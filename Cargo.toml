@@ -1,0 +1,41 @@
+[workspace.package]
+authors    = [ "Ajuna Network <https://github.com/ajuna-network>" ]
+edition    = "2021"
+homepage   = "https://ajuna.io"
+repository = "https://github.com/ajuna-network/ajuna-pallets"
+
+[workspace]
+resolver = "2"
+members = [
+    "pallets/*",
+    "pallets/ajuna-awesome-avatars/benchmarking",
+    "pallets/ajuna-nft-staking/benchmarking",
+]
+
+[workspace.dependencies]
+# General
+hex = { version = "0.4.3", default-features = false }
+log = { version = "0.4.17", default-features = false }
+
+# Parity codec
+parity-scale-codec = { version = "3.0.0", default-features = false }
+scale-info         = { version = "2.1.1", default-features = false }
+
+# Substrate
+frame-benchmarking                         = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-support                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+frame-system                               = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+pallet-balances                            = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+pallet-nfts                                = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-core                                    = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-io                                      = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-runtime                                 = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-std                                     = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.1.0", default-features = false }
+
+# Ajuna
+pallet-ajuna-awesome-avatars              = { path = "pallets/ajuna-awesome-avatars", default-features = false }
+pallet-ajuna-battle-mogs                  = { path = "pallets/ajuna-battle-mogs", default-features = false }
+pallet-ajuna-awesome-avatars-benchmarking = { path = "pallets/ajuna-awesome-avatars/benchmarking", default-features = false }
+pallet-ajuna-nft-transfer                 = { path = "pallets/ajuna-nft-transfer", default-features = false }
+pallet-ajuna-nft-staking                  = { path = "pallets/ajuna-nft-staking", default-features = false }

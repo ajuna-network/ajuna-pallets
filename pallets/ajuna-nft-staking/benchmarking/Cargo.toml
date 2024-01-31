@@ -1,0 +1,72 @@
+[package]
+description = "Ajuna Network pallet used for NFT Staking benchmarking"
+name        = "pallet-ajuna-nft-staking-benchmarking"
+version     = "0.1.0"
+
+authors.workspace    = true
+edition.workspace    = true
+homepage.workspace   = true
+repository.workspace = true
+
+[package.metadata.docs.rs]
+targets = [ "x86_64-unknown-linux-gnu" ]
+
+[dependencies]
+# General
+log = { workspace = true }
+
+# Substrate - FRAME
+frame-benchmarking                         = { workspace = true, optional = true }
+frame-support                              = { workspace = true }
+frame-system                               = { workspace = true }
+pallet-balances                            = { workspace = true }
+pallet-nfts                                = { workspace = true }
+# Substrate - SCALE codec
+parity-scale-codec                         = { workspace = true, features = [ "derive", "max-encoded-len" ] }
+scale-info                                 = { workspace = true, features = [ "derive" ] }
+# Substrate - Primitives
+sp-io                                      = { workspace = true }
+sp-runtime                                 = { workspace = true }
+sp-std                                     = { workspace = true }
+
+# Ajuna
+pallet-ajuna-nft-staking = { workspace = true }
+
+[dev-dependencies]
+# Substrate - Primitives
+sp-core = { workspace = true }
+
+[features]
+default = [ "std" ]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-ajuna-nft-staking/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-nfts/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+std = [
+    "log/std",
+    "frame-benchmarking/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-ajuna-nft-staking/std",
+    "pallet-balances/std",
+    "pallet-nfts/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "pallet-ajuna-nft-staking/try-runtime",
+    "pallet-balances/try-runtime",
+    "pallet-nfts/try-runtime",
+    "sp-runtime/try-runtime",
+]
