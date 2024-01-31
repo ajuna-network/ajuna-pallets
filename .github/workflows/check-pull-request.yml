@@ -1,0 +1,112 @@
+name: "Check Pull Request"
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - "**/*.rs"
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
+      - ".github/workflows/*.yml"
+  push:
+    branches:
+      - develop
+
+# Ensures only one build is run per branch, unless pushing to develop
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/develop' && github.run_number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_ARGS: ${{ github.ref == 'refs/heads/develop' && '--release' || '' }}
+  CARGO_TERM_COLOR: always
+  SKIP_WASM_BUILD: 1
+
+jobs:
+  fmt:
+    if: ${{ !startsWith(github.head_ref, 'release/') }}
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo fmt --all -- --check
+
+  lint:
+    if: ${{ !startsWith(github.head_ref, 'release/') }}
+    name: Clippy
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./.github/scripts/free_disk_space.sh
+      - run: sudo apt-get install -y protobuf-compiler
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-lint-
+      - run: cargo clippy --all-features --all-targets ${{ env.CARGO_ARGS }} -- -D warnings
+
+  test:
+    if: ${{ !startsWith(github.head_ref, 'release/') }}
+    name: Test-Pallets
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      matrix:
+        pallet:
+          - pallet-ajuna-awesome-avatars
+          - pallet-ajuna-awesome-avatars-benchmarking
+          - pallet-ajuna-battle-mogs
+          - pallet-ajuna-nft-staking
+          - pallet-ajuna-nft-staking-benchmarking
+          - pallet-ajuna-nft-transfer
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./.github/scripts/free_disk_space.sh
+      - run: sudo apt-get install -y protobuf-compiler
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ matrix.pallet }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-test-${{ matrix.pallet }}-
+      - run: cargo test --all-features --all-targets ${{ env.CARGO_ARGS }} -p ${{ matrix.pallet }}
+
+  coverage:
+    if: ${{ !startsWith(github.head_ref, 'release/') }}
+    name: Coverage
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:0.27.3
+      options: --security-opt seccomp=unconfined
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate code coverage
+        run: |
+          cargo tarpaulin --timeout 120 --no-fail-fast --workspace --out Xml \
+            --exclude \
+                pallet-ajuna-awesome-avatars-benchmarking \
+                pallet-ajuna-nft-staking-benchmarking \
+            --exclude-files \
+                pallets/ajuna-awesome-avatars/benchmarking/* \
+                pallets/ajuna-nft-staking-benchmarking/* \
+                benchmarking.rs weights.rs
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}

@@ -49,8 +49,8 @@ impl Binary {
 
 	#[inline]
 	pub fn copy_bits(from: u8, to: u8, side: BitMaskSide) -> u8 {
-		from | (to &
-			if side == BitMaskSide::Left { Self::LEFT_BITMASK } else { Self::RIGHT_BITMASK })
+		from | (to
+			& if side == BitMaskSide::Left { Self::LEFT_BITMASK } else { Self::RIGHT_BITMASK })
 	}
 
 	#[inline]
@@ -58,8 +58,8 @@ impl Binary {
 		if side == BitMaskSide::Left {
 			(num.saturating_add(Self::LEFT_UNIT) & Self::LEFT_BITMASK) | (num & Self::RIGHT_BITMASK)
 		} else {
-			((num | Self::LEFT_BITMASK).saturating_add(Self::RIGHT_UNIT) & Self::RIGHT_BITMASK) |
-				(num & Self::LEFT_BITMASK)
+			((num | Self::LEFT_BITMASK).saturating_add(Self::RIGHT_UNIT) & Self::RIGHT_BITMASK)
+				| (num & Self::LEFT_BITMASK)
 		}
 	}
 
@@ -68,8 +68,8 @@ impl Binary {
 		if side == BitMaskSide::Left {
 			(num.saturating_sub(Self::LEFT_UNIT) & Self::LEFT_BITMASK) | (num & Self::RIGHT_BITMASK)
 		} else {
-			((num & Self::RIGHT_BITMASK).saturating_sub(Self::RIGHT_UNIT) & Self::RIGHT_BITMASK) |
-				(num & Self::LEFT_BITMASK)
+			((num & Self::RIGHT_BITMASK).saturating_sub(Self::RIGHT_UNIT) & Self::RIGHT_BITMASK)
+				| (num & Self::LEFT_BITMASK)
 		}
 	}
 }
@@ -456,9 +456,10 @@ impl Generation {
 			);
 
 			resulting_rarity = RarityType::from(
-				((out_rarity_1 as u16 +
-					out_rarity_2 as u16 + ((input_rarity_1 as u16 + input_rarity_2 as u16) / 2)) /
-					2) % 5,
+				((out_rarity_1 as u16
+					+ out_rarity_2 as u16
+					+ ((input_rarity_1 as u16 + input_rarity_2 as u16) / 2))
+					/ 2) % 5,
 			)
 		}
 
