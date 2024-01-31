@@ -176,10 +176,11 @@ where
 			Clause::HasAnyAttributesWithValues(collection_id, _) => collection_id,
 		};
 		let NftId(collection_id, item_id) = address;
-		clause_collection_id == collection_id &&
-			(match self {
-				Clause::HasAttribute(_, key) =>
-					evaluate_fn(collection_id, item_id, key.as_slice()).is_some(),
+		clause_collection_id == collection_id
+			&& (match self {
+				Clause::HasAttribute(_, key) => {
+					evaluate_fn(collection_id, item_id, key.as_slice()).is_some()
+				},
 				Clause::HasAllAttributes(_, attributes) => attributes
 					.iter()
 					.all(|key| evaluate_fn(collection_id, item_id, key.as_slice()).is_some()),
@@ -193,22 +194,24 @@ where
 						false
 					}
 				},
-				Clause::HasAllAttributesWithValues(_, attributes) =>
+				Clause::HasAllAttributesWithValues(_, attributes) => {
 					attributes.iter().all(|(key, expected_value)| {
 						if let Some(value) = evaluate_fn(collection_id, item_id, key.as_slice()) {
 							expected_value.evaluate_for(value.as_slice())
 						} else {
 							false
 						}
-					}),
-				Clause::HasAnyAttributesWithValues(_, attributes) =>
+					})
+				},
+				Clause::HasAnyAttributesWithValues(_, attributes) => {
 					attributes.iter().any(|(key, expected_value)| {
 						if let Some(value) = evaluate_fn(collection_id, item_id, key.as_slice()) {
 							expected_value.evaluate_for(value.as_slice())
 						} else {
 							false
 						}
-					}),
+					})
+				},
 			})
 	}
 }

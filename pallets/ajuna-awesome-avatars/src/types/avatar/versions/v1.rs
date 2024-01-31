@@ -246,9 +246,9 @@ impl<T: Config> ForgerV1<T> {
 	) -> u8 {
 		let period_multiplier = Self::forge_multiplier(target, season, now);
 		// p = base_prob + (1 - base_prob) * (matches / max_sacrifices) * (1 / period_multiplier)
-		season.base_prob +
-			(((MAX_PERCENTAGE - season.base_prob) / season.max_sacrifices) * matches) /
-				period_multiplier
+		season.base_prob
+			+ (((MAX_PERCENTAGE - season.base_prob) / season.max_sacrifices) * matches)
+				/ period_multiplier
 	}
 
 	fn forge_multiplier(target: &Avatar, season: &SeasonOf<T>, now: &BlockNumberFor<T>) -> u8 {
@@ -504,8 +504,8 @@ mod test {
 				// check for souls accumulation
 				assert_eq!(
 					forged_leader.souls,
-					original_leader.souls +
-						original_sacrifices.iter().map(|x| x.souls).sum::<SoulCount>(),
+					original_leader.souls
+						+ original_sacrifices.iter().map(|x| x.souls).sum::<SoulCount>(),
 				);
 
 				// check for the upgraded DNA

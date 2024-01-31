@@ -106,8 +106,7 @@ jobs:
                 pallets/ajuna-nft-staking-benchmarking/* \
                 benchmarking.rs weights.rs
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
-        env:
           token: ${{ secrets.CODECOV_TOKEN }}

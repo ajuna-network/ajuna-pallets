@@ -178,11 +178,11 @@ mod test {
 				[0x00; 11],
 			);
 
-			let total_soul_points = leader.1.get_souls() +
-				sacrifice_2.1.get_souls() +
-				sacrifice_3.1.get_souls() +
-				sacrifice_4.1.get_souls() +
-				sacrifice_5.1.get_souls();
+			let total_soul_points = leader.1.get_souls()
+				+ sacrifice_2.1.get_souls()
+				+ sacrifice_3.1.get_souls()
+				+ sacrifice_4.1.get_souls()
+				+ sacrifice_5.1.get_souls();
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::feed_avatars(
 				leader,
@@ -247,11 +247,11 @@ mod test {
 				[0x00; 11],
 			);
 
-			let total_soul_points = leader.1.get_souls() +
-				sacrifice_6.1.get_souls() +
-				sacrifice_7.1.get_souls() +
-				sacrifice_8.1.get_souls() +
-				sacrifice_9.1.get_souls();
+			let total_soul_points = leader.1.get_souls()
+				+ sacrifice_6.1.get_souls()
+				+ sacrifice_7.1.get_souls()
+				+ sacrifice_8.1.get_souls()
+				+ sacrifice_9.1.get_souls();
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::feed_avatars(
 				leader,
