@@ -70,6 +70,7 @@ jobs:
           - pallet-ajuna-nft-staking
           - pallet-ajuna-nft-staking-benchmarking
           - pallet-ajuna-nft-transfer
+          - pallet-ajuna-affiliates
     steps:
       - uses: actions/checkout@v4
       - run: ./.github/scripts/free_disk_space.sh
