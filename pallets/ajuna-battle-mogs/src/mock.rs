@@ -69,6 +69,7 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 	type Nonce = MockNonce;
 	type Block = MockBlock;
+	type RuntimeTask = RuntimeTask;
 }
 
 parameter_types! {
@@ -89,6 +90,7 @@ impl pallet_balances::Config for Test {
 	type MaxHolds = ();
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Test {}

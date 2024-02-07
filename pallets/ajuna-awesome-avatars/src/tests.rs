@@ -3416,7 +3416,7 @@ mod nft_transfer {
 				assert_eq!(
 					<Nft as Inspect<MockAccountId>>::system_attribute(
 						&CollectionId::<Test>::get().unwrap(),
-						&avatar_id,
+						Some(&avatar_id),
 						<Avatar as NftConvertible<KeyLimit, ValueLimit>>::ITEM_CODE,
 					)
 					.unwrap(),
@@ -3446,7 +3446,7 @@ mod nft_transfer {
 					assert_eq!(
 						<Nft as Inspect<MockAccountId>>::system_attribute(
 							&CollectionId::<Test>::get().unwrap(),
-							&avatar_id,
+							Some(&avatar_id),
 							attribute_code,
 						)
 						.unwrap(),
