@@ -69,7 +69,7 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 	fn set_creator() -> Weight {
 		// Minimum execution time: 26_582 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().writes(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake Creator (r:1 w:0)
 	// Storage: Nft Collection (r:1 w:0)
@@ -77,24 +77,24 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 	fn set_contract_collection_id() -> Weight {
 		// Minimum execution time: 84_672 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(2_u64))
-			.saturating_add(T::DbWeight::get().writes(1_u64))
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake Creator (r:1 w:0)
 	// Storage: NftStake LockedState (r:0 w:1)
 	fn set_global_config() -> Weight {
 		// Minimum execution time: 32_015 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(1_u64))
-			.saturating_add(T::DbWeight::get().writes(1_u64))
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake TreasuryAccount (r:1 w:0)
 	// Storage: System Account (r:1 w:1)
 	fn fund_treasury() -> Weight {
 		// Minimum execution time: 71_758 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(2_u64))
-			.saturating_add(T::DbWeight::get().writes(1_u64))
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake TreasuryAccount (r:1 w:0)
@@ -109,8 +109,8 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 	fn create_token_reward() -> Weight {
 		// Minimum execution time: 139_906 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(9_u64))
-			.saturating_add(T::DbWeight::get().writes(7_u64))
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(7 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: Nft Item (r:2 w:2)
@@ -127,8 +127,8 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 	fn create_nft_reward() -> Weight {
 		// Minimum execution time: 178_955 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(13_u64))
-			.saturating_add(T::DbWeight::get().writes(12_u64))
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(12 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake ContractOwners (r:1 w:1)
@@ -149,8 +149,8 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 	fn accept() -> Weight {
 		// Minimum execution time: 789_389 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(42_u64))
-			.saturating_add(T::DbWeight::get().writes(59_u64))
+			.saturating_add(T::DbWeight::get().reads(42 as u64))
+			.saturating_add(T::DbWeight::get().writes(59 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake ContractOwners (r:1 w:1)
@@ -171,8 +171,8 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 	fn claim_token_reward() -> Weight {
 		// Minimum execution time: 544_620 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(33_u64))
-			.saturating_add(T::DbWeight::get().writes(62_u64))
+			.saturating_add(T::DbWeight::get().reads(33 as u64))
+			.saturating_add(T::DbWeight::get().writes(62 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake ContractOwners (r:1 w:1)
@@ -193,8 +193,8 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 	fn claim_nft_reward() -> Weight {
 		// Minimum execution time: 565_593 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(T::DbWeight::get().reads(37_u64))
-			.saturating_add(T::DbWeight::get().writes(67_u64))
+			.saturating_add(T::DbWeight::get().reads(37 as u64))
+			.saturating_add(T::DbWeight::get().writes(67 as u64))
 	}
 	fn remove_token_reward() -> Weight {
 		Default::default()
@@ -222,7 +222,7 @@ impl WeightInfo for () {
 	fn set_creator() -> Weight {
 		// Minimum execution time: 26_582 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake Creator (r:1 w:0)
 	// Storage: Nft Collection (r:1 w:0)
@@ -230,24 +230,24 @@ impl WeightInfo for () {
 	fn set_contract_collection_id() -> Weight {
 		// Minimum execution time: 84_672 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(2_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake Creator (r:1 w:0)
 	// Storage: NftStake LockedState (r:0 w:1)
 	fn set_global_config() -> Weight {
 		// Minimum execution time: 32_015 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(1_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake TreasuryAccount (r:1 w:0)
 	// Storage: System Account (r:1 w:1)
 	fn fund_treasury() -> Weight {
 		// Minimum execution time: 71_758 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(2_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake TreasuryAccount (r:1 w:0)
@@ -262,8 +262,8 @@ impl WeightInfo for () {
 	fn create_token_reward() -> Weight {
 		// Minimum execution time: 139_906 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(9_u64))
-			.saturating_add(RocksDbWeight::get().writes(7_u64))
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(7 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: Nft Item (r:2 w:2)
@@ -280,8 +280,8 @@ impl WeightInfo for () {
 	fn create_nft_reward() -> Weight {
 		// Minimum execution time: 178_955 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(13_u64))
-			.saturating_add(RocksDbWeight::get().writes(12_u64))
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(12 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake ContractOwners (r:1 w:1)
@@ -302,8 +302,8 @@ impl WeightInfo for () {
 	fn accept() -> Weight {
 		// Minimum execution time: 789_389 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(42_u64))
-			.saturating_add(RocksDbWeight::get().writes(59_u64))
+			.saturating_add(RocksDbWeight::get().reads(42 as u64))
+			.saturating_add(RocksDbWeight::get().writes(59 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake ContractOwners (r:1 w:1)
@@ -324,8 +324,8 @@ impl WeightInfo for () {
 	fn claim_token_reward() -> Weight {
 		// Minimum execution time: 544_620 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(33_u64))
-			.saturating_add(RocksDbWeight::get().writes(62_u64))
+			.saturating_add(RocksDbWeight::get().reads(33 as u64))
+			.saturating_add(RocksDbWeight::get().writes(62 as u64))
 	}
 	// Storage: NftStake LockedState (r:1 w:0)
 	// Storage: NftStake ContractOwners (r:1 w:1)
@@ -346,8 +346,8 @@ impl WeightInfo for () {
 	fn claim_nft_reward() -> Weight {
 		// Minimum execution time: 565_593 nanoseconds.
 		Weight::from_parts(0, 0)
-			.saturating_add(RocksDbWeight::get().reads(37_u64))
-			.saturating_add(RocksDbWeight::get().writes(67_u64))
+			.saturating_add(RocksDbWeight::get().reads(37 as u64))
+			.saturating_add(RocksDbWeight::get().writes(67 as u64))
 	}
 	fn remove_token_reward() -> Weight {
 		Default::default()

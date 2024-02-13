@@ -108,13 +108,6 @@ pub mod pallet {
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
-	pub enum WhitelistOperation {
-		AddAccount,
-		RemoveAccount,
-		ClearList,
-	}
-
 	#[pallet::pallet]
 	#[pallet::storage_version(migration::STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
@@ -154,13 +147,6 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type Treasurer<T: Config> = StorageMap<_, Identity, SeasonId, T::AccountId, OptionQuery>;
-
-	/// List of accounts allowed to transfer free mints.
-	/// A maximum of 3 different accounts can be on the list.
-	#[pallet::storage]
-	#[pallet::getter(fn whitelist)]
-	pub type WhitelistedAccounts<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, ConstU32<3>>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type CurrentSeasonStatus<T: Config> = StorageValue<_, SeasonStatus, ValueQuery>;
@@ -253,7 +239,6 @@ pub mod pallet {
 					free_mint_transfer_fee: 1,
 					min_free_mint_transfer: 1,
 				},
-				freemint_transfer: FreemintTransferConfig { mode: FreeMintTransferMode::Open },
 				trade: TradeConfig { open: true },
 				nft_transfer: NftTransferConfig { open: true },
 			});
@@ -366,8 +351,6 @@ pub mod pallet {
 		TradeClosed,
 		/// NFT transfer is not available at the moment.
 		NftTransferClosed,
-		/// Free mint transfer is not available at the moment.
-		FreeMintTransferClosed,
 		/// Attempt to mint or forge outside of an active season.
 		SeasonClosed,
 		/// Attempt to mint when the season has ended prematurely.
@@ -448,10 +431,6 @@ pub mod pallet {
 		NoServiceAccount,
 		/// Tried to prepare an IPFS URL for an avatar with an empty URL.
 		EmptyIpfsUrl,
-		/// The account trying to be whitelisted is already in the whitelist
-		AccountAlreadyInWhitelist,
-		/// Cannot add more accounts to the whitelist.
-		WhitelistedAccountsLimitReached,
 	}
 
 	#[pallet::hooks]
@@ -539,12 +518,7 @@ pub mod pallet {
 
 			let avatar = Self::ensure_ownership(&from, &avatar_id)?;
 			let Season { fee, .. } = Self::seasons(&avatar.season_id)?;
-			let _ = T::Currency::withdraw(
-				&from,
-				fee.transfer_avatar,
-				WithdrawReasons::FEE,
-				AllowDeath,
-			)?;
+			T::Currency::withdraw(&from, fee.transfer_avatar, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&avatar.season_id, fee.transfer_avatar);
 
 			Self::do_transfer_avatar(&from, &to, &avatar.season_id, &avatar_id)?;
@@ -566,23 +540,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 			ensure!(from != to, Error::<T>::CannotTransferToSelf);
-
-			let GlobalConfig { freemint_transfer, .. } = GlobalConfigs::<T>::get();
-
-			match freemint_transfer.mode {
-				FreeMintTransferMode::Closed => {
-					Err::<(), DispatchError>(Error::<T>::FreeMintTransferClosed.into())
-				},
-				FreeMintTransferMode::WhitelistOnly => {
-					let whitelisted_accounts = WhitelistedAccounts::<T>::get();
-					ensure!(
-						whitelisted_accounts.contains(&from),
-						Error::<T>::FreeMintTransferClosed
-					);
-					Ok(())
-				},
-				FreeMintTransferMode::Open => Ok(()),
-			}?;
 
 			let (season_id, _) = Self::current_season_with_id()?;
 			let SeasonInfo { minted, forged } = SeasonStats::<T>::get(season_id, &from);
@@ -681,7 +638,7 @@ pub mod pallet {
 				price.saturating_mul(fee.buy_percent.unique_saturated_into())
 					/ MAX_PERCENTAGE.unique_saturated_into(),
 			);
-			let _ = T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
+			T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&avatar.season_id, trade_fee);
 
 			Self::do_transfer_avatar(&seller, &buyer, &avatar.season_id, &avatar_id)?;
@@ -733,12 +690,7 @@ pub mod pallet {
 				PlayerSeasonConfigs::<T>::get(&account_to_upgrade, season_id).storage_tier;
 			ensure!(storage_tier != StorageTier::Max, Error::<T>::MaxStorageTierReached);
 
-			let _ = T::Currency::withdraw(
-				&caller,
-				fee.upgrade_storage,
-				WithdrawReasons::FEE,
-				AllowDeath,
-			)?;
+			T::Currency::withdraw(&caller, fee.upgrade_storage, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&season_id, fee.upgrade_storage);
 
 			PlayerSeasonConfigs::<T>::mutate(&account_to_upgrade, season_id, |account| {
@@ -1058,45 +1010,6 @@ pub mod pallet {
 			Self::deposit_event(Event::PreparedIpfsUrl { url });
 			Ok(())
 		}
-
-		#[pallet::call_index(21)]
-		#[pallet::weight({1000})]
-		pub fn modify_freemint_whitelist(
-			origin: OriginFor<T>,
-			account: AccountIdOf<T>,
-			operation: WhitelistOperation,
-		) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-
-			match operation {
-				WhitelistOperation::AddAccount => {
-					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
-						ensure!(
-							!account_list.contains(&account),
-							Error::<T>::AccountAlreadyInWhitelist
-						);
-
-						account_list
-							.try_push(account)
-							.map_err(|_| Error::<T>::WhitelistedAccountsLimitReached.into())
-					})
-				},
-				WhitelistOperation::RemoveAccount => {
-					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
-						account_list.retain(|entry| entry != &account);
-
-						Ok(())
-					})
-				},
-				WhitelistOperation::ClearList => {
-					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
-						account_list.clear();
-
-						Ok(())
-					})
-				},
-			}
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1112,7 +1025,7 @@ pub mod pallet {
 
 		pub(crate) fn deposit_into_treasury(season_id: &SeasonId, amount: BalanceOf<T>) {
 			Treasury::<T>::mutate(season_id, |bal| bal.saturating_accrue(amount));
-			let _ = T::Currency::deposit_creating(&Self::treasury_account_id(), amount);
+			T::Currency::deposit_creating(&Self::treasury_account_id(), amount);
 		}
 
 		/// Check that the origin is an organizer account.
@@ -1179,7 +1092,7 @@ pub mod pallet {
 			match mint_option.payment {
 				MintPayment::Normal => {
 					let fee = season.fee.mint.fee_for(&mint_option.pack_size);
-					let _ = T::Currency::withdraw(player, fee, WithdrawReasons::FEE, AllowDeath)?;
+					T::Currency::withdraw(player, fee, WithdrawReasons::FEE, AllowDeath)?;
 					Self::deposit_into_treasury(&season_id, fee);
 				},
 				MintPayment::Free => {

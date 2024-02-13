@@ -27,7 +27,8 @@ use frame_support::{
 		Currency, Get,
 	},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::pallet_prelude::BlockNumberFor;
+use frame_system::RawOrigin;
 use pallet_ajuna_nft_staking::{
 	BenchmarkHelper as NftStakingBenchmarkHelper, Config as NftStakingConfig, *,
 };
@@ -248,7 +249,7 @@ fn contract_with<T: Config>(
 				clause: Clause::HasAttributeWithValue(
 					CollectionIdOf::<T>::unique_saturated_from(stake_collection),
 					T::BenchmarkHelper::contract_key((i as u8) * 3),
-					AttributeValue::Equal(T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE)),
+					T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE),
 				),
 			})
 			.collect::<Vec<_>>()
@@ -261,18 +262,16 @@ fn contract_with<T: Config>(
 				clause: Clause::HasAttributeWithValue(
 					CollectionIdOf::<T>::unique_saturated_from(fee_collection),
 					T::BenchmarkHelper::contract_key((i as u8) * 3),
-					AttributeValue::Equal(T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE)),
+					T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE),
 				),
 			})
 			.collect::<Vec<_>>()
 			.try_into()
 			.unwrap(),
-		burn_fees: false,
 		rewards,
 		cancel_fee: 333_u64.unique_saturated_into(),
 		nft_stake_amount: num_stake_clauses as u8,
 		nft_fee_amount: num_fee_clauses as u8,
-		is_snipeable: true,
 	}
 }
 
@@ -454,7 +453,7 @@ benchmarks! {
 		let by = account::<T>("staker");
 		create_collections::<T>(&by, 2)?;
 		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: claim(RawOrigin::Signed(by.clone()), contract_id, None)
+	}: claim(RawOrigin::Signed(by.clone()), contract_id)
 	verify {
 		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards })
 	}
@@ -476,7 +475,7 @@ benchmarks! {
 		let by = account::<T>("staker");
 		create_collections::<T>(&by, 2)?;
 		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: claim(RawOrigin::Signed(by.clone()), contract_id, None)
+	}: claim(RawOrigin::Signed(by.clone()), contract_id)
 	verify {
 		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards })
 	}
