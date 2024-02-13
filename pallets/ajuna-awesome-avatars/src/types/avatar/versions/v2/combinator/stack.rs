@@ -40,9 +40,9 @@ impl<T: Config> AvatarCombinator<T> {
 		let mut total_soul_points = 0;
 
 		for i in 0..input_sacrifices.len() {
-			if hash_provider.hash[i] as u32 * SCALING_FACTOR_PERC <
-				(STACK_PROB_PERC + add_prob_perc) * MAX_BYTE &&
-				leader.can_use(transform_per_cycle)
+			if hash_provider.hash[i] as u32 * SCALING_FACTOR_PERC
+				< (STACK_PROB_PERC + add_prob_perc) * MAX_BYTE
+				&& leader.can_use(transform_per_cycle)
 			{
 				let (_, _, out_soul_points) = leader.use_avatar(transform_per_cycle);
 				total_soul_points += out_soul_points;
@@ -88,7 +88,7 @@ impl<T: Config> AvatarCombinator<T> {
 				dust_qty = dust_qty.saturating_sub(MAX_BYTE);
 
 				if dust_qty == 0 {
-					break
+					break;
 				}
 			}
 
@@ -388,11 +388,11 @@ mod test {
 				4,
 			);
 
-			let total_souls = blueprint_input_1.1.get_souls() +
-				blueprint_input_2.1.get_souls() +
-				blueprint_input_3.1.get_souls() +
-				blueprint_input_4.1.get_souls() +
-				blueprint_input_5.1.get_souls();
+			let total_souls = blueprint_input_1.1.get_souls()
+				+ blueprint_input_2.1.get_souls()
+				+ blueprint_input_3.1.get_souls()
+				+ blueprint_input_4.1.get_souls()
+				+ blueprint_input_5.1.get_souls();
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::stack_avatars(
 				blueprint_input_1,
