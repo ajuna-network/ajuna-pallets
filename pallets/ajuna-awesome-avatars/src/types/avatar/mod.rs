@@ -20,6 +20,7 @@ mod rarity_tier;
 mod versions;
 
 pub use force::*;
+pub use nft::*;
 pub use rarity_tier::*;
 pub(crate) use versions::*;
 

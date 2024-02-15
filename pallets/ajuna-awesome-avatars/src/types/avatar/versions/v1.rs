@@ -50,7 +50,7 @@ impl<T: Config> MinterV1<T> {
 			.map(|i| {
 				let (random_tier, random_variation) =
 					Self::random_component(season, hash, i as usize * 2, batched_mint);
-				(random_tier << 4) | random_variation
+				((random_tier << 4) | random_variation) as u8
 			})
 			.collect::<Vec<_>>();
 		Dna::try_from(dna).map_err(|_| Error::<T>::IncorrectDna.into())
@@ -171,10 +171,9 @@ impl<T: Config> ForgerV1<T> {
 						matches += 1;
 						matched_components.extend(matching_components.iter());
 					}
+
+					souls.saturating_accrue(other.souls)
 				}
-
-				souls.saturating_accrue(other.souls);
-
 				Ok((matched_components, matches, souls))
 			},
 		)

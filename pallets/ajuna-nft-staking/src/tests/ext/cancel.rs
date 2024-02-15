@@ -20,14 +20,7 @@ use super::*;
 fn works_with_token_reward() {
 	let stake_clauses = vec![
 		(0, Clause::HasAttribute(RESERVED_COLLECTION_0, bounded_vec![12])),
-		(
-			1,
-			Clause::HasAttributeWithValue(
-				RESERVED_COLLECTION_2,
-				bounded_vec![3],
-				AttributeValue::Equal(bounded_vec![4]),
-			),
-		),
+		(1, Clause::HasAttributeWithValue(RESERVED_COLLECTION_2, bounded_vec![3], bounded_vec![4])),
 	];
 	let fee_clauses = vec![(0, Clause::HasAttribute(RESERVED_COLLECTION_1, bounded_vec![11]))];
 	let stake_duration = 4;
@@ -36,9 +29,7 @@ fn works_with_token_reward() {
 	let contract = Contract::default()
 		.rewards(bounded_vec![Reward::Tokens(reward)])
 		.stake_duration(stake_duration)
-		.stake_amt(2)
 		.stake_clauses(AttributeNamespace::Pallet, stake_clauses.clone())
-		.fee_amt(1)
 		.fee_clauses(AttributeNamespace::Pallet, fee_clauses.clone())
 		.cancel_fee(cancellation_fee);
 	let contract_id = H256::random();
@@ -91,14 +82,7 @@ fn works_with_token_reward() {
 fn works_with_nft_reward() {
 	let stake_clauses = vec![
 		(0, Clause::HasAttribute(RESERVED_COLLECTION_0, bounded_vec![12])),
-		(
-			1,
-			Clause::HasAttributeWithValue(
-				RESERVED_COLLECTION_2,
-				bounded_vec![3],
-				AttributeValue::Equal(bounded_vec![4]),
-			),
-		),
+		(1, Clause::HasAttributeWithValue(RESERVED_COLLECTION_2, bounded_vec![3], bounded_vec![4])),
 	];
 	let fee_clauses = vec![(0, Clause::HasAttribute(RESERVED_COLLECTION_1, bounded_vec![11]))];
 	let stake_duration = 4;
@@ -107,9 +91,7 @@ fn works_with_nft_reward() {
 	let contract = Contract::default()
 		.rewards(bounded_vec![Reward::Nft(reward_addr.clone())])
 		.stake_duration(stake_duration)
-		.stake_amt(2)
 		.stake_clauses(AttributeNamespace::Pallet, stake_clauses.clone())
-		.fee_amt(1)
 		.fee_clauses(AttributeNamespace::Pallet, fee_clauses.clone())
 		.cancel_fee(cancellation_fee);
 	let contract_id = H256::random();

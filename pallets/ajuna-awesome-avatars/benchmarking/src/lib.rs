@@ -411,7 +411,7 @@ benchmarks! {
 		let amount = 1_000_000_000_000_u64.unique_saturated_into();
 		Treasurer::<T>::insert(season_id, treasurer.clone());
 		Treasury::<T>::mutate(season_id, |balance| balance.saturating_accrue(amount));
-		let _ = CurrencyOf::<T>::deposit_creating(&AAvatars::<T>::treasury_account_id(), amount);
+		CurrencyOf::<T>::deposit_creating(&AAvatars::<T>::treasury_account_id(), amount);
 		CurrencyOf::<T>::make_free_balance_be(&treasurer, CurrencyOf::<T>::minimum_balance());
 	}: _(RawOrigin::Signed(treasurer.clone()), season_id)
 	verify {
@@ -482,12 +482,9 @@ benchmarks! {
 			},
 			forge: ForgeConfig { open: true },
 			transfer: TransferConfig {
-				open: true,
+				open:true,
 				free_mint_transfer_fee: MintCount::MAX,
 				min_free_mint_transfer: MintCount::MAX,
-			},
-			freemint_transfer: FreemintTransferConfig {
-				mode: FreeMintTransferMode::Open,
 			},
 			trade: TradeConfig { open: true },
 			nft_transfer: NftTransferConfig { open: true },
