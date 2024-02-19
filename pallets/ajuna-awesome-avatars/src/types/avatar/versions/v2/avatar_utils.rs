@@ -4,7 +4,6 @@ use crate::{
 	ByteConvertible, Config, Force, Ranged, RarityTier,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-//use frame_support::traits::Len;
 use sp_runtime::{traits::Hash, SaturatedConversion};
 use sp_std::{
 	cmp::Ordering,

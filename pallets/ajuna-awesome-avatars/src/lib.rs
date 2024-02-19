@@ -90,16 +90,16 @@ pub mod pallet {
 	use super::*;
 	use sp_std::collections::vec_deque::VecDeque;
 
-	pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type SeasonOf<T> = Season<BlockNumberFor<T>, BalanceOf<T>>;
-	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub(crate) type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
 	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>>;
 	pub(crate) type KeyLimitOf<T> = <T as Config>::KeyLimit;
 	pub(crate) type ValueLimitOf<T> = <T as Config>::ValueLimit;
 	pub(crate) type CollectionIdOf<T> = <<T as Config>::NftHandler as NftHandler<
-		AccountIdOf<T>,
+		AccountIdFor<T>,
 		AvatarIdOf<T>,
 		KeyLimitOf<T>,
 		ValueLimitOf<T>,
@@ -107,6 +107,13 @@ pub mod pallet {
 	>>::CollectionId;
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
+
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+	pub enum WhitelistOperation {
+		AddAccount,
+		RemoveAccount,
+		ClearList,
+	}
 
 	#[pallet::pallet]
 	#[pallet::storage_version(migration::STORAGE_VERSION)]
@@ -147,6 +154,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type Treasurer<T: Config> = StorageMap<_, Identity, SeasonId, T::AccountId, OptionQuery>;
+
+	/// List of accounts allowed to transfer free mints.
+	/// A maximum of 3 different accounts can be on the list.
+	#[pallet::storage]
+	#[pallet::getter(fn whitelist)]
+	pub type WhitelistedAccounts<T: Config> =
+		StorageValue<_, BoundedVec<T::AccountId, ConstU32<3>>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type CurrentSeasonStatus<T: Config> = StorageValue<_, SeasonStatus, ValueQuery>;
@@ -239,6 +253,7 @@ pub mod pallet {
 					free_mint_transfer_fee: 1,
 					min_free_mint_transfer: 1,
 				},
+				freemint_transfer: FreemintTransferConfig { mode: FreeMintTransferMode::Open },
 				trade: TradeConfig { open: true },
 				nft_transfer: NftTransferConfig { open: true },
 			});
@@ -351,6 +366,8 @@ pub mod pallet {
 		TradeClosed,
 		/// NFT transfer is not available at the moment.
 		NftTransferClosed,
+		/// Free mint transfer is not available at the moment.
+		FreeMintTransferClosed,
 		/// Attempt to mint or forge outside of an active season.
 		SeasonClosed,
 		/// Attempt to mint when the season has ended prematurely.
@@ -431,6 +448,10 @@ pub mod pallet {
 		NoServiceAccount,
 		/// Tried to prepare an IPFS URL for an avatar with an empty URL.
 		EmptyIpfsUrl,
+		/// The account trying to be whitelisted is already in the whitelist
+		AccountAlreadyInWhitelist,
+		/// Cannot add more accounts to the whitelist.
+		WhitelistedAccountsLimitReached,
 	}
 
 	#[pallet::hooks]
@@ -540,6 +561,23 @@ pub mod pallet {
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 			ensure!(from != to, Error::<T>::CannotTransferToSelf);
+
+			let GlobalConfig { freemint_transfer, .. } = GlobalConfigs::<T>::get();
+
+			match freemint_transfer.mode {
+				FreeMintTransferMode::Closed => {
+					Err::<(), DispatchError>(Error::<T>::FreeMintTransferClosed.into())
+				},
+				FreeMintTransferMode::WhitelistOnly => {
+					let whitelisted_accounts = WhitelistedAccounts::<T>::get();
+					ensure!(
+						whitelisted_accounts.contains(&from),
+						Error::<T>::FreeMintTransferClosed
+					);
+					Ok(())
+				},
+				FreeMintTransferMode::Open => Ok(()),
+			}?;
 
 			let (season_id, _) = Self::current_season_with_id()?;
 			let SeasonInfo { minted, forged } = SeasonStats::<T>::get(season_id, &from);
@@ -673,7 +711,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::upgrade_storage())]
 		pub fn upgrade_storage(
 			origin: OriginFor<T>,
-			beneficiary: Option<AccountIdOf<T>>,
+			beneficiary: Option<AccountIdFor<T>>,
 			in_season: Option<SeasonId>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
@@ -1010,6 +1048,45 @@ pub mod pallet {
 			Self::deposit_event(Event::PreparedIpfsUrl { url });
 			Ok(())
 		}
+
+		#[pallet::call_index(21)]
+		#[pallet::weight({1000})]
+		pub fn modify_freemint_whitelist(
+			origin: OriginFor<T>,
+			account: AccountIdFor<T>,
+			operation: WhitelistOperation,
+		) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+
+			match operation {
+				WhitelistOperation::AddAccount => {
+					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
+						ensure!(
+							!account_list.contains(&account),
+							Error::<T>::AccountAlreadyInWhitelist
+						);
+
+						account_list
+							.try_push(account)
+							.map_err(|_| Error::<T>::WhitelistedAccountsLimitReached.into())
+					})
+				},
+				WhitelistOperation::RemoveAccount => {
+					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
+						account_list.retain(|entry| entry != &account);
+
+						Ok(())
+					})
+				},
+				WhitelistOperation::ClearList => {
+					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
+						account_list.clear();
+
+						Ok(())
+					})
+				},
+			}
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1340,7 +1417,7 @@ pub mod pallet {
 		}
 
 		fn process_leader_forge_output(
-			player: &AccountIdOf<T>,
+			player: &AccountIdFor<T>,
 			season_id: &SeasonId,
 			season: &SeasonOf<T>,
 			input_leader: ForgeItem<T>,
@@ -1377,7 +1454,7 @@ pub mod pallet {
 		}
 
 		fn process_other_forge_outputs(
-			player: &AccountIdOf<T>,
+			player: &AccountIdFor<T>,
 			season_id: &SeasonId,
 			other_outputs: Vec<ForgeOutput<T>>,
 		) -> DispatchResult {
@@ -1416,7 +1493,7 @@ pub mod pallet {
 		}
 
 		fn update_forging_statistics_for_player(
-			player: &AccountIdOf<T>,
+			player: &AccountIdFor<T>,
 			season_id: SeasonId,
 		) -> DispatchResult {
 			let current_block = <frame_system::Pallet<T>>::block_number();
@@ -1446,7 +1523,7 @@ pub mod pallet {
 		}
 
 		fn try_add_avatar_to(
-			player: &AccountIdOf<T>,
+			player: &AccountIdFor<T>,
 			season_id: &SeasonId,
 			avatar_id: AvatarIdOf<T>,
 			avatar: Avatar,
@@ -1458,7 +1535,7 @@ pub mod pallet {
 		}
 
 		fn remove_avatar_from(
-			player: &AccountIdOf<T>,
+			player: &AccountIdFor<T>,
 			season_id: &SeasonId,
 			avatar_id: &AvatarIdOf<T>,
 		) {

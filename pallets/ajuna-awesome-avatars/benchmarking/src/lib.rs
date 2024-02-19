@@ -37,15 +37,15 @@ use sp_std::vec;
 pub struct Pallet<T: Config>(pallet_ajuna_awesome_avatars::Pallet<T>);
 pub trait Config: AvatarsConfig + pallet_nfts::Config + pallet_balances::Config {}
 
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
-type BalanceOf<T> = <CurrencyOf<T> as Currency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T> = <CurrencyOf<T> as Currency<AccountIdFor<T>>>::Balance;
 type CurrencyOf<T> = <T as AvatarsConfig>::Currency;
 type KeyLimitOf<T> = <T as AvatarsConfig>::KeyLimit;
 type ValueLimitOf<T> = <T as AvatarsConfig>::ValueLimit;
 
 type CollectionIdOf<T> = <<T as AvatarsConfig>::NftHandler as NftHandler<
-	AccountIdOf<T>,
+	AccountIdFor<T>,
 	AvatarIdOf<T>,
 	KeyLimitOf<T>,
 	ValueLimitOf<T>,
@@ -482,9 +482,12 @@ benchmarks! {
 			},
 			forge: ForgeConfig { open: true },
 			transfer: TransferConfig {
-				open:true,
+				open: true,
 				free_mint_transfer_fee: MintCount::MAX,
 				min_free_mint_transfer: MintCount::MAX,
+			},
+			freemint_transfer: FreemintTransferConfig {
+				mode: FreeMintTransferMode::Open,
 			},
 			trade: TradeConfig { open: true },
 			nft_transfer: NftTransferConfig { open: true },
