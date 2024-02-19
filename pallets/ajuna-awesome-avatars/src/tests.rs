@@ -1464,8 +1464,9 @@ mod forging {
 	use super::*;
 	use sp_runtime::testing::H256;
 
-	fn create_avatar_for_bob(dna: &[u8]) -> AvatarIdOf<Test> {
-		let avatar = Avatar::default().season_id(SEASON_ID).dna(dna);
+	fn create_avatar_for_bob(dna: &[u8], with_souls: SoulCount) -> AvatarIdOf<Test> {
+		let mut avatar = Avatar::default().season_id(SEASON_ID).dna(dna);
+		avatar.souls = with_souls;
 		if avatar.rarity() == RarityTier::Legendary as u8 {
 			CurrentSeasonStatus::<Test>::mutate(|status| status.max_tier_avatars += 1);
 		}
@@ -1510,21 +1511,29 @@ mod forging {
 				let dna_after = [0x33, 0x35, 0x34, 0x30, 0x15, 0x35, 0x31, 0x30, 0x32, 0x33, 0x33];
 				assert_eq!(expected_upgraded_components(&dna_before, &dna_after), 2);
 
-				let leader_id = create_avatar_for_bob(&dna_before);
+				let leader_id = create_avatar_for_bob(&dna_before, 100);
 				let sacrifice_ids = [
-					create_avatar_for_bob(&[
-						0x10, 0x10, 0x14, 0x11, 0x13, 0x31, 0x10, 0x10, 0x13, 0x14, 0x14,
-					]),
-					create_avatar_for_bob(&[
-						0x14, 0x12, 0x14, 0x31, 0x12, 0x15, 0x12, 0x31, 0x12, 0x33, 0x10,
-					]),
-					create_avatar_for_bob(&[
-						0x12, 0x15, 0x32, 0x12, 0x33, 0x15, 0x12, 0x34, 0x15, 0x13, 0x13,
-					]),
-					create_avatar_for_bob(&[
-						0x33, 0x34, 0x33, 0x31, 0x35, 0x33, 0x10, 0x35, 0x11, 0x32, 0x15,
-					]),
+					create_avatar_for_bob(
+						&[0x10, 0x10, 0x14, 0x11, 0x13, 0x31, 0x10, 0x10, 0x13, 0x14, 0x14],
+						12,
+					),
+					create_avatar_for_bob(
+						&[0x14, 0x12, 0x14, 0x31, 0x12, 0x15, 0x12, 0x31, 0x12, 0x33, 0x10],
+						13,
+					),
+					create_avatar_for_bob(
+						&[0x12, 0x15, 0x32, 0x12, 0x33, 0x15, 0x12, 0x34, 0x15, 0x13, 0x13],
+						30,
+					),
+					create_avatar_for_bob(
+						&[0x33, 0x34, 0x33, 0x31, 0x35, 0x33, 0x10, 0x35, 0x11, 0x32, 0x15],
+						17,
+					),
 				];
+
+				let sacrifice_souls: SoulCount =
+					sacrifice_ids.iter().map(|id| Avatars::<Test>::get(id).unwrap().1.souls).sum();
+				let leader_souls = Avatars::<Test>::get(leader_id).unwrap().1.souls;
 
 				assert_ok!(AAvatars::forge(
 					RuntimeOrigin::signed(BOB),
@@ -1532,8 +1541,71 @@ mod forging {
 					sacrifice_ids.to_vec()
 				));
 				let leader = Avatars::<Test>::get(leader_id).unwrap().1;
+				assert_eq!(leader.souls, leader_souls + sacrifice_souls);
 				assert_eq!(leader.dna.to_vec(), dna_after.to_vec());
 				assert_eq!(leader.rarity(), RarityTier::Common as u8);
+			});
+	}
+
+	#[test]
+	fn forge_works_for_season_1_with_high_tier_leader() {
+		let season = Season::default()
+			.early_start(100)
+			.start(200)
+			.end(150_000)
+			.max_tier_forges(100)
+			.max_variations(6)
+			.max_components(11)
+			.min_sacrifices(1)
+			.max_sacrifices(4)
+			.tiers(&[RarityTier::Common, RarityTier::Rare, RarityTier::Legendary])
+			.single_mint_probs(&[95, 5])
+			.batch_mint_probs(&[80, 20])
+			.base_prob(20)
+			.per_period(20)
+			.periods(12);
+
+		ExtBuilder::default()
+			.seasons(&[(SEASON_ID, season)])
+			.mint_cooldown(5)
+			.build()
+			.execute_with(|| {
+				run_to_block(15_792);
+
+				let leader_dna = [0x33, 0x35, 0x34, 0x30, 0x35, 0x35, 0x31, 0x30, 0x32, 0x33, 0x33];
+
+				let leader_id = create_avatar_for_bob(&leader_dna, 100);
+				let sacrifice_ids = [
+					create_avatar_for_bob(
+						&[0x10, 0x10, 0x14, 0x11, 0x13, 0x31, 0x10, 0x10, 0x13, 0x14, 0x14],
+						12,
+					),
+					create_avatar_for_bob(
+						&[0x14, 0x12, 0x14, 0x31, 0x12, 0x15, 0x12, 0x31, 0x12, 0x33, 0x10],
+						13,
+					),
+					create_avatar_for_bob(
+						&[0x12, 0x15, 0x32, 0x12, 0x33, 0x15, 0x12, 0x34, 0x15, 0x13, 0x13],
+						30,
+					),
+					create_avatar_for_bob(
+						&[0x33, 0x34, 0x33, 0x31, 0x35, 0x33, 0x10, 0x35, 0x11, 0x32, 0x15],
+						17,
+					),
+				];
+
+				let sacrifice_souls: SoulCount =
+					sacrifice_ids.iter().map(|id| Avatars::<Test>::get(id).unwrap().1.souls).sum();
+				let leader_souls = Avatars::<Test>::get(leader_id).unwrap().1.souls;
+
+				assert_ok!(AAvatars::forge(
+					RuntimeOrigin::signed(BOB),
+					leader_id,
+					sacrifice_ids.to_vec()
+				));
+				let leader = Avatars::<Test>::get(leader_id).unwrap().1;
+				assert_eq!(leader.souls, leader_souls + sacrifice_souls);
+				assert_eq!(leader.rarity(), RarityTier::Rare as u8);
 			});
 	}
 
@@ -1723,10 +1795,10 @@ mod forging {
 
 				let mut max_tier_avatars = 0;
 				let common_avatar_ids = [
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x12]),
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x13]),
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x13]),
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x13]),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x12], 0),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x13], 0),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x13], 0),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x13], 0),
 				];
 
 				// `max_tier_avatars` increases when a legendary is forged
@@ -1742,10 +1814,10 @@ mod forging {
 
 				// `max_tier_avatars` decreases when legendaries are sacrificed
 				let legendary_avatar_ids = [
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52]),
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52]),
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52]),
-					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52]),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52], 0),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52], 0),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52], 0),
+					create_avatar_for_bob(&[0x51, 0x52, 0x53, 0x54, 0x55, 0x54, 0x53, 0x52], 0),
 				];
 				max_tier_avatars += 4;
 				assert_eq!(CurrentSeasonStatus::<Test>::get().max_tier_avatars, max_tier_avatars);
@@ -2391,6 +2463,93 @@ mod transferring {
 
 				assert_eq!(PlayerConfigs::<Test>::get(ALICE).free_mints, 3);
 				assert_eq!(PlayerConfigs::<Test>::get(CHARLIE).free_mints, 2);
+			});
+	}
+
+	#[test]
+	fn transfer_free_mints_should_reject_when_transfer_blocked() {
+		ExtBuilder::default()
+			.seasons(&[(1, Season::default())])
+			.free_mints(&[(ALICE, 11), (BOB, 11)])
+			.build()
+			.execute_with(|| {
+				assert_ok!(AAvatars::set_organizer(RuntimeOrigin::root(), ALICE));
+
+				GlobalConfigs::<Test>::mutate(|config| {
+					config.freemint_transfer.mode = FreeMintTransferMode::Closed;
+				});
+
+				SeasonStats::<Test>::mutate(1, BOB, |stats| {
+					stats.minted = 1;
+					stats.forged = 1;
+				});
+
+				assert_noop!(
+					AAvatars::transfer_free_mints(RuntimeOrigin::signed(BOB), ALICE, 2),
+					Error::<Test>::FreeMintTransferClosed
+				);
+
+				GlobalConfigs::<Test>::mutate(|config| {
+					config.freemint_transfer.mode = FreeMintTransferMode::Open;
+				});
+
+				assert_eq!(PlayerConfigs::<Test>::get(ALICE).free_mints, 11);
+				assert_eq!(PlayerConfigs::<Test>::get(BOB).free_mints, 11);
+
+				assert_ok!(AAvatars::transfer_free_mints(RuntimeOrigin::signed(BOB), ALICE, 2));
+
+				assert_eq!(PlayerConfigs::<Test>::get(ALICE).free_mints, 13);
+				assert_eq!(PlayerConfigs::<Test>::get(BOB).free_mints, 8);
+			});
+	}
+
+	#[test]
+	fn transfer_free_mints_should_reject_when_not_in_whitelist() {
+		ExtBuilder::default()
+			.seasons(&[(1, Season::default())])
+			.free_mints(&[(ALICE, 11), (BOB, 11)])
+			.build()
+			.execute_with(|| {
+				assert_ok!(AAvatars::set_organizer(RuntimeOrigin::root(), ALICE));
+
+				GlobalConfigs::<Test>::mutate(|config| {
+					config.freemint_transfer.mode = FreeMintTransferMode::WhitelistOnly;
+				});
+
+				SeasonStats::<Test>::mutate(1, BOB, |stats| {
+					stats.minted = 1;
+					stats.forged = 1;
+				});
+
+				assert_noop!(
+					AAvatars::transfer_free_mints(RuntimeOrigin::signed(BOB), ALICE, 2),
+					Error::<Test>::FreeMintTransferClosed
+				);
+
+				assert_ok!(AAvatars::modify_freemint_whitelist(
+					RuntimeOrigin::signed(ALICE),
+					BOB,
+					WhitelistOperation::AddAccount
+				));
+
+				assert_eq!(PlayerConfigs::<Test>::get(ALICE).free_mints, 11);
+				assert_eq!(PlayerConfigs::<Test>::get(BOB).free_mints, 11);
+
+				assert_ok!(AAvatars::transfer_free_mints(RuntimeOrigin::signed(BOB), ALICE, 2));
+
+				assert_eq!(PlayerConfigs::<Test>::get(ALICE).free_mints, 13);
+				assert_eq!(PlayerConfigs::<Test>::get(BOB).free_mints, 8);
+
+				assert_ok!(AAvatars::modify_freemint_whitelist(
+					RuntimeOrigin::signed(ALICE),
+					BOB,
+					WhitelistOperation::RemoveAccount
+				));
+
+				assert_noop!(
+					AAvatars::transfer_free_mints(RuntimeOrigin::signed(BOB), ALICE, 2),
+					Error::<Test>::FreeMintTransferClosed
+				);
 			});
 	}
 
