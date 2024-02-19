@@ -27,8 +27,7 @@ use frame_support::{
 		Currency, Get,
 	},
 };
-use frame_system::pallet_prelude::BlockNumberFor;
-use frame_system::RawOrigin;
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use pallet_ajuna_nft_staking::{
 	BenchmarkHelper as NftStakingBenchmarkHelper, Config as NftStakingConfig, *,
 };
@@ -67,9 +66,9 @@ impl Mode {
 pub struct Pallet<T: Config>(pallet_ajuna_nft_staking::Pallet<T>);
 pub trait Config: NftStakingConfig + pallet_nfts::Config + pallet_balances::Config {}
 
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 type CurrencyOf<T> = <T as NftStakingConfig>::Currency;
-type BalanceOf<T> = <CurrencyOf<T> as Currency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T> = <CurrencyOf<T> as Currency<AccountIdFor<T>>>::Balance;
 type CollectionIdOf<T> = <T as NftStakingConfig>::CollectionId;
 type ItemIdOf<T> = <T as NftStakingConfig>::ItemId;
 type ContractOf<T> = Contract<
@@ -82,7 +81,7 @@ type ContractOf<T> = Contract<
 >;
 
 type NftCurrencyOf<T> = <T as pallet_nfts::Config>::Currency;
-type NftBalanceOf<T> = <NftCurrencyOf<T> as Currency<AccountIdOf<T>>>::Balance;
+type NftBalanceOf<T> = <NftCurrencyOf<T> as Currency<AccountIdFor<T>>>::Balance;
 type NftCollectionIdOf<T> = <T as pallet_nfts::Config>::CollectionId;
 type CollectionDeposit<T> = <T as pallet_nfts::Config>::CollectionDeposit;
 type ItemDeposit<T> = <T as pallet_nfts::Config>::ItemDeposit;
@@ -124,7 +123,7 @@ fn create_collections<T: Config>(creator: &T::AccountId, n: usize) -> DispatchRe
 }
 
 fn create_collection<T: Config>(owner: &T::AccountId) -> DispatchResult {
-	let _ = NftCurrencyOf::<T>::deposit_creating(owner, CollectionDeposit::<T>::get());
+	NftCurrencyOf::<T>::deposit_creating(owner, CollectionDeposit::<T>::get());
 	<pallet_nfts::Pallet<T> as Create<T::AccountId, CollectionConfigOf<T>>>::create_collection(
 		owner,
 		owner,
@@ -170,7 +169,7 @@ fn accept_contract<T: Config>(
 fn mint_item<T: Config>(owner: &T::AccountId, collection_id: u16, item_id: u16) -> DispatchResult {
 	let collection_id = &T::Helper::collection(collection_id);
 	let item_id = &T::Helper::item(item_id);
-	let _ = NftCurrencyOf::<T>::deposit_creating(owner, ItemDeposit::<T>::get());
+	NftCurrencyOf::<T>::deposit_creating(owner, ItemDeposit::<T>::get());
 	<pallet_nfts::Pallet<T> as Mutate<T::AccountId, ItemConfig>>::mint_into(
 		collection_id,
 		item_id,
@@ -249,7 +248,7 @@ fn contract_with<T: Config>(
 				clause: Clause::HasAttributeWithValue(
 					CollectionIdOf::<T>::unique_saturated_from(stake_collection),
 					T::BenchmarkHelper::contract_key((i as u8) * 3),
-					T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE),
+					AttributeValue::Equal(T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE)),
 				),
 			})
 			.collect::<Vec<_>>()
@@ -262,16 +261,18 @@ fn contract_with<T: Config>(
 				clause: Clause::HasAttributeWithValue(
 					CollectionIdOf::<T>::unique_saturated_from(fee_collection),
 					T::BenchmarkHelper::contract_key((i as u8) * 3),
-					T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE),
+					AttributeValue::Equal(T::BenchmarkHelper::contract_value(ATTRIBUTE_VALUE)),
 				),
 			})
 			.collect::<Vec<_>>()
 			.try_into()
 			.unwrap(),
+		burn_fees: false,
 		rewards,
 		cancel_fee: 333_u64.unique_saturated_into(),
 		nft_stake_amount: num_stake_clauses as u8,
 		nft_fee_amount: num_fee_clauses as u8,
+		is_snipeable: true,
 	}
 }
 
@@ -453,7 +454,7 @@ benchmarks! {
 		let by = account::<T>("staker");
 		create_collections::<T>(&by, 2)?;
 		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: claim(RawOrigin::Signed(by.clone()), contract_id)
+	}: claim(RawOrigin::Signed(by.clone()), contract_id, None)
 	verify {
 		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards })
 	}
@@ -475,7 +476,7 @@ benchmarks! {
 		let by = account::<T>("staker");
 		create_collections::<T>(&by, 2)?;
 		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: claim(RawOrigin::Signed(by.clone()), contract_id)
+	}: claim(RawOrigin::Signed(by.clone()), contract_id, None)
 	verify {
 		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards })
 	}
