@@ -225,10 +225,12 @@ impl Default for ContractOf<Test> {
 			stake_duration: Default::default(),
 			stake_clauses: Default::default(),
 			fee_clauses: Default::default(),
+			burn_fees: Default::default(),
 			rewards: Default::default(),
 			cancel_fee: Default::default(),
 			nft_stake_amount: 1,
 			nft_fee_amount: 1,
+			is_snipeable: true,
 		}
 	}
 }
@@ -291,13 +293,17 @@ impl ContractOf<Test> {
 		self.nft_fee_amount = fee_amount;
 		self
 	}
+	pub fn is_snipeable(mut self, is_snipeable: bool) -> Self {
+		self.is_snipeable = is_snipeable;
+		self
+	}
 }
 
 pub type MockClause = Clause<MockCollectionId, KeyLimit, ValueLimit>;
 pub type MockContractClause = ContractClause<MockCollectionId, KeyLimit, ValueLimit>;
 pub struct MockClauses(pub Vec<MockClause>);
 pub type MockMints =
-	Vec<(NftId<MockCollectionId, MockItemId>, Attribute<KeyLimit>, Attribute<ValueLimit>)>;
+	Vec<(NftId<MockCollectionId, MockItemId>, Attribute<KeyLimit>, AttributeValue<ValueLimit>)>;
 
 impl From<MockClauses> for MockMints {
 	fn from(clauses: MockClauses) -> Self {
@@ -306,12 +312,34 @@ impl From<MockClauses> for MockMints {
 			.into_iter()
 			.enumerate()
 			.map(|(i, clause)| match clause {
-				Clause::HasAttribute(collection_id, key) => {
-					(NftId(collection_id, H256::random()), key, bounded_vec![i as u8])
-				},
+				Clause::HasAttribute(collection_id, key) => (
+					NftId(collection_id, H256::random()),
+					key,
+					AttributeValue::Equal(bounded_vec![i as u8]),
+				),
 				Clause::HasAttributeWithValue(collection_id, key, value) => {
 					(NftId(collection_id, H256::random()), key, value)
 				},
+				MockClause::HasAllAttributes(collection_id, mut attrs) => (
+					NftId(collection_id, H256::random()),
+					attrs.pop().unwrap_or_default(),
+					AttributeValue::Equal(bounded_vec![i as u8]),
+				),
+				MockClause::HasAnyAttributes(collection_id, mut attrs) => (
+					NftId(collection_id, H256::random()),
+					attrs.pop().unwrap(),
+					AttributeValue::Equal(bounded_vec![i as u8]),
+				),
+				MockClause::HasAllAttributesWithValues(collection_id, mut attrs) => (
+					NftId(collection_id, H256::random()),
+					attrs.clone().pop().unwrap().0,
+					attrs.pop().unwrap().1,
+				),
+				MockClause::HasAnyAttributesWithValues(collection_id, mut attrs) => (
+					NftId(collection_id, H256::random()),
+					attrs.clone().pop().unwrap().0,
+					attrs.pop().unwrap().1,
+				),
 			})
 			.collect()
 	}
@@ -383,8 +411,8 @@ impl ExtBuilder {
 		contract_id: MockItemId,
 		by: MockAccountId,
 	) -> Self {
-		self = self.mint_stakes(stakes);
-		self = self.mint_fees(fees);
+		self.stakes = stakes;
+		self.fees = fees;
 		self.accept_contract = Some((contract_id, by));
 		self
 	}
@@ -513,13 +541,13 @@ fn set_attribute(
 	collection_id: &MockCollectionId,
 	item_id: &MockItemId,
 	key: &Attribute<KeyLimit>,
-	value: &Attribute<ValueLimit>,
+	value: &AttributeValue<ValueLimit>,
 ) {
 	<NftHelperOf<Test> as Mutate<MockAccountId, ItemConfig>>::set_attribute(
 		collection_id,
 		item_id,
 		key.as_slice(),
-		value.as_slice(),
+		value.get_value().as_slice(),
 	)
 	.unwrap()
 }
