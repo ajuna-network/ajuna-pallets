@@ -16,10 +16,11 @@
 
 #![cfg(test)]
 
+use frame_support::pallet_prelude::ConstU32;
 use frame_support::{
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-	PalletId,
+	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -41,12 +42,13 @@ impl crate::Config for Runtime {}
 
 frame_support::construct_runtime!(
 	pub struct Runtime {
-		System: frame_system,
-		Balances: pallet_balances,
-		Randomness: pallet_insecure_randomness_collective_flip,
-		Nft: pallet_nfts,
-		AAvatars: pallet_ajuna_awesome_avatars,
-		NftTransfer: pallet_ajuna_nft_transfer,
+		System: frame_system = 0,
+		Balances: pallet_balances = 1,
+		Randomness: pallet_insecure_randomness_collective_flip = 2,
+		Nft: pallet_nfts = 3,
+		AAvatars: pallet_ajuna_awesome_avatars = 4,
+		NftTransfer: pallet_ajuna_nft_transfer = 5,
+		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
 	}
 );
 
@@ -186,6 +188,9 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHandler = NftTransfer;
+	type RuleIdentifier = MockRuleId;
+	type RuntimeRule = MockRuntimeRule;
+	type AffiliateHandler = Affiliates;
 	type WeightInfo = ();
 }
 
@@ -202,6 +207,21 @@ impl pallet_ajuna_nft_transfer::Config for Runtime {
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
+}
+
+parameter_types! {
+	pub const AffiliateMaxLevel: u32 = 2;
+}
+
+pub type MockRuleId = u8;
+pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
+
+type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
+impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuleIdentifier = MockRuleId;
+	type RuntimeRule = MockRuntimeRule;
+	type AffiliateMaxLevel = AffiliateMaxLevel;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

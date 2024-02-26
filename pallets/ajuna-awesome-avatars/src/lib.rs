@@ -75,6 +75,9 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
+use pallet_ajuna_affiliates::traits::{
+	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
+};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use sp_runtime::{
 	traits::{
@@ -145,6 +148,17 @@ pub mod pallet {
 			Self::ValueLimit,
 			Avatar,
 		>;
+
+		/// The rule identifier type at runtime.
+		type RuleIdentifier: Parameter + MaxEncodedLen;
+
+		/// The rule type at runtime.
+		type RuntimeRule: Parameter + MaxEncodedLen;
+
+		type AffiliateHandler: AffiliateInspector<Self::AccountId>
+			+ AffiliateMutator<Self::AccountId>
+			+ RuleInspector<Self::RuleIdentifier, Self::RuntimeRule>
+			+ RuleMutator<Self::RuleIdentifier, Self::RuntimeRule>;
 
 		type WeightInfo: WeightInfo;
 	}
