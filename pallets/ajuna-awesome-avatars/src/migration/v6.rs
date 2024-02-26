@@ -107,11 +107,13 @@ where
 			freemint_transfer: FreemintTransferConfig { mode: FreeMintTransferMode::Open },
 			trade: self.trade.migrate_to_v6(),
 			nft_transfer: self.nft_transfer.migrate_to_v6(),
+			affiliate_config: AffiliateConfig::default(),
 		}
 	}
 }
 
 pub struct MigrateToV6<T>(sp_std::marker::PhantomData<T>);
+
 impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 	fn on_runtime_upgrade() -> Weight {
 		let current_version = Pallet::<T>::current_storage_version();

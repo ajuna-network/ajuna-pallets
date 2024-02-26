@@ -111,6 +111,21 @@ pub struct NftTransferConfig {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub enum AffiliateMode {
+	#[default]
+	Closed,
+	Open,
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub struct AffiliateConfig {
+	pub mode: AffiliateMode,
+	pub enabled_in_mint: bool,
+	pub enabled_in_buy: bool,
+	pub enabled_in_upgrade: bool,
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub struct GlobalConfig<BlockNumber> {
 	pub mint: MintConfig<BlockNumber>,
 	pub forge: ForgeConfig,
@@ -118,4 +133,5 @@ pub struct GlobalConfig<BlockNumber> {
 	pub freemint_transfer: FreemintTransferConfig,
 	pub trade: TradeConfig,
 	pub nft_transfer: NftTransferConfig,
+	pub affiliate_config: AffiliateConfig,
 }

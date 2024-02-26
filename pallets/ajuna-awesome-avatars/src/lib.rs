@@ -81,8 +81,8 @@ use pallet_ajuna_affiliates::traits::{
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, TrailingZeroInput,
-		UniqueSaturatedInto, Zero,
+		AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, Hash, Saturating,
+		TrailingZeroInput, UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
 };
@@ -270,6 +270,7 @@ pub mod pallet {
 				freemint_transfer: FreemintTransferConfig { mode: FreeMintTransferMode::Open },
 				trade: TradeConfig { open: true },
 				nft_transfer: NftTransferConfig { open: true },
+				affiliate_config: AffiliateConfig::default(),
 			});
 		}
 	}
@@ -677,7 +678,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::buy(MaxAvatarsPerPlayer::get()))]
 		pub fn buy(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
-			let GlobalConfig { trade, .. } = GlobalConfigs::<T>::get();
+			let GlobalConfig { trade, affiliate_config, .. } = GlobalConfigs::<T>::get();
 			ensure!(trade.open, Error::<T>::TradeClosed);
 
 			let (seller, price) = Self::ensure_for_trade(&avatar_id)?;
@@ -686,10 +687,19 @@ pub mod pallet {
 
 			let avatar = Self::ensure_ownership(&seller, &avatar_id)?;
 			let (current_season_id, Season { fee, .. }) = Self::current_season_with_id()?;
-			let trade_fee = fee.buy_minimum.max(
-				price.saturating_mul(fee.buy_percent.unique_saturated_into())
-					/ MAX_PERCENTAGE.unique_saturated_into(),
-			);
+
+			let trade_fee = {
+				let base_fee = fee.buy_minimum.max(
+					price.saturating_mul(fee.buy_percent.unique_saturated_into())
+						/ MAX_PERCENTAGE.unique_saturated_into(),
+				);
+
+				if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
+					Self::try_propagate_chain_fee(&buyer, base_fee)?
+				} else {
+					base_fee
+				}
+			};
 			T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&avatar.season_id, trade_fee);
 
@@ -742,8 +752,21 @@ pub mod pallet {
 				PlayerSeasonConfigs::<T>::get(&account_to_upgrade, season_id).storage_tier;
 			ensure!(storage_tier != StorageTier::Max, Error::<T>::MaxStorageTierReached);
 
-			T::Currency::withdraw(&caller, fee.upgrade_storage, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&season_id, fee.upgrade_storage);
+			let upgrade_fee = {
+				let base_fee = fee.upgrade_storage;
+				let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+
+				if affiliate_config.mode == AffiliateMode::Open
+					&& affiliate_config.enabled_in_upgrade
+				{
+					Self::try_propagate_chain_fee(&caller, base_fee)?
+				} else {
+					base_fee
+				}
+			};
+
+			T::Currency::withdraw(&caller, upgrade_fee, WithdrawReasons::FEE, AllowDeath)?;
+			Self::deposit_into_treasury(&season_id, upgrade_fee);
 
 			PlayerSeasonConfigs::<T>::mutate(&account_to_upgrade, season_id, |account| {
 				account.storage_tier = storage_tier.upgrade()
@@ -1179,20 +1202,31 @@ pub mod pallet {
 				LogicGeneration::Second => MinterV2::<T>::mint(player, &season_id, mint_option),
 			}?;
 
-			let GlobalConfig { mint, .. } = GlobalConfigs::<T>::get();
+			let GlobalConfig { mint, affiliate_config, .. } = GlobalConfigs::<T>::get();
 			match mint_option.payment {
 				MintPayment::Normal => {
-					let fee = season.fee.mint.fee_for(&mint_option.pack_size);
-					T::Currency::withdraw(player, fee, WithdrawReasons::FEE, AllowDeath)?;
-					Self::deposit_into_treasury(&season_id, fee);
+					let mint_fee = {
+						let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
+
+						if affiliate_config.mode == AffiliateMode::Open
+							&& affiliate_config.enabled_in_mint
+						{
+							Self::try_propagate_chain_fee(player, base_fee)?
+						} else {
+							base_fee
+						}
+					};
+
+					T::Currency::withdraw(player, mint_fee, WithdrawReasons::FEE, AllowDeath)?;
+					Self::deposit_into_treasury(&season_id, mint_fee);
 				},
 				MintPayment::Free => {
-					let fee = (mint_option.pack_size.as_mint_count())
+					let mint_fee = (mint_option.pack_size.as_mint_count())
 						.saturating_mul(mint.free_mint_fee_multiplier);
 					PlayerConfigs::<T>::try_mutate(player, |config| -> DispatchResult {
 						config.free_mints = config
 							.free_mints
-							.checked_sub(fee)
+							.checked_sub(mint_fee)
 							.ok_or(Error::<T>::InsufficientFreeMints)?;
 						Ok(())
 					})?;
@@ -1638,6 +1672,37 @@ pub mod pallet {
 		fn seasons(season_id: &SeasonId) -> Result<SeasonOf<T>, DispatchError> {
 			let season = Seasons::<T>::get(season_id).ok_or(Error::<T>::UnknownSeason)?;
 			Ok(season)
+		}
+
+		fn try_propagate_chain_fee(
+			account: &T::AccountId,
+			base_fee: BalanceOf<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
+			if let Some(mut chain) = T::AffiliateHandler::get_affiliator_chain_for(account) {
+				let mut final_fee = base_fee;
+
+				if let Some(chain_acc) = chain.pop() {
+					let transfer_fee = final_fee
+						.saturating_mul(10_u32.into())
+						.checked_div(&100_u32.into())
+						.unwrap_or_default();
+					T::Currency::transfer(account, &chain_acc, transfer_fee, AllowDeath)?;
+					final_fee = final_fee.saturating_sub(transfer_fee);
+				}
+
+				if let Some(chain_acc) = chain.pop() {
+					let transfer_fee = final_fee
+						.saturating_mul(5_u32.into())
+						.checked_div(&100_u32.into())
+						.unwrap_or_default();
+					T::Currency::transfer(account, &chain_acc, transfer_fee, AllowDeath)?;
+					final_fee = final_fee.saturating_sub(transfer_fee);
+				}
+
+				Ok(final_fee)
+			} else {
+				Ok(base_fee)
+			}
 		}
 	}
 }
