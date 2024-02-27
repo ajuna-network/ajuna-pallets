@@ -99,7 +99,7 @@ impl<T> GlobalConfigV5<T>
 where
 	T: Config,
 {
-	fn migrate_to_v6(self) -> GlobalConfig<BlockNumberFor<T>> {
+	fn migrate_to_v6(self) -> GlobalConfig<BlockNumberFor<T>, BalanceOf<T>> {
 		GlobalConfig {
 			mint: self.mint.migrate_to_v6(),
 			forge: self.forge.migrate_to_v6(),

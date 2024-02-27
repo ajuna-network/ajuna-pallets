@@ -118,20 +118,28 @@ pub enum AffiliateMode {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct AffiliateConfig {
+pub struct AffiliateConfig<Balance> {
 	pub mode: AffiliateMode,
 	pub enabled_in_mint: bool,
 	pub enabled_in_buy: bool,
 	pub enabled_in_upgrade: bool,
+	pub affiliator_enable_fee: Balance,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct GlobalConfig<BlockNumber> {
+pub struct GlobalConfig<BlockNumber, Balance> {
 	pub mint: MintConfig<BlockNumber>,
 	pub forge: ForgeConfig,
 	pub transfer: TransferConfig,
 	pub freemint_transfer: FreemintTransferConfig,
 	pub trade: TradeConfig,
 	pub nft_transfer: NftTransferConfig,
-	pub affiliate_config: AffiliateConfig,
+	pub affiliate_config: AffiliateConfig<Balance>,
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+pub enum AffiliatorTarget<AccountId> {
+	OneselfFree,
+	OneselfPaying,
+	OtherPaying(AccountId),
 }

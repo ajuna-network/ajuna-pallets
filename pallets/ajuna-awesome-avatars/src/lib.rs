@@ -98,7 +98,7 @@ pub mod pallet {
 	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub(crate) type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
-	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>>;
+	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>, BalanceOf<T>>;
 	pub(crate) type KeyLimitOf<T> = <T as Config>::KeyLimit;
 	pub(crate) type ValueLimitOf<T> = <T as Config>::ValueLimit;
 	pub(crate) type CollectionIdOf<T> = <<T as Config>::NftHandler as NftHandler<
@@ -467,6 +467,8 @@ pub mod pallet {
 		AccountAlreadyInWhitelist,
 		/// Cannot add more accounts to the whitelist.
 		WhitelistedAccountsLimitReached,
+		/// No account matches the provided affiliator identifier
+		AffiliatorNotFound,
 	}
 
 	#[pallet::hooks]
@@ -1123,6 +1125,65 @@ pub mod pallet {
 					})
 				},
 			}
+		}
+
+		#[pallet::call_index(22)]
+		#[pallet::weight({1000})]
+		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: u64) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
+				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
+			} else {
+				Err(Error::<T>::AffiliatorNotFound.into())
+			}
+		}
+
+		#[pallet::call_index(23)]
+		#[pallet::weight({1000})]
+		pub fn enable_affiliator(
+			origin: OriginFor<T>,
+			target: AffiliatorTarget<T::AccountId>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			match target {
+				AffiliatorTarget::OneselfFree => {
+					// Check criteria
+					// T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
+				},
+				AffiliatorTarget::OneselfPaying => {
+					// Substract amout for paying if account not affiliator
+					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						affiliate_config.affiliator_enable_fee,
+						AllowDeath,
+					)?;
+					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
+				},
+				AffiliatorTarget::OtherPaying(other) => {
+					// Substract amout for paying if other not affiliator
+					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						affiliate_config.affiliator_enable_fee,
+						AllowDeath,
+					)?;
+					T::AffiliateHandler::try_mark_account_as_affiliatable(&other)?;
+				},
+			}
+
+			Ok(())
+		}
+
+		#[pallet::call_index(24)]
+		#[pallet::weight({1000})]
+		pub fn remove_affiliation(origin: OriginFor<T>) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::AffiliateHandler::try_clear_affiliation_for(&account)
 		}
 	}
 

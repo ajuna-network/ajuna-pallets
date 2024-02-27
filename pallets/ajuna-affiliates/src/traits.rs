@@ -11,6 +11,8 @@ pub trait AffiliateInspector<AccountId> {
 
 	/// Returns the number of accounts that are affiliated with 'account'.
 	fn get_affiliate_count_for(account: &AccountId) -> u32;
+
+	fn get_account_for_id(affiliate_id: u64) -> Option<AccountId>;
 }
 
 pub trait AffiliateMutator<AccountId> {
