@@ -1129,7 +1129,7 @@ pub mod pallet {
 
 		#[pallet::call_index(22)]
 		#[pallet::weight({1000})]
-		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: u64) -> DispatchResult {
+		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: u32) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
 			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
@@ -1181,8 +1181,8 @@ pub mod pallet {
 
 		#[pallet::call_index(24)]
 		#[pallet::weight({1000})]
-		pub fn remove_affiliation(origin: OriginFor<T>) -> DispatchResult {
-			let account = ensure_signed(origin)?;
+		pub fn remove_affiliation(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
 			T::AffiliateHandler::try_clear_affiliation_for(&account)
 		}
 	}

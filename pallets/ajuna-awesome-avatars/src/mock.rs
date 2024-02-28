@@ -336,11 +336,11 @@ impl ExtBuilder {
 
 			if !self.affiliators.is_empty() {
 				pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::set(
-					self.affiliators.len() as u64,
+					self.affiliators.len() as u32,
 				);
 				for (i, account) in self.affiliators.into_iter().enumerate() {
 					Affiliates::force_mark_account_as_affiliatable(&account);
-					pallet_ajuna_affiliates::AffiliateIdMapping::<Test, AffiliatesInstance1>::insert(i as u64, account);
+					pallet_ajuna_affiliates::AffiliateIdMapping::<Test, AffiliatesInstance1>::insert(i as u32, account);
 				}
 			}
 		});

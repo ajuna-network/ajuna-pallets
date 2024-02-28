@@ -83,11 +83,11 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::RuleIdentifier, T::RuntimeRule, OptionQuery>;
 
 	#[pallet::storage]
-	pub type NextAffiliateId<T: Config<I>, I: 'static = ()> = StorageValue<_, u64, ValueQuery>;
+	pub type NextAffiliateId<T: Config<I>, I: 'static = ()> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
 	pub type AffiliateIdMapping<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Blake2_128Concat, u64, T::AccountId, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, u32, T::AccountId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -98,7 +98,7 @@ pub mod pallet {
 		},
 		AccountMarkedAsAffiliatable {
 			account: T::AccountId,
-			affiliate_id: u64,
+			affiliate_id: u32,
 		},
 		AccountAffiliated {
 			account: T::AccountId,
@@ -174,21 +174,21 @@ pub mod pallet {
 			Affiliators::<T, I>::get(account).affiliates
 		}
 
-		fn get_account_for_id(affiliate_id: u64) -> Option<AccountIdFor<T>> {
+		fn get_account_for_id(affiliate_id: u32) -> Option<AccountIdFor<T>> {
 			AffiliateIdMapping::<T, I>::get(affiliate_id)
 		}
 	}
 
 	impl<T: Config<I>, I: 'static> AffiliateMutator<AccountIdFor<T>> for Pallet<T, I> {
 		fn try_mark_account_as_affiliatable(account: &AccountIdFor<T>) -> DispatchResult {
-			let next_id = NextAffiliateId::<T, I>::try_mutate(|value| {
+			let next_id = NextAffiliateId::<T, I>::try_mutate(|value: &mut u32| {
 				let next_id = *value;
 
 				*value = value
 					.checked_add(1)
 					.ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
 
-				Ok::<u64, DispatchError>(next_id)
+				Ok::<u32, DispatchError>(next_id)
 			})?;
 
 			AffiliateIdMapping::<T, I>::insert(next_id, account.clone());

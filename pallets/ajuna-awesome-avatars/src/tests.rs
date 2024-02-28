@@ -4178,6 +4178,7 @@ mod affiliates {
 		ExtBuilder::default()
 			.balances(&[(ALICE, initial_balance)])
 			.affiliators(&[ALICE])
+			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
 				assert_eq!(
@@ -4197,7 +4198,7 @@ mod affiliates {
 					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 1 }
 				);
 
-				assert_ok!(AAvatars::remove_affiliation(RuntimeOrigin::signed(BOB)));
+				assert_ok!(AAvatars::remove_affiliation(RuntimeOrigin::signed(ALICE), BOB));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
