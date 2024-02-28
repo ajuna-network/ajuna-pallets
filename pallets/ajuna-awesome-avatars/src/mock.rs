@@ -192,9 +192,8 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHandler = NftTransfer;
-	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
 	type AffiliateHandler = Affiliates;
+	type FeeChainMaxLength = AffiliateMaxLevel;
 	type WeightInfo = ();
 }
 
@@ -217,14 +216,11 @@ parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
 }
 
-pub type MockRuleId = u8;
-pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
-
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
+	type RuleIdentifier = AffiliateMethods;
+	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 }
 

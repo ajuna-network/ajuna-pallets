@@ -91,6 +91,7 @@ use sp_std::prelude::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use pallet_ajuna_affiliates::traits::RuleExecutor;
 	use sp_std::collections::vec_deque::VecDeque;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -108,6 +109,8 @@ pub mod pallet {
 		ValueLimitOf<T>,
 		Avatar,
 	>>::CollectionId;
+
+	pub type FeePropagationOf<T> = FeePropagation<<T as Config>::FeeChainMaxLength>;
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
@@ -149,16 +152,15 @@ pub mod pallet {
 			Avatar,
 		>;
 
-		/// The rule identifier type at runtime.
-		type RuleIdentifier: Parameter + MaxEncodedLen;
-
-		/// The rule type at runtime.
-		type RuntimeRule: Parameter + MaxEncodedLen;
+		/// The maximum depth of the propagation fee chain,
+		#[pallet::constant]
+		type FeeChainMaxLength: Get<u32>;
 
 		type AffiliateHandler: AffiliateInspector<Self::AccountId>
 			+ AffiliateMutator<Self::AccountId>
-			+ RuleInspector<Self::RuleIdentifier, Self::RuntimeRule>
-			+ RuleMutator<Self::RuleIdentifier, Self::RuntimeRule>;
+			+ RuleInspector<AffiliateMethods, FeePropagationOf<Self>>
+			+ RuleMutator<AffiliateMethods, FeePropagationOf<Self>>
+			+ RuleExecutor<AffiliateMethods, FeePropagationOf<Self>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -697,7 +699,7 @@ pub mod pallet {
 				);
 
 				if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
-					Self::try_propagate_chain_fee(&buyer, base_fee)?
+					Self::try_propagate_chain_fee(AffiliateMethods::Buy, &buyer, base_fee)?
 				} else {
 					base_fee
 				}
@@ -761,7 +763,11 @@ pub mod pallet {
 				if affiliate_config.mode == AffiliateMode::Open
 					&& affiliate_config.enabled_in_upgrade
 				{
-					Self::try_propagate_chain_fee(&caller, base_fee)?
+					Self::try_propagate_chain_fee(
+						AffiliateMethods::UpgradeStorage,
+						&caller,
+						base_fee,
+					)?
 				} else {
 					base_fee
 				}
@@ -1185,6 +1191,28 @@ pub mod pallet {
 			let _ = Self::ensure_organizer(origin)?;
 			T::AffiliateHandler::try_clear_affiliation_for(&account)
 		}
+
+		#[pallet::call_index(25)]
+		#[pallet::weight({1000})]
+		pub fn set_rule_for(
+			origin: OriginFor<T>,
+			rule_id: AffiliateMethods,
+			rule: FeePropagationOf<T>,
+		) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+
+			T::AffiliateHandler::try_add_rule_for(rule_id, rule)
+		}
+
+		#[pallet::call_index(26)]
+		#[pallet::weight({1000})]
+		pub fn clear_rule_for(origin: OriginFor<T>, rule_id: AffiliateMethods) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+
+			T::AffiliateHandler::clear_rule_for(rule_id);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1272,7 +1300,7 @@ pub mod pallet {
 						if affiliate_config.mode == AffiliateMode::Open
 							&& affiliate_config.enabled_in_mint
 						{
-							Self::try_propagate_chain_fee(player, base_fee)?
+							Self::try_propagate_chain_fee(AffiliateMethods::Mint, player, base_fee)?
 						} else {
 							base_fee
 						}
@@ -1736,34 +1764,34 @@ pub mod pallet {
 		}
 
 		fn try_propagate_chain_fee(
+			rule_id: AffiliateMethods,
 			account: &T::AccountId,
 			base_fee: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
-			if let Some(mut chain) = T::AffiliateHandler::get_affiliator_chain_for(account) {
-				let mut final_fee = base_fee;
+			let final_fee = if let Some(chain) =
+				T::AffiliateHandler::get_affiliator_chain_for(account)
+			{
+				T::AffiliateHandler::try_execute_rule_for(rule_id, |rule| {
+					let mut final_fee = base_fee;
+					for (rule_perc, chain_acc) in rule.into_iter().zip(chain.clone()) {
+						let transfer_fee = final_fee
+							.saturating_mul(rule_perc.into())
+							.checked_div(&100_u32.into())
+							.unwrap_or_default();
 
-				if let Some(chain_acc) = chain.pop() {
-					let transfer_fee = final_fee
-						.saturating_mul(10_u32.into())
-						.checked_div(&100_u32.into())
-						.unwrap_or_default();
-					T::Currency::transfer(account, &chain_acc, transfer_fee, AllowDeath)?;
-					final_fee = final_fee.saturating_sub(transfer_fee);
-				}
+						if transfer_fee > 0_u32.into() {
+							T::Currency::transfer(account, &chain_acc, transfer_fee, AllowDeath)?;
+							final_fee = final_fee.saturating_sub(transfer_fee);
+						}
+					}
 
-				if let Some(chain_acc) = chain.pop() {
-					let transfer_fee = final_fee
-						.saturating_mul(5_u32.into())
-						.checked_div(&100_u32.into())
-						.unwrap_or_default();
-					T::Currency::transfer(account, &chain_acc, transfer_fee, AllowDeath)?;
-					final_fee = final_fee.saturating_sub(transfer_fee);
-				}
-
-				Ok(final_fee)
+					Ok(final_fee)
+				})?
 			} else {
-				Ok(base_fee)
-			}
+				base_fee
+			};
+
+			Ok(final_fee)
 		}
 	}
 }

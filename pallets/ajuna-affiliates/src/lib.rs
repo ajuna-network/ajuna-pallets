@@ -92,24 +92,10 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
-		/// An organizer has been set.
-		OrganizerSet {
-			organizer: T::AccountId,
-		},
-		AccountMarkedAsAffiliatable {
-			account: T::AccountId,
-			affiliate_id: u32,
-		},
-		AccountAffiliated {
-			account: T::AccountId,
-			to: T::AccountId,
-		},
-		RuleAdded {
-			rule_id: T::RuleIdentifier,
-		},
-		RuleCleared {
-			rule_id: T::RuleIdentifier,
-		},
+		AccountMarkedAsAffiliatable { account: T::AccountId, affiliate_id: u32 },
+		AccountAffiliated { account: T::AccountId, to: T::AccountId },
+		RuleAdded { rule_id: T::RuleIdentifier },
+		RuleCleared { rule_id: T::RuleIdentifier },
 	}
 
 	#[pallet::error]
@@ -130,6 +116,8 @@ pub mod pallet {
 		CannotAffiliateBlocked,
 		/// The given extrinsic identifier is already paired with an affiliate rule
 		ExtrinsicAlreadyHasRule,
+		/// The given extrinsic identifier is not associated with any rule
+		ExtrinsicHasNoRule,
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
@@ -296,6 +284,22 @@ pub mod pallet {
 			AffiliateRules::<T, I>::remove(rule_id.clone());
 
 			Self::deposit_event(Event::RuleCleared { rule_id });
+		}
+	}
+
+	impl<T: Config<I>, I: 'static> RuleExecutor<T::RuleIdentifier, T::RuntimeRule> for Pallet<T, I> {
+		fn try_execute_rule_for<F, R>(
+			rule_id: T::RuleIdentifier,
+			rule_fn: F,
+		) -> Result<R, DispatchError>
+		where
+			F: Fn(T::RuntimeRule) -> Result<R, DispatchError>,
+		{
+			if let Some(rule) = Self::get_rule_for(rule_id) {
+				rule_fn(rule)
+			} else {
+				Err(Error::<T, I>::ExtrinsicHasNoRule.into())
+			}
 		}
 	}
 }

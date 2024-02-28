@@ -15,12 +15,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 mod account;
+mod affiliates;
 mod avatar;
 mod config;
 mod fee;
 mod season;
 
 pub use account::*;
+pub use affiliates::*;
 pub use avatar::*;
 pub use config::*;
 pub use fee::*;

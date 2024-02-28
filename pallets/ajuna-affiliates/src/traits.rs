@@ -49,6 +49,14 @@ pub trait RuleMutator<RuleId, Rule> {
 	fn clear_rule_for(rule_id: RuleId);
 }
 
+pub trait RuleExecutor<RuleId, Rule> {
+	/// Tries to retrieve the rule associated with 'rule_id' and passes it to
+	/// the 'rule_fn' parameter, propagating its output to the function caller
+	fn try_execute_rule_for<F, R>(rule_id: RuleId, rule_fn: F) -> Result<R, DispatchError>
+	where
+		F: Fn(Rule) -> Result<R, DispatchError>;
+}
+
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
 pub enum AffiliatableStatus {
 	#[default]
