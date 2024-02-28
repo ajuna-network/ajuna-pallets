@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::ops::{Deref, DerefMut};
 use crate::{
 	types::{fee::Fee, Avatar, LogicGeneration, RarityTier, SeasonId},
 	Config, Error, MAX_PERCENTAGE,
@@ -36,17 +37,61 @@ impl SeasonStatus {
 	}
 }
 
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+pub struct SeasonMeta {
+	pub name: BoundedVec<u8, ConstU32<100>>,
+	pub description: BoundedVec<u8, ConstU32<1_000>>,
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+pub struct SeasonSchedule<BlockNumber> {
+	pub early_start: BlockNumber,
+	pub start: BlockNumber,
+	pub end: BlockNumber
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+pub struct SeasonTradeFilters(BoundedVec<TradeFilter, ConstU32<100>>);
+
+impl Deref for SeasonTradeFilters {
+	type Target = BoundedVec<TradeFilter, ConstU32<100>>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl DerefMut for SeasonTradeFilters {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
+impl SeasonTradeFilters {
+	pub(crate) fn is_tradable(&self, avatar: &Avatar) -> bool {
+		// No filter means we allow everything to be traded.
+		if self.0.is_empty() {
+			return true;
+		}
+
+		let dna = &avatar.dna.as_slice()[..4];
+		self.0.iter().any(|filter| {
+			let bytes = filter.to_le_bytes();
+			let is_matching_class =
+				(0..3).all(|i| Self::is_matching_with_zero_wildcard(dna[i], bytes[i]));
+			let is_matching_quantity = bytes[3] == 0 || dna[3] >= bytes[3];
+
+			is_matching_class && is_matching_quantity
+		})
+	}
+}
+
 pub type RarityPercent = u8;
 pub type SacrificeCount = u8;
 pub type TradeFilter = u32;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct Season<BlockNumber, Balance> {
-	pub name: BoundedVec<u8, ConstU32<100>>,
-	pub description: BoundedVec<u8, ConstU32<1_000>>,
-	pub early_start: BlockNumber,
-	pub start: BlockNumber,
-	pub end: BlockNumber,
 	pub max_tier_forges: u32,
 	pub max_variations: u8,
 	pub max_components: u8,
@@ -58,7 +103,6 @@ pub struct Season<BlockNumber, Balance> {
 	pub base_prob: RarityPercent,
 	pub per_period: BlockNumber,
 	pub periods: u16,
-	pub trade_filters: BoundedVec<TradeFilter, ConstU32<100>>,
 	pub fee: Fee<Balance>,
 	pub mint_logic: LogicGeneration,
 	pub forge_logic: LogicGeneration,
