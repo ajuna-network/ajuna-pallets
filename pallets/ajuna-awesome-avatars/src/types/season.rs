@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::ops::{Deref, DerefMut};
 use crate::{
 	types::{fee::Fee, Avatar, LogicGeneration, RarityTier, SeasonId},
 	Config, Error, MAX_PERCENTAGE,
@@ -22,6 +21,7 @@ use crate::{
 use frame_support::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32Bit, UniqueSaturatedInto, Zero};
 use sp_std::borrow::ToOwned;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 pub struct SeasonStatus {
@@ -47,13 +47,34 @@ pub struct SeasonMeta {
 pub struct SeasonSchedule<BlockNumber> {
 	pub early_start: BlockNumber,
 	pub start: BlockNumber,
-	pub end: BlockNumber
+	pub end: BlockNumber,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
-pub struct SeasonTradeFilters(BoundedVec<TradeFilter, ConstU32<100>>);
+impl<BlockNumber> SeasonSchedule<BlockNumber>
+where
+	BlockNumber: PartialOrd,
+{
+	pub(crate) fn is_active(&self, now: BlockNumber) -> bool {
+		now >= self.start && now <= self.end
+	}
 
-impl Deref for SeasonTradeFilters {
+	pub(crate) fn is_early(&self, now: BlockNumber) -> bool {
+		now >= self.early_start && now < self.start
+	}
+
+	pub(crate) fn validate<T: Config>(&self) -> DispatchResult {
+		ensure!(self.early_start < self.start, Error::<T>::EarlyStartTooLate);
+		ensure!(self.start < self.end, Error::<T>::SeasonStartTooLate);
+		Ok(())
+	}
+}
+
+pub type TradeFilter = u32;
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub struct TradeFilters(pub BoundedVec<TradeFilter, ConstU32<100>>);
+
+impl Deref for TradeFilters {
 	type Target = BoundedVec<TradeFilter, ConstU32<100>>;
 
 	fn deref(&self) -> &Self::Target {
@@ -61,21 +82,21 @@ impl Deref for SeasonTradeFilters {
 	}
 }
 
-impl DerefMut for SeasonTradeFilters {
+impl DerefMut for TradeFilters {
 	fn deref_mut(&mut self) -> &mut Self::Target {
 		&mut self.0
 	}
 }
 
-impl SeasonTradeFilters {
+impl TradeFilters {
 	pub(crate) fn is_tradable(&self, avatar: &Avatar) -> bool {
 		// No filter means we allow everything to be traded.
-		if self.0.is_empty() {
+		if self.is_empty() {
 			return true;
 		}
 
 		let dna = &avatar.dna.as_slice()[..4];
-		self.0.iter().any(|filter| {
+		self.iter().any(|filter| {
 			let bytes = filter.to_le_bytes();
 			let is_matching_class =
 				(0..3).all(|i| Self::is_matching_with_zero_wildcard(dna[i], bytes[i]));
@@ -84,11 +105,19 @@ impl SeasonTradeFilters {
 			is_matching_class && is_matching_quantity
 		})
 	}
+
+	fn is_matching_with_zero_wildcard(dna: u8, filter: u8) -> bool {
+		(0..2).all(|i| {
+			let dna_nibble = (dna >> (4 * i)) & 0x0F;
+			let filter_nibble = (filter >> (4 * i)) & 0x0F;
+
+			filter_nibble == 0 || dna_nibble == filter_nibble
+		})
+	}
 }
 
 pub type RarityPercent = u8;
 pub type SacrificeCount = u8;
-pub type TradeFilter = u32;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct Season<BlockNumber, Balance> {
@@ -109,17 +138,8 @@ pub struct Season<BlockNumber, Balance> {
 }
 
 impl<BlockNumber: AtLeast32Bit, Balance> Season<BlockNumber, Balance> {
-	pub(crate) fn is_active(&self, now: BlockNumber) -> bool {
-		now >= self.start && now <= self.end
-	}
-
-	pub(crate) fn is_early(&self, now: BlockNumber) -> bool {
-		now >= self.early_start && now < self.start
-	}
-
 	pub(crate) fn validate<T: Config>(&mut self) -> DispatchResult {
 		self.sort();
-		self.validate_block_numbers::<T>()?;
 		self.validate_max_variations::<T>()?;
 		self.validate_max_components::<T>()?;
 		self.validate_tiers::<T>()?;
@@ -139,32 +159,6 @@ impl<BlockNumber: AtLeast32Bit, Balance> Season<BlockNumber, Balance> {
 		self.tiers.clone().into_iter().max().unwrap_or_default()
 	}
 
-	pub(crate) fn is_tradable(&self, avatar: &Avatar) -> bool {
-		// No filter means we allow everything to be traded.
-		if self.trade_filters.is_empty() {
-			return true;
-		}
-
-		let dna = &avatar.dna.as_slice()[..4];
-		self.trade_filters.iter().any(|filter| {
-			let bytes = filter.to_le_bytes();
-			let is_matching_class =
-				(0..3).all(|i| Self::is_matching_with_zero_wildcard(dna[i], bytes[i]));
-			let is_matching_quantity = bytes[3] == 0 || dna[3] >= bytes[3];
-
-			is_matching_class && is_matching_quantity
-		})
-	}
-
-	fn is_matching_with_zero_wildcard(dna: u8, filter: u8) -> bool {
-		(0..2).all(|i| {
-			let dna_nibble = (dna >> (4 * i)) & 0x0F;
-			let filter_nibble = (filter >> (4 * i)) & 0x0F;
-
-			filter_nibble == 0 || dna_nibble == filter_nibble
-		})
-	}
-
 	fn full_cycle(&self) -> BlockNumber {
 		self.per_period.clone().saturating_mul(self.periods.unique_saturated_into())
 	}
@@ -175,12 +169,6 @@ impl<BlockNumber: AtLeast32Bit, Balance> Season<BlockNumber, Balance> {
 		// probabilities are sorted in descending order
 		self.single_mint_probs.sort_by(|a, b| b.cmp(a));
 		self.batch_mint_probs.sort_by(|a, b| b.cmp(a));
-	}
-
-	fn validate_block_numbers<T: Config>(&self) -> DispatchResult {
-		ensure!(self.early_start < self.start, Error::<T>::EarlyStartTooLate);
-		ensure!(self.start < self.end, Error::<T>::SeasonStartTooLate);
-		Ok(())
 	}
 
 	fn validate_max_variations<T: Config>(&self) -> DispatchResult {
@@ -254,15 +242,11 @@ mod test {
 	use super::*;
 	use crate::{mock::*, types::*};
 	use frame_support::{assert_err, assert_ok};
+	use sp_runtime::bounded_vec;
 
 	impl Default for Season<MockBlockNumber, MockBalance> {
 		fn default() -> Self {
 			Self {
-				name: b"cool season".to_vec().try_into().unwrap(),
-				description: b"this is a really cool season".to_vec().try_into().unwrap(),
-				early_start: 2,
-				start: 3,
-				end: 4,
 				max_tier_forges: 10,
 				max_variations: 2,
 				max_components: 2,
@@ -283,7 +267,6 @@ mod test {
 				base_prob: 0,
 				per_period: 10,
 				periods: 12,
-				trade_filters: BoundedVec::default(),
 				fee: Fee {
 					mint: MintFees { one: 1, three: 2, six: 3 },
 					transfer_avatar: Default::default(),
@@ -291,6 +274,8 @@ mod test {
 					buy_percent: Default::default(),
 					upgrade_storage: Default::default(),
 					prepare_avatar: Default::default(),
+					set_price_unlock: Default::default(),
+					avatar_transfer_unlock: Default::default(),
 				},
 				mint_logic: LogicGeneration::First,
 				forge_logic: LogicGeneration::First,
@@ -299,18 +284,6 @@ mod test {
 	}
 
 	impl Season<MockBlockNumber, MockBalance> {
-		pub fn early_start(mut self, early_start: MockBlockNumber) -> Self {
-			self.early_start = early_start;
-			self
-		}
-		pub fn start(mut self, start: MockBlockNumber) -> Self {
-			self.start = start;
-			self
-		}
-		pub fn end(mut self, end: MockBlockNumber) -> Self {
-			self.end = end;
-			self
-		}
 		pub fn max_tier_forges(mut self, max_tier_forges: u32) -> Self {
 			self.max_tier_forges = max_tier_forges;
 			self
@@ -355,10 +328,6 @@ mod test {
 			self.periods = periods;
 			self
 		}
-		pub fn trade_filters(mut self, trade_filters: Vec<TradeFilter>) -> Self {
-			self.trade_filters = trade_filters.try_into().unwrap();
-			self
-		}
 		pub fn mint_fee(mut self, fee: MintFees<MockBalance>) -> Self {
 			self.fee.mint = fee;
 			self
@@ -385,6 +354,36 @@ mod test {
 		}
 		pub fn mint_logic(mut self, logic: LogicGeneration) -> Self {
 			self.mint_logic = logic;
+			self
+		}
+	}
+
+	impl Default for SeasonMeta {
+		fn default() -> Self {
+			Self {
+				name: b"cool season".to_vec().try_into().unwrap(),
+				description: b"this is a really cool season".to_vec().try_into().unwrap(),
+			}
+		}
+	}
+
+	impl Default for SeasonSchedule<MockBlockNumber> {
+		fn default() -> Self {
+			Self { early_start: 2, start: 3, end: 4 }
+		}
+	}
+
+	impl SeasonSchedule<MockBlockNumber> {
+		pub fn early_start(mut self, early_start: MockBlockNumber) -> Self {
+			self.early_start = early_start;
+			self
+		}
+		pub fn start(mut self, start: MockBlockNumber) -> Self {
+			self.start = start;
+			self
+		}
+		pub fn end(mut self, end: MockBlockNumber) -> Self {
+			self.end = end;
 			self
 		}
 	}
@@ -439,9 +438,6 @@ mod test {
 			.periods(15);
 
 		for (mut season, error) in [
-			// block_numbers
-			(season.clone().early_start(10).start(0), Error::<Test>::EarlyStartTooLate),
-			(season.clone().start(10).end(0), Error::<Test>::SeasonStartTooLate),
 			// max_variations
 			(season.clone().max_variations(0), Error::<Test>::MaxVariationsTooLow),
 			(season.clone().max_variations(16), Error::<Test>::MaxVariationsTooHigh),
@@ -477,6 +473,17 @@ mod test {
 			assert_err!(season.validate::<Test>(), error);
 		}
 		assert_ok!(season.validate::<Test>());
+	}
+
+	#[test]
+	fn validate_schedule_works() {
+		for (schedule, error) in [
+			// block_numbers
+			(SeasonSchedule::default().early_start(10).start(0), Error::<Test>::EarlyStartTooLate),
+			(SeasonSchedule::default().start(10).end(0), Error::<Test>::SeasonStartTooLate),
+		] {
+			assert_err!(schedule.validate::<Test>(), error);
+		}
 	}
 
 	#[test]
@@ -546,9 +553,7 @@ mod test {
 			(0b0111_1001, 0b0000_0001, false),
 			(0b0111_1001, 0b0001_0000, false),
 		] {
-			let output = Season::<MockBlockNumber, MockBalance>::is_matching_with_zero_wildcard(
-				byte_1, byte_2,
-			);
+			let output = TradeFilters::is_matching_with_zero_wildcard(byte_1, byte_2);
 
 			assert_eq!(output, expected);
 		}
@@ -556,7 +561,7 @@ mod test {
 
 	#[test]
 	fn is_tradable_works() {
-		let season = Season::default().trade_filters(vec![
+		let season_trade_filters = TradeFilters(bounded_vec![
 			u32::from_le_bytes([0x11, 0x07, 0x00, 0x00]), // CrazyDude pet
 			u32::from_le_bytes([0x12, 0x36, 0x00, 0x00]), // GiantWoodStick armor front pet part
 			u32::from_le_bytes([0x25, 0x07, 0x00, 0xFF]), // Metals of quantity 255
@@ -566,8 +571,8 @@ mod test {
 			u32::from_le_bytes([0x45, 0x00, 0x00, 0x0F]), // WeaponVersion1 of quantity 15
 		]);
 
-		let season_with_no_filters = Season::default();
-		let season_with_wildcard_filter = Season::default().trade_filters(vec![0]);
+		let season_with_no_filters = TradeFilters::default();
+		let season_with_wildcard_filter = TradeFilters(bounded_vec![0]);
 
 		for (bytes, expected) in [
 			([0x11, 0x07, 0x01, 0xF0], true),  // Common CrazyDude pet
@@ -593,7 +598,7 @@ mod test {
 			([0x45, 0x00, 0x05, 0x10], true),  // Legendary WeaponVersion1 of quantity 16
 		] {
 			let avatar = Avatar::default().dna(bytes.as_slice());
-			assert_eq!(season.is_tradable(&avatar), expected);
+			assert_eq!(season_trade_filters.is_tradable(&avatar), expected);
 
 			// Allow everything when there are no filters or a wildcard filter is used.
 			assert!(season_with_no_filters.is_tradable(&avatar));

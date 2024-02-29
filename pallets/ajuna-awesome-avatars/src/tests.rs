@@ -169,15 +169,13 @@ mod treasury {
 
 	#[test]
 	fn claim_treasury_works() {
-		let season_1 = Season::default().early_start(5).start(10).end(15).mint_fee(MintFees {
-			one: 12,
-			three: 34,
-			six: 56,
-		});
+		let season_1 = Season::default().mint_fee(MintFees { one: 12, three: 34, six: 56 });
+		let season_1_schedule = SeasonSchedule::default().early_start(5).start(10).end(15);
 		let initial_balance = MockExistentialDeposit::get() + 999_999;
 		let total_supply = initial_balance;
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season_1.clone())])
+			.schedules(&[(SEASON_ID, season_1_schedule.clone())])
 			.balances(&[(BOB, initial_balance)])
 			.build()
 			.execute_with(|| {
@@ -196,7 +194,7 @@ mod treasury {
 					Error::<Test>::CannotClaimDuringSeason
 				);
 
-				run_to_block(season_1.end + 1);
+				run_to_block(season_1_schedule.end + 1);
 				assert_ok!(AAvatars::claim_treasury(RuntimeOrigin::signed(BOB), SEASON_ID));
 				assert_eq!(Treasury::<Test>::get(SEASON_ID), 0);
 				assert_eq!(Balances::total_balance(&BOB), initial_balance + 333);
@@ -246,10 +244,11 @@ mod treasury {
 
 	#[test]
 	fn claim_treasury_rejects_during_season() {
-		let season_1 = Season::default().early_start(10).start(15).end(20);
-		let season_2 = Season::default().early_start(25).start(30).end(35);
+		let season_1_schedule = SeasonSchedule::default().early_start(10).start(15).end(20);
+		let season_2_schedule = SeasonSchedule::default().early_start(25).start(30).end(35);
 		ExtBuilder::default()
-			.seasons(&[(1, season_1.clone()), (2, season_2.clone())])
+			.seasons(&[(1, Season::default()), (2, Season::default())])
+			.schedules(&[(1, season_1_schedule.clone()), (2, season_2_schedule.clone())])
 			.balances(&[
 				(ALICE, MockExistentialDeposit::get()),
 				(BOB, MockExistentialDeposit::get()),
@@ -265,7 +264,7 @@ mod treasury {
 
 				// before season 1
 				for (treasurer, season_id) in [(ALICE, 1), (BOB, 2), (CHARLIE, 3)] {
-					for n in 0..season_1.early_start {
+					for n in 0..season_1_schedule.early_start {
 						run_to_block(n);
 						assert_noop!(
 							AAvatars::claim_treasury(RuntimeOrigin::signed(treasurer), season_id),
@@ -277,8 +276,8 @@ mod treasury {
 				// during season 1
 				for (treasurer, season_id) in [(ALICE, 1), (BOB, 2), (CHARLIE, 3)] {
 					for iter in [
-						season_1.early_start..=season_1.start, // 10..15
-						season_1.start..=season_1.end,         // 15..20
+						season_1_schedule.early_start..=season_1_schedule.start, // 10..15
+						season_1_schedule.start..=season_1_schedule.end,         // 15..20
 					] {
 						for n in iter {
 							run_to_block(n);
@@ -295,7 +294,7 @@ mod treasury {
 
 				// before season 2
 				for (treasurer, season_id) in [(BOB, 2), (CHARLIE, 3)] {
-					for n in (season_1.end + 1)..season_2.early_start {
+					for n in (season_1_schedule.end + 1)..season_2_schedule.early_start {
 						run_to_block(n);
 						deposit_into_treasury(1, 369);
 						assert_ok!(AAvatars::claim_treasury(RuntimeOrigin::signed(ALICE), 1));
@@ -309,8 +308,8 @@ mod treasury {
 				// during season 2
 				for (treasurer, season_id) in [(BOB, 2), (CHARLIE, 3)] {
 					for iter in [
-						season_2.early_start..=season_2.start, // 25..30
-						season_2.start..=season_2.end,         // 30..35
+						season_2_schedule.early_start..=season_2_schedule.start, // 25..30
+						season_2_schedule.start..=season_2_schedule.end,         // 30..35
 					] {
 						for n in iter {
 							run_to_block(n);
@@ -329,7 +328,7 @@ mod treasury {
 
 				// end of season 2
 				for (treasurer, season_id) in [(CHARLIE, 3), (DAVE, 4)] {
-					for n in (season_2.end + 1)..(season_2.end + 5) {
+					for n in (season_2_schedule.end + 1)..(season_2_schedule.end + 5) {
 						run_to_block(n);
 						deposit_into_treasury(1, 369);
 						deposit_into_treasury(2, 369);
@@ -347,11 +346,13 @@ mod treasury {
 	#[test]
 	fn claim_treasury_rejects_empty_treasury() {
 		let season_1 = Season::default();
+		let season_1_schedule = SeasonSchedule::default();
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season_1.clone())])
+			.schedules(&[(SEASON_ID, season_1_schedule.clone())])
 			.build()
 			.execute_with(|| {
-				run_to_block(season_1.end + 1);
+				run_to_block(season_1_schedule.end + 1);
 				Treasurer::<Test>::insert(1, CHARLIE);
 				assert_noop!(
 					AAvatars::claim_treasury(RuntimeOrigin::signed(CHARLIE), SEASON_ID),
@@ -363,12 +364,14 @@ mod treasury {
 	#[test]
 	fn claim_treasury_rejects_more_than_available() {
 		let season_1 = Season::default();
+		let season_1_schedule = SeasonSchedule::default();
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season_1.clone())])
+			.schedules(&[(SEASON_ID, season_1_schedule.clone())])
 			.balances(&[(CHARLIE, 999_999)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season_1.end + 1);
+				run_to_block(season_1_schedule.end + 1);
 				Treasurer::<Test>::insert(SEASON_ID, CHARLIE);
 				Treasury::<Test>::insert(SEASON_ID, 999);
 				assert!(Balances::free_balance(AAvatars::treasury_account_id()) < 999);
@@ -385,147 +388,156 @@ mod season {
 
 	#[test]
 	fn season_hook_should_work() {
-		let season_1 = Season::default().early_start(2).start(3).end(4);
-		let season_2 = Season::default().early_start(5).start(7).end(10);
-		let season_3 = Season::default().early_start(23).start(37).end(53);
-		let seasons = &[(1, season_1.clone()), (2, season_2.clone()), (3, season_3.clone())];
+		let season_1_schedule = SeasonSchedule::default().early_start(2).start(3).end(4);
+		let season_2_schedule = SeasonSchedule::default().early_start(5).start(7).end(10);
+		let season_3_schedule = SeasonSchedule::default().early_start(23).start(37).end(53);
 
-		ExtBuilder::default().seasons(seasons).build().execute_with(|| {
-			// Check default values at block 1
-			run_to_block(1);
-			assert_eq!(System::block_number(), 1);
-			assert_eq!(
-				CurrentSeasonStatus::<Test>::get(),
-				SeasonStatus {
-					season_id: 1,
-					early: false,
-					active: false,
-					early_ended: false,
-					max_tier_avatars: 0
+		ExtBuilder::default()
+			.seasons(&[(1, Season::default()), (2, Season::default()), (3, Season::default())])
+			.schedules(&[
+				(1, season_1_schedule.clone()),
+				(2, season_2_schedule.clone()),
+				(3, season_3_schedule.clone()),
+			])
+			.build()
+			.execute_with(|| {
+				// Check default values at block 1
+				run_to_block(1);
+				assert_eq!(System::block_number(), 1);
+				assert_eq!(
+					CurrentSeasonStatus::<Test>::get(),
+					SeasonStatus {
+						season_id: 1,
+						early: false,
+						active: false,
+						early_ended: false,
+						max_tier_avatars: 0
+					}
+				);
+				assert!(Seasons::<Test>::get(1).is_some());
+				assert!(Seasons::<Test>::get(2).is_some());
+				assert!(Seasons::<Test>::get(3).is_some());
+
+				// Season 1 early start (block 2..3)
+				for n in season_1_schedule.early_start..season_1_schedule.start {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 1,
+							early: true,
+							active: false,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
 				}
-			);
-			assert!(Seasons::<Test>::get(1).is_some());
-			assert!(Seasons::<Test>::get(2).is_some());
-			assert!(Seasons::<Test>::get(3).is_some());
+				// Season 1 start (block 3..4)
+				for n in season_1_schedule.start..season_2_schedule.early_start {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 1,
+							early: false,
+							active: true,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
+				}
 
-			// Season 1 early start (block 2..3)
-			for n in season_1.early_start..season_1.start {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 1,
-						early: true,
-						active: false,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
-				);
-			}
-			// Season 1 start (block 3..4)
-			for n in season_1.start..season_2.early_start {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 1,
-						early: false,
-						active: true,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
-				);
-			}
+				// Season 2 early start (block 5..6)
+				for n in season_2_schedule.early_start..season_2_schedule.start {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 2,
+							early: true,
+							active: false,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
+				}
+				// Season 2 start (block 7..9)
+				for n in season_2_schedule.start..season_2_schedule.end {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 2,
+							early: false,
+							active: true,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
+				}
+				// Season 2 end (block 10..22)
+				for n in (season_2_schedule.end + 1)..season_3_schedule.early_start {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 3,
+							early: false,
+							active: false,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
+				}
 
-			// Season 2 early start (block 5..6)
-			for n in season_2.early_start..season_2.start {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 2,
-						early: true,
-						active: false,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
-				);
-			}
-			// Season 2 start (block 7..9)
-			for n in season_2.start..season_2.end {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 2,
-						early: false,
-						active: true,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
-				);
-			}
-			// Season 2 end (block 10..22)
-			for n in (season_2.end + 1)..season_3.early_start {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 3,
-						early: false,
-						active: false,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
-				);
-			}
+				// Season 3 early start (block 23..36)
+				for n in season_3_schedule.early_start..season_3_schedule.start {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 3,
+							early: true,
+							active: false,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
+				}
+				// Season 3 start (block 37..53)
+				for n in season_3_schedule.start..=season_3_schedule.end {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 3,
+							early: false,
+							active: true,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
+				}
+				// Season 3 end (block 54..63)
+				for n in (season_3_schedule.end + 1)..=(season_3_schedule.end + 10) {
+					run_to_block(n);
+					assert_eq!(
+						CurrentSeasonStatus::<Test>::get(),
+						SeasonStatus {
+							season_id: 4,
+							early: false,
+							active: false,
+							early_ended: false,
+							max_tier_avatars: 0
+						}
+					);
+				}
 
-			// Season 3 early start (block 23..36)
-			for n in season_3.early_start..season_3.start {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 3,
-						early: true,
-						active: false,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
+				// No further seasons exist
+				assert!(
+					Seasons::<Test>::get(CurrentSeasonStatus::<Test>::get().season_id).is_none()
 				);
-			}
-			// Season 3 start (block 37..53)
-			for n in season_3.start..=season_3.end {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 3,
-						early: false,
-						active: true,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
-				);
-			}
-			// Season 3 end (block 54..63)
-			for n in (season_3.end + 1)..=(season_3.end + 10) {
-				run_to_block(n);
-				assert_eq!(
-					CurrentSeasonStatus::<Test>::get(),
-					SeasonStatus {
-						season_id: 4,
-						early: false,
-						active: false,
-						early_ended: false,
-						max_tier_avatars: 0
-					}
-				);
-			}
-
-			// No further seasons exist
-			assert!(Seasons::<Test>::get(CurrentSeasonStatus::<Test>::get().season_id).is_none());
-		})
+			})
 	}
 
 	#[test]
@@ -554,18 +566,46 @@ mod season {
 			.seasons(&[(1, Season::default())])
 			.build()
 			.execute_with(|| {
-				let season_1 = Season::default().early_start(1).start(5).end(10);
-				assert_ok!(AAvatars::set_season(RuntimeOrigin::signed(ALICE), 1, season_1.clone()));
-				assert_eq!(Seasons::<Test>::get(1), Some(season_1.clone()));
+				let season_1_schedule = SeasonSchedule::default().early_start(1).start(5).end(10);
+				assert_ok!(AAvatars::set_season(
+					RuntimeOrigin::signed(ALICE),
+					1,
+					None,
+					None,
+					Some(season_1_schedule.clone()),
+					None,
+				));
+				assert_eq!(Seasons::<Test>::get(1), Some(Season::default()));
+				assert_eq!(SeasonSchedules::<Test>::get(1), Some(season_1_schedule.clone()));
 				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::UpdatedSeason { season_id: 1, season: season_1 },
+					crate::Event::UpdatedSeason {
+						season_id: 1,
+						season: None,
+						meta: None,
+						schedule: Some(season_1_schedule),
+						trade_filters: None,
+					},
 				));
 
-				let season_2 = Season::default().early_start(11).start(12).end(13);
-				assert_ok!(AAvatars::set_season(RuntimeOrigin::signed(ALICE), 2, season_2.clone()));
-				assert_eq!(Seasons::<Test>::get(2), Some(season_2.clone()));
+				let season_2_schedule = SeasonSchedule::default().early_start(11).start(12).end(13);
+				assert_ok!(AAvatars::set_season(
+					RuntimeOrigin::signed(ALICE),
+					2,
+					None,
+					None,
+					Some(season_2_schedule.clone()),
+					None
+				));
+				assert_eq!(Seasons::<Test>::get(2), None);
+				assert_eq!(SeasonSchedules::<Test>::get(2), Some(season_2_schedule.clone()));
 				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::UpdatedSeason { season_id: 2, season: season_2 },
+					crate::Event::UpdatedSeason {
+						season_id: 2,
+						season: None,
+						meta: None,
+						schedule: Some(season_2_schedule),
+						trade_filters: None,
+					},
 				));
 			});
 	}
@@ -577,7 +617,10 @@ mod season {
 				AAvatars::set_season(
 					RuntimeOrigin::signed(BOB),
 					SeasonId::default(),
-					Season::default()
+					None,
+					None,
+					None,
+					None,
 				),
 				DispatchError::BadOrigin
 			);
@@ -587,16 +630,26 @@ mod season {
 	#[test]
 	fn set_season_should_reject_when_early_start_is_earlier_than_previous_season_end() {
 		let season_1 = Season::default();
+		let season_1_schedule = SeasonSchedule::default();
 		ExtBuilder::default()
 			.organizer(ALICE)
 			.seasons(&[(1, season_1.clone())])
+			.schedules(&[(1, season_1_schedule.clone())])
 			.build()
 			.execute_with(|| {
-				for i in 0..season_1.end {
-					let season_2 = Season::default().early_start(i).start(i + 1).end(i + 2);
-					assert!(season_2.early_start <= season_1.end);
+				for i in 0..season_1_schedule.end {
+					let season_2_schedule =
+						SeasonSchedule::default().early_start(i).start(i + 1).end(i + 2);
+					assert!(season_2_schedule.early_start <= season_1_schedule.end);
 					assert_noop!(
-						AAvatars::set_season(RuntimeOrigin::signed(ALICE), 2, season_2),
+						AAvatars::set_season(
+							RuntimeOrigin::signed(ALICE),
+							2,
+							None,
+							None,
+							Some(season_2_schedule),
+							None
+						),
 						Error::<Test>::EarlyStartTooEarly
 					);
 				}
@@ -607,10 +660,17 @@ mod season {
 	fn set_season_should_reject_when_early_start_is_earlier_than_or_equal_to_start() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			for i in 3..6 {
-				let new_season = Season::default().early_start(i).start(3).end(10);
-				assert!(new_season.early_start >= new_season.start);
+				let new_schedule = SeasonSchedule::default().early_start(i).start(3).end(10);
+				assert!(new_schedule.early_start >= new_schedule.start);
 				assert_noop!(
-					AAvatars::set_season(RuntimeOrigin::signed(ALICE), 1, new_season),
+					AAvatars::set_season(
+						RuntimeOrigin::signed(ALICE),
+						1,
+						None,
+						None,
+						Some(new_schedule),
+						None
+					),
 					Error::<Test>::EarlyStartTooLate
 				);
 			}
@@ -620,10 +680,17 @@ mod season {
 	#[test]
 	fn set_season_should_reject_when_start_is_later_than_end() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-			let new_season = Season::default().early_start(11).start(12).end(10);
-			assert!(new_season.early_start < new_season.start);
+			let new_schedule = SeasonSchedule::default().early_start(11).start(12).end(10);
+			assert!(new_schedule.early_start < new_schedule.start);
 			assert_noop!(
-				AAvatars::set_season(RuntimeOrigin::signed(ALICE), 1, new_season),
+				AAvatars::set_season(
+					RuntimeOrigin::signed(ALICE),
+					1,
+					None,
+					None,
+					Some(new_schedule),
+					None
+				),
 				Error::<Test>::SeasonStartTooLate
 			);
 		});
@@ -640,7 +707,10 @@ mod season {
 					AAvatars::set_season(
 						RuntimeOrigin::signed(ALICE),
 						1,
-						Season::default().tiers(&duplicated_rarity_tiers)
+						Some(Season::default().tiers(&duplicated_rarity_tiers)),
+						None,
+						None,
+						None
 					),
 					Error::<Test>::DuplicatedRarityTier
 				);
@@ -660,7 +730,14 @@ mod season {
 					season_1.clone().single_mint_probs(&incorrect_percentages),
 				] {
 					assert_noop!(
-						AAvatars::set_season(RuntimeOrigin::signed(ALICE), 1, season),
+						AAvatars::set_season(
+							RuntimeOrigin::signed(ALICE),
+							1,
+							Some(season),
+							None,
+							None,
+							None
+						),
 						Error::<Test>::IncorrectRarityPercentages
 					);
 				}
@@ -670,18 +747,25 @@ mod season {
 
 	#[test]
 	fn set_season_should_reject_when_season_to_update_ends_after_next_season_start() {
-		let season_1 = Season::default().early_start(1).start(5).end(10);
-		let season_2 = Season::default().early_start(11).start(15).end(20);
+		let season_1_schedule = SeasonSchedule::default().early_start(1).start(5).end(10);
+		let season_2_schedule = SeasonSchedule::default().early_start(11).start(15).end(20);
 
 		ExtBuilder::default()
 			.organizer(ALICE)
-			.seasons(&[(1, season_1), (2, season_2.clone())])
+			.schedules(&[(1, season_1_schedule), (2, season_2_schedule.clone())])
 			.build()
 			.execute_with(|| {
-				let season_1_update = Season::default().early_start(1).start(5).end(14);
-				assert!(season_1_update.end > season_2.early_start);
+				let season_1_update = SeasonSchedule::default().early_start(1).start(5).end(14);
+				assert!(season_1_update.end > season_2_schedule.early_start);
 				assert_noop!(
-					AAvatars::set_season(RuntimeOrigin::signed(ALICE), 1, season_1_update),
+					AAvatars::set_season(
+						RuntimeOrigin::signed(ALICE),
+						1,
+						None,
+						None,
+						Some(season_1_update),
+						None
+					),
 					Error::<Test>::SeasonEndTooLate
 				);
 			});
@@ -694,7 +778,10 @@ mod season {
 				AAvatars::set_season(
 					RuntimeOrigin::signed(ALICE),
 					SeasonId::MIN,
-					Season::default()
+					None,
+					None,
+					Some(SeasonSchedule::default()),
+					None
 				),
 				ArithmeticError::Underflow
 			);
@@ -708,7 +795,10 @@ mod season {
 				AAvatars::set_season(
 					RuntimeOrigin::signed(ALICE),
 					SeasonId::MAX,
-					Season::default()
+					None,
+					None,
+					Some(SeasonSchedule::default()),
+					None
 				),
 				ArithmeticError::Overflow
 			);
@@ -724,7 +814,17 @@ mod season {
 				(Season::default().max_variations(16), Error::<Test>::MaxVariationsTooHigh),
 				(Season::default().max_variations(100), Error::<Test>::MaxVariationsTooHigh),
 			] {
-				assert_noop!(AAvatars::set_season(RuntimeOrigin::signed(ALICE), 1, season), error);
+				assert_noop!(
+					AAvatars::set_season(
+						RuntimeOrigin::signed(ALICE),
+						1,
+						Some(season),
+						None,
+						None,
+						None
+					),
+					error
+				);
 			}
 		});
 	}
@@ -738,7 +838,17 @@ mod season {
 				(Season::default().max_components(33), Error::<Test>::MaxComponentsTooHigh),
 				(Season::default().max_components(100), Error::<Test>::MaxComponentsTooHigh),
 			] {
-				assert_noop!(AAvatars::set_season(RuntimeOrigin::signed(ALICE), 1, season), error);
+				assert_noop!(
+					AAvatars::set_season(
+						RuntimeOrigin::signed(ALICE),
+						1,
+						Some(season),
+						None,
+						None,
+						None
+					),
+					error
+				);
 			}
 		});
 	}
@@ -751,7 +861,14 @@ mod season {
 			.build()
 			.execute_with(|| {
 				assert_noop!(
-					AAvatars::set_season(RuntimeOrigin::signed(ALICE), 3, Season::default()),
+					AAvatars::set_season(
+						RuntimeOrigin::signed(ALICE),
+						3,
+						None,
+						None,
+						Some(SeasonSchedule::default()),
+						None
+					),
 					Error::<Test>::NonSequentialSeasonId,
 				);
 			});
@@ -799,7 +916,7 @@ mod minting {
 
 	#[test]
 	fn ensure_for_mint_works() {
-		let season = Season::default().early_start(10).start(20).end(30);
+		let season_schedule = SeasonSchedule::default().early_start(10).start(20).end(30);
 		let normal_mint = MintOption {
 			payment: MintPayment::Normal,
 			pack_size: MintPackSize::One,
@@ -812,13 +929,14 @@ mod minting {
 		};
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, Season::default())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.free_mints(&[(ALICE, 42)])
 			.balances(&[(ALICE, 333), (BOB, 333), (CHARLIE, 333)])
 			.build()
 			.execute_with(|| {
 				// Outside a season, both mints are unavailable.
-				for n in 0..season.early_start {
+				for n in 0..season_schedule.early_start {
 					run_to_block(n);
 					assert_eq!(
 						CurrentSeasonStatus::<Test>::get(),
@@ -841,7 +959,7 @@ mod minting {
 				}
 
 				// At early start
-				for n in season.early_start..season.start {
+				for n in season_schedule.early_start..season_schedule.start {
 					run_to_block(n);
 					assert!(CurrentSeasonStatus::<Test>::get().early);
 
@@ -862,7 +980,7 @@ mod minting {
 				}
 
 				// At official start, both mints are available for all accounts.
-				for n in season.start..=season.end {
+				for n in season_schedule.start..=season_schedule.end {
 					run_to_block(n);
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					assert_ok!(AAvatars::ensure_for_mint(&ALICE, &SEASON_ID, &normal_mint));
@@ -875,7 +993,7 @@ mod minting {
 				}
 
 				// At premature end, only free mint is available for all accounts.
-				for n in season.start..=season.end {
+				for n in season_schedule.start..=season_schedule.end {
 					run_to_block(n);
 					CurrentSeasonStatus::<Test>::mutate(|status| status.early_ended = true);
 					assert_noop!(
@@ -897,7 +1015,7 @@ mod minting {
 				}
 
 				// At season end, both mints are unavailable for all accounts.
-				for n in season.end + 1..(season.end + 5) {
+				for n in season_schedule.end + 1..(season_schedule.end + 5) {
 					run_to_block(n);
 					assert_eq!(
 						CurrentSeasonStatus::<Test>::get(),
@@ -925,13 +1043,10 @@ mod minting {
 	fn mint_should_work() {
 		let fees = MintFees { one: 12, three: 34, six: 56 };
 
-		let season_1 = Season::default()
-			.early_start(3)
-			.start(5)
-			.end(20)
-			.max_components(7)
-			.mint_fee(fees.clone());
-		let season_2 = Season::default().early_start(23).start(35).end(40).max_components(17);
+		let season_1 = Season::default().max_components(7).mint_fee(fees.clone());
+		let season_1_schedule = SeasonSchedule::default().early_start(3).start(5).end(20);
+		let season_2 = Season::default().max_components(17);
+		let season_2_schedule = SeasonSchedule::default().early_start(23).start(35).end(40);
 
 		let expected_nonce_increment = 1 as MockNonce;
 		let mint_cooldown = 1;
@@ -942,6 +1057,7 @@ mod minting {
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season_1.clone()), (2, season_2)])
+			.schedules(&[(SEASON_ID, season_1_schedule.clone()), (2, season_2_schedule.clone())])
 			.mint_cooldown(mint_cooldown)
 			.balances(&[(ALICE, initial_balance)])
 			.free_mints(&[(ALICE, initial_free_mints)])
@@ -980,7 +1096,7 @@ mod minting {
 					assert!(!CurrentSeasonStatus::<Test>::get().active);
 
 					// single mint
-					run_to_block(season_1.start);
+					run_to_block(season_1_schedule.start);
 					assert_ok!(AAvatars::mint(
 						RuntimeOrigin::signed(ALICE),
 						MintOption {
@@ -1015,7 +1131,7 @@ mod minting {
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					assert_eq!(
 						PlayerSeasonConfigs::<Test>::get(ALICE, season_id).stats.mint.first,
-						season_1.start
+						season_1_schedule.start
 					);
 					System::assert_has_event(mock::RuntimeEvent::AAvatars(
 						crate::Event::SeasonStarted(1),
@@ -1135,7 +1251,7 @@ mod minting {
 					}
 
 					// check for season ending
-					run_to_block(season_1.end + 1);
+					run_to_block(season_1_schedule.end + 1);
 					assert_noop!(
 						AAvatars::mint(
 							RuntimeOrigin::signed(ALICE),
@@ -1184,27 +1300,31 @@ mod minting {
 
 	#[test]
 	fn mint_should_reject_when_minting_is_closed() {
-		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
-		ExtBuilder::default().seasons(&[(1, season.clone())]).build().execute_with(|| {
-			GlobalConfigs::<Test>::mutate(|config| config.mint.open = false);
-			run_to_block(season.start);
-			for count in [MintPackSize::One, MintPackSize::Three, MintPackSize::Six] {
-				for payment in [MintPayment::Normal, MintPayment::Free] {
-					assert_noop!(
-						AAvatars::mint(
-							RuntimeOrigin::signed(ALICE),
-							MintOption {
-								pack_size: count.clone(),
-								payment,
-								pack_type: PackType::Material,
-							}
-						),
-						Error::<Test>::MintClosed
-					);
+		ExtBuilder::default()
+			.seasons(&[(1, Season::default())])
+			.schedules(&[(1, season_schedule.clone())])
+			.build()
+			.execute_with(|| {
+				GlobalConfigs::<Test>::mutate(|config| config.mint.open = false);
+				run_to_block(season_schedule.start);
+				for count in [MintPackSize::One, MintPackSize::Three, MintPackSize::Six] {
+					for payment in [MintPayment::Normal, MintPayment::Free] {
+						assert_noop!(
+							AAvatars::mint(
+								RuntimeOrigin::signed(ALICE),
+								MintOption {
+									pack_size: count.clone(),
+									payment,
+									pack_type: PackType::Material,
+								}
+							),
+							Error::<Test>::MintClosed
+						);
+					}
 				}
-			}
-		});
+			});
 	}
 
 	#[test]
@@ -1261,6 +1381,7 @@ mod minting {
 		use sp_runtime::traits::Get;
 
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 		let avatar_ids = BoundedAvatarIdsOf::<Test>::try_from(
 			(0..MaxAvatarsPerPlayer::get() as usize)
 				.map(|_| sp_core::H256::default())
@@ -1270,12 +1391,13 @@ mod minting {
 		assert_eq!(avatar_ids.len(), MaxAvatarsPerPlayer::get() as usize);
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.balances(&[(ALICE, 1_234_567_890_123_456)])
 			.free_mints(&[(ALICE, 10)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				Owners::<Test>::insert(ALICE, SEASON_ID, avatar_ids);
 				for count in [MintPackSize::One, MintPackSize::Three, MintPackSize::Six] {
 					for payment in [MintPayment::Normal, MintPayment::Free] {
@@ -1297,12 +1419,16 @@ mod minting {
 
 	#[test]
 	fn mint_should_work_when_changing_to_season_with_higher_storage_tier() {
-		let season_1 = Season::default().end(9);
-		let season_2 = Season::default().early_start(11).start(15).end(20);
+		let season_1_schedule = SeasonSchedule::default().end(9);
+		let season_2_schedule = SeasonSchedule::default().early_start(11).start(15).end(20);
 		let season_2_id = 2;
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season_1.clone()), (season_2_id, season_2.clone())])
+			.seasons(&[(SEASON_ID, Season::default()), (season_2_id, Season::default())])
+			.schedules(&[
+				(SEASON_ID, season_1_schedule.clone()),
+				(season_2_id, season_2_schedule.clone()),
+			])
 			.balances(&[(ALICE, 1_234_567_890_123_456)])
 			.free_mints(&[(ALICE, 10)])
 			.build()
@@ -1315,7 +1441,7 @@ mod minting {
 				});
 
 				// For season 1, ALICE cannot mint more than her StorageTier of One.
-				run_to_block(season_1.start);
+				run_to_block(season_1_schedule.start);
 				let _ = create_avatars(SEASON_ID, ALICE, StorageTier::One as u8 - 1);
 				assert_ok!(AAvatars::mint(RuntimeOrigin::signed(ALICE), MintOption::default()));
 				assert_noop!(
@@ -1324,7 +1450,7 @@ mod minting {
 				);
 
 				// For season 2, ALICE cannot mint more than her SeasonTier of Two.
-				run_to_block(season_2.start);
+				run_to_block(season_2_schedule.start);
 				let _ = create_avatars(season_2_id, ALICE, StorageTier::Two as u8 - 1);
 				assert_ok!(AAvatars::mint(RuntimeOrigin::signed(ALICE), MintOption::default()));
 				assert_noop!(
@@ -1336,18 +1462,19 @@ mod minting {
 
 	#[test]
 	fn mint_should_wait_for_cooldown() {
-		let season = Season::default().early_start(1).start(3).end(20);
+		let season_schedule = SeasonSchedule::default().early_start(1).start(3).end(20);
 		let mint_cooldown = 7;
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, Season::default())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(mint_cooldown)
 			.balances(&[(ALICE, 1_234_567_890_123_456)])
 			.free_mints(&[(ALICE, 10)])
 			.build()
 			.execute_with(|| {
 				for payment in [MintPayment::Normal, MintPayment::Free] {
-					run_to_block(season.start + 1);
+					run_to_block(season_schedule.start + 1);
 					assert_ok!(AAvatars::mint(
 						RuntimeOrigin::signed(ALICE),
 						MintOption {
@@ -1373,7 +1500,7 @@ mod minting {
 					}
 
 					run_to_block(System::block_number() + 1);
-					assert_eq!(System::block_number(), (season.start + 1) + mint_cooldown);
+					assert_eq!(System::block_number(), (season_schedule.start + 1) + mint_cooldown);
 					assert_ok!(AAvatars::mint(
 						RuntimeOrigin::signed(ALICE),
 						MintOption {
@@ -1395,12 +1522,14 @@ mod minting {
 	#[test]
 	fn mint_should_reject_when_balance_is_insufficient() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 
 				for mint_count in [MintPackSize::One, MintPackSize::Three, MintPackSize::Six] {
 					assert_noop!(
@@ -1481,9 +1610,6 @@ mod forging {
 	#[test]
 	fn forge_works_for_season_1() {
 		let season = Season::default()
-			.early_start(100)
-			.start(200)
-			.end(150_000)
 			.max_tier_forges(100)
 			.max_variations(6)
 			.max_components(11)
@@ -1495,6 +1621,7 @@ mod forging {
 			.base_prob(20)
 			.per_period(20)
 			.periods(12);
+		let season_schedule = SeasonSchedule::default().early_start(100).start(200).end(150_000);
 
 		let expected_upgraded_components = |dna_1: &[u8], dna_2: &[u8]| -> usize {
 			dna_1.iter().zip(dna_2).filter(|(left, right)| left != right).count()
@@ -1502,6 +1629,7 @@ mod forging {
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule)])
 			.mint_cooldown(5)
 			.build()
 			.execute_with(|| {
@@ -1550,9 +1678,6 @@ mod forging {
 	#[test]
 	fn forge_works_for_season_1_with_high_tier_leader() {
 		let season = Season::default()
-			.early_start(100)
-			.start(200)
-			.end(150_000)
 			.max_tier_forges(100)
 			.max_variations(6)
 			.max_components(11)
@@ -1564,9 +1689,11 @@ mod forging {
 			.base_prob(20)
 			.per_period(20)
 			.periods(12);
+		let season_schedule = SeasonSchedule::default().early_start(100).start(200).end(150_000);
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule)])
 			.mint_cooldown(5)
 			.build()
 			.execute_with(|| {
@@ -1624,6 +1751,7 @@ mod forging {
 			.min_sacrifices(1)
 			.max_sacrifices(4)
 			.mint_fee(MintFees { one: 1, three: 3, six: 6 });
+		let season_schedule = SeasonSchedule::default();
 
 		let mut forged_count = 0;
 		let mut assert_dna =
@@ -1684,7 +1812,7 @@ mod forging {
 				assert_eq!(SeasonStats::<Test>::get(1, BOB).forged, forged_count);
 				assert_eq!(
 					PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).stats.forge.first,
-					season.start
+					season_schedule.start
 				);
 				assert_eq!(
 					PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).stats.forge.last,
@@ -1693,13 +1821,14 @@ mod forging {
 			};
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(0)
 			.balances(&[(BOB, MockBalance::max_value())])
 			.free_mints(&[(BOB, 0)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(BOB),
 					MintOption {
@@ -1767,7 +1896,7 @@ mod forging {
 				assert_eq!(SeasonStats::<Test>::get(1, BOB).minted, 25);
 
 				// trigger season end and assert for associated checks
-				run_to_block(season.end + 1);
+				run_to_block(season_schedule.end + 1);
 				assert_eq!(CurrentSeasonStatus::<Test>::get().max_tier_avatars, 0);
 				assert!(!CurrentSeasonStatus::<Test>::get().early_ended);
 
@@ -1784,14 +1913,16 @@ mod forging {
 			.max_components(8)
 			.max_variations(6)
 			.max_tier_forges(5);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(0)
 			.free_mints(&[(BOB, MintCount::MAX)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.early_start);
+				run_to_block(season_schedule.early_start);
 
 				let mut max_tier_avatars = 0;
 				let common_avatar_ids = [
@@ -1856,15 +1987,17 @@ mod forging {
 			.min_sacrifices(1)
 			.max_sacrifices(2)
 			.base_prob(100);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(1)
 			.free_mints(&[(BOB, 10)])
 			.build()
 			.execute_with(|| {
 				// prepare avatars to forge
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(BOB),
 					MintOption {
@@ -1935,15 +2068,17 @@ mod forging {
 			.max_variations(12)
 			.min_sacrifices(1)
 			.max_sacrifices(5);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(1)
 			.free_mints(&[(BOB, 10)])
 			.build()
 			.execute_with(|| {
 				// prepare avatars to forge
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(BOB),
 					MintOption {
@@ -1993,14 +2128,16 @@ mod forging {
 			.max_variations(6)
 			.min_sacrifices(1)
 			.max_sacrifices(4);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(0)
 			.free_mints(&[(ALICE, MintCount::MAX)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(ALICE),
 					MintOption {
@@ -2049,15 +2186,20 @@ mod forging {
 	#[test]
 	fn forge_should_reject_when_forging_is_closed() {
 		let season = Season::default().min_sacrifices(0);
+		let season_schedule = SeasonSchedule::default();
 
-		ExtBuilder::default().seasons(&[(1, season.clone())]).build().execute_with(|| {
-			run_to_block(season.start);
-			GlobalConfigs::<Test>::mutate(|config| config.forge.open = false);
-			assert_noop!(
-				AAvatars::forge(RuntimeOrigin::signed(ALICE), H256::default(), Vec::new()),
-				Error::<Test>::ForgeClosed,
-			);
-		});
+		ExtBuilder::default()
+			.seasons(&[(1, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.build()
+			.execute_with(|| {
+				run_to_block(season_schedule.start);
+				GlobalConfigs::<Test>::mutate(|config| config.forge.open = false);
+				assert_noop!(
+					AAvatars::forge(RuntimeOrigin::signed(ALICE), H256::default(), Vec::new()),
+					Error::<Test>::ForgeClosed,
+				);
+			});
 	}
 
 	#[test]
@@ -2073,14 +2215,16 @@ mod forging {
 	#[test]
 	fn forge_should_reject_out_of_bound_sacrifices() {
 		let season = Season::default().min_sacrifices(3).max_sacrifices(5);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
 			.seasons(&[(1, season.clone())])
+			.schedules(&[(1, season_schedule.clone())])
 			.balances(&[(ALICE, 1_000_000)])
 			.free_mints(&[(ALICE, MintCount::MAX)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 
 				for _ in 0..3 {
 					assert_ok!(AAvatars::mint(
@@ -2121,12 +2265,12 @@ mod forging {
 
 	#[test]
 	fn forge_should_not_be_interrupted_by_season_status() {
-		let season_1 = Season::default().early_start(5).start(10).end(20);
-		let season_2 = Season::default().early_start(30).start(40).end(50);
-		let seasons = &[(1, season_1.clone()), (2, season_2.clone())];
+		let season_1_schedule = SeasonSchedule::default().early_start(5).start(10).end(20);
+		let season_2_schedule = SeasonSchedule::default().early_start(30).start(40).end(50);
 
 		ExtBuilder::default()
-			.seasons(seasons)
+			.seasons(&[(1, Season::default()), (2, Season::default())])
+			.schedules(&[(1, season_1_schedule.clone()), (2, season_2_schedule.clone())])
 			.mint_cooldown(0)
 			.free_mints(&[(ALICE, 100)])
 			.build()
@@ -2135,7 +2279,7 @@ mod forging {
 					config.storage_tier = StorageTier::Four
 				});
 
-				run_to_block(season_1.early_start);
+				run_to_block(season_1_schedule.early_start);
 				for _ in 0..31 {
 					assert_ok!(AAvatars::mint(
 						RuntimeOrigin::signed(ALICE),
@@ -2148,8 +2292,8 @@ mod forging {
 				}
 
 				for iter in [
-					season_1.early_start..season_1.end, // block 5..19
-					season_1.end..season_2.early_start, // block 20..29
+					season_1_schedule.early_start..season_1_schedule.end, // block 5..19
+					season_1_schedule.end..season_2_schedule.early_start, // block 20..29
 				] {
 					for n in iter {
 						run_to_block(n);
@@ -2166,14 +2310,16 @@ mod forging {
 	#[test]
 	fn forge_should_reject_unknown_season_calls() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(1, season.clone())])
+			.seasons(&[(1, season)])
+			.schedules(&[(1, season_schedule.clone())])
 			.balances(&[(ALICE, 1_000_000)])
 			.free_mints(&[(ALICE, MintCount::MAX)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(ALICE),
@@ -2211,14 +2357,16 @@ mod forging {
 	#[test]
 	fn forge_should_reject_unknown_avatars() {
 		let season = Season::default().min_sacrifices(1).max_sacrifices(3);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season.clone())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(0)
 			.free_mints(&[(ALICE, 10)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				for _ in 0..season.max_sacrifices {
 					assert_ok!(AAvatars::mint(
 						RuntimeOrigin::signed(ALICE),
@@ -2247,14 +2395,16 @@ mod forging {
 	#[test]
 	fn forge_should_reject_incorrect_ownership() {
 		let season = Season::default().min_sacrifices(1).max_sacrifices(3);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season.clone())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(0)
 			.free_mints(&[(ALICE, 10), (BOB, 10)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				for player in [ALICE, BOB] {
 					for _ in 0..season.max_sacrifices {
 						assert_ok!(AAvatars::mint(
@@ -2296,14 +2446,16 @@ mod forging {
 	#[test]
 	fn forge_should_reject_leader_in_sacrifice() {
 		let season = Season::default().min_sacrifices(1).max_sacrifices(3);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season.clone())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(0)
 			.free_mints(&[(ALICE, 10)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				for _ in 0..season.max_sacrifices {
 					assert_ok!(AAvatars::mint(
 						RuntimeOrigin::signed(ALICE),
@@ -2338,15 +2490,18 @@ mod forging {
 	#[test]
 	fn forge_should_reject_avatars_in_trade() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 		let price = 321;
 		let initial_balance = 6 + MockExistentialDeposit::get();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.balances(&[(ALICE, initial_balance), (BOB, 6 + initial_balance)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(ALICE),
 					MintOption {
@@ -2391,21 +2546,16 @@ mod forging {
 	fn forge_should_reject_avatars_from_different_seasons() {
 		let min_sacrifices = 1;
 		let max_sacrifices = 3;
-		let season1 = Season::default()
-			.early_start(5)
-			.start(45)
-			.end(98)
-			.min_sacrifices(min_sacrifices)
-			.max_sacrifices(max_sacrifices);
-		let season2 = Season::default()
-			.early_start(100)
-			.start(101)
-			.end(199)
-			.min_sacrifices(min_sacrifices)
-			.max_sacrifices(max_sacrifices);
+		let season1 =
+			Season::default().min_sacrifices(min_sacrifices).max_sacrifices(max_sacrifices);
+		let season_1_schedule = SeasonSchedule::default().early_start(5).start(45).end(98);
+		let season2 =
+			Season::default().min_sacrifices(min_sacrifices).max_sacrifices(max_sacrifices);
+		let season_2_schedule = SeasonSchedule::default().early_start(100).start(101).end(199);
 
 		ExtBuilder::default()
 			.seasons(&[(1, season1), (2, season2)])
+			.schedules(&[(1, season_1_schedule), (2, season_2_schedule)])
 			.mint_cooldown(0)
 			.free_mints(&[(ALICE, 10)])
 			.build()
@@ -2716,6 +2866,7 @@ mod transferring {
 	fn transfer_avatar_rejects_avatar_in_trade() {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, CHARLIE, 1)[0];
@@ -2773,16 +2924,20 @@ mod transferring {
 
 mod trading {
 	use super::*;
+	use sp_runtime::bounded_vec;
 
 	#[test]
 	fn set_price_should_work() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_for_sale = create_avatars(SEASON_ID, BOB, 1)[0];
 				let price = 7357;
 
@@ -2819,12 +2974,14 @@ mod trading {
 	#[test]
 	fn set_price_should_reject_incorrect_ownership() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, BOB, 2);
 
 				assert_noop!(
@@ -2836,15 +2993,18 @@ mod trading {
 
 	#[test]
 	fn set_price_should_reject_avatar_not_matching_trade_filters() {
-		let season = Season::default().trade_filters(vec![
+		let season_schedule = SeasonSchedule::default();
+		let trade_filters = TradeFilters(bounded_vec![
 			u32::from_le_bytes([0x11, 0x07, 0x06, 0x00]), // Mythical CrazyDude pet
 		]);
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, Season::default())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[(SEASON_ID, trade_filters)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, BOB, 2);
 
 				assert_noop!(
@@ -2857,12 +3017,15 @@ mod trading {
 	#[test]
 	fn remove_price_should_work() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, BOB, 2);
 				let avatar_for_sale = avatar_ids[0];
 				let price = 101;
@@ -2902,12 +3065,15 @@ mod trading {
 	#[test]
 	fn remove_price_should_reject_incorrect_ownership() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, BOB, 3);
 				let avatar_for_sale = avatar_ids[0];
 
@@ -2940,11 +3106,17 @@ mod trading {
 		let total_supply = alice_initial_bal + bob_initial_bal + charlie_initial_bal;
 
 		let season = Season::default().buy_minimum_fee(min_fee);
+		let season_schedule = SeasonSchedule::default();
 		let season_id = 33;
 
 		ExtBuilder::default()
 			.existential_deposit(0)
 			.seasons(&[(SEASON_ID, season.clone()), (season_id, season.clone())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[
+				(SEASON_ID, TradeFilters::default()),
+				(season_id, TradeFilters::default()),
+			])
 			.balances(&[
 				(ALICE, alice_initial_bal),
 				(BOB, bob_initial_bal),
@@ -2959,7 +3131,7 @@ mod trading {
 				assert_eq!(Balances::free_balance(treasury_account), treasury_balance_season_1);
 				assert_eq!(Balances::total_issuance(), total_supply);
 
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, BOB, 3);
 				assert_eq!(Treasury::<Test>::get(SEASON_ID), treasury_balance_season_1);
 				assert_eq!(Balances::free_balance(treasury_account), treasury_balance_season_1);
@@ -2997,7 +3169,7 @@ mod trading {
 
 				// check events
 				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::AvatarTraded { avatar_id: avatar_for_sale, from: BOB, to: ALICE },
+					crate::Event::AvatarTraded { avatar_id: avatar_for_sale, from: BOB, to: ALICE, price },
 				));
 
 				// charlie buys from bob
@@ -3028,13 +3200,16 @@ mod trading {
 		let mut bob_balance = 999_999;
 		let mut treasury_balance = 0;
 		let season = Season::default().buy_minimum_fee(min_fee).buy_percent(percent);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season.clone())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.balances(&[(ALICE, alice_balance), (BOB, bob_balance)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, ALICE, 2);
 
 				// when price is much greater (> 30%) than min_fee, percent should be charged
@@ -3097,14 +3272,17 @@ mod trading {
 	#[test]
 	fn buy_should_reject_insufficient_balance() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 		let price = 310_984;
 
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season.clone())])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.balances(&[(ALICE, price - 1), (BOB, 999_999)])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, BOB, 3);
 				let avatar_for_sale = avatar_ids[0];
 
@@ -3119,12 +3297,15 @@ mod trading {
 	#[test]
 	fn buy_should_reject_when_buyer_buys_its_own_avatar() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				let avatar_ids = create_avatars(SEASON_ID, BOB, 3);
 				let avatar_for_sale = avatar_ids[0];
 
@@ -3240,41 +3421,48 @@ mod account {
 
 	#[test]
 	fn upgrade_storage_should_work_on_different_beneficiary() {
-		let season = Season::default().early_start(10).start(20).end(30);
+		ExtBuilder::default()
+			.seasons(&[(SEASON_ID, Season::default())])
+			.schedules(&[(SEASON_ID, SeasonSchedule::default().early_start(10).start(20).end(30))])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					PlayerSeasonConfigs::<Test>::get(ALICE, SEASON_ID).storage_tier,
+					StorageTier::One
+				);
+				assert_eq!(
+					PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).storage_tier,
+					StorageTier::One
+				);
 
-		ExtBuilder::default().seasons(&[(SEASON_ID, season)]).build().execute_with(|| {
-			assert_eq!(
-				PlayerSeasonConfigs::<Test>::get(ALICE, SEASON_ID).storage_tier,
-				StorageTier::One
-			);
-			assert_eq!(
-				PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).storage_tier,
-				StorageTier::One
-			);
+				assert_ok!(AAvatars::upgrade_storage(
+					RuntimeOrigin::signed(ALICE),
+					Some(BOB),
+					None
+				));
 
-			assert_ok!(AAvatars::upgrade_storage(RuntimeOrigin::signed(ALICE), Some(BOB), None));
-
-			assert_eq!(
-				PlayerSeasonConfigs::<Test>::get(ALICE, SEASON_ID).storage_tier,
-				StorageTier::One
-			);
-			assert_eq!(
-				PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).storage_tier,
-				StorageTier::Two
-			);
-		});
+				assert_eq!(
+					PlayerSeasonConfigs::<Test>::get(ALICE, SEASON_ID).storage_tier,
+					StorageTier::One
+				);
+				assert_eq!(
+					PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).storage_tier,
+					StorageTier::Two
+				);
+			});
 	}
 
 	#[test]
 	fn upgrade_storage_should_work_on_different_season() {
 		let season_1_id = 1;
-		let season_1 = Season::default().early_start(10).start(20).end(30);
+		let season_1_schedule = SeasonSchedule::default().early_start(10).start(20).end(30);
 
 		let season_2_id = 2;
-		let season_2 = Season::default().early_start(40).start(50).end(60);
+		let season_2_schedule = SeasonSchedule::default().early_start(40).start(50).end(60);
 
 		ExtBuilder::default()
-			.seasons(&[(season_1_id, season_1), (season_2_id, season_2)])
+			.seasons(&[(season_1_id, Season::default()), (season_2_id, Season::default())])
+			.schedules(&[(season_1_id, season_1_schedule), (season_2_id, season_2_schedule)])
 			.build()
 			.execute_with(|| {
 				assert_eq!(
@@ -3318,18 +3506,20 @@ mod account {
 
 	#[test]
 	fn upgrade_storage_should_reject_fully_upgraded_storage() {
-		let season = Season::default().early_start(10).start(20).end(30);
+		ExtBuilder::default()
+			.seasons(&[(SEASON_ID, Season::default())])
+			.schedules(&[(SEASON_ID, SeasonSchedule::default().early_start(10).start(20).end(30))])
+			.build()
+			.execute_with(|| {
+				PlayerSeasonConfigs::<Test>::mutate(ALICE, SEASON_ID, |config| {
+					config.storage_tier = StorageTier::Max
+				});
 
-		ExtBuilder::default().seasons(&[(SEASON_ID, season)]).build().execute_with(|| {
-			PlayerSeasonConfigs::<Test>::mutate(ALICE, SEASON_ID, |config| {
-				config.storage_tier = StorageTier::Max
+				assert_noop!(
+					AAvatars::upgrade_storage(RuntimeOrigin::signed(ALICE), None, None),
+					Error::<Test>::MaxStorageTierReached
+				);
 			});
-
-			assert_noop!(
-				AAvatars::upgrade_storage(RuntimeOrigin::signed(ALICE), None, None),
-				Error::<Test>::MaxStorageTierReached
-			);
-		});
 	}
 }
 
@@ -3364,14 +3554,16 @@ mod nft_transfer {
 			.mint_logic(LogicGeneration::Second)
 			.max_components(8)
 			.max_variations(5);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
 			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(ALICE),
 					MintOption {
@@ -3514,6 +3706,7 @@ mod nft_transfer {
 	fn cannot_lock_avatar_on_trade() {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
 			.create_nft_collection(true)
 			.build()
@@ -3673,14 +3866,16 @@ mod nft_transfer {
 	#[test]
 	fn cannot_unlock_transferred_avatar() {
 		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season.clone())])
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
 			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 
 				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
 				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
@@ -3803,6 +3998,7 @@ mod ipfs {
 	fn prepare_avatar_rejects_avatars_in_trade() {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
+			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];

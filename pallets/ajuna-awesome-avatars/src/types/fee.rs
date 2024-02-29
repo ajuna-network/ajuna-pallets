@@ -43,4 +43,6 @@ pub struct Fee<Balance> {
 	pub buy_percent: u8,
 	pub upgrade_storage: Balance,
 	pub prepare_avatar: Balance,
+	pub set_price_unlock: Balance,
+	pub avatar_transfer_unlock: Balance,
 }
