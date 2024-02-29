@@ -4211,4 +4211,67 @@ mod affiliates {
 				);
 			});
 	}
+
+	#[test]
+	fn set_rule_works() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule = FeePropagationOf::<Test>::try_from(vec![10, 20])
+					.expect("Should create fee propagation");
+				assert_ok!(AAvatars::set_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					AffiliateMethods::Mint,
+					rule.clone()
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::RuleAdded { rule_id: AffiliateMethods::Mint },
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::AffiliateRules::<Test, AffiliatesInstance1>::get(
+						AffiliateMethods::Mint
+					),
+					Some(rule)
+				);
+			});
+	}
+
+	#[test]
+	fn clear_rule_works() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule = FeePropagationOf::<Test>::try_from(vec![10, 20])
+					.expect("Should create fee propagation");
+				assert_ok!(AAvatars::set_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					AffiliateMethods::Mint,
+					rule.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::AffiliateRules::<Test, AffiliatesInstance1>::get(
+						AffiliateMethods::Mint
+					),
+					Some(rule)
+				);
+
+				assert_ok!(AAvatars::clear_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					AffiliateMethods::Mint,
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::RuleCleared { rule_id: AffiliateMethods::Mint },
+				));
+			});
+	}
 }
