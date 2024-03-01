@@ -3169,7 +3169,12 @@ mod trading {
 
 				// check events
 				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::AvatarTraded { avatar_id: avatar_for_sale, from: BOB, to: ALICE, price },
+					crate::Event::AvatarTraded {
+						avatar_id: avatar_for_sale,
+						from: BOB,
+						to: ALICE,
+						price,
+					},
 				));
 
 				// charlie buys from bob

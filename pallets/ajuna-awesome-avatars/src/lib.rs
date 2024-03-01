@@ -334,7 +334,12 @@ pub mod pallet {
 		/// Avatar has price removed for trade.
 		AvatarPriceUnset { avatar_id: AvatarIdOf<T> },
 		/// Avatar has been traded.
-		AvatarTraded { avatar_id: AvatarIdOf<T>, from: T::AccountId, to: T::AccountId, price: BalanceOf<T> },
+		AvatarTraded {
+			avatar_id: AvatarIdOf<T>,
+			from: T::AccountId,
+			to: T::AccountId,
+			price: BalanceOf<T>,
+		},
 		/// Avatar locked.
 		AvatarLocked { avatar_id: AvatarIdOf<T> },
 		/// Avatar unlocked.
