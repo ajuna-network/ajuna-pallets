@@ -491,6 +491,7 @@ benchmarks! {
 			},
 			trade: TradeConfig { open: true },
 			nft_transfer: NftTransferConfig { open: true },
+			affiliate_config: AffiliateConfig::default(),
 		};
 	}: _(RawOrigin::Signed(organizer), config.clone())
 	verify {

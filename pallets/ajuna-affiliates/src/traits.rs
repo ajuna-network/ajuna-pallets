@@ -11,6 +11,8 @@ pub trait AffiliateInspector<AccountId> {
 
 	/// Returns the number of accounts that are affiliated with 'account'.
 	fn get_affiliate_count_for(account: &AccountId) -> u32;
+
+	fn get_account_for_id(affiliate_id: u32) -> Option<AccountId>;
 }
 
 pub trait AffiliateMutator<AccountId> {
@@ -45,6 +47,14 @@ pub trait RuleMutator<RuleId, Rule> {
 
 	/// Removes the rule mapping for 'extrinsic_id'
 	fn clear_rule_for(rule_id: RuleId);
+}
+
+pub trait RuleExecutor<RuleId, Rule> {
+	/// Tries to retrieve the rule associated with 'rule_id' and passes it to
+	/// the 'rule_fn' parameter, propagating its output to the function caller
+	fn try_execute_rule_for<F, R>(rule_id: RuleId, rule_fn: F) -> Result<R, DispatchError>
+	where
+		F: Fn(Rule) -> Result<R, DispatchError>;
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]

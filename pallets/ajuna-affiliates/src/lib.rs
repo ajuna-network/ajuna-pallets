@@ -82,23 +82,20 @@ pub mod pallet {
 	pub type AffiliateRules<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Blake2_128Concat, T::RuleIdentifier, T::RuntimeRule, OptionQuery>;
 
+	#[pallet::storage]
+	pub type NextAffiliateId<T: Config<I>, I: 'static = ()> = StorageValue<_, u32, ValueQuery>;
+
+	#[pallet::storage]
+	pub type AffiliateIdMapping<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, u32, T::AccountId, OptionQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
-		/// An organizer has been set.
-		OrganizerSet {
-			organizer: T::AccountId,
-		},
-		AccountAffiliated {
-			account: T::AccountId,
-			to: T::AccountId,
-		},
-		RuleAdded {
-			rule_id: T::RuleIdentifier,
-		},
-		RuleCleared {
-			rule_id: T::RuleIdentifier,
-		},
+		AccountMarkedAsAffiliatable { account: T::AccountId, affiliate_id: u32 },
+		AccountAffiliated { account: T::AccountId, to: T::AccountId },
+		RuleAdded { rule_id: T::RuleIdentifier },
+		RuleCleared { rule_id: T::RuleIdentifier },
 	}
 
 	#[pallet::error]
@@ -119,6 +116,8 @@ pub mod pallet {
 		CannotAffiliateBlocked,
 		/// The given extrinsic identifier is already paired with an affiliate rule
 		ExtrinsicAlreadyHasRule,
+		/// The given extrinsic identifier is not associated with any rule
+		ExtrinsicHasNoRule,
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
@@ -162,10 +161,26 @@ pub mod pallet {
 		fn get_affiliate_count_for(account: &AccountIdFor<T>) -> u32 {
 			Affiliators::<T, I>::get(account).affiliates
 		}
+
+		fn get_account_for_id(affiliate_id: u32) -> Option<AccountIdFor<T>> {
+			AffiliateIdMapping::<T, I>::get(affiliate_id)
+		}
 	}
 
 	impl<T: Config<I>, I: 'static> AffiliateMutator<AccountIdFor<T>> for Pallet<T, I> {
 		fn try_mark_account_as_affiliatable(account: &AccountIdFor<T>) -> DispatchResult {
+			let next_id = NextAffiliateId::<T, I>::try_mutate(|value: &mut u32| {
+				let next_id = *value;
+
+				*value = value
+					.checked_add(1)
+					.ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+
+				Ok::<u32, DispatchError>(next_id)
+			})?;
+
+			AffiliateIdMapping::<T, I>::insert(next_id, account.clone());
+
 			Affiliators::<T, I>::try_mutate(account, |state| {
 				ensure!(
 					state.status != AffiliatableStatus::Blocked,
@@ -173,6 +188,11 @@ pub mod pallet {
 				);
 
 				state.status = AffiliatableStatus::Affiliatable;
+
+				Self::deposit_event(Event::AccountMarkedAsAffiliatable {
+					account: account.clone(),
+					affiliate_id: next_id,
+				});
 
 				Ok(())
 			})
@@ -264,6 +284,22 @@ pub mod pallet {
 			AffiliateRules::<T, I>::remove(rule_id.clone());
 
 			Self::deposit_event(Event::RuleCleared { rule_id });
+		}
+	}
+
+	impl<T: Config<I>, I: 'static> RuleExecutor<T::RuleIdentifier, T::RuntimeRule> for Pallet<T, I> {
+		fn try_execute_rule_for<F, R>(
+			rule_id: T::RuleIdentifier,
+			rule_fn: F,
+		) -> Result<R, DispatchError>
+		where
+			F: Fn(T::RuntimeRule) -> Result<R, DispatchError>,
+		{
+			if let Some(rule) = Self::get_rule_for(rule_id) {
+				rule_fn(rule)
+			} else {
+				Err(Error::<T, I>::ExtrinsicHasNoRule.into())
+			}
 		}
 	}
 }

@@ -81,8 +81,8 @@ use pallet_ajuna_affiliates::traits::{
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, TrailingZeroInput,
-		UniqueSaturatedInto, Zero,
+		AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, Hash, Saturating,
+		TrailingZeroInput, UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
 };
@@ -91,6 +91,7 @@ use sp_std::prelude::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use pallet_ajuna_affiliates::traits::RuleExecutor;
 	use sp_std::collections::vec_deque::VecDeque;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -98,7 +99,7 @@ pub mod pallet {
 	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub(crate) type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
-	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>>;
+	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>, BalanceOf<T>>;
 	pub(crate) type KeyLimitOf<T> = <T as Config>::KeyLimit;
 	pub(crate) type ValueLimitOf<T> = <T as Config>::ValueLimit;
 	pub(crate) type CollectionIdOf<T> = <<T as Config>::NftHandler as NftHandler<
@@ -108,6 +109,8 @@ pub mod pallet {
 		ValueLimitOf<T>,
 		Avatar,
 	>>::CollectionId;
+
+	pub type FeePropagationOf<T> = FeePropagation<<T as Config>::FeeChainMaxLength>;
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
@@ -149,16 +152,15 @@ pub mod pallet {
 			Avatar,
 		>;
 
-		/// The rule identifier type at runtime.
-		type RuleIdentifier: Parameter + MaxEncodedLen;
-
-		/// The rule type at runtime.
-		type RuntimeRule: Parameter + MaxEncodedLen;
+		/// The maximum depth of the propagation fee chain,
+		#[pallet::constant]
+		type FeeChainMaxLength: Get<u32>;
 
 		type AffiliateHandler: AffiliateInspector<Self::AccountId>
 			+ AffiliateMutator<Self::AccountId>
-			+ RuleInspector<Self::RuleIdentifier, Self::RuntimeRule>
-			+ RuleMutator<Self::RuleIdentifier, Self::RuntimeRule>;
+			+ RuleInspector<AffiliateMethods, FeePropagationOf<Self>>
+			+ RuleMutator<AffiliateMethods, FeePropagationOf<Self>>
+			+ RuleExecutor<AffiliateMethods, FeePropagationOf<Self>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -270,6 +272,7 @@ pub mod pallet {
 				freemint_transfer: FreemintTransferConfig { mode: FreeMintTransferMode::Open },
 				trade: TradeConfig { open: true },
 				nft_transfer: NftTransferConfig { open: true },
+				affiliate_config: AffiliateConfig::default(),
 			});
 		}
 	}
@@ -466,6 +469,8 @@ pub mod pallet {
 		AccountAlreadyInWhitelist,
 		/// Cannot add more accounts to the whitelist.
 		WhitelistedAccountsLimitReached,
+		/// No account matches the provided affiliator identifier
+		AffiliatorNotFound,
 	}
 
 	#[pallet::hooks]
@@ -677,7 +682,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::buy(MaxAvatarsPerPlayer::get()))]
 		pub fn buy(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
-			let GlobalConfig { trade, .. } = GlobalConfigs::<T>::get();
+			let GlobalConfig { trade, affiliate_config, .. } = GlobalConfigs::<T>::get();
 			ensure!(trade.open, Error::<T>::TradeClosed);
 
 			let (seller, price) = Self::ensure_for_trade(&avatar_id)?;
@@ -686,10 +691,19 @@ pub mod pallet {
 
 			let avatar = Self::ensure_ownership(&seller, &avatar_id)?;
 			let (current_season_id, Season { fee, .. }) = Self::current_season_with_id()?;
-			let trade_fee = fee.buy_minimum.max(
-				price.saturating_mul(fee.buy_percent.unique_saturated_into())
-					/ MAX_PERCENTAGE.unique_saturated_into(),
-			);
+
+			let trade_fee = {
+				let base_fee = fee.buy_minimum.max(
+					price.saturating_mul(fee.buy_percent.unique_saturated_into())
+						/ MAX_PERCENTAGE.unique_saturated_into(),
+				);
+
+				if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
+					Self::try_propagate_chain_fee(AffiliateMethods::Buy, &buyer, base_fee)?
+				} else {
+					base_fee
+				}
+			};
 			T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&avatar.season_id, trade_fee);
 
@@ -742,8 +756,25 @@ pub mod pallet {
 				PlayerSeasonConfigs::<T>::get(&account_to_upgrade, season_id).storage_tier;
 			ensure!(storage_tier != StorageTier::Max, Error::<T>::MaxStorageTierReached);
 
-			T::Currency::withdraw(&caller, fee.upgrade_storage, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&season_id, fee.upgrade_storage);
+			let upgrade_fee = {
+				let base_fee = fee.upgrade_storage;
+				let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+
+				if affiliate_config.mode == AffiliateMode::Open
+					&& affiliate_config.enabled_in_upgrade
+				{
+					Self::try_propagate_chain_fee(
+						AffiliateMethods::UpgradeStorage,
+						&caller,
+						base_fee,
+					)?
+				} else {
+					base_fee
+				}
+			};
+
+			T::Currency::withdraw(&caller, upgrade_fee, WithdrawReasons::FEE, AllowDeath)?;
+			Self::deposit_into_treasury(&season_id, upgrade_fee);
 
 			PlayerSeasonConfigs::<T>::mutate(&account_to_upgrade, season_id, |account| {
 				account.storage_tier = storage_tier.upgrade()
@@ -1101,6 +1132,87 @@ pub mod pallet {
 				},
 			}
 		}
+
+		#[pallet::call_index(22)]
+		#[pallet::weight({1000})]
+		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: u32) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
+				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
+			} else {
+				Err(Error::<T>::AffiliatorNotFound.into())
+			}
+		}
+
+		#[pallet::call_index(23)]
+		#[pallet::weight({1000})]
+		pub fn enable_affiliator(
+			origin: OriginFor<T>,
+			target: AffiliatorTarget<T::AccountId>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			match target {
+				AffiliatorTarget::OneselfFree => {
+					// Check criteria
+					// T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
+				},
+				AffiliatorTarget::OneselfPaying => {
+					// Substract amout for paying if account not affiliator
+					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						affiliate_config.affiliator_enable_fee,
+						AllowDeath,
+					)?;
+					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
+				},
+				AffiliatorTarget::OtherPaying(other) => {
+					// Substract amout for paying if other not affiliator
+					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						affiliate_config.affiliator_enable_fee,
+						AllowDeath,
+					)?;
+					T::AffiliateHandler::try_mark_account_as_affiliatable(&other)?;
+				},
+			}
+
+			Ok(())
+		}
+
+		#[pallet::call_index(24)]
+		#[pallet::weight({1000})]
+		pub fn remove_affiliation(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+			T::AffiliateHandler::try_clear_affiliation_for(&account)
+		}
+
+		#[pallet::call_index(25)]
+		#[pallet::weight({1000})]
+		pub fn set_rule_for(
+			origin: OriginFor<T>,
+			rule_id: AffiliateMethods,
+			rule: FeePropagationOf<T>,
+		) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+
+			T::AffiliateHandler::try_add_rule_for(rule_id, rule)
+		}
+
+		#[pallet::call_index(26)]
+		#[pallet::weight({1000})]
+		pub fn clear_rule_for(origin: OriginFor<T>, rule_id: AffiliateMethods) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+
+			T::AffiliateHandler::clear_rule_for(rule_id);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1179,20 +1291,31 @@ pub mod pallet {
 				LogicGeneration::Second => MinterV2::<T>::mint(player, &season_id, mint_option),
 			}?;
 
-			let GlobalConfig { mint, .. } = GlobalConfigs::<T>::get();
+			let GlobalConfig { mint, affiliate_config, .. } = GlobalConfigs::<T>::get();
 			match mint_option.payment {
 				MintPayment::Normal => {
-					let fee = season.fee.mint.fee_for(&mint_option.pack_size);
-					T::Currency::withdraw(player, fee, WithdrawReasons::FEE, AllowDeath)?;
-					Self::deposit_into_treasury(&season_id, fee);
+					let mint_fee = {
+						let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
+
+						if affiliate_config.mode == AffiliateMode::Open
+							&& affiliate_config.enabled_in_mint
+						{
+							Self::try_propagate_chain_fee(AffiliateMethods::Mint, player, base_fee)?
+						} else {
+							base_fee
+						}
+					};
+
+					T::Currency::withdraw(player, mint_fee, WithdrawReasons::FEE, AllowDeath)?;
+					Self::deposit_into_treasury(&season_id, mint_fee);
 				},
 				MintPayment::Free => {
-					let fee = (mint_option.pack_size.as_mint_count())
+					let mint_fee = (mint_option.pack_size.as_mint_count())
 						.saturating_mul(mint.free_mint_fee_multiplier);
 					PlayerConfigs::<T>::try_mutate(player, |config| -> DispatchResult {
 						config.free_mints = config
 							.free_mints
-							.checked_sub(fee)
+							.checked_sub(mint_fee)
 							.ok_or(Error::<T>::InsufficientFreeMints)?;
 						Ok(())
 					})?;
@@ -1638,6 +1761,37 @@ pub mod pallet {
 		fn seasons(season_id: &SeasonId) -> Result<SeasonOf<T>, DispatchError> {
 			let season = Seasons::<T>::get(season_id).ok_or(Error::<T>::UnknownSeason)?;
 			Ok(season)
+		}
+
+		fn try_propagate_chain_fee(
+			rule_id: AffiliateMethods,
+			account: &T::AccountId,
+			base_fee: BalanceOf<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
+			let final_fee = if let Some(chain) =
+				T::AffiliateHandler::get_affiliator_chain_for(account)
+			{
+				T::AffiliateHandler::try_execute_rule_for(rule_id, |rule| {
+					let mut final_fee = base_fee;
+					for (rule_perc, chain_acc) in rule.into_iter().zip(chain.clone()) {
+						let transfer_fee = final_fee
+							.saturating_mul(rule_perc.into())
+							.checked_div(&100_u32.into())
+							.unwrap_or_default();
+
+						if transfer_fee > 0_u32.into() {
+							T::Currency::transfer(account, &chain_acc, transfer_fee, AllowDeath)?;
+							final_fee = final_fee.saturating_sub(transfer_fee);
+						}
+					}
+
+					Ok(final_fee)
+				})?
+			} else {
+				base_fee
+			};
+
+			Ok(final_fee)
 		}
 	}
 }

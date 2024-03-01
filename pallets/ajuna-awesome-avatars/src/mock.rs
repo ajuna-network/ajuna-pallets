@@ -192,9 +192,8 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHandler = NftTransfer;
-	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
 	type AffiliateHandler = Affiliates;
+	type FeeChainMaxLength = AffiliateMaxLevel;
 	type WeightInfo = ();
 }
 
@@ -217,14 +216,11 @@ parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
 }
 
-pub type MockRuleId = u8;
-pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
-
-type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
+pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
+	type RuleIdentifier = AffiliateMethods;
+	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 }
 
@@ -236,6 +232,7 @@ pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
 	free_mints: Vec<(MockAccountId, MintCount)>,
 	create_nft_collection: bool,
+	affiliators: Vec<MockAccountId>,
 }
 
 impl Default for ExtBuilder {
@@ -248,6 +245,7 @@ impl Default for ExtBuilder {
 			balances: Default::default(),
 			free_mints: Default::default(),
 			create_nft_collection: Default::default(),
+			affiliators: Default::default(),
 		}
 	}
 }
@@ -281,6 +279,12 @@ impl ExtBuilder {
 		self.create_nft_collection = create_nft_collection;
 		self
 	}
+
+	pub fn affiliators(mut self, affiliators: &[MockAccountId]) -> Self {
+		self.affiliators = affiliators.to_vec();
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		MOCK_EXISTENTIAL_DEPOSIT.with(|v| *v.borrow_mut() = self.existential_deposit);
 
@@ -324,6 +328,16 @@ impl ExtBuilder {
 				)
 				.expect("Collection created");
 				CollectionId::<Test>::put(collection_id);
+			}
+
+			if !self.affiliators.is_empty() {
+				pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::set(
+					self.affiliators.len() as u32,
+				);
+				for (i, account) in self.affiliators.into_iter().enumerate() {
+					Affiliates::force_mark_account_as_affiliatable(&account);
+					pallet_ajuna_affiliates::AffiliateIdMapping::<Test, AffiliatesInstance1>::insert(i as u32, account);
+				}
 			}
 		});
 		ext

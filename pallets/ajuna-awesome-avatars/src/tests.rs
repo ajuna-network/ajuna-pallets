@@ -3987,3 +3987,291 @@ mod ipfs {
 			});
 	}
 }
+
+mod affiliates {
+	use super::*;
+	use pallet_ajuna_affiliates::traits::*;
+	use sp_runtime::bounded_vec;
+
+	#[test]
+	fn add_affiliate_to_account() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.affiliators(&[ALICE])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+				);
+
+				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0));
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::AccountAffiliated { account: BOB, to: ALICE },
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					Some(bounded_vec![ALICE])
+				);
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 1 }
+				);
+			});
+	}
+
+	#[test]
+	fn cannot_affiliate_to_non_enabled_account() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::NonAffiliatable, affiliates: 0 }
+				);
+
+				assert_noop!(
+					AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0),
+					Error::<Test>::AffiliatorNotFound
+				);
+			});
+	}
+
+	#[ignore]
+	#[test]
+	fn enable_account_for_affiliation_free() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				assert_ok!(AAvatars::enable_affiliator(
+					RuntimeOrigin::signed(ALICE),
+					AffiliatorTarget::OneselfFree
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+				);
+				assert_eq!(
+					pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::get(),
+					1
+				);
+
+				assert_eq!(<Test as Config>::Currency::free_balance(ALICE), initial_balance);
+				assert_eq!(
+					<Test as Config>::Currency::free_balance(AAvatars::treasury_account_id()),
+					0
+				);
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::AccountMarkedAsAffiliatable {
+						account: ALICE,
+						affiliate_id: 0,
+					},
+				));
+			});
+	}
+
+	#[test]
+	fn enable_account_for_affiliation_paying() {
+		let initial_balance = 1_000_000;
+		let affiliator_enable_fee = 1_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				GlobalConfigs::<Test>::mutate(|config| {
+					config.affiliate_config.affiliator_enable_fee = affiliator_enable_fee;
+				});
+
+				assert_ok!(AAvatars::enable_affiliator(
+					RuntimeOrigin::signed(ALICE),
+					AffiliatorTarget::OneselfPaying
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+				);
+				assert_eq!(
+					pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::get(),
+					1
+				);
+
+				assert_eq!(
+					<Test as Config>::Currency::free_balance(ALICE),
+					initial_balance - affiliator_enable_fee
+				);
+				assert_eq!(
+					<Test as Config>::Currency::free_balance(AAvatars::treasury_account_id()),
+					affiliator_enable_fee
+				);
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::AccountMarkedAsAffiliatable {
+						account: ALICE,
+						affiliate_id: 0,
+					},
+				));
+			});
+	}
+
+	#[test]
+	fn enable_account_for_affiliation_paying_with_beneficiary() {
+		let initial_balance = 1_000_000;
+		let affiliator_enable_fee = 1_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				GlobalConfigs::<Test>::mutate(|config| {
+					config.affiliate_config.affiliator_enable_fee = affiliator_enable_fee;
+				});
+
+				assert_ok!(AAvatars::enable_affiliator(
+					RuntimeOrigin::signed(ALICE),
+					AffiliatorTarget::OtherPaying(BOB)
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::NonAffiliatable, affiliates: 0 }
+				);
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(BOB),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+				);
+				assert_eq!(
+					pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::get(),
+					1
+				);
+
+				assert_eq!(
+					<Test as Config>::Currency::free_balance(ALICE),
+					initial_balance - affiliator_enable_fee
+				);
+				assert_eq!(
+					<Test as Config>::Currency::free_balance(AAvatars::treasury_account_id()),
+					affiliator_enable_fee
+				);
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::AccountMarkedAsAffiliatable {
+						account: BOB,
+						affiliate_id: 0,
+					},
+				));
+			});
+	}
+
+	#[test]
+	fn remove_affiliate_chain() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.affiliators(&[ALICE])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+				);
+
+				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					Some(bounded_vec![ALICE])
+				);
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 1 }
+				);
+
+				assert_ok!(AAvatars::remove_affiliation(RuntimeOrigin::signed(ALICE), BOB));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					None
+				);
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+				);
+			});
+	}
+
+	#[test]
+	fn set_rule_works() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule = FeePropagationOf::<Test>::try_from(vec![10, 20])
+					.expect("Should create fee propagation");
+				assert_ok!(AAvatars::set_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					AffiliateMethods::Mint,
+					rule.clone()
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::RuleAdded { rule_id: AffiliateMethods::Mint },
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::AffiliateRules::<Test, AffiliatesInstance1>::get(
+						AffiliateMethods::Mint
+					),
+					Some(rule)
+				);
+			});
+	}
+
+	#[test]
+	fn clear_rule_works() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule = FeePropagationOf::<Test>::try_from(vec![10, 20])
+					.expect("Should create fee propagation");
+				assert_ok!(AAvatars::set_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					AffiliateMethods::Mint,
+					rule.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::AffiliateRules::<Test, AffiliatesInstance1>::get(
+						AffiliateMethods::Mint
+					),
+					Some(rule)
+				);
+
+				assert_ok!(AAvatars::clear_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					AffiliateMethods::Mint,
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::RuleCleared { rule_id: AffiliateMethods::Mint },
+				));
+			});
+	}
+}

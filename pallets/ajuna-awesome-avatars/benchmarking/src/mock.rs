@@ -16,13 +16,14 @@
 
 #![cfg(test)]
 
-use frame_support::pallet_prelude::ConstU32;
 use frame_support::{
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-	BoundedVec, PalletId,
+	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
+use pallet_ajuna_awesome_avatars::types::AffiliateMethods;
+use pallet_ajuna_awesome_avatars::FeePropagationOf;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -188,8 +189,7 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHandler = NftTransfer;
-	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
+	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type WeightInfo = ();
 }
@@ -213,14 +213,11 @@ parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
 }
 
-pub type MockRuleId = u8;
-pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
-
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
+	type RuleIdentifier = AffiliateMethods;
+	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 }
 
