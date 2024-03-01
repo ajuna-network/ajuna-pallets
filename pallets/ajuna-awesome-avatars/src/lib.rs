@@ -81,8 +81,8 @@ use pallet_ajuna_affiliates::traits::{
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, CheckedSub, CheckedDiv, Hash, Saturating, TrailingZeroInput, UniqueSaturatedInto,
-		Zero,
+		AccountIdConversion, CheckedDiv, CheckedSub, Hash, Saturating, TrailingZeroInput,
+		UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
 };
