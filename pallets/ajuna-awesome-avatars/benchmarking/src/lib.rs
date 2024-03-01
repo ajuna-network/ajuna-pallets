@@ -28,9 +28,9 @@ use frame_support::{
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use pallet_ajuna_awesome_avatars::{types::*, Config as AvatarsConfig, Pallet as AAvatars, *};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
-use sp_runtime::{
-	traits::{Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
-	BoundedVec,
+use sp_runtime::bounded_vec;
+use sp_runtime::traits::{
+	Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
 };
 use sp_std::vec;
 
@@ -80,11 +80,6 @@ fn create_seasons<T: Config>(n: usize) -> Result<(), &'static str> {
 		Seasons::<T>::insert(
 			(i + 1) as SeasonId,
 			Season {
-				name: [u8::MAX; 100].to_vec().try_into().unwrap(),
-				description: [u8::MAX; 1_000].to_vec().try_into().unwrap(),
-				early_start: BlockNumberFor::<T>::from((i * 10 + 1) as u32),
-				start: BlockNumberFor::<T>::from((i * 10 + 5) as u32),
-				end: BlockNumberFor::<T>::from((i * 10 + 10) as u32),
 				max_tier_forges: u32::MAX,
 				max_variations: 15,
 				max_components: 16,
@@ -105,7 +100,6 @@ fn create_seasons<T: Config>(n: usize) -> Result<(), &'static str> {
 				base_prob: 0,
 				per_period: BlockNumberFor::<T>::from(10_u32),
 				periods: 12,
-				trade_filters: BoundedVec::default(),
 				fee: Fee {
 					mint: MintFees {
 						one: 550_000_000_000_u64.unique_saturated_into(), // 0.55 BAJU
@@ -117,14 +111,34 @@ fn create_seasons<T: Config>(n: usize) -> Result<(), &'static str> {
 					buy_percent: 1,
 					upgrade_storage: 1_000_000_000_000_u64.unique_saturated_into(), // 1 BAJU
 					prepare_avatar: 5_000_000_000_000_u64.unique_saturated_into(),  // 5 BAJU
+					set_price_unlock: 10_000_000_000_000_u64.unique_saturated_into(), // 10 BAJU,
+					avatar_transfer_unlock: 10_000_000_000_000_u64.unique_saturated_into(), // 10 BAJU,
 				},
 				mint_logic: LogicGeneration::First,
 				forge_logic: LogicGeneration::First,
 			},
 		);
+		SeasonMetas::<T>::insert(
+			(i + 1) as SeasonId,
+			SeasonMeta {
+				name: [u8::MAX; 100].to_vec().try_into().unwrap(),
+				description: [u8::MAX; 1_000].to_vec().try_into().unwrap(),
+			},
+		);
+		SeasonSchedules::<T>::insert(
+			(i + 1) as SeasonId,
+			SeasonSchedule {
+				early_start: BlockNumberFor::<T>::from((i * 10 + 1) as u32),
+				start: BlockNumberFor::<T>::from((i * 10 + 5) as u32),
+				end: BlockNumberFor::<T>::from((i * 10 + 10) as u32),
+			},
+		);
+		SeasonTradeFilters::<T>::insert((i + 1) as SeasonId, TradeFilters::default());
 	}
 	frame_system::Pallet::<T>::set_block_number(
-		Seasons::<T>::get(CurrentSeasonStatus::<T>::get().season_id).unwrap().start,
+		SeasonSchedules::<T>::get(CurrentSeasonStatus::<T>::get().season_id)
+			.unwrap()
+			.start,
 	);
 	Ok(())
 }
@@ -351,7 +365,7 @@ benchmarks! {
 		let (buyer_name, seller_name) = ("buyer", "seller");
 		let (buyer, seller) = (account::<T>(buyer_name), account::<T>(seller_name));
 		let n in 1 .. MaxAvatarsPerPlayer::get();
-		create_avatars::<T>(buyer_name, n- 1)?;
+		create_avatars::<T>(buyer_name, n - 1)?;
 		create_avatars::<T>(seller_name, n)?;
 
 		let sell_fee = BalanceOf::<T>::unique_saturated_from(u64::MAX / 2);
@@ -364,7 +378,7 @@ benchmarks! {
 		Trade::<T>::insert(season_id, avatar_id, sell_fee);
 	}: _(RawOrigin::Signed(buyer.clone()), avatar_id)
 	verify {
-		assert_last_event::<T>(Event::AvatarTraded { avatar_id, from: seller, to: buyer })
+		assert_last_event::<T>(Event::AvatarTraded { avatar_id, from: seller, to: buyer, price: sell_fee })
 	}
 
 	upgrade_storage {
@@ -424,11 +438,6 @@ benchmarks! {
 
 		let season_id = 1;
 		let season = Season {
-			name: [u8::MAX; 100].to_vec().try_into().unwrap(),
-			description: [u8::MAX; 1_000].to_vec().try_into().unwrap(),
-			early_start: BlockNumberFor::<T>::from(u32::MAX - 2),
-			start: BlockNumberFor::<T>::from(u32::MAX - 1),
-			end: BlockNumberFor::<T>::from(u32::MAX),
 			max_tier_forges: u32::MAX,
 			max_variations: 15,
 			max_components: 16,
@@ -449,7 +458,6 @@ benchmarks! {
 			base_prob: 99,
 			per_period: BlockNumberFor::<T>::from(1_u32),
 			periods: u16::MAX,
-			trade_filters: BoundedVec::default(),
 			fee: Fee {
 				mint: MintFees {
 					one: BalanceOf::<T>::unique_saturated_from(u128::MAX),
@@ -461,13 +469,35 @@ benchmarks! {
 				buy_percent: u8::MAX,
 				upgrade_storage: BalanceOf::<T>::unique_saturated_from(u128::MAX),
 				prepare_avatar: BalanceOf::<T>::unique_saturated_from(u128::MAX),
+				set_price_unlock: BalanceOf::<T>::unique_saturated_from(u128::MAX),
+				avatar_transfer_unlock: BalanceOf::<T>::unique_saturated_from(u128::MAX),
 			},
 			mint_logic: LogicGeneration::First,
 			forge_logic: LogicGeneration::First,
 		};
-	}: _(RawOrigin::Signed(organizer), season_id, season.clone())
+		let season_meta = SeasonMeta {
+			name: [u8::MAX; 100].to_vec().try_into().unwrap(),
+			description: [u8::MAX; 1_000].to_vec().try_into().unwrap(),
+		};
+		let season_schedule = SeasonSchedule {
+			early_start: BlockNumberFor::<T>::from(u32::MAX - 2),
+			start: BlockNumberFor::<T>::from(u32::MAX - 1),
+			end: BlockNumberFor::<T>::from(u32::MAX),
+		};
+		let trade_filters = TradeFilters(bounded_vec![
+			u32::from_le_bytes([0x11, 0x07, 0x00, 0x00]), // CrazyDude pet
+			u32::from_le_bytes([0x12, 0x36, 0x00, 0x00]), // GiantWoodStick armor front pet part
+			u32::from_le_bytes([0x25, 0x07, 0x00, 0xFF]), // Metals of quantity 255
+			u32::from_le_bytes([0x25, 0x02, 0x00, 0x00]), // Electronics of any quantity
+			u32::from_le_bytes([0x30, 0x00, 0x00, 0x00]), // Any Essence
+			u32::from_le_bytes([0x41, 0x00, 0x00, 0xF0]), // ArmorBase of quantity 240
+			u32::from_le_bytes([0x45, 0x00, 0x00, 0x0F]), // WeaponVersion1 of quantity 15
+		]);
+	}: _(RawOrigin::Signed(organizer), season_id, Some(season.clone()), Some(season_meta.clone()), Some(season_schedule.clone()), Some(trade_filters.clone()))
 	verify {
-		assert_last_event::<T>(Event::UpdatedSeason { season_id, season })
+		assert_last_event::<T>(Event::UpdatedSeason {
+			season_id, season: Some(season), meta: Some(season_meta), schedule: Some(season_schedule), trade_filters: Some(trade_filters)
+		})
 	}
 
 	update_global_config {

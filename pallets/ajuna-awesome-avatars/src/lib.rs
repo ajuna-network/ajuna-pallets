@@ -50,7 +50,7 @@
 //!
 //! * `do_forge` - Forge avatar.
 //! * `do_mint` - Mint avatar.
-//! * `ensure_season` - Given a season id and a season, validate them.
+//! * `ensure_season_schedule` - Given a season id and a season schedule, validate them.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -81,8 +81,8 @@ use pallet_ajuna_affiliates::traits::{
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, Hash, Saturating,
-		TrailingZeroInput, UniqueSaturatedInto, Zero,
+		AccountIdConversion, CheckedDiv, CheckedSub, Hash, Saturating, TrailingZeroInput,
+		UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
 };
@@ -96,6 +96,7 @@ pub mod pallet {
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type SeasonOf<T> = Season<BlockNumberFor<T>, BalanceOf<T>>;
+	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
 	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub(crate) type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
@@ -184,6 +185,20 @@ pub mod pallet {
 	/// Storage for the seasons.
 	#[pallet::storage]
 	pub type Seasons<T: Config> = StorageMap<_, Identity, SeasonId, SeasonOf<T>, OptionQuery>;
+
+	/// Storage for the season's metadata.
+	#[pallet::storage]
+	pub type SeasonMetas<T: Config> = StorageMap<_, Identity, SeasonId, SeasonMeta, OptionQuery>;
+
+	/// Storage for the season's schedules.
+	#[pallet::storage]
+	pub type SeasonSchedules<T: Config> =
+		StorageMap<_, Identity, SeasonId, SeasonScheduleOf<T>, OptionQuery>;
+
+	/// Storage for the season's trade filters.
+	#[pallet::storage]
+	pub type SeasonTradeFilters<T: Config> =
+		StorageMap<_, Identity, SeasonId, TradeFilters, OptionQuery>;
 
 	#[pallet::storage]
 	pub type Treasury<T: Config> = StorageMap<_, Identity, SeasonId, BalanceOf<T>, ValueQuery>;
@@ -291,7 +306,13 @@ pub mod pallet {
 		/// A season's treasury has been claimed by a treasurer.
 		TreasuryClaimed { season_id: SeasonId, treasurer: T::AccountId, amount: BalanceOf<T> },
 		/// The season configuration for {season_id} has been updated.
-		UpdatedSeason { season_id: SeasonId, season: SeasonOf<T> },
+		UpdatedSeason {
+			season_id: SeasonId,
+			season: Option<SeasonOf<T>>,
+			meta: Option<SeasonMeta>,
+			schedule: Option<SeasonScheduleOf<T>>,
+			trade_filters: Option<TradeFilters>,
+		},
 		/// Global configuration updated.
 		UpdatedGlobalConfig(GlobalConfigOf<T>),
 		/// Avatars minted.
@@ -313,7 +334,12 @@ pub mod pallet {
 		/// Avatar has price removed for trade.
 		AvatarPriceUnset { avatar_id: AvatarIdOf<T> },
 		/// Avatar has been traded.
-		AvatarTraded { avatar_id: AvatarIdOf<T>, from: T::AccountId, to: T::AccountId },
+		AvatarTraded {
+			avatar_id: AvatarIdOf<T>,
+			from: T::AccountId,
+			to: T::AccountId,
+			price: BalanceOf<T>,
+		},
 		/// Avatar locked.
 		AvatarLocked { avatar_id: AvatarIdOf<T> },
 		/// Avatar unlocked.
@@ -479,7 +505,7 @@ pub mod pallet {
 			let current_season_id = CurrentSeasonStatus::<T>::get().season_id;
 			let mut weight = T::DbWeight::get().reads(1);
 
-			if let Some(current_season) = Seasons::<T>::get(current_season_id) {
+			if let Some(current_season) = SeasonSchedules::<T>::get(current_season_id) {
 				weight.saturating_accrue(T::DbWeight::get().reads(1));
 
 				if now <= current_season.end {
@@ -717,7 +743,7 @@ pub mod pallet {
 				config.stats.trade.sold.saturating_inc()
 			});
 
-			Self::deposit_event(Event::AvatarTraded { avatar_id, from: seller, to: buyer });
+			Self::deposit_event(Event::AvatarTraded { avatar_id, from: seller, to: buyer, price });
 			Ok(())
 		}
 
@@ -842,11 +868,11 @@ pub mod pallet {
 			let treasurer = Treasurer::<T>::get(season_id).ok_or(Error::<T>::UnknownTreasurer)?;
 			ensure!(maybe_treasurer == treasurer, DispatchError::BadOrigin);
 
-			let (current_season_id, season) = Self::current_season_with_id()?;
+			let (current_season_id, season_schedule) = Self::current_season_schedule_with_id()?;
 			ensure!(
 				season_id < current_season_id
 					|| (season_id == current_season_id
-						&& <frame_system::Pallet<T>>::block_number() > season.end),
+						&& <frame_system::Pallet<T>>::block_number() > season_schedule.end),
 				Error::<T>::CannotClaimDuringSeason
 			);
 
@@ -872,12 +898,39 @@ pub mod pallet {
 		pub fn set_season(
 			origin: OriginFor<T>,
 			season_id: SeasonId,
-			season: SeasonOf<T>,
+			season: Option<SeasonOf<T>>,
+			season_meta: Option<SeasonMeta>,
+			season_schedule: Option<SeasonScheduleOf<T>>,
+			trade_filters: Option<TradeFilters>,
 		) -> DispatchResult {
 			Self::ensure_organizer(origin)?;
-			let season = Self::ensure_season(&season_id, season)?;
-			Seasons::<T>::insert(season_id, &season);
-			Self::deposit_event(Event::UpdatedSeason { season_id, season });
+
+			if let Some(mut season_update) = season.clone() {
+				season_update.validate::<T>()?;
+				Seasons::<T>::insert(season_id, &season_update);
+			}
+
+			if let Some(meta_update) = season_meta.clone() {
+				SeasonMetas::<T>::insert(season_id, meta_update);
+			}
+
+			if let Some(schedule_update) = season_schedule.clone() {
+				Self::ensure_season_schedule(season_id, &schedule_update)?;
+				SeasonSchedules::<T>::insert(season_id, &schedule_update);
+			}
+
+			if let Some(filter_update) = trade_filters.clone() {
+				SeasonTradeFilters::<T>::insert(season_id, filter_update);
+			}
+
+			Self::deposit_event(Event::UpdatedSeason {
+				season_id,
+				season,
+				meta: season_meta,
+				schedule: season_schedule,
+				trade_filters,
+			});
+
 			Ok(())
 		}
 
@@ -1250,25 +1303,31 @@ pub mod pallet {
 			Ok(maybe_sa)
 		}
 
-		/// Validates a new season.
-		pub(crate) fn ensure_season(
-			season_id: &SeasonId,
-			mut season: SeasonOf<T>,
-		) -> Result<SeasonOf<T>, DispatchError> {
-			season.validate::<T>()?;
+		pub(crate) fn ensure_season_schedule(
+			season_id: SeasonId,
+			season_schedule: &SeasonScheduleOf<T>,
+		) -> DispatchResult {
+			season_schedule.validate::<T>()?;
 
-			let prev_season_id = season_id.checked_sub(&1).ok_or(ArithmeticError::Underflow)?;
-			let next_season_id = season_id.checked_add(&1).ok_or(ArithmeticError::Overflow)?;
+			let prev_season_id = season_id.checked_sub(1).ok_or(ArithmeticError::Underflow)?;
+			let next_season_id = season_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
 			if prev_season_id > 0 {
-				let prev_season =
-					Seasons::<T>::get(prev_season_id).ok_or(Error::<T>::NonSequentialSeasonId)?;
-				ensure!(prev_season.end < season.early_start, Error::<T>::EarlyStartTooEarly);
+				let prev_schedule = SeasonSchedules::<T>::get(prev_season_id)
+					.ok_or(Error::<T>::NonSequentialSeasonId)?;
+				ensure!(
+					prev_schedule.end < season_schedule.early_start,
+					Error::<T>::EarlyStartTooEarly
+				);
 			}
-			if let Some(next_season) = Seasons::<T>::get(next_season_id) {
-				ensure!(season.end < next_season.early_start, Error::<T>::SeasonEndTooLate);
+			if let Some(next_schedule) = SeasonSchedules::<T>::get(next_season_id) {
+				ensure!(
+					season_schedule.end < next_schedule.early_start,
+					Error::<T>::SeasonEndTooLate
+				);
 			}
-			Ok(season)
+
+			Ok(())
 		}
 
 		pub(crate) fn random_hash(phrase: &[u8], who: &T::AccountId) -> T::Hash {
@@ -1438,6 +1497,21 @@ pub mod pallet {
 				},
 			};
 			Ok((current_status.season_id, season))
+		}
+
+		fn current_season_schedule_with_id(
+		) -> Result<(SeasonId, SeasonScheduleOf<T>), DispatchError> {
+			let mut current_status = CurrentSeasonStatus::<T>::get();
+			let season_schedule = match SeasonSchedules::<T>::get(current_status.season_id) {
+				Some(season_schedule) if current_status.is_in_season() => season_schedule,
+				_ => {
+					if current_status.season_id > 1 {
+						current_status.season_id.saturating_dec();
+					}
+					Self::season_schedules(&current_status.season_id)?
+				},
+			};
+			Ok((current_status.season_id, season_schedule))
 		}
 
 		fn season_with_id_for(avatar: &Avatar) -> Result<(SeasonId, SeasonOf<T>), DispatchError> {
@@ -1702,9 +1776,9 @@ pub mod pallet {
 		}
 
 		fn ensure_tradable(avatar: &Avatar) -> DispatchResult {
-			let season = Seasons::<T>::get(avatar.season_id)
+			let trade_filters = SeasonTradeFilters::<T>::get(avatar.season_id)
 				.ok_or::<DispatchError>(Error::<T>::UnknownSeason.into())?;
-			ensure!(season.is_tradable(avatar), Error::<T>::AvatarCannotBeTraded);
+			ensure!(trade_filters.is_tradable(avatar), Error::<T>::AvatarCannotBeTraded);
 			Ok(())
 		}
 
@@ -1712,7 +1786,7 @@ pub mod pallet {
 			weight: &mut Weight,
 			block_number: BlockNumberFor<T>,
 			season_id: SeasonId,
-			season: &SeasonOf<T>,
+			season: &SeasonScheduleOf<T>,
 		) {
 			let is_current_season_active = CurrentSeasonStatus::<T>::get().active;
 			weight.saturating_accrue(T::DbWeight::get().reads(1));
@@ -1748,7 +1822,7 @@ pub mod pallet {
 			Self::deposit_event(Event::SeasonFinished(season_id));
 			weight.saturating_accrue(T::DbWeight::get().writes(1));
 
-			if let Some(next_season) = Seasons::<T>::get(next_season_id) {
+			if let Some(next_season) = SeasonSchedules::<T>::get(next_season_id) {
 				Self::start_season(weight, block_number, next_season_id, &next_season);
 			}
 		}
@@ -1761,6 +1835,12 @@ pub mod pallet {
 		fn seasons(season_id: &SeasonId) -> Result<SeasonOf<T>, DispatchError> {
 			let season = Seasons::<T>::get(season_id).ok_or(Error::<T>::UnknownSeason)?;
 			Ok(season)
+		}
+
+		fn season_schedules(season_id: &SeasonId) -> Result<SeasonScheduleOf<T>, DispatchError> {
+			let season_schedule =
+				SeasonSchedules::<T>::get(season_id).ok_or(Error::<T>::UnknownSeason)?;
+			Ok(season_schedule)
 		}
 
 		fn try_propagate_chain_fee(

@@ -399,9 +399,6 @@ mod test {
 	#[test]
 	fn compare_works() {
 		let season = Season::default()
-			.early_start(100)
-			.start(200)
-			.end(150_000)
 			.max_tier_forges(100)
 			.max_variations(6)
 			.max_components(11)
@@ -442,15 +439,17 @@ mod test {
 			.max_variations(3)
 			.min_sacrifices(1)
 			.max_sacrifices(2);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
 			.seasons(&[(season_id, season.clone())])
+			.schedules(&[(season_id, season_schedule.clone())])
 			.mint_cooldown(1)
 			.free_mints(&[(BOB, 10)])
 			.build()
 			.execute_with(|| {
 				// prepare avatars to forge
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(BOB),
 					MintOption {
@@ -543,15 +542,17 @@ mod test {
 			.max_variations(12)
 			.min_sacrifices(1)
 			.max_sacrifices(5);
+		let season_schedule = SeasonSchedule::default();
 
 		ExtBuilder::default()
 			.seasons(&[(season_id, season.clone())])
+			.schedules(&[(season_id, season_schedule.clone())])
 			.mint_cooldown(1)
 			.free_mints(&[(BOB, 10)])
 			.build()
 			.execute_with(|| {
 				// prepare avatars to forge
-				run_to_block(season.start);
+				run_to_block(season_schedule.start);
 				assert_ok!(AAvatars::mint(
 					RuntimeOrigin::signed(BOB),
 					MintOption {

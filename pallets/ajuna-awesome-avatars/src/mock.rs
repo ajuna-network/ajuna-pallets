@@ -228,6 +228,8 @@ pub struct ExtBuilder {
 	existential_deposit: MockBalance,
 	organizer: Option<MockAccountId>,
 	seasons: Vec<(SeasonId, Season<MockBlockNumber, MockBalance>)>,
+	schedules: Vec<(SeasonId, SeasonSchedule<MockBlockNumber>)>,
+	trade_filters: Vec<(SeasonId, TradeFilters)>,
 	mint_cooldown: MockBlockNumber,
 	balances: Vec<(MockAccountId, MockBalance)>,
 	free_mints: Vec<(MockAccountId, MintCount)>,
@@ -241,6 +243,8 @@ impl Default for ExtBuilder {
 			existential_deposit: MockExistentialDeposit::get(),
 			organizer: Default::default(),
 			seasons: Default::default(),
+			schedules: Default::default(),
+			trade_filters: Default::default(),
 			mint_cooldown: Default::default(),
 			balances: Default::default(),
 			free_mints: Default::default(),
@@ -263,6 +267,17 @@ impl ExtBuilder {
 		self.seasons = seasons.to_vec();
 		self
 	}
+
+	pub fn schedules(mut self, schedules: &[(SeasonId, SeasonSchedule<MockBlockNumber>)]) -> Self {
+		self.schedules = schedules.to_vec();
+		self
+	}
+
+	pub fn trade_filters(mut self, trade_filters: &[(SeasonId, TradeFilters)]) -> Self {
+		self.trade_filters = trade_filters.to_vec();
+		self
+	}
+
 	pub fn mint_cooldown(mut self, mint_cooldown: MockBlockNumber) -> Self {
 		self.mint_cooldown = mint_cooldown;
 		self
@@ -305,6 +320,14 @@ impl ExtBuilder {
 
 			for (season_id, season) in self.seasons {
 				Seasons::<Test>::insert(season_id, season);
+			}
+
+			for (season_id, season_schedule) in self.schedules {
+				SeasonSchedules::<Test>::insert(season_id, season_schedule);
+			}
+
+			for (season_id, trade_filters) in self.trade_filters {
+				SeasonTradeFilters::<Test>::insert(season_id, trade_filters);
 			}
 
 			GlobalConfigs::<Test>::mutate(|config| {
