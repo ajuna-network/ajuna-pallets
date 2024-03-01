@@ -625,7 +625,7 @@ pub mod pallet {
 			}?;
 
 			let (season_id, _) = Self::current_season_with_id()?;
-			let SeasonInfo { minted, forged } = SeasonStats::<T>::get(season_id, &from);
+			let SeasonInfo { minted, forged, .. } = SeasonStats::<T>::get(season_id, &from);
 			ensure!(minted > 0 && forged > 0, Error::<T>::CannotTransferFromInactiveAccount);
 
 			let GlobalConfig { transfer, .. } = GlobalConfigs::<T>::get();
@@ -736,11 +736,11 @@ pub mod pallet {
 			Self::do_transfer_avatar(&seller, &buyer, &avatar.season_id, &avatar_id)?;
 			Trade::<T>::remove(avatar.season_id, avatar_id);
 
-			PlayerSeasonConfigs::<T>::mutate(&buyer, current_season_id, |config| {
-				config.stats.trade.bought.saturating_inc()
+			SeasonStats::<T>::mutate(current_season_id, &buyer, |stats| {
+				stats.bought.saturating_inc()
 			});
-			PlayerSeasonConfigs::<T>::mutate(&seller, current_season_id, |config| {
-				config.stats.trade.sold.saturating_inc()
+			SeasonStats::<T>::mutate(current_season_id, &seller, |stats| {
+				stats.sold.saturating_inc()
 			});
 
 			Self::deposit_event(Event::AvatarTraded { avatar_id, from: seller, to: buyer, price });
@@ -1390,16 +1390,15 @@ pub mod pallet {
 						stats.mint.first = current_block;
 					}
 					stats.mint.last = current_block;
-					stats
-						.mint
-						.seasons_participated
-						.try_insert(season_id)
-						.map_err(|_| Error::<T>::IncorrectSeasonId)?;
 					Ok(())
 				},
 			)?;
 			SeasonStats::<T>::mutate(season_id, player, |info| {
 				info.minted.saturating_accrue(generated_avatar_ids.len() as Stat);
+
+				if mint_option.payment == MintPayment::Free {
+					info.free_minted.saturating_accrue(generated_avatar_ids.len() as Stat);
+				}
 			});
 
 			Self::deposit_event(Event::AvatarsMinted { avatar_ids: generated_avatar_ids });
@@ -1717,11 +1716,6 @@ pub mod pallet {
 						stats.forge.first = current_block;
 					}
 					stats.forge.last = current_block;
-					stats
-						.forge
-						.seasons_participated
-						.try_insert(season_id)
-						.map_err(|_| Error::<T>::IncorrectSeasonId)?;
 					Ok(())
 				},
 			)?;

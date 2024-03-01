@@ -1265,20 +1265,10 @@ mod minting {
 					);
 
 					// total minted count updates
-					let seasons_participated = PlayerSeasonConfigs::<Test>::get(ALICE, season_id)
-						.stats
-						.mint
-						.seasons_participated;
 					assert_eq!(
-						seasons_participated
-							.iter()
-							.map(|season_id| SeasonStats::<Test>::get(season_id, ALICE).minted)
-							.sum::<u32>(),
+						SeasonStats::<Test>::get(season_id, ALICE).minted,
 						minted_count as u32
 					);
-
-					// check participation
-					assert_eq!(seasons_participated.into_iter().collect::<Vec<_>>(), vec![1]);
 
 					// current season minted count resets
 					assert_eq!(CurrentSeasonStatus::<Test>::get().season_id, 2);
@@ -1799,16 +1789,6 @@ mod forging {
 				assert_eq!(Avatars::<Test>::get(leader_id).unwrap().1.dna.to_vec(), expected_dna);
 
 				forged_count += 1;
-				assert_eq!(
-					PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID)
-						.stats
-						.forge
-						.seasons_participated
-						.iter()
-						.map(|season_id| SeasonStats::<Test>::get(season_id, BOB).forged)
-						.sum::<u32>(),
-					forged_count as u32
-				);
 				assert_eq!(SeasonStats::<Test>::get(1, BOB).forged, forged_count);
 				assert_eq!(
 					PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).stats.forge.first,
@@ -1961,15 +1941,6 @@ mod forging {
 				));
 				assert_eq!(CurrentSeasonStatus::<Test>::get().max_tier_avatars, max_tier_avatars);
 				assert_eq!(Owners::<Test>::get(BOB, SEASON_ID).len(), (4 - 3) + (4 - 3));
-				assert_eq!(
-					PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID)
-						.stats
-						.forge
-						.seasons_participated
-						.into_iter()
-						.collect::<Vec<_>>(),
-					vec![1]
-				);
 
 				// NOTE: BOB forged twice so the seasonal forged count is 2
 				assert_eq!(SeasonStats::<Test>::get(1, BOB).forged, 2);
@@ -3161,11 +3132,8 @@ mod trading {
 				assert_eq!(Trade::<Test>::get(SEASON_ID, avatar_for_sale), None);
 
 				// check for account stats
-				assert_eq!(
-					PlayerSeasonConfigs::<Test>::get(ALICE, SEASON_ID).stats.trade.bought,
-					1
-				);
-				assert_eq!(PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).stats.trade.sold, 1);
+				assert_eq!(SeasonStats::<Test>::get(SEASON_ID, ALICE).bought, 1);
+				assert_eq!(SeasonStats::<Test>::get(SEASON_ID, BOB).sold, 1);
 
 				// check events
 				System::assert_last_event(mock::RuntimeEvent::AAvatars(
@@ -3182,11 +3150,8 @@ mod trading {
 				assert_ok!(AAvatars::set_price(RuntimeOrigin::signed(BOB), avatar_for_sale, 1357));
 				assert_ok!(AAvatars::buy(RuntimeOrigin::signed(CHARLIE), avatar_for_sale));
 				treasury_balance_season_1 += min_fee;
-				assert_eq!(
-					PlayerSeasonConfigs::<Test>::get(CHARLIE, SEASON_ID).stats.trade.bought,
-					1
-				);
-				assert_eq!(PlayerSeasonConfigs::<Test>::get(BOB, SEASON_ID).stats.trade.sold, 2);
+				assert_eq!(SeasonStats::<Test>::get(SEASON_ID, CHARLIE).bought, 1);
+				assert_eq!(SeasonStats::<Test>::get(SEASON_ID, BOB).sold, 2);
 
 				// check season id
 				let avatar_on_sale = create_avatars(season_id, ALICE, 1)[0];
