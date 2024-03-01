@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use super::{MintCount, SeasonId};
+use super::MintCount;
 use frame_support::pallet_prelude::*;
-use sp_runtime::{traits::Get, BoundedBTreeSet};
+use sp_runtime::traits::Get;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 pub enum StorageTier {
@@ -62,35 +62,38 @@ pub type Stat = u32;
 pub struct PlayStats<BlockNumber> {
 	pub first: BlockNumber,
 	pub last: BlockNumber,
-	pub seasons_participated: BoundedBTreeSet<SeasonId, MaxSeasons>,
-}
-
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
-pub struct TradeStats {
-	pub bought: Stat,
-	pub sold: Stat,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
 pub struct Stats<BlockNumber> {
 	pub mint: PlayStats<BlockNumber>,
 	pub forge: PlayStats<BlockNumber>,
-	pub trade: TradeStats,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
-pub struct PlayerConfig {
-	pub free_mints: MintCount,
+pub struct Locks {
+	pub avatar_transfer: bool,
+	pub set_price: bool,
+	pub affiliate: bool,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
 pub struct PlayerSeasonConfig<BlockNumber> {
 	pub storage_tier: StorageTier,
 	pub stats: Stats<BlockNumber>,
+	pub locks: Locks,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
 pub struct SeasonInfo {
 	pub minted: Stat,
+	pub free_minted: Stat,
 	pub forged: Stat,
+	pub bought: Stat,
+	pub sold: Stat,
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+pub struct PlayerConfig {
+	pub free_mints: MintCount,
 }

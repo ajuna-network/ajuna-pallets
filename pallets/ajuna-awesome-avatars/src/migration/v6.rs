@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Decode)]
 pub struct MintConfigV5<T: Config> {
@@ -160,6 +161,58 @@ where
 	}
 }
 
+#[derive(Decode)]
+pub struct TradeStatsV5 {
+	pub bought: Stat,
+	pub sold: Stat,
+}
+
+#[derive(Decode)]
+pub struct StatsV5<T: Config> {
+	pub mint: PlayStats<BlockNumberFor<T>>,
+	pub forge: PlayStats<BlockNumberFor<T>>,
+	pub trade: TradeStatsV5,
+}
+
+impl<T> StatsV5<T>
+where
+	T: Config,
+{
+	fn migrate_to_v6(self) -> Stats<BlockNumberFor<T>> {
+		Stats { mint: self.mint, forge: self.forge }
+	}
+}
+#[derive(Decode)]
+pub struct PlayerSeasonConfigV5<T: Config> {
+	pub storage_tier: StorageTier,
+	pub stats: StatsV5<T>,
+}
+
+impl<T> PlayerSeasonConfigV5<T>
+where
+	T: Config,
+{
+	fn migrate_to_v6(self) -> PlayerSeasonConfig<BlockNumberFor<T>> {
+		PlayerSeasonConfig {
+			storage_tier: self.storage_tier,
+			stats: self.stats.migrate_to_v6(),
+			locks: Locks::default(),
+		}
+	}
+}
+
+#[derive(Decode)]
+pub struct SeasonInfoV5 {
+	pub minted: Stat,
+	pub forged: Stat,
+}
+
+impl SeasonInfoV5 {
+	fn migration_to_v6(self, bought: Stat, sold: Stat) -> SeasonInfo {
+		SeasonInfo { minted: self.minted, free_minted: 0, forged: self.forged, bought, sold }
+	}
+}
+
 pub struct MigrateToV6<T>(sp_std::marker::PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
@@ -171,6 +224,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 				log::info!(target: LOG_TARGET, "Updated GlobalConfig from v5 to v6");
 				old_config.map(|old| old.migrate_to_v6())
 			});
+
+			let mut seasons_translated = 0;
 
 			Seasons::<T>::translate::<SeasonV5<T>, _>(|season_id, old_season| {
 				log::info!(target: LOG_TARGET, "Updated Season from v5 to v6");
@@ -197,12 +252,56 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 					TradeFilters(old_season.trade_filters.clone()),
 				);
 
+				seasons_translated += 1;
+
 				Some(old_season.migrate_to_v6())
 			});
 
+			let mut trade_stats_map = BTreeMap::<(SeasonId, T::AccountId), (Stat, Stat)>::new();
+			let mut player_season_configs_translated = 0;
+
+			PlayerSeasonConfigs::<T>::translate::<PlayerSeasonConfigV5<T>, _>(
+				|account, season_id, old_config| {
+					log::info!(target: LOG_TARGET, "Updated PlayerSeasonConfigs from v5 to v6");
+
+					trade_stats_map.insert(
+						(season_id, account),
+						(old_config.stats.trade.bought, old_config.stats.trade.sold),
+					);
+
+					player_season_configs_translated += 1;
+
+					Some(old_config.migrate_to_v6())
+				},
+			);
+
+			let mut season_stats_translated = 0;
+
+			SeasonStats::<T>::translate::<SeasonInfoV5, _>(
+				|season_id, account, old_season_info| {
+					log::info!(target: LOG_TARGET, "Updated SeasonStats from v5 to v6");
+
+					if let Some((bought, sold)) = trade_stats_map.remove(&(season_id, account)) {
+						season_stats_translated += 1;
+
+						Some(old_season_info.migration_to_v6(bought, sold))
+					} else {
+						log::error!(target: LOG_TARGET, "Missing trade mapping in SeasonStats from v5 to v6");
+						None
+					}
+				},
+			);
+
 			current_version.put::<Pallet<T>>();
 			log::info!(target: LOG_TARGET, "Upgraded storage to version {:?}", current_version);
-			T::DbWeight::get().reads_writes(1, 1)
+
+			let total_reads =
+				seasons_translated + player_season_configs_translated + season_stats_translated;
+			let total_writes = (seasons_translated * 4)
+				+ player_season_configs_translated
+				+ season_stats_translated;
+
+			T::DbWeight::get().reads_writes(total_reads, total_writes)
 		} else {
 			log::info!(
 				target: LOG_TARGET,
