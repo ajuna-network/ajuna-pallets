@@ -34,6 +34,7 @@ use traits::*;
 pub mod pallet {
 	use super::*;
 	use sp_runtime::ArithmeticError;
+	use sp_std::vec::Vec;
 
 	pub type AffiliatedAccountsOf<T, I> =
 		BoundedVec<<T as frame_system::Config>::AccountId, <T as Config<I>>::AffiliateMaxLevel>;

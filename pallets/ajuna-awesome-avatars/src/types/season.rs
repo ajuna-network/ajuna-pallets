@@ -21,7 +21,7 @@ use crate::{
 use frame_support::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32Bit, UniqueSaturatedInto, Zero};
 use sp_std::borrow::ToOwned;
-use std::ops::{Deref, DerefMut};
+use sp_std::ops::{Deref, DerefMut};
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 pub struct SeasonStatus {

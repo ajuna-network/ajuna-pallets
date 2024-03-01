@@ -1,4 +1,5 @@
 use frame_support::pallet_prelude::*;
+use sp_std::vec::Vec;
 
 pub trait AffiliateInspector<AccountId> {
 	/// Returns a vector of accounts that 'account' is affiliated to.
