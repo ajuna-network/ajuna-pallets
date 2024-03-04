@@ -200,6 +200,11 @@ pub mod pallet {
 	pub type SeasonTradeFilters<T: Config> =
 		StorageMap<_, Identity, SeasonId, TradeFilters, OptionQuery>;
 
+	/// Storage for the season's different unlock-ables.
+	#[pallet::storage]
+	pub type SeasonUnlocks<T: Config> =
+		StorageMap<_, Identity, SeasonId, UnlockConfigs, OptionQuery>;
+
 	#[pallet::storage]
 	pub type Treasury<T: Config> = StorageMap<_, Identity, SeasonId, BalanceOf<T>, ValueQuery>;
 
@@ -497,6 +502,13 @@ pub mod pallet {
 		WhitelistedAccountsLimitReached,
 		/// No account matches the provided affiliator identifier
 		AffiliatorNotFound,
+		/// The feature is locked for the current player
+		FeatureLocked,
+		/// The feature trying to be unlocked is not available for the selected season
+		FeatureUnlockableInSeason,
+		/// The feature trying to be unlocked has missing requirements to be fullfilled by
+		/// the accoutn trying to unlock it
+		UnlockCriteriaNotFullfilled,
 	}
 
 	#[pallet::hooks]
@@ -583,6 +595,10 @@ pub mod pallet {
 			Self::ensure_unprepared(&avatar_id)?;
 
 			let avatar = Self::ensure_ownership(&from, &avatar_id)?;
+			ensure!(
+				PlayerSeasonConfigs::<T>::get(&from, avatar.season_id).locks.avatar_transfer,
+				Error::<T>::FeatureLocked
+			);
 			let Season { fee, .. } = Self::seasons(&avatar.season_id)?;
 			T::Currency::withdraw(&from, fee.transfer_avatar, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&avatar.season_id, fee.transfer_avatar);
@@ -670,6 +686,10 @@ pub mod pallet {
 			let seller = ensure_signed(origin)?;
 			ensure!(GlobalConfigs::<T>::get().trade.open, Error::<T>::TradeClosed);
 			let avatar = Self::ensure_ownership(&seller, &avatar_id)?;
+			ensure!(
+				PlayerSeasonConfigs::<T>::get(&seller, avatar.season_id).locks.set_price,
+				Error::<T>::FeatureLocked
+			);
 			Self::ensure_unlocked(&avatar_id)?;
 			Self::ensure_unprepared(&avatar_id)?;
 			Self::ensure_tradable(&avatar)?;
@@ -1191,8 +1211,17 @@ pub mod pallet {
 
 		#[pallet::call_index(22)]
 		#[pallet::weight({1000})]
-		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: u32) -> DispatchResult {
+		pub fn add_affiliation(
+			origin: OriginFor<T>,
+			affiliate_id: u32,
+			season_id: SeasonId,
+		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
+
+			ensure!(
+				PlayerSeasonConfigs::<T>::get(&account, season_id).locks.affiliate,
+				Error::<T>::FeatureLocked
+			);
 
 			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
 				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
@@ -1206,13 +1235,26 @@ pub mod pallet {
 		pub fn enable_affiliator(
 			origin: OriginFor<T>,
 			target: AffiliatorTarget<T::AccountId>,
+			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
 			match target {
 				AffiliatorTarget::OneselfFree => {
 					// Check criteria
-					// T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
+					if let Some(UnlockConfigs { affiliate_unlock: Some(unlock_vec), .. }) =
+						SeasonUnlocks::<T>::get(season_id)
+					{
+						let player_stats = SeasonStats::<T>::get(season_id, &account);
+
+						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
+							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
+						} else {
+							Ok(())
+						}
+					} else {
+						Err(Error::<T>::FeatureUnlockableInSeason.into())
+					}
 				},
 				AffiliatorTarget::OneselfPaying => {
 					// Substract amout for paying if account not affiliator
@@ -1223,7 +1265,7 @@ pub mod pallet {
 						affiliate_config.affiliator_enable_fee,
 						AllowDeath,
 					)?;
-					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
+					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 				},
 				AffiliatorTarget::OtherPaying(other) => {
 					// Substract amout for paying if other not affiliator
@@ -1234,11 +1276,9 @@ pub mod pallet {
 						affiliate_config.affiliator_enable_fee,
 						AllowDeath,
 					)?;
-					T::AffiliateHandler::try_mark_account_as_affiliatable(&other)?;
+					T::AffiliateHandler::try_mark_account_as_affiliatable(&other)
 				},
 			}
-
-			Ok(())
 		}
 
 		#[pallet::call_index(24)]
@@ -1268,6 +1308,57 @@ pub mod pallet {
 			T::AffiliateHandler::clear_rule_for(rule_id);
 
 			Ok(())
+		}
+
+		#[pallet::call_index(27)]
+		#[pallet::weight({1000})]
+		pub fn enable_set_avatar_price(
+			origin: OriginFor<T>,
+			season_id: SeasonId,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			if let Some(UnlockConfigs { set_price_unlock: Some(unlock_vec), .. }) =
+				SeasonUnlocks::<T>::get(season_id)
+			{
+				let player_stats = SeasonStats::<T>::get(season_id, &account);
+
+				if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
+					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
+						config.locks.set_price = true;
+					});
+
+					Ok(())
+				} else {
+					Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+				}
+			} else {
+				Err(Error::<T>::FeatureUnlockableInSeason.into())
+			}
+		}
+
+		#[pallet::call_index(28)]
+		#[pallet::weight({1000})]
+		pub fn enable_avatar_transfer(origin: OriginFor<T>, season_id: SeasonId) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			if let Some(UnlockConfigs { avatar_transfer_unlock: Some(unlock_vec), .. }) =
+				SeasonUnlocks::<T>::get(season_id)
+			{
+				let player_stats = SeasonStats::<T>::get(season_id, &account);
+
+				if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
+					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
+						config.locks.avatar_transfer = true;
+					});
+
+					Ok(())
+				} else {
+					Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+				}
+			} else {
+				Err(Error::<T>::FeatureUnlockableInSeason.into())
+			}
 		}
 	}
 
@@ -1869,6 +1960,17 @@ pub mod pallet {
 			};
 
 			Ok(final_fee)
+		}
+
+		fn evaluate_unlock_state(
+			config: &BoundedVec<u8, ConstU32<5>>,
+			account_stats: &SeasonInfo,
+		) -> bool {
+			config[0] >= account_stats.minted as u8
+				&& config[1] >= account_stats.free_minted as u8
+				&& config[2] >= account_stats.forged as u8
+				&& config[3] >= account_stats.bought as u8
+				&& config[4] >= account_stats.sold as u8
 		}
 	}
 }

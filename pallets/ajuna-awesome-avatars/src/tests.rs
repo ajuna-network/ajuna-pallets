@@ -2470,6 +2470,7 @@ mod forging {
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.balances(&[(ALICE, initial_balance), (BOB, 6 + initial_balance)])
+			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -2743,6 +2744,12 @@ mod transferring {
 				(season_id_2, Season::default().transfer_avatar_fee(avatar_transfer_fee_2)),
 			])
 			.balances(&[(ALICE, initial_balance)])
+			.locks(&[
+				(ALICE, season_id_1, Locks::all_unlocked()),
+				(BOB, season_id_1, Locks::all_unlocked()),
+				(ALICE, season_id_2, Locks::all_unlocked()),
+				(BOB, season_id_2, Locks::all_unlocked()),
+			])
 			.build()
 			.execute_with(|| {
 				let treasury_account = &AAvatars::treasury_account_id();
@@ -2813,6 +2820,7 @@ mod transferring {
 			.seasons(&[(SEASON_ID, Season::default().transfer_avatar_fee(avatar_transfer_fee))])
 			.organizer(BOB)
 			.balances(&[(BOB, MockExistentialDeposit::get() + avatar_transfer_fee)])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				GlobalConfigs::<Test>::mutate(|config| config.avatar_transfer.open = false);
@@ -2838,6 +2846,7 @@ mod transferring {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+			.locks(&[(CHARLIE, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, CHARLIE, 1)[0];
@@ -2876,6 +2885,7 @@ mod transferring {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default().transfer_avatar_fee(avatar_transfer_fee))])
 			.balances(&[(ALICE, MockExistentialDeposit::get() + avatar_transfer_fee)])
+			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				PlayerSeasonConfigs::<Test>::mutate(BOB, SEASON_ID, |config| {
@@ -2906,6 +2916,7 @@ mod trading {
 			.seasons(&[(SEASON_ID, season)])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -2973,6 +2984,7 @@ mod trading {
 			.seasons(&[(SEASON_ID, Season::default())])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.trade_filters(&[(SEASON_ID, trade_filters)])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -2994,6 +3006,7 @@ mod trading {
 			.seasons(&[(SEASON_ID, season)])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -3042,6 +3055,7 @@ mod trading {
 			.seasons(&[(SEASON_ID, season)])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -3092,6 +3106,12 @@ mod trading {
 				(ALICE, alice_initial_bal),
 				(BOB, bob_initial_bal),
 				(CHARLIE, charlie_initial_bal),
+			])
+			.locks(&[
+				(ALICE, SEASON_ID, Locks::all_unlocked()),
+				(BOB, SEASON_ID, Locks::all_unlocked()),
+				(ALICE, season_id, Locks::all_unlocked()),
+				(BOB, season_id, Locks::all_unlocked()),
 			])
 			.build()
 			.execute_with(|| {
@@ -3177,6 +3197,7 @@ mod trading {
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.balances(&[(ALICE, alice_balance), (BOB, bob_balance)])
+			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -3250,6 +3271,7 @@ mod trading {
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.balances(&[(ALICE, price - 1), (BOB, 999_999)])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -3273,6 +3295,7 @@ mod trading {
 			.seasons(&[(SEASON_ID, season)])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -3530,6 +3553,10 @@ mod nft_transfer {
 			.seasons(&[(SEASON_ID, season)])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
+			.locks(&[
+				(ALICE, SEASON_ID, Locks::all_unlocked()),
+				(BOB, SEASON_ID, Locks::all_unlocked()),
+			])
 			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
@@ -3618,6 +3645,13 @@ mod nft_transfer {
 
 				// Ensure ownership transferred to technical account
 				let technical_account = AAvatars::technical_account_id();
+				let config = PlayerSeasonConfig::<BlockNumberFor<Test>> {
+					storage_tier: Default::default(),
+					stats: Default::default(),
+					locks: Locks::all_unlocked(),
+				};
+				PlayerSeasonConfigs::<Test>::insert(technical_account, SEASON_ID, config);
+
 				assert!(!Owners::<Test>::get(ALICE, SEASON_ID).contains(&avatar_id));
 				assert_eq!(Owners::<Test>::get(technical_account, SEASON_ID)[0], avatar_id);
 				assert_eq!(Avatars::<Test>::get(avatar_id).unwrap().0, technical_account);
@@ -3678,6 +3712,7 @@ mod nft_transfer {
 			.seasons(&[(SEASON_ID, Season::default())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
+			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
 			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
@@ -3921,6 +3956,7 @@ mod ipfs {
 	fn prepare_avatar_rejects_forging_trading_and_transferring() {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
+			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				let avatar_ids = create_avatars(SEASON_ID, ALICE, 5);
@@ -3955,13 +3991,16 @@ mod ipfs {
 
 	#[test]
 	fn prepare_avatar_rejects_unowned_avatars() {
-		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-			assert_noop!(
-				AAvatars::prepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
-				Error::<Test>::Ownership
-			);
-		});
+		ExtBuilder::default()
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
+			.build()
+			.execute_with(|| {
+				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+				assert_noop!(
+					AAvatars::prepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
+					Error::<Test>::Ownership
+				);
+			});
 	}
 
 	#[test]
@@ -3969,6 +4008,7 @@ mod ipfs {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
@@ -4165,6 +4205,7 @@ mod affiliates {
 		ExtBuilder::default()
 			.balances(&[(ALICE, initial_balance)])
 			.affiliators(&[ALICE])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				assert_eq!(
@@ -4172,7 +4213,7 @@ mod affiliates {
 					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
 				);
 
-				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0));
+				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0, SEASON_ID));
 
 				System::assert_last_event(mock::RuntimeEvent::Affiliates(
 					pallet_ajuna_affiliates::Event::AccountAffiliated { account: BOB, to: ALICE },
@@ -4195,6 +4236,7 @@ mod affiliates {
 		let initial_balance = 1_000_000;
 		ExtBuilder::default()
 			.balances(&[(ALICE, initial_balance)])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				assert_eq!(
@@ -4203,7 +4245,7 @@ mod affiliates {
 				);
 
 				assert_noop!(
-					AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0),
+					AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0, SEASON_ID),
 					Error::<Test>::AffiliatorNotFound
 				);
 			});
@@ -4219,7 +4261,8 @@ mod affiliates {
 			.execute_with(|| {
 				assert_ok!(AAvatars::enable_affiliator(
 					RuntimeOrigin::signed(ALICE),
-					AffiliatorTarget::OneselfFree
+					AffiliatorTarget::OneselfFree,
+					SEASON_ID
 				));
 
 				assert_eq!(
@@ -4260,7 +4303,8 @@ mod affiliates {
 
 				assert_ok!(AAvatars::enable_affiliator(
 					RuntimeOrigin::signed(ALICE),
-					AffiliatorTarget::OneselfPaying
+					AffiliatorTarget::OneselfPaying,
+					SEASON_ID
 				));
 
 				assert_eq!(
@@ -4304,7 +4348,8 @@ mod affiliates {
 
 				assert_ok!(AAvatars::enable_affiliator(
 					RuntimeOrigin::signed(ALICE),
-					AffiliatorTarget::OtherPaying(BOB)
+					AffiliatorTarget::OtherPaying(BOB),
+					SEASON_ID
 				));
 
 				assert_eq!(
@@ -4345,6 +4390,7 @@ mod affiliates {
 			.balances(&[(ALICE, initial_balance)])
 			.affiliators(&[ALICE])
 			.organizer(ALICE)
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				assert_eq!(
@@ -4352,7 +4398,7 @@ mod affiliates {
 					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
 				);
 
-				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0));
+				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0, SEASON_ID));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliatees::<Test, AffiliatesInstance1>::get(BOB),

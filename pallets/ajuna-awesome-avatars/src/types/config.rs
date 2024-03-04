@@ -143,3 +143,12 @@ pub enum AffiliatorTarget<AccountId> {
 	OneselfPaying,
 	OtherPaying(AccountId),
 }
+
+pub type UnlockConfig = Option<BoundedVec<u8, ConstU32<5>>>;
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+pub struct UnlockConfigs {
+	pub set_price_unlock: UnlockConfig,
+	pub avatar_transfer_unlock: UnlockConfig,
+	pub affiliate_unlock: UnlockConfig,
+}

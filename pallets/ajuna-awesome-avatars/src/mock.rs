@@ -235,6 +235,7 @@ pub struct ExtBuilder {
 	free_mints: Vec<(MockAccountId, MintCount)>,
 	create_nft_collection: bool,
 	affiliators: Vec<MockAccountId>,
+	locks: Vec<(MockAccountId, SeasonId, Locks)>,
 }
 
 impl Default for ExtBuilder {
@@ -250,6 +251,7 @@ impl Default for ExtBuilder {
 			free_mints: Default::default(),
 			create_nft_collection: Default::default(),
 			affiliators: Default::default(),
+			locks: Default::default(),
 		}
 	}
 }
@@ -297,6 +299,11 @@ impl ExtBuilder {
 
 	pub fn affiliators(mut self, affiliators: &[MockAccountId]) -> Self {
 		self.affiliators = affiliators.to_vec();
+		self
+	}
+
+	pub fn locks(mut self, locks: &[(MockAccountId, SeasonId, Locks)]) -> Self {
+		self.locks = locks.to_vec();
 		self
 	}
 
@@ -360,6 +367,17 @@ impl ExtBuilder {
 				for (i, account) in self.affiliators.into_iter().enumerate() {
 					Affiliates::force_mark_account_as_affiliatable(&account);
 					pallet_ajuna_affiliates::AffiliateIdMapping::<Test, AffiliatesInstance1>::insert(i as u32, account);
+				}
+			}
+
+			if !self.locks.is_empty() {
+				for (account, season_id, lock) in self.locks {
+					let config = PlayerSeasonConfig::<BlockNumberFor<Test>> {
+						storage_tier: Default::default(),
+						stats: Default::default(),
+						locks: lock,
+					};
+					PlayerSeasonConfigs::<Test>::insert(account, season_id, config);
 				}
 			}
 		});
