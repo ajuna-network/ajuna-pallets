@@ -196,9 +196,25 @@ pub struct TradeStatsV5 {
 }
 
 #[derive(Decode)]
+pub struct PlayStatsV5<T: Config> {
+	pub first: BlockNumberFor<T>,
+	pub last: BlockNumberFor<T>,
+	pub seasons_participated: BoundedBTreeSet<SeasonId, MaxSeasons>,
+}
+
+impl<T> PlayStatsV5<T>
+where
+	T: Config,
+{
+	fn migrate_to_v6(self) -> PlayStats<BlockNumberFor<T>> {
+		PlayStats { first: self.first, last: self.last }
+	}
+}
+
+#[derive(Decode)]
 pub struct StatsV5<T: Config> {
-	pub mint: PlayStats<BlockNumberFor<T>>,
-	pub forge: PlayStats<BlockNumberFor<T>>,
+	pub mint: PlayStatsV5<T>,
+	pub forge: PlayStatsV5<T>,
 	pub trade: TradeStatsV5,
 }
 
@@ -207,7 +223,7 @@ where
 	T: Config,
 {
 	fn migrate_to_v6(self) -> Stats<BlockNumberFor<T>> {
-		Stats { mint: self.mint, forge: self.forge }
+		Stats { mint: self.mint.migrate_to_v6(), forge: self.forge.migrate_to_v6() }
 	}
 }
 #[derive(Decode)]
@@ -249,15 +265,14 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 		let onchain_version = Pallet::<T>::on_chain_storage_version();
 		if onchain_version == 5 && current_version == 6 {
 			let _ = GlobalConfigs::<T>::translate::<GlobalConfigV5<T>, _>(|old_config| {
-				log::info!(target: LOG_TARGET, "Updated GlobalConfig from v5 to v6");
 				old_config.map(|old| old.migrate_to_v6())
 			});
+
+			log::info!(target: LOG_TARGET, "Updated GlobalConfig from v5 to v6");
 
 			let mut seasons_translated = 0;
 
 			Seasons::<T>::translate::<SeasonV5<T>, _>(|season_id, old_season| {
-				log::info!(target: LOG_TARGET, "Updated Season from v5 to v6");
-
 				SeasonMetas::<T>::insert(
 					season_id,
 					SeasonMeta {
@@ -285,13 +300,13 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 				Some(old_season.migrate_to_v6())
 			});
 
+			log::info!(target: LOG_TARGET, "Updated {} Season entries from v5 to v6", seasons_translated);
+
 			let mut trade_stats_map = BTreeMap::<(SeasonId, T::AccountId), (Stat, Stat)>::new();
 			let mut player_season_configs_translated = 0;
 
 			PlayerSeasonConfigs::<T>::translate::<PlayerSeasonConfigV5<T>, _>(
 				|account, season_id, old_config| {
-					log::info!(target: LOG_TARGET, "Updated PlayerSeasonConfigs from v5 to v6");
-
 					trade_stats_map.insert(
 						(season_id, account),
 						(old_config.stats.trade.bought, old_config.stats.trade.sold),
@@ -303,12 +318,12 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 				},
 			);
 
+			log::info!(target: LOG_TARGET, "Updated {} PlayerSeasonConfigs entries from v5 to v6", player_season_configs_translated);
+
 			let mut season_stats_translated = 0;
 
 			SeasonStats::<T>::translate::<SeasonInfoV5, _>(
 				|season_id, account, old_season_info| {
-					log::info!(target: LOG_TARGET, "Updated SeasonStats from v5 to v6");
-
 					if let Some((bought, sold)) = trade_stats_map.remove(&(season_id, account)) {
 						season_stats_translated += 1;
 
@@ -319,6 +334,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 					}
 				},
 			);
+
+			log::info!(target: LOG_TARGET, "Updated {} SeasonStats entries from v5 to v6", season_stats_translated);
 
 			current_version.put::<Pallet<T>>();
 			log::info!(target: LOG_TARGET, "Upgraded storage to version {:?}", current_version);
