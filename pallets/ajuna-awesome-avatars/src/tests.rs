@@ -2688,7 +2688,7 @@ mod transferring {
 
 				let transfer = 5;
 				GlobalConfigs::<Test>::mutate(|cfg| {
-					cfg.transfer.min_free_mint_transfer = transfer + 1
+					cfg.freemint_transfer.min_free_mint_transfer = transfer + 1
 				});
 				assert_noop!(
 					AAvatars::transfer_free_mints(RuntimeOrigin::signed(ALICE), BOB, transfer),
@@ -2798,7 +2798,7 @@ mod transferring {
 	#[test]
 	fn transfer_avatar_rejects_on_transfer_closed() {
 		ExtBuilder::default().build().execute_with(|| {
-			GlobalConfigs::<Test>::mutate(|config| config.transfer.open = false);
+			GlobalConfigs::<Test>::mutate(|config| config.avatar_transfer.open = false);
 			assert_noop!(
 				AAvatars::transfer_avatar(RuntimeOrigin::signed(BOB), CHARLIE, H256::random()),
 				Error::<Test>::TransferClosed
@@ -2815,7 +2815,7 @@ mod transferring {
 			.balances(&[(BOB, MockExistentialDeposit::get() + avatar_transfer_fee)])
 			.build()
 			.execute_with(|| {
-				GlobalConfigs::<Test>::mutate(|config| config.transfer.open = false);
+				GlobalConfigs::<Test>::mutate(|config| config.avatar_transfer.open = false);
 				let avatar_id = create_avatars(SEASON_ID, BOB, 1)[0];
 				assert_ok!(AAvatars::transfer_avatar(RuntimeOrigin::signed(BOB), DAVE, avatar_id));
 			});

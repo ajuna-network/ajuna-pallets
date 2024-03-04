@@ -155,7 +155,7 @@ fn create_avatars<T: Config>(name: &'static str, n: u32) -> Result<(), &'static 
 		config.mint.open = true;
 		config.mint.cooldown = Zero::zero();
 		config.forge.open = true;
-		config.transfer.open = true;
+		config.avatar_transfer.open = true;
 		config.trade.open = true;
 		config.nft_transfer.open = true;
 	});
@@ -323,8 +323,8 @@ benchmarks! {
 		create_seasons::<T>(1)?;
 		let from = account::<T>("from");
 		let to = account::<T>("to");
-		let GlobalConfig { transfer, .. } = GlobalConfigs::<T>::get();
-		let free_mint_transfer_fee = transfer.free_mint_transfer_fee;
+		let GlobalConfig { freemint_transfer, .. } = GlobalConfigs::<T>::get();
+		let free_mint_transfer_fee = freemint_transfer.free_mint_transfer_fee;
 		let how_many = MintCount::MAX - free_mint_transfer_fee as MintCount;
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		SeasonStats::<T>::mutate(season_id, &from, |stats| {
@@ -511,13 +511,13 @@ benchmarks! {
 				free_mint_fee_multiplier: MintCount::MAX,
 			},
 			forge: ForgeConfig { open: true },
-			transfer: TransferConfig {
+			avatar_transfer: AvatarTransferConfig {
 				open: true,
-				free_mint_transfer_fee: MintCount::MAX,
-				min_free_mint_transfer: MintCount::MAX,
 			},
 			freemint_transfer: FreemintTransferConfig {
 				mode: FreeMintTransferMode::Open,
+				free_mint_transfer_fee: MintCount::MAX,
+				min_free_mint_transfer: MintCount::MAX,
 			},
 			trade: TradeConfig { open: true },
 			nft_transfer: NftTransferConfig { open: true },

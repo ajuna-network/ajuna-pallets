@@ -56,12 +56,8 @@ pub struct TransferConfigV5 {
 }
 
 impl TransferConfigV5 {
-	fn migrate_to_v6(self) -> TransferConfig {
-		TransferConfig {
-			open: self.open,
-			free_mint_transfer_fee: self.free_mint_transfer_fee,
-			min_free_mint_transfer: self.min_free_mint_transfer,
-		}
+	fn migrate_to_v6(self) -> AvatarTransferConfig {
+		AvatarTransferConfig { open: self.open }
 	}
 }
 
@@ -101,11 +97,18 @@ where
 	T: Config,
 {
 	fn migrate_to_v6(self) -> GlobalConfig<BlockNumberFor<T>, BalanceOf<T>> {
+		let free_mint_transfer_fee = self.transfer.free_mint_transfer_fee;
+		let min_free_mint_transfer = self.transfer.min_free_mint_transfer;
+
 		GlobalConfig {
 			mint: self.mint.migrate_to_v6(),
 			forge: self.forge.migrate_to_v6(),
-			transfer: self.transfer.migrate_to_v6(),
-			freemint_transfer: FreemintTransferConfig { mode: FreeMintTransferMode::Open },
+			avatar_transfer: self.transfer.migrate_to_v6(),
+			freemint_transfer: FreemintTransferConfig {
+				mode: FreeMintTransferMode::Open,
+				free_mint_transfer_fee,
+				min_free_mint_transfer,
+			},
 			trade: self.trade.migrate_to_v6(),
 			nft_transfer: self.nft_transfer.migrate_to_v6(),
 			affiliate_config: AffiliateConfig::default(),
