@@ -114,6 +114,34 @@ where
 }
 
 #[derive(Decode)]
+pub struct FeeV5<T: Config> {
+	pub mint: MintFees<BalanceOf<T>>,
+	pub transfer_avatar: BalanceOf<T>,
+	pub buy_minimum: BalanceOf<T>,
+	pub buy_percent: u8,
+	pub upgrade_storage: BalanceOf<T>,
+	pub prepare_avatar: BalanceOf<T>,
+}
+
+impl<T> FeeV5<T>
+where
+	T: Config,
+{
+	fn migrate_to_v6(self) -> Fee<BalanceOf<T>> {
+		Fee {
+			mint: self.mint,
+			transfer_avatar: self.transfer_avatar,
+			buy_minimum: self.buy_minimum,
+			buy_percent: self.buy_percent,
+			upgrade_storage: self.upgrade_storage,
+			prepare_avatar: self.prepare_avatar,
+			set_price_unlock: Default::default(),
+			avatar_transfer_unlock: Default::default(),
+		}
+	}
+}
+
+#[derive(Decode)]
 pub struct SeasonV5<T: Config> {
 	pub name: BoundedVec<u8, ConstU32<100>>,
 	pub description: BoundedVec<u8, ConstU32<1_000>>,
@@ -132,7 +160,7 @@ pub struct SeasonV5<T: Config> {
 	pub per_period: BlockNumberFor<T>,
 	pub periods: u16,
 	pub trade_filters: BoundedVec<TradeFilter, ConstU32<100>>,
-	pub fee: Fee<BalanceOf<T>>,
+	pub fee: FeeV5<T>,
 	pub mint_logic: LogicGeneration,
 	pub forge_logic: LogicGeneration,
 }
@@ -154,7 +182,7 @@ where
 			base_prob: self.base_prob,
 			per_period: self.per_period,
 			periods: self.periods,
-			fee: self.fee,
+			fee: self.fee.migrate_to_v6(),
 			mint_logic: self.mint_logic,
 			forge_logic: self.forge_logic,
 		}
