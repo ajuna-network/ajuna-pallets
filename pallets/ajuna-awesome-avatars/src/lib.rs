@@ -279,12 +279,12 @@ pub mod pallet {
 			GlobalConfigs::<T>::put(GlobalConfig {
 				mint: MintConfig { open: true, cooldown: 5_u8.into(), free_mint_fee_multiplier: 1 },
 				forge: ForgeConfig { open: true },
-				transfer: TransferConfig {
-					open: true,
+				avatar_transfer: AvatarTransferConfig { open: true },
+				freemint_transfer: FreemintTransferConfig {
+					mode: FreeMintTransferMode::Open,
 					free_mint_transfer_fee: 1,
 					min_free_mint_transfer: 1,
 				},
-				freemint_transfer: FreemintTransferConfig { mode: FreeMintTransferMode::Open },
 				trade: TradeConfig { open: true },
 				nft_transfer: NftTransferConfig { open: true },
 				affiliate_config: AffiliateConfig::default(),
@@ -569,11 +569,11 @@ pub mod pallet {
 			to: T::AccountId,
 			avatar_id: AvatarIdOf<T>,
 		) -> DispatchResult {
-			let GlobalConfig { transfer, .. } = GlobalConfigs::<T>::get();
+			let GlobalConfig { avatar_transfer, .. } = GlobalConfigs::<T>::get();
 			let from = match Self::ensure_organizer(origin.clone()) {
 				Ok(organizer) => organizer,
 				_ => {
-					ensure!(transfer.open, Error::<T>::TransferClosed);
+					ensure!(avatar_transfer.open, Error::<T>::TransferClosed);
 					ensure_signed(origin)?
 				},
 			};
@@ -628,13 +628,16 @@ pub mod pallet {
 			let SeasonInfo { minted, forged, .. } = SeasonStats::<T>::get(season_id, &from);
 			ensure!(minted > 0 && forged > 0, Error::<T>::CannotTransferFromInactiveAccount);
 
-			let GlobalConfig { transfer, .. } = GlobalConfigs::<T>::get();
-			ensure!(how_many >= transfer.min_free_mint_transfer, Error::<T>::TooLowFreeMints);
+			let GlobalConfig { freemint_transfer, .. } = GlobalConfigs::<T>::get();
+			ensure!(
+				how_many >= freemint_transfer.min_free_mint_transfer,
+				Error::<T>::TooLowFreeMints
+			);
 			let sender_free_mints = PlayerConfigs::<T>::get(&from)
 				.free_mints
 				.checked_sub(
 					how_many
-						.checked_add(transfer.free_mint_transfer_fee)
+						.checked_add(freemint_transfer.free_mint_transfer_fee)
 						.ok_or(ArithmeticError::Overflow)?,
 				)
 				.ok_or(Error::<T>::InsufficientFreeMints)?;
