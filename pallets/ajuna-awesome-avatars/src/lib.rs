@@ -1966,11 +1966,11 @@ pub mod pallet {
 			config: &BoundedVec<u8, ConstU32<5>>,
 			account_stats: &SeasonInfo,
 		) -> bool {
-			config[0] >= account_stats.minted as u8
-				&& config[1] >= account_stats.free_minted as u8
-				&& config[2] >= account_stats.forged as u8
-				&& config[3] >= account_stats.bought as u8
-				&& config[4] >= account_stats.sold as u8
+			config[0] <= account_stats.minted as u8
+				&& config[1] <= account_stats.free_minted as u8
+				&& config[2] <= account_stats.forged as u8
+				&& config[3] <= account_stats.bought as u8
+				&& config[4] <= account_stats.sold as u8
 		}
 	}
 }
