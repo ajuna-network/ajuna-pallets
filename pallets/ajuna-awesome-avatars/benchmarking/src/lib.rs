@@ -164,6 +164,7 @@ fn create_avatars<T: Config>(name: &'static str, n: u32) -> Result<(), &'static 
 	PlayerSeasonConfigs::<T>::mutate(&player, season_id, |config| {
 		config.stats.mint.last = Zero::zero();
 		config.storage_tier = StorageTier::Max;
+		config.locks = Locks::all_unlocked();
 	});
 
 	for _ in 0..n {

@@ -70,11 +70,17 @@ pub struct Stats<BlockNumber> {
 	pub forge: PlayStats<BlockNumber>,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Default)]
 pub struct Locks {
 	pub avatar_transfer: bool,
 	pub set_price: bool,
 	pub affiliate: bool,
+}
+
+impl Locks {
+	pub fn all_unlocked() -> Self {
+		Self { avatar_transfer: true, set_price: true, affiliate: true }
+	}
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
