@@ -28,7 +28,6 @@ use frame_support::{
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use pallet_ajuna_awesome_avatars::{types::*, Config as AvatarsConfig, Pallet as AAvatars, *};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
-use sp_runtime::bounded_vec;
 use sp_runtime::traits::{
 	Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
 };
@@ -485,7 +484,7 @@ benchmarks! {
 			start: BlockNumberFor::<T>::from(u32::MAX - 1),
 			end: BlockNumberFor::<T>::from(u32::MAX),
 		};
-		let trade_filters = TradeFilters(bounded_vec![
+		let trade_filters = TradeFilters(sp_runtime::BoundedVec::try_from(vec![
 			u32::from_le_bytes([0x11, 0x07, 0x00, 0x00]), // CrazyDude pet
 			u32::from_le_bytes([0x12, 0x36, 0x00, 0x00]), // GiantWoodStick armor front pet part
 			u32::from_le_bytes([0x25, 0x07, 0x00, 0xFF]), // Metals of quantity 255
@@ -493,7 +492,7 @@ benchmarks! {
 			u32::from_le_bytes([0x30, 0x00, 0x00, 0x00]), // Any Essence
 			u32::from_le_bytes([0x41, 0x00, 0x00, 0xF0]), // ArmorBase of quantity 240
 			u32::from_le_bytes([0x45, 0x00, 0x00, 0x0F]), // WeaponVersion1 of quantity 15
-		]);
+		]).expect("Should create vec"));
 	}: _(RawOrigin::Signed(organizer), season_id, Some(season.clone()), Some(season_meta.clone()), Some(season_schedule.clone()), Some(trade_filters.clone()))
 	verify {
 		assert_last_event::<T>(Event::UpdatedSeason {
