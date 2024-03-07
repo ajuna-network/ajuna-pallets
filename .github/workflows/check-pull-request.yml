@@ -30,10 +30,14 @@ jobs:
     if: ${{ !startsWith(github.head_ref, 'release/') }}
     name: Rustfmt
     runs-on: ubuntu-latest
+    container:
+      # contains the nightly-toolchain
+      image: docker.io/paritytech/ci-unified:bullseye-1.75.0-2024-01-22-v20240109
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
-      - run: cargo fmt --all -- --check
+        # some settings are only available in nightly.
+      - run: cargo +nightly fmt --all -- --check
 
   lint:
     if: ${{ !startsWith(github.head_ref, 'release/') }}
