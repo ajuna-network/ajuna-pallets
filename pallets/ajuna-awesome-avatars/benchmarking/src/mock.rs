@@ -22,8 +22,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
-use pallet_ajuna_awesome_avatars::types::AffiliateMethods;
-use pallet_ajuna_awesome_avatars::FeePropagationOf;
+use pallet_ajuna_awesome_avatars::{types::AffiliateMethods, FeePropagationOf};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{

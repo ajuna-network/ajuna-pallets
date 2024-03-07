@@ -9,8 +9,8 @@ impl<T: Config> AvatarCombinator<T> {
 	) -> Result<(LeaderForgeOutput<T>, Vec<ForgeOutput<T>>), DispatchError> {
 		let (matching_sacrifices, non_matching): (Vec<_>, Vec<_>) =
 			input_sacrifices.into_iter().partition(|(_, sacrifice)| {
-				sacrifice.same_assemble_version(&input_leader.1)
-					|| sacrifice.has_full_type(ItemType::Special, SpecialItemType::ToolBox)
+				sacrifice.same_assemble_version(&input_leader.1) ||
+					sacrifice.has_full_type(ItemType::Special, SpecialItemType::ToolBox)
 			});
 
 		let leader_progress_array = input_leader.1.get_progress();
@@ -43,18 +43,18 @@ impl<T: Config> AvatarCombinator<T> {
 			ByteType::High,
 		));
 
-		if input_leader.has_full_type(ItemType::Equippable, EquippableItemType::ArmorBase)
-			&& input_leader.get_rarity() < progress_rarity
+		if input_leader.has_full_type(ItemType::Equippable, EquippableItemType::ArmorBase) &&
+			input_leader.get_rarity() < progress_rarity
 		{
 			// Add a component to the base armor, only first component will be added
 			if let Some((_, armor_component)) = additionals.iter().find(|(_, sacrifice)| {
-				sacrifice.has_type(ItemType::Equippable)
-					&& !sacrifice.has_subtype(EquippableItemType::ArmorBase)
+				sacrifice.has_type(ItemType::Equippable) &&
+					!sacrifice.has_subtype(EquippableItemType::ArmorBase)
 			}) {
 				input_leader.set_spec(
 					SpecIdx::Byte1,
-					input_leader.get_spec::<u8>(SpecIdx::Byte1)
-						| armor_component.get_spec::<u8>(SpecIdx::Byte1),
+					input_leader.get_spec::<u8>(SpecIdx::Byte1) |
+						armor_component.get_spec::<u8>(SpecIdx::Byte1),
 				);
 			}
 		}
@@ -887,11 +887,10 @@ mod test {
 			let sac_3 = create_random_toolbox([0; 32], &ALICE, 100);
 			let sac_4 = create_random_toolbox([0; 32], &ALICE, 100);
 
-			let total_souls = leader.1.get_souls()
-				+ sac_1.1.get_souls()
-				+ sac_2.1.get_souls()
-				+ sac_3.1.get_souls()
-				+ sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 
 			let expected_dna = [
 				0x41, 0x12, 0x02, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1169,11 +1168,10 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), Some(unit_fn));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), Some(unit_fn));
 
-			let total_souls = leader.1.get_souls()
-				+ sac_1.1.get_souls()
-				+ sac_2.1.get_souls()
-				+ sac_3.1.get_souls()
-				+ sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 
 			assert_eq!(
 				ForgerV2::<Test>::determine_forge_type(
@@ -1256,11 +1254,10 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(31));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(73));
 
-			let total_souls = leader.1.get_souls()
-				+ sac_1.1.get_souls()
-				+ sac_2.1.get_souls()
-				+ sac_3.1.get_souls()
-				+ sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 
 			let leader_progress = leader.1.get_progress();
 			let lowest_count =

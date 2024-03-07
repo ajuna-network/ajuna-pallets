@@ -919,7 +919,7 @@ mod test {
 							DnaUtils::read_attribute::<PetType>(&avatar, AvatarAttr::ClassType2);
 						assert_eq!(leader_class_type_2, PetType::BigHybrid);
 
-						break;
+						break
 					}
 
 					leader_1 = (avatar_id, WrappedAvatar::new(avatar));
@@ -1043,7 +1043,7 @@ mod test {
 							DnaUtils::read_attribute::<PetType>(&avatar, AvatarAttr::ClassType2);
 						assert_eq!(leader_class_type_2, PetType::TankyBullwog);
 
-						break;
+						break
 					}
 
 					leader_1 = (avatar_id, WrappedAvatar::new(avatar));

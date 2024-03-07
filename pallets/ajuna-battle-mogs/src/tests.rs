@@ -72,7 +72,7 @@ fn create_mogwai(owner: MockAccountId) -> MockMogwaiId {
 	if let crate::mock::RuntimeEvent::BattleMogs(Event::<Test>::MogwaiCreated(_, mogwai_id)) =
 		last_event()
 	{
-		return mogwai_id;
+		return mogwai_id
 	}
 
 	panic!("Expected MogwaiCreated event");

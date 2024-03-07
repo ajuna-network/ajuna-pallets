@@ -101,9 +101,8 @@ impl<T: Config> AvatarMutator<T> for EssenceItemType {
 		let souls = (hash_provider.next() % 99) + 1;
 
 		let avatar = match *self {
-			EssenceItemType::Glimmer => {
-				AvatarBuilder::with_base_avatar(base_avatar).into_glimmer(1)
-			},
+			EssenceItemType::Glimmer =>
+				AvatarBuilder::with_base_avatar(base_avatar).into_glimmer(1),
 			EssenceItemType::ColorSpark | EssenceItemType::PaintFlask => {
 				let hash_byte = hash_provider.next();
 				let color_pair = (
@@ -187,10 +186,10 @@ impl<T: Config> AvatarMutator<T> for EquippableItemType {
 		let pet_type = SlotRoller::<T>::roll_on(&PET_TYPE_PROBABILITIES, hash_provider);
 
 		let avatar = match *self {
-			EquippableItemType::ArmorBase
-			| EquippableItemType::ArmorComponent1
-			| EquippableItemType::ArmorComponent2
-			| EquippableItemType::ArmorComponent3 => {
+			EquippableItemType::ArmorBase |
+			EquippableItemType::ArmorComponent1 |
+			EquippableItemType::ArmorComponent2 |
+			EquippableItemType::ArmorComponent3 => {
 				let slot_type = SlotRoller::<T>::roll_on(&ARMOR_SLOT_PROBABILITIES, hash_provider);
 
 				let rarity = {
@@ -212,9 +211,9 @@ impl<T: Config> AvatarMutator<T> for EquippableItemType {
 					hash_provider,
 				)
 			},
-			EquippableItemType::WeaponVersion1
-			| EquippableItemType::WeaponVersion2
-			| EquippableItemType::WeaponVersion3 => {
+			EquippableItemType::WeaponVersion1 |
+			EquippableItemType::WeaponVersion2 |
+			EquippableItemType::WeaponVersion3 => {
 				let slot_type = SlotRoller::<T>::roll_on(&WEAPON_SLOT_PROBABILITIES, hash_provider);
 
 				let hash_byte = hash_provider.next();

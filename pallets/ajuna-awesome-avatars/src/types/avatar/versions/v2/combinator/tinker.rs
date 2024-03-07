@@ -21,8 +21,8 @@ impl<T: Config> AvatarCombinator<T> {
 			.chunks_exact(2)
 			.take(4)
 			.map(|chunk| {
-				sacrifice_pattern
-					== DnaUtils::bits_order_to_enum(
+				sacrifice_pattern ==
+					DnaUtils::bits_order_to_enum(
 						chunk[1] as u32,
 						4,
 						DnaUtils::bits_to_enums::<MaterialItemType>(chunk[0] as u32),
@@ -150,11 +150,11 @@ mod test {
 			let material_input_3 = create_random_material(&ALICE, &pattern[2], 1);
 			let material_input_4 = create_random_material(&ALICE, &pattern[3], 1);
 
-			let total_soul_points = pet_part_input_1.1.get_souls()
-				+ material_input_1.1.get_souls()
-				+ material_input_2.1.get_souls()
-				+ material_input_3.1.get_souls()
-				+ material_input_4.1.get_souls();
+			let total_soul_points = pet_part_input_1.1.get_souls() +
+				material_input_1.1.get_souls() +
+				material_input_2.1.get_souls() +
+				material_input_3.1.get_souls() +
+				material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 11);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
@@ -224,11 +224,11 @@ mod test {
 			let material_input_3 = create_random_material(&ALICE, &pattern[2], 2);
 			let material_input_4 = create_random_material(&ALICE, &pattern[3], 1);
 
-			let total_soul_points = pet_part_input_1.1.get_souls()
-				+ material_input_1.1.get_souls()
-				+ material_input_2.1.get_souls()
-				+ material_input_3.1.get_souls()
-				+ material_input_4.1.get_souls();
+			let total_soul_points = pet_part_input_1.1.get_souls() +
+				material_input_1.1.get_souls() +
+				material_input_2.1.get_souls() +
+				material_input_3.1.get_souls() +
+				material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 16);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
@@ -307,11 +307,11 @@ mod test {
 			let material_input_3 = create_random_material(&ALICE, &pattern[2], 2);
 			let material_input_4 = create_random_material(&ALICE, &pattern[3], 2);
 
-			let total_soul_points = pet_part_input_1.1.get_souls()
-				+ material_input_1.1.get_souls()
-				+ material_input_2.1.get_souls()
-				+ material_input_3.1.get_souls()
-				+ material_input_4.1.get_souls();
+			let total_soul_points = pet_part_input_1.1.get_souls() +
+				material_input_1.1.get_souls() +
+				material_input_2.1.get_souls() +
+				material_input_3.1.get_souls() +
+				material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 22);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
@@ -379,11 +379,11 @@ mod test {
 			let material_input_3 = create_random_material(&ALICE, &pattern[1], 1);
 			let material_input_4 = create_random_material(&ALICE, &pattern[3], 1);
 
-			let total_soul_points = pet_part_input_1.1.get_souls()
-				+ material_input_1.1.get_souls()
-				+ material_input_2.1.get_souls()
-				+ material_input_3.1.get_souls()
-				+ material_input_4.1.get_souls();
+			let total_soul_points = pet_part_input_1.1.get_souls() +
+				material_input_1.1.get_souls() +
+				material_input_2.1.get_souls() +
+				material_input_3.1.get_souls() +
+				material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 11);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
@@ -408,10 +408,9 @@ mod test {
 						.iter()
 						.map(|output| {
 							match output {
-								ForgeOutput::Forged((_, avatar), _) => {
+								ForgeOutput::Forged((_, avatar), _) =>
 									DnaUtils::read_attribute_raw(avatar, AvatarAttr::Quantity)
-										as u32
-								},
+										as u32,
 								_ => 0,
 							}
 						})
@@ -456,11 +455,11 @@ mod test {
 			let material_input_4 =
 				create_random_material(&ALICE, &MaterialItemType::Electronics, 1);
 
-			let total_soul_points = pet_part_input_1.1.get_souls()
-				+ material_input_1.1.get_souls()
-				+ material_input_2.1.get_souls()
-				+ material_input_3.1.get_souls()
-				+ material_input_4.1.get_souls();
+			let total_soul_points = pet_part_input_1.1.get_souls() +
+				material_input_1.1.get_souls() +
+				material_input_2.1.get_souls() +
+				material_input_3.1.get_souls() +
+				material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 9);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
@@ -485,10 +484,9 @@ mod test {
 						.iter()
 						.map(|output| {
 							match output {
-								ForgeOutput::Forged((_, avatar), _) => {
+								ForgeOutput::Forged((_, avatar), _) =>
 									DnaUtils::read_attribute_raw(avatar, AvatarAttr::Quantity)
-										as u32
-								},
+										as u32,
 								_ => 0,
 							}
 						})
@@ -531,11 +529,11 @@ mod test {
 			let material_input_3 = create_random_material(&ALICE, &pattern[2], 1);
 			let material_input_4 = create_random_material(&ALICE, &pattern[3], 1);
 
-			let total_soul_points = pet_part_input_1.1.get_souls()
-				+ material_input_1.1.get_souls()
-				+ material_input_2.1.get_souls()
-				+ material_input_3.1.get_souls()
-				+ material_input_4.1.get_souls();
+			let total_soul_points = pet_part_input_1.1.get_souls() +
+				material_input_1.1.get_souls() +
+				material_input_2.1.get_souls() +
+				material_input_3.1.get_souls() +
+				material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 8);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
@@ -642,11 +640,10 @@ mod test {
 				Some(unit_fn),
 			);
 
-			let total_soul_points = leader.1.get_souls()
-				+ sac_1.1.get_souls()
-				+ sac_2.1.get_souls()
-				+ sac_3.1.get_souls()
-				+ sac_4.1.get_souls();
+			let total_soul_points =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 			assert_eq!(total_soul_points, 5);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
