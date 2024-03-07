@@ -22,7 +22,10 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
-use pallet_ajuna_awesome_avatars::{types::AffiliateMethods, FeePropagationOf};
+use pallet_ajuna_awesome_avatars::{
+	types::{AffiliateMethods, Avatar, SeasonId},
+	FeePropagationOf,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -35,6 +38,7 @@ pub type MockSignature = MultiSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
 pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Runtime>;
+pub type MockBlockNumber = u64;
 pub type MockBalance = u64;
 pub type MockCollectionId = u32;
 
@@ -49,6 +53,7 @@ frame_support::construct_runtime!(
 		AAvatars: pallet_ajuna_awesome_avatars = 4,
 		NftTransfer: pallet_ajuna_nft_transfer = 5,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
+		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
 	}
 );
 
@@ -190,6 +195,7 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type NftHandler = NftTransfer;
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
+	type TournamentHandler = Tournament;
 	type WeightInfo = ();
 }
 
@@ -218,6 +224,22 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+}
+
+parameter_types! {
+	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
+	pub const MinimumTournamentPhaseDuration: MockBlockNumber = 100;
+}
+
+type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
+impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
+	type PalletId = TournamentPalletId1;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type SeasonId = SeasonId;
+	type EntityId = crate::AvatarIdOf<Runtime>;
+	type RankedEntity = Avatar;
+	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

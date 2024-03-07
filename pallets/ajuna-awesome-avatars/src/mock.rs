@@ -53,6 +53,7 @@ frame_support::construct_runtime!(
 		AAvatars: pallet_ajuna_awesome_avatars = 4,
 		NftTransfer: pallet_ajuna_nft_transfer = 5,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
+		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
 	}
 );
 
@@ -192,8 +193,9 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHandler = NftTransfer;
-	type AffiliateHandler = Affiliates;
 	type FeeChainMaxLength = AffiliateMaxLevel;
+	type AffiliateHandler = Affiliates;
+	type TournamentHandler = Tournament;
 	type WeightInfo = ();
 }
 
@@ -222,6 +224,22 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+}
+
+parameter_types! {
+	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
+	pub const MinimumTournamentPhaseDuration: MockBlockNumber = 100;
+}
+
+type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
+impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
+	type PalletId = TournamentPalletId1;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type SeasonId = SeasonId;
+	type EntityId = AvatarIdOf<Test>;
+	type RankedEntity = Avatar;
+	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 
 pub struct ExtBuilder {

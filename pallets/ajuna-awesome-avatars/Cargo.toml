@@ -30,6 +30,7 @@ sp-std             = { workspace = true }
 # Ajuna
 pallet-ajuna-affiliates   = { workspace = true }
 pallet-ajuna-nft-transfer = { workspace = true }
+pallet-ajuna-tournament   = { workspace = true }
 
 [dev-dependencies]
 # Substrate - FRAME
@@ -56,6 +57,7 @@ std = [
     "frame-system/std",
     "pallet-ajuna-affiliates/std",
     "pallet-ajuna-nft-transfer/std",
+    "pallet-ajuna-tournament/std",
     "pallet-balances/std",
     "pallet-insecure-randomness-collective-flip/std",
     "pallet-nfts/std",
@@ -71,6 +73,7 @@ try-runtime = [
     "frame-system/try-runtime",
     "pallet-ajuna-affiliates/try-runtime",
     "pallet-ajuna-nft-transfer/try-runtime",
+    "pallet-ajuna-tournament/try-runtime",
     "pallet-balances/try-runtime",
     "pallet-insecure-randomness-collective-flip/try-runtime",
     "pallet-nfts/try-runtime",

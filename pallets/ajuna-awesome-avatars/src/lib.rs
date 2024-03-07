@@ -79,6 +79,10 @@ use pallet_ajuna_affiliates::traits::{
 	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
 };
 use pallet_ajuna_nft_transfer::traits::NftHandler;
+use pallet_ajuna_tournament::{
+	config::TournamentConfig,
+	traits::{TournamentClaimer, TournamentInspector, TournamentMutator, TournamentRanker},
+};
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, CheckedDiv, CheckedSub, Hash, Saturating, TrailingZeroInput,
@@ -98,7 +102,7 @@ pub mod pallet {
 	pub(crate) type SeasonOf<T> = Season<BlockNumberFor<T>, BalanceOf<T>>;
 	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
 	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
-	pub(crate) type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
+	pub type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
 	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>, BalanceOf<T>>;
 	pub(crate) type KeyLimitOf<T> = <T as Config>::KeyLimit;
@@ -110,8 +114,9 @@ pub mod pallet {
 		ValueLimitOf<T>,
 		Avatar,
 	>>::CollectionId;
-
 	pub type FeePropagationOf<T> = FeePropagation<<T as Config>::FeeChainMaxLength>;
+	pub type AvatarRankerFor<T> = AvatarRanker<AvatarIdOf<T>>;
+	pub type TournamentConfigFor<T> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T>>;
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
@@ -157,11 +162,16 @@ pub mod pallet {
 		#[pallet::constant]
 		type FeeChainMaxLength: Get<u32>;
 
-		type AffiliateHandler: AffiliateInspector<Self::AccountId>
-			+ AffiliateMutator<Self::AccountId>
+		type AffiliateHandler: AffiliateInspector<AccountIdFor<Self>>
+			+ AffiliateMutator<AccountIdFor<Self>>
 			+ RuleInspector<AffiliateMethods, FeePropagationOf<Self>>
 			+ RuleMutator<AffiliateMethods, FeePropagationOf<Self>>
 			+ RuleExecutor<AffiliateMethods, FeePropagationOf<Self>>;
+
+		type TournamentHandler: TournamentInspector<SeasonId, BlockNumberFor<Self>, BalanceOf<Self>, AccountIdFor<Self>>
+			+ TournamentMutator<AccountIdFor<Self>, SeasonId, BlockNumberFor<Self>, BalanceOf<Self>>
+			+ TournamentRanker<SeasonId, Avatar, AvatarIdOf<Self>>
+			+ TournamentClaimer<SeasonId, AccountIdFor<Self>, AvatarIdOf<Self>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -259,6 +269,10 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type Preparation<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, IpfsUrl, OptionQuery>;
+
+	#[pallet::storage]
+	pub type TournamentConfigRankers<T: Config> =
+		StorageMap<_, Identity, TournamentConfigFor<T>, AvatarRankerFor<T>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -1449,6 +1463,48 @@ pub mod pallet {
 			Self::deposit_event(Event::UpdatedUnlockConfigs { season_id, unlock_configs });
 			Ok(())
 		}
+
+		#[pallet::call_index(30)]
+		#[pallet::weight({1000})]
+		pub fn try_create_tournament(
+			origin: OriginFor<T>,
+			season_id: SeasonId,
+			config: TournamentConfigFor<T>,
+			with_ranker: AvatarRankerFor<T>,
+		) -> DispatchResult {
+			let organizer = Self::ensure_organizer(origin)?;
+			let _ = T::TournamentHandler::try_create_new_tournament_for(
+				&organizer,
+				&season_id,
+				config.clone(),
+			)?;
+
+			TournamentConfigRankers::<T>::insert(config, with_ranker);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(31)]
+		#[pallet::weight({1000})]
+		pub fn try_claim_tournament_reward_for(
+			origin: OriginFor<T>,
+			season_id: SeasonId,
+			avatar_id: AvatarIdOf<T>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::TournamentHandler::try_claim_tournament_reward_for(&season_id, &account, &avatar_id)
+		}
+
+		#[pallet::call_index(32)]
+		#[pallet::weight({1000})]
+		pub fn try_claim_golden_duck_for(
+			origin: OriginFor<T>,
+			season_id: SeasonId,
+			avatar_id: AvatarIdOf<T>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::TournamentHandler::try_claim_golden_duck_for(&season_id, &account, &avatar_id)
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1583,6 +1639,12 @@ pub mod pallet {
 					info.free_minted.saturating_accrue(generated_avatar_ids.len() as Stat);
 				}
 			});
+
+			if T::TournamentHandler::is_golden_duck_enabled_for(&season_id) {
+				for avatar_id in generated_avatar_ids.iter() {
+					T::TournamentHandler::try_rank_entity_for_golden_duck(&season_id, avatar_id)?;
+				}
+			}
 
 			Self::deposit_event(Event::AvatarsMinted { avatar_ids: generated_avatar_ids });
 			Ok(())
@@ -1829,6 +1891,18 @@ pub mod pallet {
 								status.early_ended = true;
 							}
 						});
+
+						// If the leader avatar has turned into a Legendary avatar then we try to
+						// rank it for the active tournament
+						if let Some(config) =
+							T::TournamentHandler::get_active_tournament_config_for(season_id)
+						{
+							if let Some(ranker) = TournamentConfigRankers::<T>::get(config) {
+								T::TournamentHandler::try_rank_entity_in_tournament_for(
+									season_id, &leader_id, &leader, &ranker,
+								)?;
+							}
+						}
 					}
 
 					Avatars::<T>::insert(leader_id, (player, leader));
