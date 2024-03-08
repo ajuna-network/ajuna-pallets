@@ -40,6 +40,8 @@ pub mod pallet {
 	pub(crate) type BalanceOf<T, I> =
 		<<T as Config<I>>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub type TournamentConfigFor<T, I> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T, I>>;
+	pub type PlayerTableFor<T, I> =
+		PlayerTable<(<T as Config<I>>::EntityId, <T as Config<I>>::RankedEntity)>;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -58,6 +60,9 @@ pub mod pallet {
 
 		/// The season identifier type.
 		type SeasonId: Member + Parameter + MaxEncodedLen + Copy;
+
+		/// The ranked entities type
+		type RankedEntity: Member + Parameter + MaxEncodedLen;
 
 		/// The ranked entities identifier
 		type EntityId: Member + Parameter + MaxEncodedLen + Copy;
@@ -96,7 +101,7 @@ pub mod pallet {
 			NMapKey<Twox128, TournamentId>,
 			NMapKey<Twox128, T::RankCategory>,
 		),
-		PlayerTable<T::EntityId>,
+		PlayerTableFor<T, I>,
 		ValueQuery,
 	>;
 
@@ -120,11 +125,21 @@ pub mod pallet {
 		TournamentActivationTooEarly,
 		/// Cannot deactivate a tournament before its configured block end,
 		TournamentEndingTooEarly,
+		/// An error occurred trying to rank an entity,
+		FailedToRankEntity,
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		fn ensure_valid_tournament(config: &TournamentConfigFor<T, I>) -> DispatchResult {
 			Ok(())
+		}
+
+		fn try_get_current_tournament_id_for(
+			season_id: &T::SeasonId,
+		) -> Result<TournamentId, DispatchError> {
+			let maybe_id = ActiveTournaments::<T, I>::take(season_id);
+			ensure!(maybe_id.is_some(), Error::<T, I>::NoActiveTournamentForSeason);
+			Ok(maybe_id.unwrap())
 		}
 	}
 
@@ -159,7 +174,7 @@ pub mod pallet {
 			Tournaments::<T, I>::insert(season_id, next_tournament_id, config);
 
 			Self::deposit_event(Event::<T, I>::TournamentCreated {
-				season_id: season_id.clone(),
+				season_id: *season_id,
 				tournament_id: next_tournament_id,
 			});
 
@@ -181,7 +196,7 @@ pub mod pallet {
 					// TODO: Tournament start logic
 
 					Self::deposit_event(Event::<T, I>::TournamentStarted {
-						season_id: season_id.clone(),
+						season_id: *season_id,
 						tournament_id: next_tournament_id,
 					});
 
@@ -195,11 +210,7 @@ pub mod pallet {
 		}
 
 		fn try_finish_active_tournament_for(season_id: &T::SeasonId) -> DispatchResult {
-			let tournament_id = {
-				let maybe_id = ActiveTournaments::<T, I>::take(season_id);
-				ensure!(maybe_id.is_some(), Error::<T, I>::NoActiveTournamentForSeason);
-				maybe_id.unwrap()
-			};
+			let tournament_id = Self::try_get_current_tournament_id_for(season_id)?;
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
@@ -207,7 +218,7 @@ pub mod pallet {
 					// TODO: Tournament ending logic
 
 					Self::deposit_event(Event::<T, I>::TournamentEnded {
-						season_id: season_id.clone(),
+						season_id: *season_id,
 						tournament_id,
 					});
 
@@ -221,20 +232,36 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config<I>, I: 'static, E>
-		TournamentRanker<T::SeasonId, AccountIdFor<T>, T::RankCategory, E, T::EntityId> for Pallet<T, I>
+	impl<T: Config<I>, I: 'static>
+		TournamentRanker<T::SeasonId, T::RankCategory, T::EntityId, T::RankedEntity> for Pallet<T, I>
 	{
 		fn try_rank_entity_in_tournament_for<R>(
 			season_id: &T::SeasonId,
-			account: &AccountIdFor<T>,
+			category: &T::RankCategory,
+			entity_id: &T::EntityId,
+			entity: &T::RankedEntity,
 			ranker: &R,
-			entity: &E,
 		) -> DispatchResult
 		where
-			R: Ranker<T::EntityId, Category = T::RankCategory, Entity = E>,
+			R: EntityRank<Entity = T::RankedEntity>,
 		{
-			// TODO: Ranking logic
-			Ok(())
+			let tournament_id = Self::try_get_current_tournament_id_for(season_id)?;
+
+			TournamentRankings::<T, I>::mutate((season_id, tournament_id, category), |table| {
+				if let Err(index) =
+					table.binary_search_by(|(_, other)| ranker.rank_against(entity, other))
+				{
+					if index < PlayerTable::<PlayerTableFor<T, I>>::bound() {
+						table.force_insert_keep_left(index, (*entity_id, entity.clone()))
+					} else {
+						Ok(None)
+					}
+				} else {
+					Ok(None)
+				}
+			})
+			.map(|_| ())
+			.map_err(|_| Error::<T, I>::FailedToRankEntity.into())
 		}
 	}
 }

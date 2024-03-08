@@ -96,6 +96,7 @@ impl pallet_balances::Config for Test {
 }
 
 pub type MockSeasonId = u8;
+pub type MockEntity = u32;
 pub type MockEntityId = u32;
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MockRankCategory {
@@ -108,6 +109,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type SeasonId = MockSeasonId;
+	type RankedEntity = MockEntity;
 	type EntityId = MockEntityId;
 	type RankCategory = MockRankCategory;
 }
@@ -117,6 +119,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type SeasonId = MockSeasonId;
+	type RankedEntity = MockEntity;
 	type EntityId = MockEntityId;
 	type RankCategory = MockRankCategory;
 }
