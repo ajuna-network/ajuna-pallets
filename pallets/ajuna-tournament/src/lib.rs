@@ -34,14 +34,21 @@ use traits::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::traits::Currency;
+	use frame_support::{
+		traits::{Currency, ExistenceRequirement},
+		PalletId,
+	};
+	use scale_info::prelude::format;
+	use sp_runtime::{
+		traits::{AccountIdConversion, CheckedDiv},
+		Saturating,
+	};
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type BalanceOf<T, I> =
 		<<T as Config<I>>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub type TournamentConfigFor<T, I> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T, I>>;
-	pub type PlayerTableFor<T, I> =
-		PlayerTable<(<T as Config<I>>::EntityId, <T as Config<I>>::RankedEntity)>;
+	pub type PlayerTableFor<T, I> = PlayerTable<(AccountIdFor<T>, <T as Config<I>>::RankedEntity)>;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -52,20 +59,24 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self, I>>
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Currency: Currency<Self::AccountId>;
 
+		/// The amount needed to rank an avatar
+		#[pallet::constant]
+		type RankDeposit: Get<BalanceOf<Self, I>>;
+
 		/// The season identifier type.
 		type SeasonId: Member + Parameter + MaxEncodedLen + Copy;
 
 		/// The ranked entities type
 		type RankedEntity: Member + Parameter + MaxEncodedLen;
-
-		/// The ranked entities identifier
-		type EntityId: Member + Parameter + MaxEncodedLen + Copy;
 
 		/// Specific category in a tournament an entity can be ranked into.
 		type RankCategory: Member + Parameter + MaxEncodedLen + Copy;
@@ -79,11 +90,22 @@ pub mod pallet {
 	#[pallet::getter(fn tournaments)]
 	pub type Tournaments<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
-		Twox128,
+		Identity,
 		T::SeasonId,
-		Twox128,
+		Identity,
 		TournamentId,
 		TournamentConfigFor<T, I>,
+		OptionQuery,
+	>;
+
+	#[pallet::storage]
+	pub type TournamentTreasuries<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+		_,
+		Identity,
+		T::SeasonId,
+		Identity,
+		TournamentId,
+		AccountIdFor<T>,
 		OptionQuery,
 	>;
 
@@ -97,9 +119,9 @@ pub mod pallet {
 	pub type TournamentRankings<T: Config<I>, I: 'static = ()> = StorageNMap<
 		_,
 		(
-			NMapKey<Twox128, T::SeasonId>,
-			NMapKey<Twox128, TournamentId>,
-			NMapKey<Twox128, T::RankCategory>,
+			NMapKey<Identity, T::SeasonId>,
+			NMapKey<Identity, TournamentId>,
+			NMapKey<Identity, T::RankCategory>,
 		),
 		PlayerTableFor<T, I>,
 		ValueQuery,
@@ -127,19 +149,81 @@ pub mod pallet {
 		TournamentEndingTooEarly,
 		/// An error occurred trying to rank an entity,
 		FailedToRankEntity,
+		/// Tournament configuration is invalid.
+		InvalidTournamentConfig,
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		/// The account ID of the treasury.
+		pub fn global_treasury_account_id() -> AccountIdFor<T> {
+			T::PalletId::get().into_account_truncating()
+		}
+
+		/// The account ID of the sub-account for a given season_id/tournament_id.
+		pub fn tournament_treasury_account_id(
+			season_id: &T::SeasonId,
+			tournament_id: &TournamentId,
+		) -> T::AccountId {
+			let sub_account_bytes =
+				format!("season_{:03?}-tournament_{:03?}", season_id, tournament_id).into_bytes();
+			T::PalletId::get().into_sub_account_truncating(sub_account_bytes)
+		}
+
 		fn ensure_valid_tournament(config: &TournamentConfigFor<T, I>) -> DispatchResult {
+			ensure!(config.start < config.end, Error::<T, I>::InvalidTournamentConfig);
+			ensure!(config.max_players <= MAX_PLAYERS, Error::<T, I>::InvalidTournamentConfig);
+			ensure!(
+				config.reward_table.iter().fold(0_u16, |a, b| a + (*b as u16)) <= 100,
+				Error::<T, I>::InvalidTournamentConfig
+			);
 			Ok(())
 		}
 
 		fn try_get_current_tournament_id_for(
 			season_id: &T::SeasonId,
 		) -> Result<TournamentId, DispatchError> {
-			let maybe_id = ActiveTournaments::<T, I>::take(season_id);
+			let maybe_id = ActiveTournaments::<T, I>::get(season_id);
 			ensure!(maybe_id.is_some(), Error::<T, I>::NoActiveTournamentForSeason);
 			Ok(maybe_id.unwrap())
+		}
+
+		fn process_category_payout(
+			treasury_account: &AccountIdFor<T>,
+			_category: &T::RankCategory,
+			tournament_config: &TournamentConfigFor<T, I>,
+			rank_table: &PlayerTableFor<T, I>,
+		) -> DispatchResult {
+			let total_payout = T::Currency::free_balance(treasury_account);
+
+			for ((account, _), payout_perc) in rank_table
+				.iter()
+				.zip(&tournament_config.reward_table)
+				.filter(|(_, perc)| **perc > 0)
+			{
+				let account_payout = total_payout
+					.saturating_mul((*payout_perc).into())
+					.checked_div(&100_u32.into())
+					.unwrap_or_default();
+
+				if account_payout > 0_u32.into() {
+					T::Currency::transfer(
+						treasury_account,
+						account,
+						account_payout,
+						ExistenceRequirement::AllowDeath,
+					)?;
+				}
+			}
+
+			match tournament_config.reward_table.last() {
+				Some(perc) if *perc > 0 => {
+					// TODO: Golden duck logic would go here
+					// Remaining payout to be sent to golden duck account
+				},
+				_ => {},
+			}
+
+			Ok(())
 		}
 	}
 
@@ -193,7 +277,7 @@ pub mod pallet {
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, next_tournament_id)
 			{
 				if tournament_config.start >= current_block {
-					// TODO: Tournament start logic
+					ActiveTournaments::<T, I>::insert(season_id, next_tournament_id);
 
 					Self::deposit_event(Event::<T, I>::TournamentStarted {
 						season_id: *season_id,
@@ -215,7 +299,18 @@ pub mod pallet {
 
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
 				if tournament_config.end <= current_block {
-					// TODO: Tournament ending logic
+					for (category, player_table) in
+						TournamentRankings::<T, I>::iter_prefix((season_id, tournament_id))
+					{
+						let treasury_account =
+							Self::tournament_treasury_account_id(season_id, &tournament_id);
+						Self::process_category_payout(
+							&treasury_account,
+							&category,
+							&tournament_config,
+							&player_table,
+						)?;
+					}
 
 					Self::deposit_event(Event::<T, I>::TournamentEnded {
 						season_id: *season_id,
@@ -233,12 +328,12 @@ pub mod pallet {
 	}
 
 	impl<T: Config<I>, I: 'static>
-		TournamentRanker<T::SeasonId, T::RankCategory, T::EntityId, T::RankedEntity> for Pallet<T, I>
+		TournamentRanker<AccountIdFor<T>, T::SeasonId, T::RankCategory, T::RankedEntity> for Pallet<T, I>
 	{
 		fn try_rank_entity_in_tournament_for<R>(
+			account: &AccountIdFor<T>,
 			season_id: &T::SeasonId,
 			category: &T::RankCategory,
-			entity_id: &T::EntityId,
 			entity: &T::RankedEntity,
 			ranker: &R,
 		) -> DispatchResult
@@ -252,7 +347,7 @@ pub mod pallet {
 					table.binary_search_by(|(_, other)| ranker.rank_against(entity, other))
 				{
 					if index < PlayerTable::<PlayerTableFor<T, I>>::bound() {
-						table.force_insert_keep_left(index, (*entity_id, entity.clone()))
+						table.force_insert_keep_left(index, (account.clone(), entity.clone()))
 					} else {
 						Ok(None)
 					}

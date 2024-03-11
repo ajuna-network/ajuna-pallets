@@ -19,6 +19,7 @@ use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
+	PalletId,
 };
 use sp_runtime::{
 	testing::{TestSignature, H256},
@@ -97,30 +98,37 @@ impl pallet_balances::Config for Test {
 
 pub type MockSeasonId = u8;
 pub type MockEntity = u32;
-pub type MockEntityId = u32;
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MockRankCategory {
 	A = 0,
 	B = 1,
 }
 
+parameter_types! {
+	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
+	pub const TournamentPalletId2: PalletId = PalletId(*b"aj/trmt2");
+	pub const RankDeposit: MockBalance = 1;
+}
+
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
+	type PalletId = TournamentPalletId1;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
+	type RankDeposit = RankDeposit;
 	type SeasonId = MockSeasonId;
 	type RankedEntity = MockEntity;
-	type EntityId = MockEntityId;
 	type RankCategory = MockRankCategory;
 }
 
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
 impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
+	type PalletId = TournamentPalletId2;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
+	type RankDeposit = RankDeposit;
 	type SeasonId = MockSeasonId;
 	type RankedEntity = MockEntity;
-	type EntityId = MockEntityId;
 	type RankCategory = MockRankCategory;
 }
 
