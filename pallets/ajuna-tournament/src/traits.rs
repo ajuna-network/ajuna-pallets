@@ -10,12 +10,6 @@ pub type RewardTable = BoundedVec<u8, ConstU32<REWARD_TABLE_MAX_LENGTH>>;
 
 pub type PlayerTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
 
-pub trait Ranker {
-	type Ordering: Ord;
-	type Category: Member + Parameter + MaxEncodedLen + Copy;
-	type Entity: Member + Parameter + MaxEncodedLen;
-}
-
 pub trait EntityRank {
 	type Entity: Member + Parameter + MaxEncodedLen;
 	fn rank_against(&self, entity: &Self::Entity, other: &Self::Entity) -> sp_std::cmp::Ordering;
@@ -49,11 +43,11 @@ pub trait TournamentMutator<SeasonId, BlockNumber, Balance> {
 	fn try_finish_active_tournament_for(season_id: &SeasonId) -> DispatchResult;
 }
 
-pub trait TournamentRanker<SeasonId, RankCategory, EntityIndex, Entity> {
+pub trait TournamentRanker<AccountId, SeasonId, RankCategory, Entity> {
 	fn try_rank_entity_in_tournament_for<R>(
+		account: &AccountId,
 		season_id: &SeasonId,
 		category: &RankCategory,
-		entity_id: &EntityIndex,
 		entity: &Entity,
 		ranker: &R,
 	) -> DispatchResult
