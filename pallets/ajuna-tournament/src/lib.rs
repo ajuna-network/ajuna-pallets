@@ -115,6 +115,11 @@ pub mod pallet {
 		StorageMap<_, Identity, T::SeasonId, TournamentId, OptionQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn latest_tournaments)]
+	pub type LatestTournaments<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, T::SeasonId, TournamentId, OptionQuery>;
+
+	#[pallet::storage]
 	#[pallet::getter(fn rankings)]
 	pub type TournamentRankings<T: Config<I>, I: 'static = ()> = StorageNMap<
 		_,
@@ -171,7 +176,10 @@ pub mod pallet {
 
 		fn ensure_valid_tournament(config: &TournamentConfigFor<T, I>) -> DispatchResult {
 			ensure!(config.start < config.end, Error::<T, I>::InvalidTournamentConfig);
-			ensure!(config.max_players <= MAX_PLAYERS, Error::<T, I>::InvalidTournamentConfig);
+			ensure!(
+				config.max_players > 0 && config.max_players <= MAX_PLAYERS,
+				Error::<T, I>::InvalidTournamentConfig
+			);
 			ensure!(
 				config.reward_table.iter().fold(0_u16, |a, b| a + (*b as u16)) <= 100,
 				Error::<T, I>::InvalidTournamentConfig
@@ -271,7 +279,7 @@ pub mod pallet {
 				Error::<T, I>::AnotherTournamentAlreadyActiveForSeason
 			);
 
-			let next_tournament_id = NextTournamentIds::<T, I>::get(season_id);
+			let next_tournament_id = LatestTournaments::<T, I>::get(season_id).unwrap_or(1);
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, next_tournament_id)
@@ -311,6 +319,9 @@ pub mod pallet {
 							&player_table,
 						)?;
 					}
+
+					ActiveTournaments::<T, I>::remove(season_id);
+					LatestTournaments::<T, I>::insert(season_id, tournament_id);
 
 					Self::deposit_event(Event::<T, I>::TournamentEnded {
 						season_id: *season_id,
