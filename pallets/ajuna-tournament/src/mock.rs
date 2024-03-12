@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_tournament};
+use crate::{self as pallet_ajuna_tournament, EntityRank};
 use frame_support::pallet_prelude::{Decode, Encode, Hooks, MaxEncodedLen, TypeInfo};
 use frame_support::{
 	parameter_types,
@@ -23,9 +23,10 @@ use frame_support::{
 };
 use sp_runtime::{
 	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
-	BoundedVec, BuildStorage,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	BuildStorage,
 };
+use std::cmp::Ordering;
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -38,6 +39,9 @@ pub const BOB: MockAccountId = 2;
 pub const CHARLIE: MockAccountId = 3;
 pub const DAVE: MockAccountId = 4;
 pub const EDWARD: MockAccountId = 5;
+
+pub const SEASON_ID_1: MockSeasonId = 1;
+pub const SEASON_ID_2: MockSeasonId = 2;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -97,6 +101,7 @@ impl pallet_balances::Config for Test {
 }
 
 pub type MockSeasonId = u8;
+pub type MockEntityId = H256;
 pub type MockEntity = u32;
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MockRankCategory {
@@ -104,10 +109,20 @@ pub enum MockRankCategory {
 	B = 1,
 }
 
+pub struct MockRanker;
+
+impl EntityRank for MockRanker {
+	type Entity = MockEntity;
+
+	fn rank_against(&self, entity: &Self::Entity, other: &Self::Entity) -> Ordering {
+		entity.cmp(other)
+	}
+}
+
 parameter_types! {
 	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
 	pub const TournamentPalletId2: PalletId = PalletId(*b"aj/trmt2");
-	pub const RankDeposit: MockBalance = 1;
+	pub const RankDeposit: MockBalance = 100;
 }
 
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
@@ -117,6 +132,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type Currency = Balances;
 	type RankDeposit = RankDeposit;
 	type SeasonId = MockSeasonId;
+	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
 	type RankCategory = MockRankCategory;
 }
@@ -128,6 +144,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type Currency = Balances;
 	type RankDeposit = RankDeposit;
 	type SeasonId = MockSeasonId;
+	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
 	type RankCategory = MockRankCategory;
 }

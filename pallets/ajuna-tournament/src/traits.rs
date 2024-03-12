@@ -43,7 +43,7 @@ pub trait TournamentMutator<SeasonId, BlockNumber, Balance> {
 	fn try_finish_active_tournament_for(season_id: &SeasonId) -> DispatchResult;
 }
 
-pub trait TournamentRanker<AccountId, SeasonId, RankCategory, Entity> {
+pub trait TournamentRanker<AccountId, SeasonId, RankCategory, Entity, EntityId> {
 	fn try_rank_entity_in_tournament_for<R>(
 		account: &AccountId,
 		season_id: &SeasonId,
@@ -53,4 +53,11 @@ pub trait TournamentRanker<AccountId, SeasonId, RankCategory, Entity> {
 	) -> DispatchResult
 	where
 		R: EntityRank<Entity = Entity>;
+
+	fn try_rank_entity_for_golden_duck(
+		account: &AccountId,
+		season_id: &SeasonId,
+		category: &RankCategory,
+		entity: &EntityId,
+	) -> DispatchResult;
 }
