@@ -29,7 +29,7 @@ pub mod traits;
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 
-use traits::*;
+pub use traits::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -74,6 +74,9 @@ pub mod pallet {
 
 		/// The season identifier type.
 		type SeasonId: Member + Parameter + MaxEncodedLen + Copy;
+
+		/// The ranked entity identifier type.
+		type EntityId: Member + Parameter + MaxEncodedLen;
 
 		/// The ranked entities type
 		type RankedEntity: Member + Parameter + MaxEncodedLen;
@@ -339,7 +342,13 @@ pub mod pallet {
 	}
 
 	impl<T: Config<I>, I: 'static>
-		TournamentRanker<AccountIdFor<T>, T::SeasonId, T::RankCategory, T::RankedEntity> for Pallet<T, I>
+		TournamentRanker<
+			AccountIdFor<T>,
+			T::SeasonId,
+			T::RankCategory,
+			T::RankedEntity,
+			T::EntityId,
+		> for Pallet<T, I>
 	{
 		fn try_rank_entity_in_tournament_for<R>(
 			account: &AccountIdFor<T>,
@@ -352,12 +361,31 @@ pub mod pallet {
 			R: EntityRank<Entity = T::RankedEntity>,
 		{
 			let tournament_id = Self::try_get_current_tournament_id_for(season_id)?;
+			let tournament_config = Self::get_active_tournament_for(season_id)
+				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
+			let treasury_account = Self::tournament_treasury_account_id(season_id, &tournament_id);
+
+			T::Currency::transfer(
+				account,
+				&treasury_account,
+				T::RankDeposit::get(),
+				ExistenceRequirement::KeepAlive,
+			)?;
 
 			TournamentRankings::<T, I>::mutate((season_id, tournament_id, category), |table| {
 				if let Err(index) =
 					table.binary_search_by(|(_, other)| ranker.rank_against(entity, other))
 				{
-					if index < PlayerTable::<PlayerTableFor<T, I>>::bound() {
+					if tournament_config.max_players == MAX_PLAYERS {
+						if index < PlayerTable::<PlayerTableFor<T, I>>::bound() {
+							table.force_insert_keep_left(index, (account.clone(), entity.clone()))
+						} else {
+							Ok(None)
+						}
+					} else if index < tournament_config.max_players as usize {
+						if table.len() == tournament_config.max_players as usize {
+							let _ = table.pop();
+						}
 						table.force_insert_keep_left(index, (account.clone(), entity.clone()))
 					} else {
 						Ok(None)
@@ -368,6 +396,15 @@ pub mod pallet {
 			})
 			.map(|_| ())
 			.map_err(|_| Error::<T, I>::FailedToRankEntity.into())
+		}
+
+		fn try_rank_entity_for_golden_duck(
+			_account: &AccountIdFor<T>,
+			_season_id: &T::SeasonId,
+			_category: &T::RankCategory,
+			_entity: &T::EntityId,
+		) -> DispatchResult {
+			Ok(())
 		}
 	}
 }
