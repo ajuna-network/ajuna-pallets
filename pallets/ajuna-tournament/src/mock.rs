@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_tournament, EntityRank};
-use frame_support::pallet_prelude::{Decode, Encode, Hooks, MaxEncodedLen, TypeInfo};
 use frame_support::{
+	pallet_prelude::{Decode, Encode, Hooks, MaxEncodedLen, TypeInfo},
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 	PalletId,

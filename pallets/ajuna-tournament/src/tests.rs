@@ -1,7 +1,6 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::bounded_vec;
-use sp_runtime::testing::H256;
+use sp_runtime::{bounded_vec, testing::H256};
 
 impl Default for TournamentConfig<BlockNumberFor<Test>, MockBalance> {
 	fn default() -> Self {
