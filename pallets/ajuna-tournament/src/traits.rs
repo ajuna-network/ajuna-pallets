@@ -11,7 +11,7 @@ pub type RewardTable = BoundedVec<u8, ConstU32<REWARD_TABLE_MAX_LENGTH>>;
 pub type PlayerTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
 
 pub trait EntityRank {
-	type Entity: Member + Parameter + MaxEncodedLen;
+	type Entity: Member + PartialOrd + Ord;
 	fn rank_against(&self, entity: &Self::Entity, other: &Self::Entity) -> sp_std::cmp::Ordering;
 }
 
@@ -26,10 +26,19 @@ pub struct TournamentConfig<BlockNumber, Balance> {
 	pub max_players: u32,
 }
 
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub enum GoldenDuckState<AccountId, EntityId> {
+	#[default]
+	Disabled,
+	Enabled(Option<(AccountId, EntityId)>),
+}
+
 pub trait TournamentInspector<SeasonId, BlockNumber, Balance> {
 	fn get_active_tournament_for(
 		season_id: &SeasonId,
 	) -> Option<TournamentConfig<BlockNumber, Balance>>;
+
+	fn is_golden_duck_enabled_for(season_id: &SeasonId) -> bool;
 }
 
 pub trait TournamentMutator<SeasonId, BlockNumber, Balance> {
@@ -57,7 +66,8 @@ pub trait TournamentRanker<AccountId, SeasonId, RankCategory, Entity, EntityId> 
 	fn try_rank_entity_for_golden_duck(
 		account: &AccountId,
 		season_id: &SeasonId,
-		category: &RankCategory,
-		entity: &EntityId,
-	) -> DispatchResult;
+		entity_id: &EntityId,
+	) -> DispatchResult
+	where
+		EntityId: Member + PartialOrd + Ord;
 }
