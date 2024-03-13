@@ -1,6 +1,7 @@
 use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::bounded_vec;
+use sp_runtime::testing::H256;
 
 impl Default for TournamentConfig<BlockNumberFor<Test>, MockBalance> {
 	fn default() -> Self {
@@ -27,17 +28,17 @@ impl TournamentConfig<BlockNumberFor<Test>, MockBalance> {
 		self
 	}
 
-	pub(crate) fn initial_reward(mut self, initial_reward: Option<MockBalance>) -> Self {
+	pub(crate) fn _initial_reward(mut self, initial_reward: Option<MockBalance>) -> Self {
 		self.initial_reward = initial_reward;
 		self
 	}
 
-	pub(crate) fn max_reward(mut self, max_reward: Option<MockBalance>) -> Self {
+	pub(crate) fn _max_reward(mut self, max_reward: Option<MockBalance>) -> Self {
 		self.max_reward = max_reward;
 		self
 	}
 
-	pub(crate) fn take_fee_percentage(mut self, take_fee_percentage: Option<u8>) -> Self {
+	pub(crate) fn _take_fee_percentage(mut self, take_fee_percentage: Option<u8>) -> Self {
 		self.take_fee_percentage = take_fee_percentage;
 		self
 	}
@@ -89,6 +90,35 @@ mod tournament_inspector {
 			);
 
 			assert_eq!(TournamentBeta::get_active_tournament_for(&SEASON_ID_1), None);
+		});
+	}
+
+	#[test]
+	fn check_is_golden_duck_enabled() {
+		ExtBuilder::default().build().execute_with(|| {
+			// Golden duck tournament
+			{
+				let golden_duck_tournament = TournamentConfigFor::<Test, Instance1>::default()
+					.reward_table(bounded_vec![40, 20, 10]);
+				assert_ok!(TournamentAlpha::try_create_new_tournament_for(
+					&SEASON_ID_1,
+					golden_duck_tournament.clone(),
+				));
+				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
+				assert!(TournamentAlpha::is_golden_duck_enabled_for(&SEASON_ID_1));
+			};
+
+			// Non-Golden duck tournament
+			{
+				let non_golden_duck_tournament = TournamentConfigFor::<Test, Instance1>::default()
+					.reward_table(bounded_vec![50, 30, 20]);
+				assert_ok!(TournamentAlpha::try_create_new_tournament_for(
+					&SEASON_ID_2,
+					non_golden_duck_tournament.clone(),
+				));
+				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_2));
+				assert!(!TournamentAlpha::is_golden_duck_enabled_for(&SEASON_ID_2));
+			};
 		});
 	}
 }
@@ -423,10 +453,16 @@ fn test_full_tournament_workflow() {
 			);
 
 			// Ranking some entities
-			let rankings: [(MockAccountId, MockEntity); 6] =
-				[(ALICE, 120), (BOB, 30), (DAVE, 22), (EDWARD, 99), (CHARLIE, 70), (BOB, 56)];
+			let rankings: [(MockAccountId, MockEntity, MockEntityId); 6] = [
+				(ALICE, 120, H256::from_low_u64_be(10)),
+				(BOB, 30, H256::from_low_u64_be(45)),
+				(DAVE, 22, H256::from_low_u64_be(3)),
+				(EDWARD, 99, H256::from_low_u64_be(26)),
+				(CHARLIE, 70, H256::from_low_u64_be(71)),
+				(BOB, 56, H256::from_low_u64_be(92)),
+			];
 
-			for (account, entity) in rankings {
+			for (account, entity, entity_id) in rankings {
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&account,
 					&SEASON_ID_1,
@@ -434,17 +470,37 @@ fn test_full_tournament_workflow() {
 					&entity,
 					&MockRanker
 				));
+
+				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+					&account,
+					&SEASON_ID_1,
+					&entity_id
+				));
 			}
 
 			assert_eq!(Balances::free_balance(tournament_account), 600);
+			assert_eq!(Balances::free_balance(ALICE), 900);
+			assert_eq!(Balances::free_balance(BOB), 800);
+			assert_eq!(Balances::free_balance(CHARLIE), 900);
+			assert_eq!(Balances::free_balance(DAVE), 900);
+			assert_eq!(Balances::free_balance(EDWARD), 900);
+
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get((
 					SEASON_ID_1,
 					tournament_id,
 					MockRankCategory::A
 				)),
-				PlayerTableFor::<Test, Instance1>::try_from(vec![(ALICE, 120), (EDWARD, 99),])
+				PlayerTableFor::<Test, Instance1>::try_from(vec![(ALICE, 120), (EDWARD, 99)])
 					.expect("Should build player_table")
+			);
+
+			assert_eq!(
+				GoldenDucks::<Test, Instance1>::get(SEASON_ID_1, tournament_id,),
+				GoldenDuckStateFor::<Test, Instance1>::Enabled(Some((
+					DAVE,
+					H256::from_low_u64_be(3)
+				)))
 			);
 
 			run_to_block(10);
@@ -456,7 +512,11 @@ fn test_full_tournament_workflow() {
 				crate::Event::TournamentEnded { season_id: SEASON_ID_1, tournament_id },
 			));
 
+			assert_eq!(Balances::free_balance(tournament_account), 0);
 			assert_eq!(Balances::free_balance(ALICE), 1_200);
+			assert_eq!(Balances::free_balance(BOB), 800);
+			assert_eq!(Balances::free_balance(CHARLIE), 900);
+			assert_eq!(Balances::free_balance(DAVE), 1_140);
 			assert_eq!(Balances::free_balance(EDWARD), 960);
 
 			assert_eq!(ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
