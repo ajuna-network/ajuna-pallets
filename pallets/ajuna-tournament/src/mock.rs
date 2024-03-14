@@ -100,7 +100,7 @@ impl pallet_balances::Config for Test {
 	type RuntimeFreezeReason = ();
 }
 
-pub type MockSeasonId = u8;
+pub type MockSeasonId = u32;
 pub type MockEntityId = H256;
 pub type MockEntity = u32;
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq, Eq)]

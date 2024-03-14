@@ -41,8 +41,9 @@ pub trait TournamentInspector<SeasonId, BlockNumber, Balance> {
 	fn is_golden_duck_enabled_for(season_id: &SeasonId) -> bool;
 }
 
-pub trait TournamentMutator<SeasonId, BlockNumber, Balance> {
+pub trait TournamentMutator<AccountId, SeasonId, BlockNumber, Balance> {
 	fn try_create_new_tournament_for(
+		creator: &AccountId,
 		season_id: &SeasonId,
 		config: TournamentConfig<BlockNumber, Balance>,
 	) -> Result<TournamentId, DispatchError>;
