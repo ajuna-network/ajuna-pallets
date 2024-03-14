@@ -38,10 +38,9 @@ pub mod pallet {
 		traits::{Currency, ExistenceRequirement},
 		PalletId,
 	};
-	use scale_info::prelude::format;
 	use sp_runtime::{
-		traits::{AccountIdConversion, CheckedDiv},
-		Saturating,
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedDiv},
+		SaturatedConversion, Saturating,
 	};
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -75,7 +74,7 @@ pub mod pallet {
 		type RankDeposit: Get<BalanceOf<Self, I>>;
 
 		/// The season identifier type.
-		type SeasonId: Member + Parameter + MaxEncodedLen + Copy;
+		type SeasonId: Member + Parameter + MaxEncodedLen + AtLeast32BitUnsigned + Copy;
 
 		/// The ranked entity identifier type.
 		type EntityId: Member + Parameter + MaxEncodedLen + PartialOrd + Ord;
@@ -186,23 +185,38 @@ pub mod pallet {
 			season_id: &T::SeasonId,
 			tournament_id: &TournamentId,
 		) -> T::AccountId {
-			let sub_account_bytes =
-				format!("season_{:03?}-tournament_{:03?}", season_id, tournament_id).into_bytes();
-			T::PalletId::get().into_sub_account_truncating(sub_account_bytes)
+			let mut base = T::PalletId::get();
+			// TODO: Improve logic
+			base.0[0] = (*season_id).saturated_into::<u32>() as u8;
+			base.0[1] = *tournament_id as u8;
+			base.into_account_truncating()
 		}
 
 		fn ensure_valid_tournament(
 			config: &TournamentConfigFor<T, I>,
 		) -> Result<u16, DispatchError> {
 			ensure!(config.start < config.end, Error::<T, I>::InvalidTournamentConfig);
-			ensure!(
-				config.max_players > 0 && config.max_players <= MAX_PLAYERS,
-				Error::<T, I>::InvalidTournamentConfig
-			);
+
+			if let Some(initial_reward) = config.initial_reward {
+				ensure!(initial_reward > 0_u32.into(), Error::<T, I>::InvalidTournamentConfig);
+			}
+
+			if let Some(max_reward) = config.max_reward {
+				ensure!(max_reward > 0_u32.into(), Error::<T, I>::InvalidTournamentConfig);
+			}
+
+			if let Some(fee_perc) = config.take_fee_percentage {
+				ensure!(fee_perc <= 100, Error::<T, I>::InvalidTournamentConfig);
+			}
 
 			let reward_table_total_dist =
 				config.reward_table.iter().fold(0_u16, |a, b| a + (*b as u16));
 			ensure!(reward_table_total_dist <= 100, Error::<T, I>::InvalidTournamentConfig);
+
+			ensure!(
+				config.max_players > 0 && config.max_players <= MAX_PLAYERS,
+				Error::<T, I>::InvalidTournamentConfig
+			);
 
 			Ok(reward_table_total_dist)
 		}
@@ -213,6 +227,64 @@ pub mod pallet {
 			let maybe_id = ActiveTournaments::<T, I>::get(season_id);
 			ensure!(maybe_id.is_some(), Error::<T, I>::NoActiveTournamentForSeason);
 			Ok(maybe_id.unwrap())
+		}
+
+		fn process_rank_fee_deposit(
+			payer: &AccountIdFor<T>,
+			fee_percentage: u8,
+		) -> Result<BalanceOf<T, I>, DispatchError> {
+			let base_deposit = T::RankDeposit::get();
+			let fee_deposit = base_deposit
+				.saturating_mul(fee_percentage.into())
+				.checked_div(&100_u32.into())
+				.unwrap_or_default();
+			let global_treasury_account = Self::global_treasury_account_id();
+
+			T::Currency::transfer(
+				payer,
+				&global_treasury_account,
+				fee_deposit,
+				ExistenceRequirement::KeepAlive,
+			)?;
+
+			Ok(base_deposit.saturating_sub(fee_deposit))
+		}
+
+		fn process_max_reward_payout(
+			payer: &AccountIdFor<T>,
+			tournament_treasury_account: &AccountIdFor<T>,
+			rank_deposit: BalanceOf<T, I>,
+			max_reward: BalanceOf<T, I>,
+		) -> DispatchResult {
+			let tournament_treasury_balance =
+				T::Currency::free_balance(tournament_treasury_account);
+			let tournament_deposit_left = max_reward.saturating_sub(tournament_treasury_balance);
+			let effective_tournament_deposit =
+				sp_std::cmp::min(tournament_deposit_left, rank_deposit);
+
+			if effective_tournament_deposit > 0_u32.into() {
+				T::Currency::transfer(
+					payer,
+					tournament_treasury_account,
+					effective_tournament_deposit,
+					ExistenceRequirement::KeepAlive,
+				)?;
+			}
+
+			if effective_tournament_deposit < rank_deposit {
+				let effective_global_deposit =
+					rank_deposit.saturating_sub(effective_tournament_deposit);
+				let global_treasury_account = Self::global_treasury_account_id();
+
+				T::Currency::transfer(
+					payer,
+					&global_treasury_account,
+					effective_global_deposit,
+					ExistenceRequirement::KeepAlive,
+				)?;
+			}
+
+			Ok(())
 		}
 
 		fn process_category_payout(
@@ -279,9 +351,11 @@ pub mod pallet {
 	}
 
 	impl<T: Config<I>, I: 'static>
-		TournamentMutator<T::SeasonId, BlockNumberFor<T>, BalanceOf<T, I>> for Pallet<T, I>
+		TournamentMutator<AccountIdFor<T>, T::SeasonId, BlockNumberFor<T>, BalanceOf<T, I>>
+		for Pallet<T, I>
 	{
 		fn try_create_new_tournament_for(
+			creator: &AccountIdFor<T>,
 			season_id: &T::SeasonId,
 			config: TournamentConfigFor<T, I>,
 		) -> Result<TournamentId, DispatchError> {
@@ -293,6 +367,17 @@ pub mod pallet {
 					*tournament_id = assigned_id;
 					assigned_id
 				});
+
+			if let Some(reward) = config.initial_reward {
+				let treasury_account =
+					Self::tournament_treasury_account_id(season_id, &next_tournament_id);
+				T::Currency::transfer(
+					creator,
+					&treasury_account,
+					reward,
+					ExistenceRequirement::KeepAlive,
+				)?;
+			}
 
 			Tournaments::<T, I>::insert(season_id, next_tournament_id, config);
 
@@ -414,12 +499,28 @@ pub mod pallet {
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
 			let treasury_account = Self::tournament_treasury_account_id(season_id, &tournament_id);
 
-			T::Currency::transfer(
-				account,
-				&treasury_account,
-				T::RankDeposit::get(),
-				ExistenceRequirement::KeepAlive,
-			)?;
+			let rank_deposit =
+				if let Some(take_fee_percentage) = tournament_config.take_fee_percentage {
+					Self::process_rank_fee_deposit(account, take_fee_percentage)?
+				} else {
+					T::RankDeposit::get()
+				};
+
+			if let Some(max_reward) = tournament_config.max_reward {
+				Self::process_max_reward_payout(
+					account,
+					&treasury_account,
+					rank_deposit,
+					max_reward,
+				)?;
+			} else {
+				T::Currency::transfer(
+					account,
+					&treasury_account,
+					rank_deposit,
+					ExistenceRequirement::KeepAlive,
+				)?;
+			}
 
 			TournamentRankings::<T, I>::mutate((season_id, tournament_id, category), |table| {
 				if let Err(index) =
