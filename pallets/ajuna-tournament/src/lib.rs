@@ -225,9 +225,8 @@ pub mod pallet {
 		fn try_get_current_tournament_id_for(
 			season_id: &T::SeasonId,
 		) -> Result<TournamentId, DispatchError> {
-			let maybe_id = ActiveTournaments::<T, I>::get(season_id);
-			ensure!(maybe_id.is_some(), Error::<T, I>::NoActiveTournamentForSeason);
-			Ok(maybe_id.unwrap())
+			ActiveTournaments::<T, I>::get(season_id)
+				.ok_or_else(|| Error::<T, I>::NoActiveTournamentForSeason.into())
 		}
 
 		fn process_rank_fee_deposit(
@@ -326,6 +325,26 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		fn try_update_rank_table(
+			table: &mut PlayerTableFor<T, I>,
+			tournament_config: &TournamentConfigFor<T, I>,
+			index: usize,
+			account: &AccountIdFor<T>,
+			entity: &T::RankedEntity,
+		) -> DispatchResult {
+			if index < tournament_config.max_players as usize {
+				if table.len() == tournament_config.max_players as usize {
+					let _ = table.pop();
+				}
+				table
+					.force_insert_keep_left(index, (account.clone(), entity.clone()))
+					.map(|_| ())
+					.map_err(|_| Error::<T, I>::FailedToRankEntity.into())
+			} else {
+				Ok(())
+			}
+		}
 	}
 
 	impl<T: Config<I>, I: 'static>
@@ -408,7 +427,7 @@ pub mod pallet {
 			let tournament_config = Tournaments::<T, I>::get(season_id, next_tournament_id)
 				.ok_or(Error::<T, I>::TournamentNotFound)?;
 
-			if tournament_config.start >= current_block {
+			if tournament_config.start < current_block {
 				return Err(Error::<T, I>::TournamentActivationTooEarly.into());
 			}
 
@@ -429,7 +448,7 @@ pub mod pallet {
 			let tournament_config = Tournaments::<T, I>::get(season_id, tournament_id)
 				.ok_or(Error::<T, I>::TournamentNotFound)?;
 
-			if tournament_config.end <= current_block {
+			if tournament_config.end > current_block {
 				return Err(Error::<T, I>::TournamentEndingTooEarly.into());
 			}
 
@@ -494,12 +513,13 @@ pub mod pallet {
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
 			let treasury_account = Self::tournament_treasury_account_id(*season_id, tournament_id);
 
-			let rank_deposit =
-				if let Some(take_fee_percentage) = tournament_config.take_fee_percentage {
-					Self::process_rank_fee_deposit(account, take_fee_percentage)?
-				} else {
-					T::RankDeposit::get()
-				};
+			let rank_deposit = tournament_config
+				.take_fee_percentage
+				.map(|take_fee_percentage| {
+					Self::process_rank_fee_deposit(account, take_fee_percentage)
+				})
+				.transpose()?
+				.unwrap_or_else(T::RankDeposit::get);
 
 			if let Some(max_reward) = tournament_config.max_reward {
 				Self::process_max_reward_payout(
@@ -521,26 +541,11 @@ pub mod pallet {
 				if let Err(index) =
 					table.binary_search_by(|(_, other)| ranker.rank_against(entity, other))
 				{
-					if tournament_config.max_players == MAX_PLAYERS {
-						if index < PlayerTable::<PlayerTableFor<T, I>>::bound() {
-							table.force_insert_keep_left(index, (account.clone(), entity.clone()))
-						} else {
-							Ok(None)
-						}
-					} else if index < tournament_config.max_players as usize {
-						if table.len() == tournament_config.max_players as usize {
-							let _ = table.pop();
-						}
-						table.force_insert_keep_left(index, (account.clone(), entity.clone()))
-					} else {
-						Ok(None)
-					}
+					Self::try_update_rank_table(table, &tournament_config, index, account, entity)
 				} else {
-					Ok(None)
+					Ok(())
 				}
 			})
-			.map(|_| ())
-			.map_err(|_| Error::<T, I>::FailedToRankEntity.into())
 		}
 
 		fn try_rank_entity_for_golden_duck(
