@@ -40,7 +40,7 @@ pub mod pallet {
 	};
 	use sp_runtime::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedDiv},
-		SaturatedConversion, Saturating,
+		Saturating,
 	};
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -185,7 +185,7 @@ pub mod pallet {
 			season_id: T::SeasonId,
 			tournament_id: TournamentId,
 		) -> T::AccountId {
-			let account = TournamentTreasuryAccount::new_with::<T::SeasonId>(
+			let account = TournamentTreasuryAccount::<T::SeasonId>::new(
 				T::PalletId::get(),
 				season_id,
 				tournament_id,
