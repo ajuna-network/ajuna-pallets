@@ -21,24 +21,26 @@ use frame_support::{
 	traits::{ConstU16, ConstU64},
 	PalletId,
 };
+use sp_core::ed25519::{Public as Ed25519Public, Signature as Ed25519Signature};
 use sp_runtime::{
-	testing::{TestSignature, H256},
+	app_crypto::sp_core,
+	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
 };
 use std::cmp::Ordering;
 
-pub type MockSignature = TestSignature;
+pub type MockSignature = Ed25519Signature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
 pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 
-pub const ALICE: MockAccountId = 1;
-pub const BOB: MockAccountId = 2;
-pub const CHARLIE: MockAccountId = 3;
-pub const DAVE: MockAccountId = 4;
-pub const EDWARD: MockAccountId = 5;
+pub const ALICE: MockAccountId = Ed25519Public([1; 32]);
+pub const BOB: MockAccountId = Ed25519Public([2; 32]);
+pub const CHARLIE: MockAccountId = Ed25519Public([3; 32]);
+pub const DAVE: MockAccountId = Ed25519Public([4; 32]);
+pub const EDWARD: MockAccountId = Ed25519Public([5; 32]);
 
 pub const SEASON_ID_1: MockSeasonId = 1;
 pub const SEASON_ID_2: MockSeasonId = 2;
