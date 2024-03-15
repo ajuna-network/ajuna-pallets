@@ -52,8 +52,7 @@ impl<SeasonId> TypeId for TournamentTreasuryAccount<SeasonId> {
 	//
 	// However, this is the same type that is used for the pallet id.
 	// I believe this is used by indexers to identify accounts from pallet
-	// from pallet instances, hence we should use the same identifier as the
-	// PalletId.
+	// instances, hence we should use the same identifier as the PalletId.
 	const TYPE_ID: [u8; 4] = *b"modl";
 }
 
