@@ -334,6 +334,7 @@ pub mod pallet {
 		fn get_active_tournament_for(season_id: &T::SeasonId) -> Option<TournamentConfigFor<T, I>> {
 			ActiveTournaments::<T, I>::get(season_id)
 				.map(|tournament_id| Tournaments::<T, I>::get(season_id, tournament_id))
+				.unwrap_or_default()
 		}
 
 		fn is_golden_duck_enabled_for(season_id: &T::SeasonId) -> bool {
@@ -408,7 +409,7 @@ pub mod pallet {
 				.ok_or(Error::<T, I>::TournamentNotFound)?;
 
 			if tournament_config.start >= current_block {
-				Err(Error::<T, I>::TournamentActivationTooEarly.into());
+				return Err(Error::<T, I>::TournamentActivationTooEarly.into());
 			}
 
 			ActiveTournaments::<T, I>::insert(season_id, next_tournament_id);
@@ -429,7 +430,7 @@ pub mod pallet {
 				.ok_or(Error::<T, I>::TournamentNotFound)?;
 
 			if tournament_config.end <= current_block {
-				Err(Error::<T, I>::TournamentEndingTooEarly.into());
+				return Err(Error::<T, I>::TournamentEndingTooEarly.into());
 			}
 
 			let treasury_account = Self::tournament_treasury_account_id(*season_id, tournament_id);
