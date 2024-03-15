@@ -1,4 +1,5 @@
-use frame_support::pallet_prelude::*;
+use frame_support::{pallet_prelude::*, PalletId};
+use sp_runtime::{traits::AtLeast32BitUnsigned, SaturatedConversion, TypeId};
 
 pub const REWARD_TABLE_MAX_LENGTH: u32 = 11;
 
@@ -9,6 +10,37 @@ pub type TournamentId = u32;
 pub type RewardTable = BoundedVec<u8, ConstU32<REWARD_TABLE_MAX_LENGTH>>;
 
 pub type PlayerTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
+
+#[derive(Decode, Encode, Clone)]
+pub struct TournamentTreasuryAccount {
+	// bytes representing the data
+	pub bytes: Vec<u8>,
+}
+
+impl TournamentTreasuryAccount {
+	pub fn new_with<SeasonId: AtLeast32BitUnsigned>(
+		pallet_id: PalletId,
+		season_id: SeasonId,
+		tournament_id: TournamentId,
+	) -> Self {
+		let mut bytes = pallet_id.0.to_vec();
+		bytes.extend_from_slice(b"/");
+		bytes.extend(season_id.saturated_into::<u128>().to_string().bytes());
+		bytes.extend(b"/");
+		bytes.extend(tournament_id.to_string().bytes());
+		Self { bytes }
+	}
+}
+
+impl TypeId for TournamentTreasuryAccount {
+	// I don't know yet the full implications of the TypeId.
+	//
+	// However, this is the same type that is used for the pallet id.
+	// I believe this is used by indexers to identify accounts from pallet
+	// from pallet instances, hence we should use the same identifier as the
+	// PalletId.
+	const TYPE_ID: [u8; 4] = *b"modl";
+}
 
 pub trait EntityRank {
 	type Entity: Member + PartialOrd + Ord;
