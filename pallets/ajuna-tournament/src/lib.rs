@@ -40,7 +40,7 @@ pub mod pallet {
 	};
 	use sp_runtime::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedDiv},
-		SaturatedConversion, Saturating,
+		Saturating,
 	};
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -182,14 +182,15 @@ pub mod pallet {
 
 		/// The account ID of the sub-account for a given season_id/tournament_id.
 		pub fn tournament_treasury_account_id(
-			season_id: &T::SeasonId,
-			tournament_id: &TournamentId,
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
 		) -> T::AccountId {
-			let mut base = T::PalletId::get();
-			// TODO: Improve logic
-			base.0[0] = (*season_id).saturated_into::<u32>() as u8;
-			base.0[1] = *tournament_id as u8;
-			base.into_account_truncating()
+			let account = TournamentTreasuryAccount::<T::SeasonId>::new(
+				T::PalletId::get(),
+				season_id,
+				tournament_id,
+			);
+			account.into_account_truncating()
 		}
 
 		fn ensure_valid_tournament(
@@ -370,7 +371,7 @@ pub mod pallet {
 
 			if let Some(reward) = config.initial_reward {
 				let treasury_account =
-					Self::tournament_treasury_account_id(season_id, &next_tournament_id);
+					Self::tournament_treasury_account_id(*season_id, next_tournament_id);
 				T::Currency::transfer(
 					creator,
 					&treasury_account,
@@ -432,7 +433,7 @@ pub mod pallet {
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
 				if tournament_config.end <= current_block {
 					let treasury_account =
-						Self::tournament_treasury_account_id(season_id, &tournament_id);
+						Self::tournament_treasury_account_id(*season_id, tournament_id);
 
 					for (category, player_table) in
 						TournamentRankings::<T, I>::iter_prefix((season_id, tournament_id))
@@ -497,7 +498,7 @@ pub mod pallet {
 			let tournament_id = Self::try_get_current_tournament_id_for(season_id)?;
 			let tournament_config = Self::get_active_tournament_for(season_id)
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
-			let treasury_account = Self::tournament_treasury_account_id(season_id, &tournament_id);
+			let treasury_account = Self::tournament_treasury_account_id(*season_id, tournament_id);
 
 			let rank_deposit =
 				if let Some(take_fee_percentage) = tournament_config.take_fee_percentage {

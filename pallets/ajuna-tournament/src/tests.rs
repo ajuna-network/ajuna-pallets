@@ -173,8 +173,8 @@ mod tournament_mutator {
 			assert_eq!(Balances::free_balance(ALICE), 900);
 			assert_eq!(
 				Balances::free_balance(TournamentAlpha::tournament_treasury_account_id(
-					&SEASON_ID_1,
-					&tournament_id
+					SEASON_ID_1,
+					tournament_id
 				)),
 				100
 			);
@@ -356,7 +356,7 @@ mod tournament_ranker {
 					result.unwrap()
 				};
 				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(&SEASON_ID_1, &tournament_id);
+					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
 
 				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
 
@@ -474,7 +474,7 @@ mod tournament_ranker {
 					result.unwrap()
 				};
 				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(&SEASON_ID_1, &tournament_id);
+					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
 				let global_account = TournamentAlpha::global_treasury_account_id();
 
 				assert_eq!(Balances::free_balance(ALICE), 1_000);
@@ -530,7 +530,7 @@ mod tournament_ranker {
 					result.unwrap()
 				};
 				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(&SEASON_ID_1, &tournament_id);
+					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
 				let global_account = TournamentAlpha::global_treasury_account_id();
 
 				assert_eq!(Balances::free_balance(ALICE), 1_000);
@@ -610,7 +610,7 @@ fn test_full_tournament_workflow() {
 			};
 
 			let tournament_account =
-				TournamentAlpha::tournament_treasury_account_id(&SEASON_ID_1, &tournament_id);
+				TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
 			let global_account = TournamentAlpha::global_treasury_account_id();
 
 			assert_eq!(Balances::free_balance(tournament_account), 50);
