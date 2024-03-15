@@ -332,22 +332,19 @@ pub mod pallet {
 		TournamentInspector<T::SeasonId, BlockNumberFor<T>, BalanceOf<T, I>> for Pallet<T, I>
 	{
 		fn get_active_tournament_for(season_id: &T::SeasonId) -> Option<TournamentConfigFor<T, I>> {
-			if let Some(tournament_id) = ActiveTournaments::<T, I>::get(season_id) {
-				Tournaments::<T, I>::get(season_id, tournament_id)
-			} else {
-				None
-			}
+			ActiveTournaments::<T, I>::get(season_id)
+				.map(|tournament_id| Tournaments::<T, I>::get(season_id, tournament_id))
 		}
 
 		fn is_golden_duck_enabled_for(season_id: &T::SeasonId) -> bool {
-			if let Some(tournament_id) = ActiveTournaments::<T, I>::get(season_id) {
-				matches!(
-					GoldenDucks::<T, I>::get(season_id, tournament_id),
-					GoldenDuckState::Enabled(_)
-				)
-			} else {
-				false
-			}
+			ActiveTournaments::<T, I>::get(season_id)
+				.map(|tournament_id| {
+					matches!(
+						GoldenDucks::<T, I>::get(season_id, tournament_id),
+						GoldenDuckState::Enabled(_)
+					)
+				})
+				.unwrap_or(false)
 		}
 	}
 
@@ -407,72 +404,68 @@ pub mod pallet {
 			let next_tournament_id = LatestTournaments::<T, I>::get(season_id).unwrap_or(1);
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
-			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, next_tournament_id)
-			{
-				if tournament_config.start >= current_block {
-					ActiveTournaments::<T, I>::insert(season_id, next_tournament_id);
+			let tournament_config = Tournaments::<T, I>::get(season_id, next_tournament_id)
+				.ok_or(Error::<T, I>::TournamentNotFound)?;
 
-					Self::deposit_event(Event::<T, I>::TournamentStarted {
-						season_id: *season_id,
-						tournament_id: next_tournament_id,
-					});
-
-					Ok(())
-				} else {
-					Err(Error::<T, I>::TournamentActivationTooEarly.into())
-				}
-			} else {
-				Err(Error::<T, I>::TournamentNotFound.into())
+			if tournament_config.start >= current_block {
+				Err(Error::<T, I>::TournamentActivationTooEarly.into());
 			}
+
+			ActiveTournaments::<T, I>::insert(season_id, next_tournament_id);
+
+			Self::deposit_event(Event::<T, I>::TournamentStarted {
+				season_id: *season_id,
+				tournament_id: next_tournament_id,
+			});
+
+			Ok(())
 		}
 
 		fn try_finish_active_tournament_for(season_id: &T::SeasonId) -> DispatchResult {
 			let tournament_id = Self::try_get_current_tournament_id_for(season_id)?;
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
-			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
-				if tournament_config.end <= current_block {
-					let treasury_account =
-						Self::tournament_treasury_account_id(*season_id, tournament_id);
+			let tournament_config = Tournaments::<T, I>::get(season_id, tournament_id)
+				.ok_or(Error::<T, I>::TournamentNotFound)?;
 
-					for (category, player_table) in
-						TournamentRankings::<T, I>::iter_prefix((season_id, tournament_id))
-					{
-						Self::process_category_payout(
-							&treasury_account,
-							&category,
-							&tournament_config,
-							&player_table,
-						)?;
-					}
-
-					if let GoldenDuckStateFor::<T, I>::Enabled(Some((golden_account, _))) =
-						GoldenDucks::<T, I>::get(season_id, tournament_id)
-					{
-						let golden_duck_balance = T::Currency::free_balance(&treasury_account);
-						T::Currency::transfer(
-							&treasury_account,
-							&golden_account,
-							golden_duck_balance,
-							ExistenceRequirement::AllowDeath,
-						)?;
-					}
-
-					ActiveTournaments::<T, I>::remove(season_id);
-					LatestTournaments::<T, I>::insert(season_id, tournament_id);
-
-					Self::deposit_event(Event::<T, I>::TournamentEnded {
-						season_id: *season_id,
-						tournament_id,
-					});
-
-					Ok(())
-				} else {
-					Err(Error::<T, I>::TournamentEndingTooEarly.into())
-				}
-			} else {
-				Err(Error::<T, I>::TournamentNotFound.into())
+			if tournament_config.end <= current_block {
+				Err(Error::<T, I>::TournamentEndingTooEarly.into());
 			}
+
+			let treasury_account = Self::tournament_treasury_account_id(*season_id, tournament_id);
+
+			for (category, player_table) in
+				TournamentRankings::<T, I>::iter_prefix((season_id, tournament_id))
+			{
+				Self::process_category_payout(
+					&treasury_account,
+					&category,
+					&tournament_config,
+					&player_table,
+				)?;
+			}
+
+			if let GoldenDuckStateFor::<T, I>::Enabled(Some((golden_account, _))) =
+				GoldenDucks::<T, I>::get(season_id, tournament_id)
+			{
+				let golden_duck_balance = T::Currency::free_balance(&treasury_account);
+				T::Currency::transfer(
+					&treasury_account,
+					&golden_account,
+					golden_duck_balance,
+					ExistenceRequirement::AllowDeath,
+				)?;
+			}
+
+			ActiveTournaments::<T, I>::remove(season_id);
+			LatestTournaments::<T, I>::insert(season_id, tournament_id);
+
+			Self::deposit_event(Event::<T, I>::TournamentEnded {
+				season_id: *season_id,
+				tournament_id,
+			});
+
+			Ok(())
 		}
 	}
 
