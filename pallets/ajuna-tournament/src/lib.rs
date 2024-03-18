@@ -229,7 +229,7 @@ pub mod pallet {
 				.ok_or_else(|| Error::<T, I>::NoActiveTournamentForSeason.into())
 		}
 
-		fn process_rank_fee_deposit(
+		fn take_fee_from_rank_deposit(
 			payer: &AccountIdFor<T>,
 			fee_percentage: u8,
 		) -> Result<BalanceOf<T, I>, DispatchError> {
@@ -250,7 +250,12 @@ pub mod pallet {
 			Ok(base_deposit.saturating_sub(fee_deposit))
 		}
 
-		fn process_max_reward_payout(
+		/// Tries to deposit 'rank_deposit' into the treasury account 'tournament_treasury_account'
+		/// up until 'max_reward'.
+		///
+		/// If 'tournament_treasury_account' reaches 'max_reward' we deposit the rest of the
+		/// 'rank_deposit' onto the 'global_treasury_account'.
+		fn try_deposit_fee_in_tournament_treasury(
 			payer: &AccountIdFor<T>,
 			tournament_treasury_account: &AccountIdFor<T>,
 			rank_deposit: BalanceOf<T, I>,
@@ -516,13 +521,13 @@ pub mod pallet {
 			let rank_deposit = tournament_config
 				.take_fee_percentage
 				.map(|take_fee_percentage| {
-					Self::process_rank_fee_deposit(account, take_fee_percentage)
+					Self::take_fee_from_rank_deposit(account, take_fee_percentage)
 				})
 				.transpose()?
 				.unwrap_or_else(T::RankDeposit::get);
 
 			if let Some(max_reward) = tournament_config.max_reward {
-				Self::process_max_reward_payout(
+				Self::try_deposit_fee_in_tournament_treasury(
 					account,
 					&treasury_account,
 					rank_deposit,

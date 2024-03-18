@@ -61,14 +61,25 @@ pub trait EntityRank {
 	fn rank_against(&self, entity: &Self::Entity, other: &Self::Entity) -> sp_std::cmp::Ordering;
 }
 
+/// Describes the configuration of a given tournament
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct TournamentConfig<BlockNumber, Balance> {
+	/// Initial block in which the tournament can start
 	pub start: BlockNumber,
+	/// Initial block in which the tournament can finish
 	pub end: BlockNumber,
+	/// Optional funds that will be transferred by the tournament creator
+	/// to the tournament's treasury on success.
 	pub initial_reward: Option<Balance>,
+	/// Optional cap to the maximum amount the tournament treasury account will hold.
 	pub max_reward: Option<Balance>,
+	/// Optional percentage that will be taken out of the ranking fee and sent to the global
+	/// treasury account for each ranking request.
 	pub take_fee_percentage: Option<u8>,
+	/// Distribution table that indiciates how the reward should be split among the torunament
+	/// winner in the form of [1st %, 2nd %, 3rd %, ....]
 	pub reward_table: RewardTable,
+	/// Maximum amount of players that can be ranked in the tournament
 	pub max_players: u32,
 }
 
