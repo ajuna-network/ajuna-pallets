@@ -21,6 +21,7 @@ use frame_support::{
 	traits::{ConstU16, ConstU64},
 	PalletId,
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_core::ed25519::{Public as Ed25519Public, Signature as Ed25519Signature};
 use sp_runtime::{
 	app_crypto::sp_core,
@@ -35,6 +36,7 @@ pub type MockAccountPublic = <MockSignature as Verify>::Signer;
 pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
+pub type MockBlockNumber = BlockNumberFor<Test>;
 
 pub const ALICE: MockAccountId = Ed25519Public([1; 32]);
 pub const BOB: MockAccountId = Ed25519Public([2; 32]);
@@ -125,6 +127,7 @@ parameter_types! {
 	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
 	pub const TournamentPalletId2: PalletId = PalletId(*b"aj/trmt2");
 	pub const RankDeposit: MockBalance = 100;
+	pub const MinimumTournamentDuration: MockBlockNumber = 2;
 }
 
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
@@ -137,6 +140,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
 	type RankCategory = MockRankCategory;
+	type MinimumTournamentDuration = MinimumTournamentDuration;
 }
 
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
@@ -149,6 +153,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
 	type RankCategory = MockRankCategory;
+	type MinimumTournamentDuration = MinimumTournamentDuration;
 }
 
 #[derive(Default)]

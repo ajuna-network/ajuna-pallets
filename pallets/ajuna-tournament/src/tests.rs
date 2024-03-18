@@ -5,8 +5,9 @@ use sp_runtime::{bounded_vec, testing::H256};
 impl Default for TournamentConfig<BlockNumberFor<Test>, MockBalance> {
 	fn default() -> Self {
 		Self {
-			start: 1,
+			start: 5,
 			end: 10,
+			claim_end: 20,
 			initial_reward: None,
 			max_reward: None,
 			take_fee_percentage: None,
@@ -24,6 +25,11 @@ impl TournamentConfig<BlockNumberFor<Test>, MockBalance> {
 
 	pub(crate) fn end(mut self, end: BlockNumberFor<Test>) -> Self {
 		self.end = end;
+		self
+	}
+
+	pub(crate) fn claim_end(mut self, claim_end: BlockNumberFor<Test>) -> Self {
+		self.claim_end = claim_end;
 		self
 	}
 
@@ -173,8 +179,7 @@ mod tournament_mutator {
 			assert_eq!(Balances::free_balance(ALICE), 900);
 			assert_eq!(
 				Balances::free_balance(TournamentAlpha::tournament_treasury_account_id(
-					SEASON_ID_1,
-					tournament_id
+					SEASON_ID_1
 				)),
 				100
 			);
@@ -267,19 +272,23 @@ mod tournament_mutator {
 
 	#[test]
 	fn try_start_new_tournament_fails_with_already_active_tournament() {
-		let tournament_config = TournamentConfigFor::<Test, Instance1>::default();
+		let tournament_config_1 = TournamentConfigFor::<Test, Instance1>::default();
+		let tournament_config_2 = TournamentConfigFor::<Test, Instance1>::default()
+			.start(25)
+			.end(30)
+			.claim_end(40);
 		ExtBuilder::default().build().execute_with(|| {
 			assert_ok!(TournamentAlpha::try_create_new_tournament_for(
 				&ALICE,
 				&SEASON_ID_1,
-				tournament_config.clone(),
+				tournament_config_1,
 			));
 			assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
 
 			assert_ok!(TournamentAlpha::try_create_new_tournament_for(
 				&ALICE,
 				&SEASON_ID_1,
-				tournament_config.clone(),
+				tournament_config_2,
 			));
 
 			assert_noop!(
@@ -291,7 +300,7 @@ mod tournament_mutator {
 
 	#[test]
 	fn try_finish_active_tournament_works() {
-		let tournament_config = TournamentConfigFor::<Test, Instance1>::default().start(1).end(5);
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default().start(5).end(10);
 		ExtBuilder::default().build().execute_with(|| {
 			let tournament_id = {
 				let result = TournamentAlpha::try_create_new_tournament_for(
@@ -305,7 +314,7 @@ mod tournament_mutator {
 
 			assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
 
-			run_to_block(6);
+			run_to_block(10);
 
 			assert_ok!(TournamentAlpha::try_finish_active_tournament_for(&SEASON_ID_1));
 
@@ -356,7 +365,7 @@ mod tournament_ranker {
 					result.unwrap()
 				};
 				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
+					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
 				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
 
@@ -474,13 +483,11 @@ mod tournament_ranker {
 					result.unwrap()
 				};
 				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
-				let global_account = TournamentAlpha::global_treasury_account_id();
+					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
 				assert_eq!(Balances::free_balance(ALICE), 1_000);
 				assert_eq!(Balances::free_balance(BOB), 1_000);
 				assert_eq!(Balances::free_balance(tournament_account), 0);
-				assert_eq!(Balances::free_balance(global_account), 0);
 
 				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
 
@@ -495,7 +502,6 @@ mod tournament_ranker {
 				assert_eq!(Balances::free_balance(ALICE), 900);
 				assert_eq!(Balances::free_balance(BOB), 1_000);
 				assert_eq!(Balances::free_balance(tournament_account), 100);
-				assert_eq!(Balances::free_balance(global_account), 0);
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&BOB,
@@ -507,8 +513,7 @@ mod tournament_ranker {
 
 				assert_eq!(Balances::free_balance(ALICE), 900);
 				assert_eq!(Balances::free_balance(BOB), 900);
-				assert_eq!(Balances::free_balance(tournament_account), 150);
-				assert_eq!(Balances::free_balance(global_account), 50);
+				assert_eq!(Balances::free_balance(tournament_account), 200);
 			});
 	}
 
@@ -530,13 +535,11 @@ mod tournament_ranker {
 					result.unwrap()
 				};
 				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
-				let global_account = TournamentAlpha::global_treasury_account_id();
+					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
 				assert_eq!(Balances::free_balance(ALICE), 1_000);
 				assert_eq!(Balances::free_balance(BOB), 1_000);
 				assert_eq!(Balances::free_balance(tournament_account), 0);
-				assert_eq!(Balances::free_balance(global_account), 0);
 
 				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
 
@@ -550,8 +553,7 @@ mod tournament_ranker {
 
 				assert_eq!(Balances::free_balance(ALICE), 900);
 				assert_eq!(Balances::free_balance(BOB), 1_000);
-				assert_eq!(Balances::free_balance(tournament_account), 90);
-				assert_eq!(Balances::free_balance(global_account), 10);
+				assert_eq!(Balances::free_balance(tournament_account), 100);
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&BOB,
@@ -563,8 +565,7 @@ mod tournament_ranker {
 
 				assert_eq!(Balances::free_balance(ALICE), 900);
 				assert_eq!(Balances::free_balance(BOB), 900);
-				assert_eq!(Balances::free_balance(tournament_account), 180);
-				assert_eq!(Balances::free_balance(global_account), 20);
+				assert_eq!(Balances::free_balance(tournament_account), 200);
 			});
 	}
 
@@ -588,8 +589,9 @@ mod tournament_ranker {
 #[test]
 fn test_full_tournament_workflow() {
 	let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
-		.start(1)
-		.end(5)
+		.start(5)
+		.end(10)
+		.claim_end(20)
 		.initial_reward(Some(50))
 		.take_fee_percentage(Some(5))
 		.max_reward(Some(450))
@@ -609,12 +611,9 @@ fn test_full_tournament_workflow() {
 				result.unwrap()
 			};
 
-			let tournament_account =
-				TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1, tournament_id);
-			let global_account = TournamentAlpha::global_treasury_account_id();
+			let tournament_account = TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
 			assert_eq!(Balances::free_balance(tournament_account), 50);
-			assert_eq!(Balances::free_balance(global_account), 0);
 			assert_eq!(Balances::free_balance(ALICE), 950);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
@@ -656,8 +655,7 @@ fn test_full_tournament_workflow() {
 				));
 			}
 
-			assert_eq!(Balances::free_balance(tournament_account), 335);
-			assert_eq!(Balances::free_balance(global_account), 15);
+			assert_eq!(Balances::free_balance(tournament_account), 350);
 			assert_eq!(Balances::free_balance(ALICE), 850);
 			assert_eq!(Balances::free_balance(BOB), 900);
 			assert_eq!(Balances::free_balance(CHARLIE), 1_000);
@@ -686,8 +684,7 @@ fn test_full_tournament_workflow() {
 				));
 			}
 
-			assert_eq!(Balances::free_balance(tournament_account), 450);
-			assert_eq!(Balances::free_balance(global_account), 200);
+			assert_eq!(Balances::free_balance(tournament_account), 650);
 			assert_eq!(Balances::free_balance(ALICE), 850);
 			assert_eq!(Balances::free_balance(BOB), 800);
 			assert_eq!(Balances::free_balance(CHARLIE), 900);
@@ -705,7 +702,7 @@ fn test_full_tournament_workflow() {
 			);
 
 			assert_eq!(
-				GoldenDucks::<Test, Instance1>::get(SEASON_ID_1, tournament_id,),
+				GoldenDucks::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
 				GoldenDuckStateFor::<Test, Instance1>::Enabled(Some((
 					DAVE,
 					H256::from_low_u64_be(3)
@@ -722,11 +719,10 @@ fn test_full_tournament_workflow() {
 			));
 
 			assert_eq!(Balances::free_balance(tournament_account), 0);
-			assert_eq!(Balances::free_balance(global_account), 200);
 			assert_eq!(Balances::free_balance(ALICE), 1_075);
 			assert_eq!(Balances::free_balance(BOB), 800);
 			assert_eq!(Balances::free_balance(CHARLIE), 900);
-			assert_eq!(Balances::free_balance(DAVE), 1_080);
+			assert_eq!(Balances::free_balance(DAVE), 1_280);
 			assert_eq!(Balances::free_balance(EDWARD), 945);
 
 			assert_eq!(ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
