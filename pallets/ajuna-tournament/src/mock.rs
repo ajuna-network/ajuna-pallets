@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_tournament, EntityRank};
+use crate::{self as pallet_ajuna_tournament, *};
 use frame_support::{
-	pallet_prelude::{Decode, Encode, Hooks, MaxEncodedLen, TypeInfo},
+	pallet_prelude::{Hooks, MaxEncodedLen},
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 	PalletId,
@@ -107,11 +107,6 @@ impl pallet_balances::Config for Test {
 pub type MockSeasonId = u32;
 pub type MockEntityId = H256;
 pub type MockEntity = u32;
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq, Eq)]
-pub enum MockRankCategory {
-	A = 0,
-	B = 1,
-}
 
 pub struct MockRanker;
 
@@ -126,8 +121,8 @@ impl EntityRank for MockRanker {
 parameter_types! {
 	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
 	pub const TournamentPalletId2: PalletId = PalletId(*b"aj/trmt2");
-	pub const RankDeposit: MockBalance = 100;
 	pub const MinimumTournamentDuration: MockBlockNumber = 2;
+	pub const InitialTournamentId: TournamentId = 1;
 }
 
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
@@ -135,12 +130,11 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type RankDeposit = RankDeposit;
 	type SeasonId = MockSeasonId;
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
-	type RankCategory = MockRankCategory;
 	type MinimumTournamentDuration = MinimumTournamentDuration;
+	type InitialTournamentId = InitialTournamentId;
 }
 
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
@@ -148,17 +142,29 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type PalletId = TournamentPalletId2;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type RankDeposit = RankDeposit;
 	type SeasonId = MockSeasonId;
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
-	type RankCategory = MockRankCategory;
 	type MinimumTournamentDuration = MinimumTournamentDuration;
+	type InitialTournamentId = InitialTournamentId;
 }
 
-#[derive(Default)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
+}
+
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self {
+			balances: vec![
+				(ALICE, 1_000),
+				(BOB, 1_000),
+				(CHARLIE, 1_000),
+				(EDWARD, 1_000),
+				(DAVE, 1_000),
+			],
+		}
+	}
 }
 
 impl ExtBuilder {
@@ -183,8 +189,12 @@ pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		if System::block_number() > 1 {
 			System::on_finalize(System::block_number());
+			TournamentAlpha::on_finalize(System::block_number());
+			TournamentBeta::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
+		TournamentAlpha::on_initialize(System::block_number());
+		TournamentBeta::on_initialize(System::block_number());
 	}
 }

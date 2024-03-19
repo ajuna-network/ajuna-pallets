@@ -6,6 +6,8 @@ pub const REWARD_TABLE_MAX_LENGTH: u32 = 11;
 
 pub const MAX_PLAYERS: u32 = 10;
 
+pub const MAX_ENABLED_SEASONS: u32 = 15;
+
 pub const MIN_TOURNAMENT_BLOCK_SPACING: u32 = 10_000;
 
 pub type TournamentId = u32;
@@ -13,6 +15,8 @@ pub type TournamentId = u32;
 pub type RewardTable = BoundedVec<u8, ConstU32<REWARD_TABLE_MAX_LENGTH>>;
 
 pub type PlayerTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
+
+pub type SeasonSet<T> = BoundedBTreeSet<T, ConstU32<MAX_ENABLED_SEASONS>>;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct TournamentTreasuryAccount<SeasonId> {
@@ -84,18 +88,28 @@ pub struct TournamentConfig<BlockNumber, Balance> {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub enum GoldenDuckState<AccountId, EntityId> {
+pub enum GoldenDuckState<EntityId> {
 	#[default]
 	Disabled,
-	Enabled(Option<(AccountId, EntityId)>),
+	Enabled(Option<EntityId>),
 }
 
-pub trait TournamentInspector<SeasonId, BlockNumber, Balance> {
-	fn get_active_tournament_for(
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub enum TournamentState {
+	#[default]
+	Inactive,
+	ActivePeriod(TournamentId),
+	ClaimPeriod(TournamentId),
+}
+
+pub trait TournamentInspector<SeasonId, BlockNumber, Balance, AccountId> {
+	fn get_active_tournament_config_for(
 		season_id: &SeasonId,
 	) -> Option<TournamentConfig<BlockNumber, Balance>>;
 
 	fn is_golden_duck_enabled_for(season_id: &SeasonId) -> bool;
+
+	fn get_treasury_account_for(season_id: &SeasonId) -> AccountId;
 }
 
 pub trait TournamentMutator<AccountId, SeasonId, BlockNumber, Balance> {
@@ -105,16 +119,14 @@ pub trait TournamentMutator<AccountId, SeasonId, BlockNumber, Balance> {
 		config: TournamentConfig<BlockNumber, Balance>,
 	) -> Result<TournamentId, DispatchError>;
 
-	fn try_start_next_tournament_for(season_id: &SeasonId) -> DispatchResult;
+	fn try_enable_tournament_processing_for_season(season_id: &SeasonId) -> DispatchResult;
 
-	fn try_finish_active_tournament_for(season_id: &SeasonId) -> DispatchResult;
+	fn try_disable_tournament_processing_for_season(season_id: &SeasonId) -> DispatchResult;
 }
 
-pub trait TournamentRanker<AccountId, SeasonId, RankCategory, Entity, EntityId> {
+pub trait TournamentRanker<SeasonId, Entity, EntityId> {
 	fn try_rank_entity_in_tournament_for<R>(
-		account: &AccountId,
 		season_id: &SeasonId,
-		category: &RankCategory,
 		entity: &Entity,
 		ranker: &R,
 	) -> DispatchResult
@@ -122,12 +134,25 @@ pub trait TournamentRanker<AccountId, SeasonId, RankCategory, Entity, EntityId> 
 		R: EntityRank<Entity = Entity>;
 
 	fn try_rank_entity_for_golden_duck(
-		account: &AccountId,
 		season_id: &SeasonId,
 		entity_id: &EntityId,
 	) -> DispatchResult
 	where
 		EntityId: Member + PartialOrd + Ord;
+}
+
+pub trait TournamentClaimer<SeasonId, AccountId, Entity, EntityId> {
+	fn try_claim_tournament_reward_for(
+		season_id: &SeasonId,
+		account: &AccountId,
+		entity: &Entity,
+	) -> DispatchResult;
+
+	fn try_claim_golden_duck_for(
+		season_id: &SeasonId,
+		account: &AccountId,
+		entity_id: &EntityId,
+	) -> DispatchResult;
 }
 
 #[cfg(test)]
