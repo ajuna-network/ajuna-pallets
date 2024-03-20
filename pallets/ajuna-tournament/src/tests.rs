@@ -170,7 +170,7 @@ mod tournament_inspector {
 	}
 }
 
-/*mod tournament_mutator {
+mod tournament_mutator {
 	use super::*;
 
 	#[test]
@@ -195,103 +195,16 @@ mod tournament_inspector {
 				Tournaments::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
 				Some(tournament_config)
 			);
-			assert_eq!(NextTournamentIds::<Test, Instance1>::get(SEASON_ID_1), tournament_id);
+			assert_eq!(NextTournamentIds::<Test, Instance1>::get(SEASON_ID_1), tournament_id + 1);
 		});
 	}
 
 	#[test]
-	fn try_create_new_tournament_with_initial_reward() {
+	fn try_create_new_tournament_with_initial_reward_takes_funds_from_creator() {
 		let tournament_config =
-			TournamentConfigFor::<Test, Instance1>::default().initial_reward(Some(100));
+			TournamentConfigFor::<Test, Instance1>::default().initial_reward(Some(330));
 		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
 			assert_eq!(Balances::free_balance(ALICE), 1_000);
-
-			let tournament_id = {
-				let result = TournamentAlpha::try_create_new_tournament_for(
-					&ALICE,
-					&SEASON_ID_1,
-					tournament_config.clone(),
-				);
-				assert_ok!(result);
-				result.unwrap()
-			};
-
-			assert_eq!(Balances::free_balance(ALICE), 900);
-			assert_eq!(
-				Balances::free_balance(TournamentAlpha::tournament_treasury_account_id(
-					SEASON_ID_1
-				)),
-				100
-			);
-		});
-	}
-
-	#[test]
-	fn try_create_new_tournament_fails_for_invalid_configurations() {
-		ExtBuilder::default().build().execute_with(|| {
-			let tournament_config_1 =
-				TournamentConfigFor::<Test, Instance1>::default().start(10).end(5);
-
-			assert_noop!(
-				TournamentAlpha::try_create_new_tournament_for(
-					&ALICE,
-					&SEASON_ID_1,
-					tournament_config_1
-				),
-				Error::<Test, Instance1>::InvalidTournamentConfig
-			);
-
-			let tournament_config_2 =
-				TournamentConfigFor::<Test, Instance1>::default().max_players(0);
-
-			assert_noop!(
-				TournamentAlpha::try_create_new_tournament_for(
-					&ALICE,
-					&SEASON_ID_1,
-					tournament_config_2
-				),
-				Error::<Test, Instance1>::InvalidTournamentConfig
-			);
-
-			let tournament_config_3 =
-				TournamentConfigFor::<Test, Instance1>::default().max_players(MAX_PLAYERS + 1);
-
-			assert_noop!(
-				TournamentAlpha::try_create_new_tournament_for(
-					&ALICE,
-					&SEASON_ID_1,
-					tournament_config_3
-				),
-				Error::<Test, Instance1>::InvalidTournamentConfig
-			);
-
-			let tournament_config_4 = TournamentConfigFor::<Test, Instance1>::default()
-				.reward_table(bounded_vec![80, 30, 20]);
-
-			assert_noop!(
-				TournamentAlpha::try_create_new_tournament_for(
-					&ALICE,
-					&SEASON_ID_1,
-					tournament_config_4
-				),
-				Error::<Test, Instance1>::InvalidTournamentConfig
-			);
-		});
-	}
-
-	#[test]
-	fn try_start_new_tournament_works() {
-		let tournament_config = TournamentConfigFor::<Test, Instance1>::default();
-		ExtBuilder::default().build().execute_with(|| {
-			let tournament_id = {
-				let result = TournamentAlpha::try_create_new_tournament_for(
-					&ALICE,
-					&SEASON_ID_1,
-					tournament_config.clone(),
-				);
-				assert_ok!(result);
-				result.unwrap()
-			};
 
 			assert_ok!(TournamentAlpha::try_create_new_tournament_for(
 				&ALICE,
@@ -299,80 +212,284 @@ mod tournament_inspector {
 				tournament_config.clone(),
 			));
 
-			assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
-
-			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
-				crate::Event::TournamentStarted { season_id: SEASON_ID_1, tournament_id },
-			));
-
-			assert_eq!(ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1), Some(tournament_id));
-			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
-		});
-	}
-
-	#[test]
-	fn try_start_new_tournament_fails_with_already_active_tournament() {
-		let tournament_config_1 = TournamentConfigFor::<Test, Instance1>::default();
-		let tournament_config_2 = TournamentConfigFor::<Test, Instance1>::default()
-			.start(25)
-			.end(30)
-			.claim_end(40);
-		ExtBuilder::default().build().execute_with(|| {
-			assert_ok!(TournamentAlpha::try_create_new_tournament_for(
-				&ALICE,
-				&SEASON_ID_1,
-				tournament_config_1,
-			));
-			assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
-
-			assert_ok!(TournamentAlpha::try_create_new_tournament_for(
-				&ALICE,
-				&SEASON_ID_1,
-				tournament_config_2,
-			));
-
-			assert_noop!(
-				TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1),
-				Error::<Test, Instance1>::AnotherTournamentAlreadyActiveForSeason
+			assert_eq!(Balances::free_balance(ALICE), 670);
+			assert_eq!(
+				Balances::free_balance(TournamentAlpha::tournament_treasury_account_id(
+					SEASON_ID_1
+				)),
+				330
 			);
 		});
 	}
 
 	#[test]
-	fn try_finish_active_tournament_works() {
-		let tournament_config = TournamentConfigFor::<Test, Instance1>::default().start(5).end(10);
+	fn try_create_new_tournament_fails_for_invalid_configurations() {
 		ExtBuilder::default().build().execute_with(|| {
-			let tournament_id = {
-				let result = TournamentAlpha::try_create_new_tournament_for(
+			run_to_block(3);
+
+			// Tournament starting block should not be lower than the current block
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().start(2).end(3);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(
 					&ALICE,
 					&SEASON_ID_1,
-					tournament_config.clone(),
-				);
-				assert_ok!(result);
-				result.unwrap()
-			};
+					tournament_config
+				),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
 
-			assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
+			// Tournament starting block should not be lower than the active end block
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().start(10).end(5);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_2,
+					tournament_config
+				),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
 
-			run_to_block(10);
+			// Tournament end block should not be lower than the claim end block
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().end(10).claim_end(5);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &3, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
 
-			assert_ok!(TournamentAlpha::try_finish_active_tournament_for(&SEASON_ID_1));
+			let min_duration = MinimumTournamentDuration::get().saturating_sub(1);
 
-			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
-				crate::Event::TournamentEnded { season_id: SEASON_ID_1, tournament_id },
+			// The amount of blocks between start and end should be greater or equal than
+			// 'MinimumTournamentDuration'
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.start(10)
+				.end(10 + min_duration);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &4, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// The amount of blocks between end and claim_end should be greater or equal than
+			// 'MinimumTournamentDuration'
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.start(5)
+				.end(10)
+				.claim_end(10 + min_duration);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &5, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// The starting block of a tournament should be greater than the previous tournament
+			// claim_end block
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().start(5).end(10).claim_end(15);
+			assert_ok!(TournamentAlpha::try_create_new_tournament_for(
+				&ALICE,
+				&6,
+				tournament_config.clone()
 			));
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &6, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
 
-			assert_eq!(ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
-			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), Some(tournament_id));
+			// The tournament config should have either initial_reward or take_reward_fee filled
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.initial_reward(None)
+				.take_fee_percentage(None);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &7, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// initial_reward should be greater than 0
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().initial_reward(Some(0));
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &8, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// max_reward should be greater than 0
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().max_reward(Some(0));
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &9, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// max_reward should be greater than 0
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().max_reward(Some(0));
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &10, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// take_fee_percentage should be smaller or equal than 100
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().take_fee_percentage(Some(120));
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &11, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// reward_table percentages should add up to a maximum of 100
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default().reward_table(
+				RewardTable::try_from(vec![90, 80, 20]).expect("Should create table"),
+			);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &12, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// max_players should be greater than 0
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().max_players(0);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &13, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
+
+			// max_players should be lower than `MAX_PLAYERS` constant
+			let tournament_config =
+				TournamentConfigFor::<Test, Instance1>::default().max_players(MAX_PLAYERS + 1);
+			assert_noop!(
+				TournamentAlpha::try_create_new_tournament_for(&ALICE, &14, tournament_config),
+				Error::<Test, Instance1>::InvalidTournamentConfig
+			);
 		});
 	}
 
 	#[test]
-	fn try_finish_active_tournament_fails_when_non_active_tournament() {
+	fn try_enable_tournament_processing_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_noop!(
-				TournamentAlpha::try_finish_active_tournament_for(&SEASON_ID_1),
-				Error::<Test, Instance1>::NoActiveTournamentForSeason
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.start(10)
+				.end(20)
+				.claim_end(30);
+			let tournament_id = {
+				let maybe_id = TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_1,
+					tournament_config.clone(),
+				);
+
+				assert_ok!(maybe_id);
+
+				maybe_id.expect("Should get id")
+			};
+			assert_ok!(TournamentAlpha::try_create_new_tournament_for(
+				&ALICE,
+				&SEASON_ID_2,
+				tournament_config
+			));
+
+			assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(&SEASON_ID_1));
+
+			run_to_block(15);
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentActivePeriodStarted {
+					season_id: SEASON_ID_1,
+					tournament_id,
+				},
+			));
+
+			assert_eq!(
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				TournamentState::ActivePeriod(tournament_id)
+			);
+			assert_eq!(
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_2),
+				TournamentState::Inactive
+			);
+		});
+	}
+
+	#[test]
+	fn try_disable_tournament_processing_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_config_1 = TournamentConfigFor::<Test, Instance1>::default()
+				.start(10)
+				.end(20)
+				.claim_end(30);
+			let tournament_id_1 = {
+				let maybe_id = TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_1,
+					tournament_config_1,
+				);
+
+				assert_ok!(maybe_id);
+
+				maybe_id.expect("Should get id")
+			};
+
+			assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(&SEASON_ID_1));
+
+			run_to_block(15);
+
+			assert_eq!(
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				TournamentState::ActivePeriod(tournament_id_1)
+			);
+
+			run_to_block(100);
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentEnded {
+					season_id: SEASON_ID_1,
+					tournament_id: tournament_id_1,
+				},
+			));
+
+			let tournament_config_2 = TournamentConfigFor::<Test, Instance1>::default()
+				.start(120)
+				.end(180)
+				.claim_end(300);
+			let tournament_id_2 = {
+				let maybe_id = TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_1,
+					tournament_config_2,
+				);
+
+				assert_ok!(maybe_id);
+
+				maybe_id.expect("Should get id")
+			};
+
+			assert_ok!(TournamentAlpha::try_disable_tournament_processing_for_season(&SEASON_ID_1));
+
+			run_to_block(130);
+
+			assert_eq!(
+				LatestTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				Some(tournament_id_1)
+			);
+			assert_eq!(
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				TournamentState::Inactive
+			);
+
+			assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(&SEASON_ID_1));
+
+			run_to_block(140);
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentActivePeriodStarted {
+					season_id: SEASON_ID_1,
+					tournament_id: tournament_id_2,
+				},
+			));
+
+			assert_eq!(
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				TournamentState::ActivePeriod(tournament_id_2)
 			);
 		});
 	}
@@ -383,207 +500,77 @@ mod tournament_ranker {
 
 	#[test]
 	fn tournament_ranker_works() {
-		let tournament_config =
-			TournamentConfigFor::<Test, Instance1>::default().max_players(MAX_PLAYERS);
-		ExtBuilder::default()
-			.balances(&[
-				(ALICE, 1_000),
-				(BOB, 1_000),
-				(CHARLIE, 1_000),
-				(DAVE, 1_000),
-				(EDWARD, 1_000),
-			])
-			.build()
-			.execute_with(|| {
-				let tournament_id = {
-					let result = TournamentAlpha::try_create_new_tournament_for(
-						&ALICE,
-						&SEASON_ID_1,
-						tournament_config.clone(),
-					);
-					assert_ok!(result);
-					result.unwrap()
-				};
-				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
-
-				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
-
-				assert_eq!(
-					TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-					PlayerTableFor::<Test, Instance1>::default()
-				);
-
-				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.max_players(MAX_PLAYERS)
+			.start(10)
+			.end(50)
+			.claim_end(90);
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_id = {
+				let result = TournamentAlpha::try_create_new_tournament_for(
 					&ALICE,
 					&SEASON_ID_1,
-					&10_u32,
-					&MockRanker
-				));
-
-				assert_eq!(Balances::free_balance(tournament_account), 100);
-				assert_eq!(
-					TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id,),
-					PlayerTableFor::<Test, Instance1>::try_from(vec![(ALICE, 10)])
-						.expect("Should build player_table")
+					tournament_config.clone(),
 				);
+				assert_ok!(result);
+				result.unwrap()
+			};
 
-				let rankings: [(MockAccountId, MockEntity); 5] =
-					[(BOB, 5), (CHARLIE, 12), (DAVE, 3), (EDWARD, 50), (BOB, 17)];
+			assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(&SEASON_ID_1));
 
-				for (account, entity) in rankings {
-					assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-						&account,
-						&SEASON_ID_1,
-						&entity,
-						&MockRanker
-					));
-				}
+			run_to_block(15);
 
-				assert_eq!(Balances::free_balance(tournament_account), 600);
-				assert_eq!(
-					TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id,),
-					PlayerTableFor::<Test, Instance1>::try_from(vec![
-						(EDWARD, 50),
-						(BOB, 17),
-						(CHARLIE, 12),
-						(ALICE, 10),
-						(BOB, 5),
-						(DAVE, 3),
-					])
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				PlayerTableFor::<Test, Instance1>::default()
+			);
+
+			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+				&SEASON_ID_1,
+				&10_u32,
+				&MockRanker
+			));
+
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				PlayerTableFor::<Test, Instance1>::try_from(vec![10])
 					.expect("Should build player_table")
-				);
+			);
 
-				let rankings: [(MockAccountId, MockEntity); 6] =
-					[(ALICE, 70), (EDWARD, 80), (DAVE, 1), (EDWARD, 25), (CHARLIE, 35), (BOB, 9)];
+			let rankings: [MockEntity; 5] = [5, 12, 3, 50, 17];
 
-				for (account, entity) in rankings {
-					assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-						&account,
-						&SEASON_ID_1,
-						&entity,
-						&MockRanker
-					));
-				}
+			for entity in rankings {
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&entity,
+					&MockRanker
+				));
+			}
 
-				assert_eq!(Balances::free_balance(tournament_account), 1_200);
-				assert_eq!(
-					TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id,),
-					PlayerTableFor::<Test, Instance1>::try_from(vec![
-						(EDWARD, 80),
-						(ALICE, 70),
-						(EDWARD, 50),
-						(CHARLIE, 35),
-						(EDWARD, 25),
-						(BOB, 17),
-						(CHARLIE, 12),
-						(ALICE, 10),
-						(BOB, 9),
-						(BOB, 5),
-					])
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				PlayerTableFor::<Test, Instance1>::try_from(vec![50, 17, 12, 10, 5, 3])
 					.expect("Should build player_table")
-				);
-			});
-	}
+			);
 
-	#[test]
-	fn tournament_ranker_with_max_reward() {
-		let tournament_config =
-			TournamentConfigFor::<Test, Instance1>::default().max_reward(Some(150));
-		ExtBuilder::default()
-			.balances(&[(ALICE, 1_000), (BOB, 1_000)])
-			.build()
-			.execute_with(|| {
-				let tournament_id = {
-					let result = TournamentAlpha::try_create_new_tournament_for(
-						&ALICE,
-						&SEASON_ID_1,
-						tournament_config.clone(),
-					);
-					assert_ok!(result);
-					result.unwrap()
-				};
-				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
+			let rankings: [MockEntity; 6] = [70, 80, 1, 25, 35, 9];
 
-				assert_eq!(Balances::free_balance(ALICE), 1_000);
-				assert_eq!(Balances::free_balance(BOB), 1_000);
-				assert_eq!(Balances::free_balance(tournament_account), 0);
-
-				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
-
+			for entity in rankings {
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-					&ALICE,
 					&SEASON_ID_1,
-					&10_u32,
+					&entity,
 					&MockRanker
 				));
+			}
 
-				assert_eq!(Balances::free_balance(ALICE), 900);
-				assert_eq!(Balances::free_balance(BOB), 1_000);
-				assert_eq!(Balances::free_balance(tournament_account), 100);
-
-				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-					&BOB,
-					&SEASON_ID_1,
-					&15_u32,
-					&MockRanker
-				));
-
-				assert_eq!(Balances::free_balance(ALICE), 900);
-				assert_eq!(Balances::free_balance(BOB), 900);
-				assert_eq!(Balances::free_balance(tournament_account), 200);
-			});
-	}
-
-	#[test]
-	fn tournament_ranker_with_take_fee_percentage() {
-		let tournament_config =
-			TournamentConfigFor::<Test, Instance1>::default().take_fee_percentage(Some(10));
-		ExtBuilder::default()
-			.balances(&[(ALICE, 1_000), (BOB, 1_000)])
-			.build()
-			.execute_with(|| {
-				let tournament_id = {
-					let result = TournamentAlpha::try_create_new_tournament_for(
-						&ALICE,
-						&SEASON_ID_1,
-						tournament_config.clone(),
-					);
-					assert_ok!(result);
-					result.unwrap()
-				};
-				let tournament_account =
-					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
-
-				assert_eq!(Balances::free_balance(ALICE), 1_000);
-				assert_eq!(Balances::free_balance(BOB), 1_000);
-				assert_eq!(Balances::free_balance(tournament_account), 0);
-
-				assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
-
-				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-					&ALICE,
-					&SEASON_ID_1,
-					&10_u32,
-					&MockRanker
-				));
-
-				assert_eq!(Balances::free_balance(ALICE), 900);
-				assert_eq!(Balances::free_balance(BOB), 1_000);
-				assert_eq!(Balances::free_balance(tournament_account), 100);
-
-				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-					&BOB,
-					&SEASON_ID_1,
-					&15_u32,
-					&MockRanker
-				));
-
-				assert_eq!(Balances::free_balance(ALICE), 900);
-				assert_eq!(Balances::free_balance(BOB), 900);
-				assert_eq!(Balances::free_balance(tournament_account), 200);
-			});
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				PlayerTableFor::<Test, Instance1>::try_from(vec![
+					80, 70, 50, 35, 25, 17, 12, 10, 9, 5,
+				])
+				.expect("Should build player_table")
+			);
+		});
 	}
 
 	#[test]
@@ -591,7 +578,6 @@ mod tournament_ranker {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
 				TournamentAlpha::try_rank_entity_in_tournament_for(
-					&ALICE,
 					&SEASON_ID_1,
 					&10_u32,
 					&MockRanker
@@ -602,17 +588,362 @@ mod tournament_ranker {
 	}
 }
 
+mod tournament_claimer {
+	use super::*;
+
+	#[test]
+	fn try_claim_tournament_rewards_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.initial_reward(Some(100))
+				.start(10)
+				.end(50)
+				.claim_end(90)
+				.reward_table(RewardTable::try_from(vec![50, 30]).expect("Should create table"))
+				.max_players(2);
+			ExtBuilder::default().build().execute_with(|| {
+				let tournament_id = {
+					let result = TournamentAlpha::try_create_new_tournament_for(
+						&ALICE,
+						&SEASON_ID_1,
+						tournament_config,
+					);
+					assert_ok!(result);
+					result.unwrap()
+				};
+				let tournament_account =
+					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
+
+				assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(
+					&SEASON_ID_1
+				));
+
+				run_to_block(15);
+
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&10_u32,
+					&MockRanker
+				));
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&15_u32,
+					&MockRanker
+				));
+
+				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+					&SEASON_ID_1,
+					&H256::from_low_u64_be(10),
+				));
+
+				assert_eq!(Balances::free_balance(tournament_account), 100);
+				assert_eq!(Balances::free_balance(ALICE), 900);
+				assert_eq!(Balances::free_balance(BOB), 1_000);
+
+				run_to_block(60);
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::TournamentClaimPeriodStarted {
+						season_id: SEASON_ID_1,
+						tournament_id,
+					},
+				));
+
+				assert_eq!(
+					TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+					PlayerTableFor::<Test, Instance1>::try_from(vec![15, 10])
+						.expect("Should build player_table")
+				);
+
+				assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+					&SEASON_ID_1,
+					&ALICE,
+					&10_u32
+				));
+
+				assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+					&SEASON_ID_1,
+					&BOB,
+					&15_u32
+				));
+
+				assert_eq!(Balances::free_balance(tournament_account), 20);
+				assert_eq!(Balances::free_balance(ALICE), 930);
+				assert_eq!(Balances::free_balance(BOB), 1_050);
+
+				assert_ok!(TournamentAlpha::try_claim_golden_duck_for(
+					&SEASON_ID_1,
+					&ALICE,
+					&H256::from_low_u64_be(10),
+				));
+
+				assert_eq!(Balances::free_balance(ALICE), 950);
+				assert_eq!(Balances::free_balance(BOB), 1_050);
+				assert_eq!(Balances::free_balance(tournament_account), 0);
+			});
+		});
+	}
+
+	#[test]
+	fn try_claim_tournament_rewards_with_max_reward() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.max_reward(Some(200))
+			.initial_reward(Some(500))
+			.start(10)
+			.end(50)
+			.claim_end(90)
+			.reward_table(RewardTable::try_from(vec![50, 30]).expect("Should create table"));
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_id = {
+				let result = TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_1,
+					tournament_config,
+				);
+				assert_ok!(result);
+				result.unwrap()
+			};
+
+			let tournament_account = TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
+
+			assert_eq!(Balances::free_balance(tournament_account), 500);
+			assert_eq!(Balances::free_balance(ALICE), 500);
+			assert_eq!(Balances::free_balance(BOB), 1_000);
+
+			assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(&SEASON_ID_1));
+
+			run_to_block(15);
+
+			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+				&SEASON_ID_1,
+				&10_u32,
+				&MockRanker
+			));
+
+			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+				&SEASON_ID_1,
+				&15_u32,
+				&MockRanker
+			));
+
+			assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+				&SEASON_ID_1,
+				&H256::from_low_u64_be(10),
+			));
+
+			run_to_block(60);
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentClaimPeriodStarted {
+					season_id: SEASON_ID_1,
+					tournament_id,
+				},
+			));
+
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				PlayerTableFor::<Test, Instance1>::try_from(vec![15, 10])
+					.expect("Should build player_table")
+			);
+
+			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+				&SEASON_ID_1,
+				&ALICE,
+				&10_u32
+			));
+
+			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+				&SEASON_ID_1,
+				&BOB,
+				&15_u32
+			));
+
+			assert_eq!(Balances::free_balance(tournament_account), 340);
+			assert_eq!(Balances::free_balance(ALICE), 560);
+			assert_eq!(Balances::free_balance(BOB), 1_100);
+
+			assert_ok!(TournamentAlpha::try_claim_golden_duck_for(
+				&SEASON_ID_1,
+				&ALICE,
+				&H256::from_low_u64_be(10),
+			));
+
+			assert_eq!(Balances::free_balance(tournament_account), 300);
+			assert_eq!(Balances::free_balance(ALICE), 600);
+			assert_eq!(Balances::free_balance(BOB), 1_100);
+		});
+	}
+
+	#[test]
+	fn try_claim_tournament_rewards_fails_outside_claim_state() {
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.initial_reward(Some(100))
+				.start(10)
+				.end(50)
+				.claim_end(90)
+				.reward_table(RewardTable::try_from(vec![50, 30]).expect("Should create table"))
+				.max_players(2);
+			ExtBuilder::default().build().execute_with(|| {
+				let tournament_id = {
+					let result = TournamentAlpha::try_create_new_tournament_for(
+						&ALICE,
+						&SEASON_ID_1,
+						tournament_config,
+					);
+					assert_ok!(result);
+					result.unwrap()
+				};
+				assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(
+					&SEASON_ID_1
+				));
+
+				run_to_block(15);
+
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&10_u32,
+					&MockRanker
+				));
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&15_u32,
+					&MockRanker
+				));
+
+				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+					&SEASON_ID_1,
+					&H256::from_low_u64_be(10),
+				));
+
+				// Trying to claim reward while still in active state
+				assert_noop!(
+					TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &ALICE, &10_u32),
+					Error::<Test, Instance1>::TournamentNotInClaimPeriod
+				);
+
+				assert_noop!(
+					TournamentAlpha::try_claim_golden_duck_for(
+						&SEASON_ID_1,
+						&ALICE,
+						&H256::from_low_u64_be(10),
+					),
+					Error::<Test, Instance1>::TournamentNotInClaimPeriod
+				);
+
+				run_to_block(60);
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::TournamentClaimPeriodStarted {
+						season_id: SEASON_ID_1,
+						tournament_id,
+					},
+				));
+
+				run_to_block(100);
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::TournamentEnded { season_id: SEASON_ID_1, tournament_id },
+				));
+
+				// Trying to claim reward while still in active state
+				assert_noop!(
+					TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &ALICE, &10_u32),
+					Error::<Test, Instance1>::NoActiveTournamentForSeason
+				);
+
+				assert_noop!(
+					TournamentAlpha::try_claim_golden_duck_for(
+						&SEASON_ID_1,
+						&ALICE,
+						&H256::from_low_u64_be(10),
+					),
+					Error::<Test, Instance1>::NoActiveTournamentForSeason
+				);
+			});
+		});
+	}
+
+	#[test]
+	fn try_claim_tournament_rewards_fails_with_non_winner_entities() {
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.initial_reward(Some(100))
+				.start(10)
+				.end(50)
+				.claim_end(90)
+				.reward_table(RewardTable::try_from(vec![50, 30]).expect("Should create table"))
+				.max_players(2);
+			ExtBuilder::default().build().execute_with(|| {
+				let tournament_id = {
+					let result = TournamentAlpha::try_create_new_tournament_for(
+						&ALICE,
+						&SEASON_ID_1,
+						tournament_config,
+					);
+					assert_ok!(result);
+					result.unwrap()
+				};
+				assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(
+					&SEASON_ID_1
+				));
+
+				run_to_block(15);
+
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&10_u32,
+					&MockRanker
+				));
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&15_u32,
+					&MockRanker
+				));
+
+				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+					&SEASON_ID_1,
+					&H256::from_low_u64_be(10),
+				));
+
+				run_to_block(60);
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::TournamentClaimPeriodStarted {
+						season_id: SEASON_ID_1,
+						tournament_id,
+					},
+				));
+
+				// Trying to claim reward while still in active state
+				assert_noop!(
+					TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &ALICE, &13_u32),
+					Error::<Test, Instance1>::RankingCandidateNotInWinnerTable
+				);
+
+				assert_noop!(
+					TournamentAlpha::try_claim_golden_duck_for(
+						&SEASON_ID_1,
+						&ALICE,
+						&H256::from_low_u64_be(13),
+					),
+					Error::<Test, Instance1>::GoldenDuckCandidateNotWinner
+				);
+			});
+		});
+	}
+}
+
 #[test]
 fn test_full_tournament_workflow() {
 	let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
-		.start(5)
-		.end(10)
-		.claim_end(20)
-		.initial_reward(Some(50))
-		.take_fee_percentage(Some(5))
-		.max_reward(Some(450))
-		.reward_table(RewardTable::try_from(vec![50, 10]).expect("Should created reward table"))
-		.max_players(2);
+		.start(20)
+		.end(50)
+		.claim_end(100)
+		.initial_reward(Some(300))
+		.max_reward(Some(120))
+		.reward_table(RewardTable::try_from(vec![40, 25, 10]).expect("Should created reward table"))
+		.max_players(3);
 	ExtBuilder::default()
 		.balances(&[(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000), (DAVE, 1_000), (EDWARD, 1_000)])
 		.build()
@@ -627,116 +958,180 @@ fn test_full_tournament_workflow() {
 				result.unwrap()
 			};
 
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentCreated { season_id: SEASON_ID_1, tournament_id },
+			));
+
 			let tournament_account = TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
-			assert_eq!(Balances::free_balance(tournament_account), 50);
-			assert_eq!(Balances::free_balance(ALICE), 950);
+			assert_eq!(Balances::free_balance(tournament_account), 300);
+			assert_eq!(Balances::free_balance(ALICE), 700);
+			assert_eq!(Balances::free_balance(BOB), 1_000);
+			assert_eq!(Balances::free_balance(CHARLIE), 1_000);
+			assert_eq!(Balances::free_balance(DAVE), 1_000);
+			assert_eq!(Balances::free_balance(EDWARD), 1_000);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 				crate::Event::TournamentCreated { season_id: SEASON_ID_1, tournament_id },
 			));
 
-			// Starting created tournament
-			assert_ok!(TournamentAlpha::try_start_next_tournament_for(&SEASON_ID_1));
+			assert_ok!(TournamentAlpha::try_enable_tournament_processing_for_season(&SEASON_ID_1));
+
+			run_to_block(25);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
-				crate::Event::TournamentStarted { season_id: SEASON_ID_1, tournament_id },
+				crate::Event::TournamentActivePeriodStarted {
+					season_id: SEASON_ID_1,
+					tournament_id,
+				},
 			));
 
 			assert_eq!(
-				TournamentAlpha::get_active_tournament_for(&SEASON_ID_1),
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				TournamentState::ActivePeriod(tournament_id)
+			);
+			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
+			assert_eq!(
+				TournamentAlpha::get_active_tournament_config_for(&SEASON_ID_1),
 				Some(tournament_config)
 			);
 
 			// Ranking some entities
-			let rankings_1: [(MockAccountId, MockEntity, MockEntityId); 3] = [
-				(ALICE, 120, H256::from_low_u64_be(10)),
-				(BOB, 30, H256::from_low_u64_be(45)),
-				(DAVE, 22, H256::from_low_u64_be(3)),
+			let rankings_1: [(MockEntity, MockEntityId); 3] = [
+				(120, H256::from_low_u64_be(10)),
+				(30, H256::from_low_u64_be(45)),
+				(22, H256::from_low_u64_be(3)),
 			];
 
-			for (account, entity, entity_id) in rankings_1 {
+			for (entity, entity_id) in rankings_1 {
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-					&account,
 					&SEASON_ID_1,
 					&entity,
 					&MockRanker
 				));
 
 				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
-					&account,
 					&SEASON_ID_1,
 					&entity_id
 				));
 			}
-
-			assert_eq!(Balances::free_balance(tournament_account), 350);
-			assert_eq!(Balances::free_balance(ALICE), 850);
-			assert_eq!(Balances::free_balance(BOB), 900);
-			assert_eq!(Balances::free_balance(CHARLIE), 1_000);
-			assert_eq!(Balances::free_balance(DAVE), 900);
-			assert_eq!(Balances::free_balance(EDWARD), 1_000);
-
-			let rankings_2: [(MockAccountId, MockEntity, MockEntityId); 3] = [
-				(EDWARD, 99, H256::from_low_u64_be(26)),
-				(CHARLIE, 70, H256::from_low_u64_be(71)),
-				(BOB, 56, H256::from_low_u64_be(92)),
-			];
-
-			for (account, entity, entity_id) in rankings_2 {
-				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-					&account,
-					&SEASON_ID_1,
-					&entity,
-					&MockRanker
-				));
-
-				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
-					&account,
-					&SEASON_ID_1,
-					&entity_id
-				));
-			}
-
-			assert_eq!(Balances::free_balance(tournament_account), 650);
-			assert_eq!(Balances::free_balance(ALICE), 850);
-			assert_eq!(Balances::free_balance(BOB), 800);
-			assert_eq!(Balances::free_balance(CHARLIE), 900);
-			assert_eq!(Balances::free_balance(DAVE), 900);
-			assert_eq!(Balances::free_balance(EDWARD), 900);
 
 			assert_eq!(
-				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id,),
-				PlayerTableFor::<Test, Instance1>::try_from(vec![(ALICE, 120), (EDWARD, 99)])
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				PlayerTableFor::<Test, Instance1>::try_from(vec![120, 30, 22])
 					.expect("Should build player_table")
 			);
-
 			assert_eq!(
 				GoldenDucks::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-				GoldenDuckStateFor::<Test, Instance1>::Enabled(Some((
-					DAVE,
-					H256::from_low_u64_be(3)
-				)))
+				GoldenDuckStateFor::<Test, Instance1>::Enabled(25, Some(H256::from_low_u64_be(3)))
 			);
 
-			run_to_block(10);
+			let rankings_2: [(MockEntity, MockEntityId); 3] = [
+				(99, H256::from_low_u64_be(26)),
+				(70, H256::from_low_u64_be(71)),
+				(56, H256::from_low_u64_be(92)),
+			];
 
-			// Ending tournament
-			assert_ok!(TournamentAlpha::try_finish_active_tournament_for(&SEASON_ID_1));
+			for (entity, entity_id) in rankings_2 {
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&entity,
+					&MockRanker
+				));
+
+				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+					&SEASON_ID_1,
+					&entity_id
+				));
+			}
+
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				PlayerTableFor::<Test, Instance1>::try_from(vec![120, 99, 70])
+					.expect("Should build player_table")
+			);
+			assert_eq!(
+				GoldenDucks::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				GoldenDuckStateFor::<Test, Instance1>::Enabled(25, Some(H256::from_low_u64_be(3)))
+			);
+
+			run_to_block(65);
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentClaimPeriodStarted {
+					season_id: SEASON_ID_1,
+					tournament_id,
+				},
+			));
+
+			assert_eq!(
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				TournamentState::ClaimPeriod(tournament_id, 120)
+			);
+			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
+
+			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+				&SEASON_ID_1,
+				&ALICE,
+				&120_u32
+			));
+
+			assert_noop!(
+				TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &BOB, &30_u32),
+				Error::<Test, Instance1>::RankingCandidateNotInWinnerTable
+			);
+
+			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+				&SEASON_ID_1,
+				&CHARLIE,
+				&99_u32
+			));
+
+			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+				&SEASON_ID_1,
+				&DAVE,
+				&70_u32
+			));
+
+			assert_eq!(Balances::free_balance(tournament_account), 210);
+			assert_eq!(Balances::free_balance(ALICE), 748);
+			assert_eq!(Balances::free_balance(BOB), 1_000);
+			assert_eq!(Balances::free_balance(CHARLIE), 1_030);
+			assert_eq!(Balances::free_balance(DAVE), 1_012);
+			assert_eq!(Balances::free_balance(EDWARD), 1_000);
+
+			assert_noop!(
+				TournamentAlpha::try_claim_golden_duck_for(
+					&SEASON_ID_1,
+					&CHARLIE,
+					&H256::from_low_u64_be(26),
+				),
+				Error::<Test, Instance1>::GoldenDuckCandidateNotWinner
+			);
+
+			assert_ok!(TournamentAlpha::try_claim_golden_duck_for(
+				&SEASON_ID_1,
+				&EDWARD,
+				&H256::from_low_u64_be(3),
+			));
+
+			assert_eq!(Balances::free_balance(tournament_account), 180);
+			assert_eq!(Balances::free_balance(ALICE), 748);
+			assert_eq!(Balances::free_balance(BOB), 1_000);
+			assert_eq!(Balances::free_balance(CHARLIE), 1_030);
+			assert_eq!(Balances::free_balance(DAVE), 1_012);
+			assert_eq!(Balances::free_balance(EDWARD), 1_030);
+
+			run_to_block(120);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 				crate::Event::TournamentEnded { season_id: SEASON_ID_1, tournament_id },
 			));
 
-			assert_eq!(Balances::free_balance(tournament_account), 0);
-			assert_eq!(Balances::free_balance(ALICE), 1_075);
-			assert_eq!(Balances::free_balance(BOB), 800);
-			assert_eq!(Balances::free_balance(CHARLIE), 900);
-			assert_eq!(Balances::free_balance(DAVE), 1_280);
-			assert_eq!(Balances::free_balance(EDWARD), 945);
-
-			assert_eq!(ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
+			assert_eq!(
+				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
+				TournamentState::Inactive
+			);
 			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), Some(tournament_id));
 		});
 }
-*/

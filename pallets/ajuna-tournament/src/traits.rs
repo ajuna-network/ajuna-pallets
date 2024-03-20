@@ -91,15 +91,15 @@ pub struct TournamentConfig<BlockNumber, Balance> {
 pub enum GoldenDuckState<EntityId> {
 	#[default]
 	Disabled,
-	Enabled(Option<EntityId>),
+	Enabled(u8, Option<EntityId>),
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub enum TournamentState {
+pub enum TournamentState<Balance> {
 	#[default]
 	Inactive,
 	ActivePeriod(TournamentId),
-	ClaimPeriod(TournamentId),
+	ClaimPeriod(TournamentId, Balance),
 }
 
 pub trait TournamentInspector<SeasonId, BlockNumber, Balance, AccountId> {

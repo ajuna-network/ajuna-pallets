@@ -16,7 +16,7 @@
 
 use crate::{self as pallet_ajuna_tournament, *};
 use frame_support::{
-	pallet_prelude::{Hooks, MaxEncodedLen},
+	pallet_prelude::Hooks,
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 	PalletId,
