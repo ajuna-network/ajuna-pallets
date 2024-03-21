@@ -2,8 +2,8 @@ use super::{TournamentConfig, TournamentId};
 use sp_runtime::{traits::Member, DispatchError, DispatchResult};
 
 pub trait EntityRank {
-	type EntityId: Member + PartialOrd + Ord;
-	type Entity: Member + PartialOrd + Ord;
+	type EntityId: Member;
+	type Entity: Member;
 
 	fn rank_against(
 		&self,

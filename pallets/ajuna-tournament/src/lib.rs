@@ -44,8 +44,9 @@ pub type RankingTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
 pub mod pallet {
 	use super::*;
 	use frame_support::traits::{Currency, ExistenceRequirement};
+	use sp_arithmetic::traits::AtLeast16BitUnsigned;
 	use sp_runtime::{
-		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedDiv},
+		traits::{AccountIdConversion, CheckedDiv},
 		Saturating,
 	};
 
@@ -82,7 +83,7 @@ pub mod pallet {
 		type SeasonId: Member
 			+ Parameter
 			+ MaxEncodedLen
-			+ AtLeast32BitUnsigned
+			+ AtLeast16BitUnsigned
 			+ Into<u32>
 			+ Copy
 			+ Default;
