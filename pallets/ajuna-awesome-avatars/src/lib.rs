@@ -1230,13 +1230,13 @@ pub mod pallet {
 		#[pallet::weight({1000})]
 		pub fn enable_affiliator(
 			origin: OriginFor<T>,
-			target: AffiliatorTarget<T::AccountId>,
+			target: UnlockTarget<T::AccountId>,
 			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
 			match target {
-				AffiliatorTarget::OneselfFree => {
+				UnlockTarget::OneselfFree => {
 					// Check criteria
 					if let Some(UnlockConfigs { affiliate_unlock: Some(unlock_vec), .. }) =
 						SeasonUnlocks::<T>::get(season_id)
@@ -1252,7 +1252,7 @@ pub mod pallet {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
 					}
 				},
-				AffiliatorTarget::OneselfPaying => {
+				UnlockTarget::OneselfPaying => {
 					// Substract amout for paying if account not affiliator
 					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 					T::Currency::transfer(
@@ -1263,7 +1263,7 @@ pub mod pallet {
 					)?;
 					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 				},
-				AffiliatorTarget::OtherPaying(other) => {
+				UnlockTarget::OtherPaying(other) => {
 					// Substract amout for paying if other not affiliator
 					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 					T::Currency::transfer(
@@ -1310,50 +1310,127 @@ pub mod pallet {
 		#[pallet::weight({1000})]
 		pub fn enable_set_avatar_price(
 			origin: OriginFor<T>,
+			target: UnlockTarget<T::AccountId>,
 			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
-			if let Some(UnlockConfigs { set_price_unlock: Some(unlock_vec), .. }) =
-				SeasonUnlocks::<T>::get(season_id)
-			{
-				let player_stats = SeasonStats::<T>::get(season_id, &account);
+			match target {
+				UnlockTarget::OneselfFree => {
+					if let Some(UnlockConfigs { set_price_unlock: Some(unlock_vec), .. }) =
+						SeasonUnlocks::<T>::get(season_id)
+					{
+						let player_stats = SeasonStats::<T>::get(season_id, &account);
+		
+						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
+							PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
+								config.locks.set_price = true;
+							});
+		
+							Ok(())
+						} else {
+							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+						}
+					} else {
+						Err(Error::<T>::FeatureUnlockableInSeason.into())
+					}
+				},
+				UnlockTarget::OneselfPaying => {
+					// Substract amout for paying if account not set price unlocked
+					let Season { fee, .. } = Self::seasons(&season_id)?;
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						fee.set_price_unlock,
+						AllowDeath,
+					)?;
 
-				if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
 					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
 						config.locks.set_price = true;
 					});
 
 					Ok(())
-				} else {
-					Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
-				}
-			} else {
-				Err(Error::<T>::FeatureUnlockableInSeason.into())
+				},
+				UnlockTarget::OtherPaying(other) => {
+					// Substract amout for paying if other not affiliator
+					let Season { fee, .. } = Self::seasons(&season_id)?;
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						fee.set_price_unlock,
+						AllowDeath,
+					)?;
+
+					PlayerSeasonConfigs::<T>::mutate(other, season_id, |config| {
+						config.locks.set_price = true;
+					});
+
+					Ok(())
+				},
 			}
 		}
 
 		#[pallet::call_index(28)]
 		#[pallet::weight({1000})]
-		pub fn enable_avatar_transfer(origin: OriginFor<T>, season_id: SeasonId) -> DispatchResult {
+		pub fn enable_avatar_transfer(
+			origin: OriginFor<T>,
+			target: UnlockTarget<T::AccountId>,
+			season_id: SeasonId,
+		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
-			if let Some(UnlockConfigs { avatar_transfer_unlock: Some(unlock_vec), .. }) =
-				SeasonUnlocks::<T>::get(season_id)
-			{
-				let player_stats = SeasonStats::<T>::get(season_id, &account);
+			match target {
+				UnlockTarget::OneselfFree => {
+					if let Some(UnlockConfigs { avatar_transfer_unlock: Some(unlock_vec), .. }) =
+					SeasonUnlocks::<T>::get(season_id)
+					{
+						let player_stats = SeasonStats::<T>::get(season_id, &account);
+		
+						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
+							PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
+								config.locks.avatar_transfer = true;
+							});
+		
+							Ok(())
+						} else {
+							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+						}
+					} else {
+						Err(Error::<T>::FeatureUnlockableInSeason.into())
+					}
+				},
+				UnlockTarget::OneselfPaying => {
+					// Substract amout for paying if account not set price unlocked
+					let Season { fee, .. } = Self::seasons(&season_id)?;
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						fee.avatar_transfer_unlock,
+						AllowDeath,
+					)?;
 
-				if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
 					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
 						config.locks.avatar_transfer = true;
 					});
 
 					Ok(())
-				} else {
-					Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
-				}
-			} else {
-				Err(Error::<T>::FeatureUnlockableInSeason.into())
+				},
+				UnlockTarget::OtherPaying(other) => {
+					// Substract amout for paying if other not affiliator
+					let Season { fee, .. } = Self::seasons(&season_id)?;
+					T::Currency::transfer(
+						&account,
+						&Self::treasury_account_id(),
+						fee.avatar_transfer_unlock,
+						AllowDeath,
+					)?;
+
+					PlayerSeasonConfigs::<T>::mutate(other, season_id, |config| {
+						config.locks.avatar_transfer = true;
+					});
+
+					Ok(())
+				},
 			}
 		}
 	}

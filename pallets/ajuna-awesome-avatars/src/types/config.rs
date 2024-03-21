@@ -138,7 +138,7 @@ pub struct GlobalConfig<BlockNumber, Balance> {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
-pub enum AffiliatorTarget<AccountId> {
+pub enum UnlockTarget<AccountId> {
 	OneselfFree,
 	OneselfPaying,
 	OtherPaying(AccountId),

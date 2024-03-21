@@ -4261,7 +4261,7 @@ mod affiliates {
 			.execute_with(|| {
 				assert_ok!(AAvatars::enable_affiliator(
 					RuntimeOrigin::signed(ALICE),
-					AffiliatorTarget::OneselfFree,
+					UnlockTarget::OneselfFree,
 					SEASON_ID
 				));
 
@@ -4303,7 +4303,7 @@ mod affiliates {
 
 				assert_ok!(AAvatars::enable_affiliator(
 					RuntimeOrigin::signed(ALICE),
-					AffiliatorTarget::OneselfPaying,
+					UnlockTarget::OneselfPaying,
 					SEASON_ID
 				));
 
@@ -4348,7 +4348,7 @@ mod affiliates {
 
 				assert_ok!(AAvatars::enable_affiliator(
 					RuntimeOrigin::signed(ALICE),
-					AffiliatorTarget::OtherPaying(BOB),
+					UnlockTarget::OtherPaying(BOB),
 					SEASON_ID
 				));
 
