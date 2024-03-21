@@ -1248,7 +1248,7 @@ pub mod pallet {
 						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
 							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 						} else {
-							Ok(())
+							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
 						}
 					} else {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
