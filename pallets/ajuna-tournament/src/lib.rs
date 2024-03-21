@@ -24,33 +24,40 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod account;
+pub mod config;
 pub mod traits;
 
-use frame_support::pallet_prelude::*;
+use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
 
+use account::*;
+pub use config::*;
 pub use traits::*;
+
+pub const MAX_PLAYERS: u32 = 10;
+
+pub type TournamentId = u32;
+pub type RankingTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		traits::{Currency, ExistenceRequirement},
-		PalletId,
-	};
+	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_runtime::{
 		traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedDiv},
-		SaturatedConversion, Saturating,
+		Saturating,
 	};
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type BalanceOf<T, I> =
 		<<T as Config<I>>::Currency as Currency<AccountIdFor<T>>>::Balance;
-	pub(crate) type SeasonSetFor<T, I> = SeasonSet<<T as Config<I>>::SeasonId>;
+	pub(crate) type TournamentScheduledActionFor<T, I> =
+		TournamentScheduledAction<<T as Config<I>>::SeasonId>;
 	pub type TournamentConfigFor<T, I> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T, I>>;
-	pub type PlayerTableFor<T, I> = PlayerTable<<T as Config<I>>::RankedEntity>;
-	pub type TournamentStateFor<T, I> = TournamentState<BalanceOf<T, I>>;
-	pub type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
+	pub(crate) type RankingTableFor<T, I> = RankingTable<<T as Config<I>>::RankedEntity>;
+	pub(crate) type TournamentStateFor<T, I> = TournamentState<BalanceOf<T, I>>;
+	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -88,31 +95,15 @@ pub mod pallet {
 		/// Minimum duration of the tournament active and claim periods in blocks.
 		#[pallet::constant]
 		type MinimumTournamentDuration: Get<BlockNumberFor<Self>>;
-
-		/// The value at which Tournament ids will start at
-		#[pallet::constant]
-		type InitialTournamentId: Get<TournamentId>;
 	}
 
-	/// Stores a
 	#[pallet::storage]
-	pub type EnabledSeasons<T: Config<I>, I: 'static = ()> =
-		StorageValue<_, SeasonSetFor<T, I>, ValueQuery>;
+	pub type TournamentSchedules<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, BlockNumberFor<T>, TournamentScheduledActionFor<T, I>, OptionQuery>;
 
-	/// Default value for NextTournamentIds
-	#[pallet::type_value]
-	pub fn NextTournamentIdDefault<T: Config<I>, I: 'static>() -> TournamentId {
-		T::InitialTournamentId::get()
-	}
 	#[pallet::storage]
-	pub type NextTournamentIds<T: Config<I>, I: 'static = ()> = StorageMap<
-		_,
-		Identity,
-		T::SeasonId,
-		TournamentId,
-		ValueQuery,
-		NextTournamentIdDefault<T, I>,
-	>;
+	pub type NextTournamentIds<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, T::SeasonId, TournamentId, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn tournaments)]
@@ -144,7 +135,7 @@ pub mod pallet {
 		T::SeasonId,
 		Identity,
 		TournamentId,
-		PlayerTableFor<T, I>,
+		RankingTableFor<T, I>,
 		ValueQuery,
 	>;
 
@@ -187,12 +178,8 @@ pub mod pallet {
 		FailedToRankEntity,
 		/// Tournament configuration is invalid.
 		InvalidTournamentConfig,
-		/// Cannot enable the processing of tournaments for the selected season id since the
-		/// maximum amount of seasons is already enabled.
-		CannotEnableTournamentProcessingForSeason,
-		/// Cannot disable the processing of tournaments for the selected season id since there is
-		/// still an active tournament for it.
-		CannotDisableTournamentProcessingForSeason,
+		/// Tournament schedule already in use by another tournament.
+		CannotScheduleTournament,
 		/// A ranking duck candidate proposed by an account is not in the winner's table.
 		RankingCandidateNotInWinnerTable,
 		/// A golden duck candidate proposed by an account is not the actual golden duck winner.
@@ -202,47 +189,21 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
 		fn on_initialize(now: BlockNumberFor<T>) -> Weight {
-			let enabled_seasons = EnabledSeasons::<T, I>::get();
-			let enabled_season_len = enabled_seasons.len();
-			let mut weight = T::DbWeight::get().reads(1);
+			let weight = T::DbWeight::get().reads(1);
 
-			if enabled_season_len > 0 {
-				let base_modulo = BlockNumberFor::<T>::from(enabled_season_len as u32);
-				let modulo = {
-					let block_spacing_factor = 10_u32.into();
-					(base_modulo * block_spacing_factor) + 1_u32.into()
-				};
-
-				// In order to check the next season_id tournament every 'max_season_id' multiplied
-				// by the 'block_spacing_factor' we just have to compute the modulo of the current
-				// block number with the 'max_season_id' multiply that value byt the spacing factor
-				// and then add 1 so that at each check we move to the next season id. With this we
-				// would check at block 0 season_id 0, then at block ('max_season_id' *
-				// 'block_spacing_factor') + 1 season_id 1 and so on...
-				if now % modulo == 0_u32.into() {
-					let index_to_check = (now % base_modulo).saturated_into::<usize>();
-					if let Some(season_id) = enabled_seasons.into_iter().nth(index_to_check) {
-						match ActiveTournaments::<T, I>::get(season_id) {
-							TournamentState::Inactive => {
-								weight += Self::try_start_next_tournament_for(season_id);
-							},
-							TournamentState::ActivePeriod(tournament_id) =>
-								weight += Self::try_finish_tournament_active_period_for(
-									season_id,
-									tournament_id,
-								),
-							TournamentState::ClaimPeriod(tournament_id, _) =>
-								weight += Self::try_finish_tournament_claim_period_for(
-									season_id,
-									tournament_id,
-								),
-						}
+			if let Some(action) = TournamentSchedules::<T, I>::take(now) {
+				weight +
+					match action {
+						TournamentScheduledAction::StartActivePhase(season_id, tournament_id) =>
+							Self::try_start_next_tournament_for(season_id, tournament_id),
+						TournamentScheduledAction::SwitchToClaimPhase(season_id, tournament_id) =>
+							Self::try_switch_tournament_to_claim_period_for(
+								season_id,
+								tournament_id,
+							),
+						TournamentScheduledAction::EndClaimPhase(season_id, tournament_id) =>
+							Self::try_finish_tournament_claim_period_for(season_id, tournament_id),
 					}
-
-					weight
-				} else {
-					weight
-				}
 			} else {
 				weight
 			}
@@ -260,18 +221,20 @@ pub mod pallet {
 		fn ensure_valid_tournament(
 			season_id: &T::SeasonId,
 			config: &TournamentConfigFor<T, I>,
-		) -> Result<u16, DispatchError> {
+		) -> DispatchResult {
 			let current_block = <frame_system::Pallet<T>>::block_number();
 			ensure!(current_block < config.start, Error::<T, I>::InvalidTournamentConfig);
-			ensure!(config.start < config.end, Error::<T, I>::InvalidTournamentConfig);
-			ensure!(config.end < config.claim_end, Error::<T, I>::InvalidTournamentConfig);
+			ensure!(config.start < config.active_end, Error::<T, I>::InvalidTournamentConfig);
+			ensure!(config.active_end < config.claim_end, Error::<T, I>::InvalidTournamentConfig);
 
 			ensure!(
-				config.end.saturating_sub(config.start) >= T::MinimumTournamentDuration::get(),
+				config.active_end.saturating_sub(config.start) >=
+					T::MinimumTournamentDuration::get(),
 				Error::<T, I>::InvalidTournamentConfig
 			);
 			ensure!(
-				config.claim_end.saturating_sub(config.end) >= T::MinimumTournamentDuration::get(),
+				config.claim_end.saturating_sub(config.active_end) >=
+					T::MinimumTournamentDuration::get(),
 				Error::<T, I>::InvalidTournamentConfig
 			);
 
@@ -303,18 +266,66 @@ pub mod pallet {
 			}
 
 			let reward_table_total_dist =
-				config.reward_table.iter().fold(0_u16, |a, b| a + (*b as u16));
-			ensure!(reward_table_total_dist <= 100, Error::<T, I>::InvalidTournamentConfig);
+				config.reward_distribution.iter().fold(0_u16, |a, b| a + (*b as u16));
+			let golden_duck_dist = match config.golden_duck_config {
+				GoldenDuckConfig::Disabled => 0,
+				GoldenDuckConfig::Enabled(percentage) => {
+					ensure!(percentage > 0, Error::<T, I>::InvalidTournamentConfig);
+					percentage
+				},
+			} as u16;
+
+			ensure!(
+				(reward_table_total_dist + golden_duck_dist) <= 100,
+				Error::<T, I>::InvalidTournamentConfig
+			);
 
 			ensure!(
 				config.max_players > 0 && config.max_players <= MAX_PLAYERS,
 				Error::<T, I>::InvalidTournamentConfig
 			);
 
-			Ok(reward_table_total_dist)
+			Ok(())
 		}
 
-		fn try_get_current_tournament_id_for(
+		fn try_insert_tournament_schedule(
+			season_id: &T::SeasonId,
+			tournament_id: &TournamentId,
+			config: &TournamentConfigFor<T, I>,
+		) -> DispatchResult {
+			TournamentSchedules::<T, I>::try_mutate(config.start, |action| match action {
+				None => {
+					*action = Some(TournamentScheduledAction::StartActivePhase(
+						*season_id,
+						*tournament_id,
+					));
+					Ok(())
+				},
+				Some(_) => Err(Error::<T, I>::CannotScheduleTournament),
+			})?;
+			TournamentSchedules::<T, I>::try_mutate(config.active_end, |action| match action {
+				None => {
+					*action = Some(TournamentScheduledAction::SwitchToClaimPhase(
+						*season_id,
+						*tournament_id,
+					));
+					Ok(())
+				},
+				Some(_) => Err(Error::<T, I>::CannotScheduleTournament),
+			})?;
+			TournamentSchedules::<T, I>::try_mutate(config.claim_end, |action| match action {
+				None => {
+					*action =
+						Some(TournamentScheduledAction::EndClaimPhase(*season_id, *tournament_id));
+					Ok(())
+				},
+				Some(_) => Err(Error::<T, I>::CannotScheduleTournament),
+			})?;
+
+			Ok(())
+		}
+
+		fn try_get_active_tournament_id_for(
 			season_id: &T::SeasonId,
 		) -> Result<TournamentId, DispatchError> {
 			match ActiveTournaments::<T, I>::get(season_id) {
@@ -340,7 +351,7 @@ pub mod pallet {
 		}
 
 		fn try_update_rank_table(
-			table: &mut PlayerTableFor<T, I>,
+			table: &mut RankingTableFor<T, I>,
 			tournament_config: &TournamentConfigFor<T, I>,
 			index: usize,
 			entity: &T::RankedEntity,
@@ -358,26 +369,25 @@ pub mod pallet {
 			}
 		}
 
-		fn try_start_next_tournament_for(season_id: T::SeasonId) -> Weight {
-			let next_tournament_id = LatestTournaments::<T, I>::get(season_id)
-				.map(|id| id.saturating_add(1))
-				.unwrap_or(T::InitialTournamentId::get());
-			let current_block = <frame_system::Pallet<T>>::block_number();
+		fn try_start_next_tournament_for(
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+		) -> Weight {
+			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
+				let current_block = <frame_system::Pallet<T>>::block_number();
 
-			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, next_tournament_id)
-			{
 				if tournament_config.start > current_block {
 					return T::DbWeight::get().reads(1)
 				}
 
 				ActiveTournaments::<T, I>::insert(
 					season_id,
-					TournamentState::ActivePeriod(next_tournament_id),
+					TournamentState::ActivePeriod(tournament_id),
 				);
 
 				Self::deposit_event(Event::<T, I>::TournamentActivePeriodStarted {
 					season_id,
-					tournament_id: next_tournament_id,
+					tournament_id,
 				});
 
 				T::DbWeight::get().reads_writes(1, 1)
@@ -386,14 +396,14 @@ pub mod pallet {
 			}
 		}
 
-		fn try_finish_tournament_active_period_for(
+		fn try_switch_tournament_to_claim_period_for(
 			season_id: T::SeasonId,
 			tournament_id: TournamentId,
 		) -> Weight {
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
-				if tournament_config.end > current_block {
+				if tournament_config.active_end > current_block {
 					return T::DbWeight::get().reads(1)
 				}
 
@@ -481,7 +491,7 @@ pub mod pallet {
 			season_id: &T::SeasonId,
 			config: TournamentConfigFor<T, I>,
 		) -> Result<TournamentId, DispatchError> {
-			let reward_table_dist = Self::ensure_valid_tournament(season_id, &config)?;
+			Self::ensure_valid_tournament(season_id, &config)?;
 
 			let next_tournament_id =
 				NextTournamentIds::<T, I>::mutate(season_id, |tournament_id| {
@@ -489,6 +499,8 @@ pub mod pallet {
 					*tournament_id = tournament_id.saturating_add(1);
 					assigned_id
 				});
+
+			Self::try_insert_tournament_schedule(season_id, &next_tournament_id, &config)?;
 
 			if let Some(reward) = config.initial_reward {
 				let treasury_account = Self::tournament_treasury_account_id(*season_id);
@@ -500,15 +512,15 @@ pub mod pallet {
 				)?;
 			}
 
-			Tournaments::<T, I>::insert(season_id, next_tournament_id, config);
-
-			if reward_table_dist < 100 {
+			if let GoldenDuckConfig::Enabled(percentage) = config.golden_duck_config {
 				GoldenDucks::<T, I>::insert(
 					season_id,
 					next_tournament_id,
-					GoldenDuckStateFor::<T, I>::Enabled((100 - reward_table_dist) as u8, None),
+					GoldenDuckStateFor::<T, I>::Enabled(percentage, None),
 				);
 			}
+
+			Tournaments::<T, I>::insert(season_id, next_tournament_id, config);
 
 			Self::deposit_event(Event::<T, I>::TournamentCreated {
 				season_id: *season_id,
@@ -516,26 +528,6 @@ pub mod pallet {
 			});
 
 			Ok(next_tournament_id)
-		}
-
-		fn try_enable_tournament_processing_for_season(season_id: &T::SeasonId) -> DispatchResult {
-			EnabledSeasons::<T, I>::try_mutate(|season_set| {
-				season_set
-					.try_insert(*season_id)
-					.map(|_| ())
-					.map_err(|_| Error::<T, I>::CannotEnableTournamentProcessingForSeason.into())
-			})
-		}
-
-		fn try_disable_tournament_processing_for_season(season_id: &T::SeasonId) -> DispatchResult {
-			ensure!(
-				matches!(ActiveTournaments::<T, I>::get(season_id), TournamentState::Inactive),
-				Error::<T, I>::CannotDisableTournamentProcessingForSeason
-			);
-
-			EnabledSeasons::<T, I>::mutate(|season_set| season_set.remove(season_id));
-
-			Ok(())
 		}
 	}
 
@@ -550,7 +542,7 @@ pub mod pallet {
 		where
 			R: EntityRank<Entity = T::RankedEntity>,
 		{
-			let tournament_id = Self::try_get_current_tournament_id_for(season_id)?;
+			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 			let tournament_config = Self::get_active_tournament_config_for(season_id)
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
 
@@ -569,7 +561,7 @@ pub mod pallet {
 			season_id: &T::SeasonId,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
-			let tournament_id = Self::try_get_current_tournament_id_for(season_id)?;
+			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 
 			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| match state {
 				GoldenDuckState::Enabled(payout_perc, None) => {
@@ -609,7 +601,7 @@ pub mod pallet {
 						let treasury_account = Self::tournament_treasury_account_id(*season_id);
 
 						let payout_percentage = tournament_config
-							.reward_table
+							.reward_distribution
 							.into_iter()
 							.nth(index)
 							.unwrap_or_default();
