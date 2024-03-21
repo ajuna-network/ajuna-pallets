@@ -357,6 +357,8 @@ pub mod pallet {
 		UnpreparedAvatar { avatar_id: AvatarIdOf<T> },
 		/// IPFS URL prepared.
 		PreparedIpfsUrl { url: IpfsUrl },
+		/// Unlock configurations updated.
+		UpdatedUnlockConfigs { season_id: SeasonId, unlock_configs: UnlockConfigs },
 	}
 
 	#[pallet::error]
@@ -1437,6 +1439,19 @@ pub mod pallet {
 					Ok(())
 				},
 			}
+		}
+
+		#[pallet::call_index(29)]
+		#[pallet::weight({1000})]
+		pub fn set_unlock_config(
+			origin: OriginFor<T>,
+			season_id: SeasonId,
+			unlock_configs: UnlockConfigs,
+		) -> DispatchResult {
+			Self::ensure_organizer(origin)?;
+			SeasonUnlocks::<T>::insert(season_id, &unlock_configs);
+			Self::deposit_event(Event::UpdatedUnlockConfigs { season_id, unlock_configs });
+			Ok(())
 		}
 	}
 
