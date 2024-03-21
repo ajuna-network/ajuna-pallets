@@ -207,16 +207,16 @@ impl EquippableItemType {
 	}
 
 	pub fn is_armor(&self) -> bool {
-		*self == EquippableItemType::ArmorBase ||
-			*self == EquippableItemType::ArmorComponent1 ||
-			*self == EquippableItemType::ArmorComponent2 ||
-			*self == EquippableItemType::ArmorComponent3
+		*self == EquippableItemType::ArmorBase
+			|| *self == EquippableItemType::ArmorComponent1
+			|| *self == EquippableItemType::ArmorComponent2
+			|| *self == EquippableItemType::ArmorComponent3
 	}
 
 	pub fn is_weapon(&self) -> bool {
-		*self == EquippableItemType::WeaponVersion1 ||
-			*self == EquippableItemType::WeaponVersion2 ||
-			*self == EquippableItemType::WeaponVersion3
+		*self == EquippableItemType::WeaponVersion1
+			|| *self == EquippableItemType::WeaponVersion2
+			|| *self == EquippableItemType::WeaponVersion3
 	}
 }
 

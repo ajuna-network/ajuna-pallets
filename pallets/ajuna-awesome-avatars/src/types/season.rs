@@ -94,7 +94,7 @@ impl TradeFilters {
 	pub(crate) fn is_tradable(&self, avatar: &Avatar) -> bool {
 		// No filter means we allow everything to be traded.
 		if self.is_empty() {
-			return true
+			return true;
 		}
 
 		let dna = &avatar.dna.as_slice()[..4];
@@ -182,8 +182,8 @@ impl<BlockNumber: AtLeast32Bit, Balance> Season<BlockNumber, Balance> {
 	fn validate_max_components<T: Config>(&self) -> DispatchResult {
 		ensure!(self.max_components > 1, Error::<T>::MaxComponentsTooLow);
 		ensure!(
-			self.max_components.checked_mul(2).ok_or(Error::<T>::MaxComponentsTooHigh)? as usize <=
-				T::Hash::max_encoded_len(),
+			self.max_components.checked_mul(2).ok_or(Error::<T>::MaxComponentsTooHigh)? as usize
+				<= T::Hash::max_encoded_len(),
 			Error::<T>::MaxComponentsTooHigh
 		);
 		Ok(())

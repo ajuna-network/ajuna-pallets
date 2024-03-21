@@ -317,8 +317,9 @@ impl From<MockClauses> for MockMints {
 					key,
 					AttributeValue::Equal(bounded_vec![i as u8]),
 				),
-				Clause::HasAttributeWithValue(collection_id, key, value) =>
-					(NftId(collection_id, H256::random()), key, value),
+				Clause::HasAttributeWithValue(collection_id, key, value) => {
+					(NftId(collection_id, H256::random()), key, value)
+				},
 				MockClause::HasAllAttributes(collection_id, mut attrs) => (
 					NftId(collection_id, H256::random()),
 					attrs.pop().unwrap_or_default(),
@@ -507,11 +508,12 @@ pub fn create_contract(contract_id: MockItemId, contract: ContractOf<Test>, shou
 	let creator = Creator::<Test>::get().unwrap();
 	for reward in &contract.rewards {
 		match reward {
-			Reward::Tokens(amount) =>
+			Reward::Tokens(amount) => {
 				if should_fund {
 					let _ =
 						CurrencyOf::<Test>::deposit_creating(&creator, ItemDeposit::get() + amount);
-				},
+				}
+			},
 			Reward::Nft(NftId(collection_id, item_id)) => {
 				let _ = mint_item(&creator, collection_id, item_id);
 			},

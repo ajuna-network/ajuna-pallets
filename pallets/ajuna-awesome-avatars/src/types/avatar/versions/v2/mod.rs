@@ -234,15 +234,15 @@ impl<T: Config> ForgerV2<T> {
 				PetItemType::Pet => {
 					if sacrifices.iter().all(|sacrifice| {
 						let equippable_item = sacrifice.get_item_sub_type::<EquippableItemType>();
-						sacrifice.has_type(ItemType::Equippable) &&
-							sacrifice.get_rarity() == RarityTier::Legendary &&
-							sacrifice.same_class_type_2(leader) &&
-							(equippable_item.is_armor_base() || equippable_item.is_weapon())
+						sacrifice.has_type(ItemType::Equippable)
+							&& sacrifice.get_rarity() == RarityTier::Legendary
+							&& sacrifice.same_class_type_2(leader)
+							&& (equippable_item.is_armor_base() || equippable_item.is_weapon())
 					}) && leader.get_rarity() >= RarityTier::Legendary
 					{
 						ForgeType::Equip
-					} else if leader.get_rarity() != RarityTier::Mythical &&
-						sacrifices.iter().all(|sacrifice| {
+					} else if leader.get_rarity() != RarityTier::Mythical
+						&& sacrifices.iter().all(|sacrifice| {
 							sacrifice.same_full_type(leader) && sacrifice.same_rarity(leader)
 						}) {
 						ForgeType::Mate
@@ -255,20 +255,20 @@ impl<T: Config> ForgerV2<T> {
 					}
 				},
 				PetItemType::PetPart => {
-					if leader.has_zeroed_class_types() &&
-						sacrifices.iter().all(|sacrifice| {
+					if leader.has_zeroed_class_types()
+						&& sacrifices.iter().all(|sacrifice| {
 							sacrifice.same_full_type(leader) && sacrifice.has_zeroed_class_types()
 						}) {
 						ForgeType::Statue
 					} else if sacrifices.iter().all(|sacrifice| {
-						sacrifice.same_full_type(leader) &&
-							sacrifice.same_class_type_2(leader) &&
-							sacrifice.get_class_type_2::<HexType>() != HexType::X0
+						sacrifice.same_full_type(leader)
+							&& sacrifice.same_class_type_2(leader)
+							&& sacrifice.get_class_type_2::<HexType>() != HexType::X0
 					}) {
 						ForgeType::Stack
-					} else if leader.get_class_type_1::<HexType>() != HexType::X0 &&
-						leader.get_class_type_2::<HexType>() != HexType::X0 &&
-						sacrifices.iter().all(|sacrifice| sacrifice.has_type(ItemType::Material))
+					} else if leader.get_class_type_1::<HexType>() != HexType::X0
+						&& leader.get_class_type_2::<HexType>() != HexType::X0
+						&& sacrifices.iter().all(|sacrifice| sacrifice.has_type(ItemType::Material))
 					{
 						ForgeType::Tinker
 					} else {
@@ -278,8 +278,8 @@ impl<T: Config> ForgerV2<T> {
 				PetItemType::Egg => {
 					let leader_rarity = leader.get_rarity();
 
-					if leader_rarity <= RarityTier::Epic &&
-						sacrifices.iter().all(|sacrifice| sacrifice.same_full_type(leader))
+					if leader_rarity <= RarityTier::Epic
+						&& sacrifices.iter().all(|sacrifice| sacrifice.same_full_type(leader))
 					{
 						ForgeType::Breed
 					} else {
@@ -296,8 +296,8 @@ impl<T: Config> ForgerV2<T> {
 			},
 			ItemType::Essence => match leader.get_item_sub_type::<EssenceItemType>() {
 				EssenceItemType::Glimmer => {
-					if leader.get_quantity() as usize >= sacrifices.len() &&
-						sacrifices.iter().all(|sacrifice| {
+					if leader.get_quantity() as usize >= sacrifices.len()
+						&& sacrifices.iter().all(|sacrifice| {
 							sacrifice.has_type(ItemType::Material) && sacrifice.get_quantity() >= 4
 						}) {
 						ForgeType::Glimmer
@@ -338,9 +338,9 @@ impl<T: Config> ForgerV2<T> {
 					})
 					.count();
 
-				if leader_sub_type.is_armor() &&
-					all_sacrifice_are_armor_or_toolbox &&
-					sacrificed_toolboxes <= MAX_TOOLBOXES
+				if leader_sub_type.is_armor()
+					&& all_sacrifice_are_armor_or_toolbox
+					&& sacrificed_toolboxes <= MAX_TOOLBOXES
 				{
 					ForgeType::Assemble
 				} else if leader_rarity == RarityTier::Epic && leader_sub_type.is_armor_base() {
@@ -353,8 +353,8 @@ impl<T: Config> ForgerV2<T> {
 									let item_sub_type =
 										sacrifice.get_item_sub_type::<EssenceItemType>();
 
-									item_sub_type == EssenceItemType::PaintFlask ||
-										item_sub_type == EssenceItemType::GlowFlask
+									item_sub_type == EssenceItemType::PaintFlask
+										|| item_sub_type == EssenceItemType::GlowFlask
 								})
 								.unwrap_or(false)
 						})
@@ -367,9 +367,9 @@ impl<T: Config> ForgerV2<T> {
 								let item_sub_type =
 									sacrifice.get_item_sub_type::<EssenceItemType>();
 
-								item_sub_type == EssenceItemType::Glimmer ||
-									item_sub_type == EssenceItemType::PaintFlask ||
-									item_sub_type == EssenceItemType::GlowFlask
+								item_sub_type == EssenceItemType::Glimmer
+									|| item_sub_type == EssenceItemType::PaintFlask
+									|| item_sub_type == EssenceItemType::GlowFlask
 							})
 							.unwrap_or(false)
 					});
@@ -385,12 +385,12 @@ impl<T: Config> ForgerV2<T> {
 			},
 			ItemType::Blueprint => {
 				if sacrifices.iter().all(|sacrifice| {
-					sacrifice.same_full_and_class_types(leader) &&
-						sacrifice.same_spec_at(leader, SpecIdx::Byte3)
+					sacrifice.same_full_and_class_types(leader)
+						&& sacrifice.same_spec_at(leader, SpecIdx::Byte3)
 				}) {
 					ForgeType::Stack
-				} else if sacrifices.len() == 4 &&
-					sacrifices.iter().all(|sacrifice| sacrifice.has_type(ItemType::Material))
+				} else if sacrifices.len() == 4
+					&& sacrifices.iter().all(|sacrifice| sacrifice.has_type(ItemType::Material))
 				{
 					ForgeType::Build
 				} else {
@@ -1179,12 +1179,12 @@ mod test {
 					let mut avatar = avatar;
 
 					let class_type_1 = SlotType::from_byte(
-						(random_hash.next() % SlotType::range().end as u8) +
-							SlotType::range().start as u8,
+						(random_hash.next() % SlotType::range().end as u8)
+							+ SlotType::range().start as u8,
 					);
 					let class_type_2 = PetType::from_byte(
-						(random_hash.next() % PetType::range().end as u8) +
-							PetType::range().start as u8,
+						(random_hash.next() % PetType::range().end as u8)
+							+ PetType::range().start as u8,
 					);
 					let rarity_type = RarityTier::from_byte(
 						(random_hash.next() % RarityTier::Mythical.as_byte()) + 1,

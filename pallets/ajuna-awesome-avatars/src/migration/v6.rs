@@ -345,9 +345,9 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 
 			let total_reads =
 				seasons_translated + player_season_configs_translated + season_stats_translated;
-			let total_writes = (seasons_translated * 4) +
-				player_season_configs_translated +
-				season_stats_translated;
+			let total_writes = (seasons_translated * 4)
+				+ player_season_configs_translated
+				+ season_stats_translated;
 
 			T::DbWeight::get().reads_writes(total_reads, total_writes)
 		} else {

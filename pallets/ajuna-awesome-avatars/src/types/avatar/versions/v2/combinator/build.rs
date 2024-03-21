@@ -70,8 +70,8 @@ impl<T: Config> AvatarCombinator<T> {
 			let mut generated_equippables = Vec::with_capacity(3);
 
 			for i in 0..max_build {
-				if soul_points > 0 &&
-					(build_prop * MAX_BYTE >= hash_provider.hash[i] as u32 * SCALING_FACTOR_PERC)
+				if soul_points > 0
+					&& (build_prop * MAX_BYTE >= hash_provider.hash[i] as u32 * SCALING_FACTOR_PERC)
 				{
 					let pet_type = leader.get_class_type_2::<PetType>();
 					let slot_type = leader.get_class_type_1::<SlotType>();
@@ -193,11 +193,11 @@ mod test {
 			let blueprint_input_1 =
 				create_random_blueprint(&ALICE, &pet_type, &slot_type, &equip_type, &pattern, 5);
 
-			let total_soul_points = blueprint_input_1.1.get_souls() +
-				material_input_1.1.get_souls() +
-				material_input_2.1.get_souls() +
-				material_input_3.1.get_souls() +
-				material_input_4.1.get_souls();
+			let total_soul_points = blueprint_input_1.1.get_souls()
+				+ material_input_1.1.get_souls()
+				+ material_input_2.1.get_souls()
+				+ material_input_3.1.get_souls()
+				+ material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 15);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::build_avatars(
@@ -275,11 +275,11 @@ mod test {
 			let blueprint_input_1 =
 				create_random_blueprint(&ALICE, &pet_type, &slot_type, &equip_type, &pattern, 5);
 
-			let total_soul_points = blueprint_input_1.1.get_souls() +
-				material_input_1.1.get_souls() +
-				material_input_2.1.get_souls() +
-				material_input_3.1.get_souls() +
-				material_input_4.1.get_souls();
+			let total_soul_points = blueprint_input_1.1.get_souls()
+				+ material_input_1.1.get_souls()
+				+ material_input_2.1.get_souls()
+				+ material_input_3.1.get_souls()
+				+ material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 20);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::build_avatars(
@@ -373,11 +373,11 @@ mod test {
 			let blueprint_input_1 =
 				create_random_blueprint(&ALICE, &pet_type, &slot_type, &equip_type, &pattern, 5);
 
-			let total_soul_points = blueprint_input_1.1.get_souls() +
-				material_input_1.1.get_souls() +
-				material_input_2.1.get_souls() +
-				material_input_3.1.get_souls() +
-				material_input_4.1.get_souls();
+			let total_soul_points = blueprint_input_1.1.get_souls()
+				+ material_input_1.1.get_souls()
+				+ material_input_2.1.get_souls()
+				+ material_input_3.1.get_souls()
+				+ material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 105);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::build_avatars(
@@ -471,11 +471,11 @@ mod test {
 			let blueprint_input_1 =
 				create_random_blueprint(&ALICE, &pet_type, &slot_type, &equip_type, &pattern, 5);
 
-			let total_soul_points = blueprint_input_1.1.get_souls() +
-				material_input_1.1.get_souls() +
-				material_input_2.1.get_souls() +
-				material_input_3.1.get_souls() +
-				material_input_4.1.get_souls();
+			let total_soul_points = blueprint_input_1.1.get_souls()
+				+ material_input_1.1.get_souls()
+				+ material_input_2.1.get_souls()
+				+ material_input_3.1.get_souls()
+				+ material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 15);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::build_avatars(
@@ -565,11 +565,11 @@ mod test {
 			let blueprint_input_1 =
 				create_random_blueprint(&ALICE, &pet_type, &slot_type, &equip_type, &pattern, 5);
 
-			let total_soul_points = blueprint_input_1.1.get_souls() +
-				material_input_1.1.get_souls() +
-				material_input_2.1.get_souls() +
-				material_input_3.1.get_souls() +
-				material_input_4.1.get_souls();
+			let total_soul_points = blueprint_input_1.1.get_souls()
+				+ material_input_1.1.get_souls()
+				+ material_input_2.1.get_souls()
+				+ material_input_3.1.get_souls()
+				+ material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 17);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::build_avatars(
@@ -650,11 +650,11 @@ mod test {
 			let blueprint_input_1 =
 				create_random_blueprint(&ALICE, &pet_type, &slot_type, &equip_type, &pattern, 5);
 
-			let total_soul_points = blueprint_input_1.1.get_souls() +
-				material_input_1.1.get_souls() +
-				material_input_2.1.get_souls() +
-				material_input_3.1.get_souls() +
-				material_input_4.1.get_souls();
+			let total_soul_points = blueprint_input_1.1.get_souls()
+				+ material_input_1.1.get_souls()
+				+ material_input_2.1.get_souls()
+				+ material_input_3.1.get_souls()
+				+ material_input_4.1.get_souls();
 			assert_eq!(total_soul_points, 15);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::build_avatars(
@@ -748,10 +748,11 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(250));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(239));
 
-			let total_souls =
-				leader.1.get_souls() +
-					sac_1.1.get_souls() + sac_2.1.get_souls() +
-					sac_3.1.get_souls() + sac_4.1.get_souls();
+			let total_souls = leader.1.get_souls()
+				+ sac_1.1.get_souls()
+				+ sac_2.1.get_souls()
+				+ sac_3.1.get_souls()
+				+ sac_4.1.get_souls();
 			assert_eq!(total_souls, 953);
 
 			assert_eq!(leader.1.get_quantity(), 5);
@@ -855,10 +856,11 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(940));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(717));
 
-			let total_souls =
-				leader.1.get_souls() +
-					sac_1.1.get_souls() + sac_2.1.get_souls() +
-					sac_3.1.get_souls() + sac_4.1.get_souls();
+			let total_souls = leader.1.get_souls()
+				+ sac_1.1.get_souls()
+				+ sac_2.1.get_souls()
+				+ sac_3.1.get_souls()
+				+ sac_4.1.get_souls();
 			assert_eq!(total_souls, 2475);
 
 			assert_eq!(

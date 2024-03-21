@@ -450,8 +450,8 @@ pub mod pallet {
 			let block_number = <frame_system::Pallet<T>>::block_number();
 
 			ensure!(
-				block_number - mogwai.genesis >=
-					GameEventType::time_till(GameEventType::Hatch).into(),
+				block_number - mogwai.genesis
+					>= GameEventType::time_till(GameEventType::Hatch).into(),
 				Error::<T>::MogwaiNoHatch
 			);
 

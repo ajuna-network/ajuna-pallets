@@ -1280,9 +1280,9 @@ mod minting {
 						.map(|avatar_id| Avatars::<Test>::get(avatar_id).unwrap())
 						.collect::<Vec<_>>();
 					assert!(minted.iter().all(|(owner, avatar)| {
-						owner == &ALICE &&
-							(avatar.souls >= 1 && avatar.souls <= 100) &&
-							avatar.season_id == 1
+						owner == &ALICE
+							&& (avatar.souls >= 1 && avatar.souls <= 100)
+							&& avatar.season_id == 1
 					}));
 				}
 			});
@@ -2003,8 +2003,8 @@ mod forging {
 				// check for souls accumulation
 				assert_eq!(
 					forged_leader.souls,
-					original_leader.souls +
-						original_sacrifices.iter().map(|x| x.souls).sum::<SoulCount>(),
+					original_leader.souls
+						+ original_sacrifices.iter().map(|x| x.souls).sum::<SoulCount>(),
 				);
 
 				// check for the upgraded DNA
