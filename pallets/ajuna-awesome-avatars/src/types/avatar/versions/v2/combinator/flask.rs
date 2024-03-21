@@ -18,9 +18,9 @@ impl<T: Config> AvatarCombinator<T> {
 		let flask = input_sacrifices.iter().find(|(_, sacrifice)| {
 			let item_sub_type = sacrifice.get_item_sub_type::<EssenceItemType>();
 
-			sacrifice.has_type(ItemType::Essence)
-				&& (item_sub_type == EssenceItemType::PaintFlask
-					|| item_sub_type == EssenceItemType::GlowFlask)
+			sacrifice.has_type(ItemType::Essence) &&
+				(item_sub_type == EssenceItemType::PaintFlask ||
+					item_sub_type == EssenceItemType::GlowFlask)
 		});
 
 		if let Some((_, flask_avatar)) = flask {

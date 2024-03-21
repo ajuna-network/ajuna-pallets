@@ -583,12 +583,10 @@ pub mod pallet {
 
 			for reward in &rewards {
 				match reward {
-					Reward::Tokens(amount) => {
-						T::Currency::transfer(&Self::account_id(), &creator, *amount, AllowDeath)
-					},
-					Reward::Nft(NftId(collection_id, item_id)) => {
-						T::NftHelper::transfer(collection_id, item_id, &creator)
-					},
+					Reward::Tokens(amount) =>
+						T::Currency::transfer(&Self::account_id(), &creator, *amount, AllowDeath),
+					Reward::Nft(NftId(collection_id, item_id)) =>
+						T::NftHelper::transfer(collection_id, item_id, &creator),
 				}?;
 			}
 
@@ -668,12 +666,10 @@ pub mod pallet {
 
 			for reward in &rewards {
 				match reward {
-					Reward::Tokens(amount) => {
-						T::Currency::transfer(&Self::account_id(), beneficiary, *amount, AllowDeath)
-					},
-					Reward::Nft(NftId(collection_id, item_id)) => {
-						T::NftHelper::transfer(collection_id, item_id, beneficiary)
-					},
+					Reward::Tokens(amount) =>
+						T::Currency::transfer(&Self::account_id(), beneficiary, *amount, AllowDeath),
+					Reward::Nft(NftId(collection_id, item_id)) =>
+						T::NftHelper::transfer(collection_id, item_id, beneficiary),
 				}?;
 			}
 

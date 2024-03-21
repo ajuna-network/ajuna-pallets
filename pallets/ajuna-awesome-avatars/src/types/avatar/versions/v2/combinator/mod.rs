@@ -46,9 +46,8 @@ impl<T: Config> AvatarCombinator<T> {
 				<frame_system::Pallet<T>>::block_number(),
 			),
 			ForgeType::Feed => Self::feed_avatars(leader, sacrifices),
-			ForgeType::Glimmer => {
-				Self::glimmer_avatars(leader, sacrifices, season_id, hash_provider)
-			},
+			ForgeType::Glimmer =>
+				Self::glimmer_avatars(leader, sacrifices, season_id, hash_provider),
 			ForgeType::Spark => Self::spark_avatars(leader, sacrifices, hash_provider),
 			ForgeType::Flask => Self::flask_avatars(leader, sacrifices, hash_provider),
 			ForgeType::Statue => Self::statue_avatars(

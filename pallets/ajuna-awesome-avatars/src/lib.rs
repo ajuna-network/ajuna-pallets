@@ -628,9 +628,8 @@ pub mod pallet {
 			let GlobalConfig { freemint_transfer, .. } = GlobalConfigs::<T>::get();
 
 			match freemint_transfer.mode {
-				FreeMintTransferMode::Closed => {
-					Err::<(), DispatchError>(Error::<T>::FreeMintTransferClosed.into())
-				},
+				FreeMintTransferMode::Closed =>
+					Err::<(), DispatchError>(Error::<T>::FreeMintTransferClosed.into()),
 				FreeMintTransferMode::WhitelistOnly => {
 					let whitelisted_accounts = WhitelistedAccounts::<T>::get();
 					ensure!(
@@ -745,8 +744,8 @@ pub mod pallet {
 
 			let trade_fee = {
 				let base_fee = fee.buy_minimum.max(
-					price.saturating_mul(fee.buy_percent.unique_saturated_into())
-						/ MAX_PERCENTAGE.unique_saturated_into(),
+					price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
+						MAX_PERCENTAGE.unique_saturated_into(),
 				);
 
 				if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
@@ -811,8 +810,8 @@ pub mod pallet {
 				let base_fee = fee.upgrade_storage;
 				let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 
-				if affiliate_config.mode == AffiliateMode::Open
-					&& affiliate_config.enabled_in_upgrade
+				if affiliate_config.mode == AffiliateMode::Open &&
+					affiliate_config.enabled_in_upgrade
 				{
 					Self::try_propagate_chain_fee(
 						AffiliateMethods::UpgradeStorage,
@@ -895,9 +894,9 @@ pub mod pallet {
 
 			let (current_season_id, season_schedule) = Self::current_season_schedule_with_id()?;
 			ensure!(
-				season_id < current_season_id
-					|| (season_id == current_season_id
-						&& <frame_system::Pallet<T>>::block_number() > season_schedule.end),
+				season_id < current_season_id ||
+					(season_id == current_season_id &&
+						<frame_system::Pallet<T>>::block_number() > season_schedule.end),
 				Error::<T>::CannotClaimDuringSeason
 			);
 
@@ -1182,7 +1181,7 @@ pub mod pallet {
 			let _ = Self::ensure_organizer(origin)?;
 
 			match operation {
-				WhitelistOperation::AddAccount => {
+				WhitelistOperation::AddAccount =>
 					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
 						ensure!(
 							!account_list.contains(&account),
@@ -1192,22 +1191,19 @@ pub mod pallet {
 						account_list
 							.try_push(account)
 							.map_err(|_| Error::<T>::WhitelistedAccountsLimitReached.into())
-					})
-				},
-				WhitelistOperation::RemoveAccount => {
+					}),
+				WhitelistOperation::RemoveAccount =>
 					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
 						account_list.retain(|entry| entry != &account);
 
 						Ok(())
-					})
-				},
-				WhitelistOperation::ClearList => {
+					}),
+				WhitelistOperation::ClearList =>
 					WhitelistedAccounts::<T>::try_mutate(move |account_list| {
 						account_list.clear();
 
 						Ok(())
-					})
-				},
+					}),
 			}
 		}
 
@@ -1543,8 +1539,8 @@ pub mod pallet {
 					let mint_fee = {
 						let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
 
-						if affiliate_config.mode == AffiliateMode::Open
-							&& affiliate_config.enabled_in_mint
+						if affiliate_config.mode == AffiliateMode::Open &&
+							affiliate_config.enabled_in_mint
 						{
 							Self::try_propagate_chain_fee(AffiliateMethods::Mint, player, base_fee)?
 						} else {
@@ -1657,8 +1653,8 @@ pub mod pallet {
 				.try_push(*avatar_id)
 				.map_err(|_| Error::<T>::MaxOwnershipReached)?;
 			ensure!(
-				to_avatar_ids.len()
-					<= PlayerSeasonConfigs::<T>::get(to, season_id).storage_tier as usize,
+				to_avatar_ids.len() <=
+					PlayerSeasonConfigs::<T>::get(to, season_id).storage_tier as usize,
 				Error::<T>::MaxOwnershipReached
 			);
 
@@ -1842,9 +1838,8 @@ pub mod pallet {
 						avatar_ids: vec![(leader_id, upgraded_components)],
 					});
 				},
-				LeaderForgeOutput::Consumed(leader_id) => {
-					Self::remove_avatar_from(player, season_id, &leader_id)
-				},
+				LeaderForgeOutput::Consumed(leader_id) =>
+					Self::remove_avatar_from(player, season_id, &leader_id),
 			}
 
 			Ok(())
@@ -1870,9 +1865,8 @@ pub mod pallet {
 						Self::try_add_avatar_to(player, season_id, avatar_id, avatar)?;
 						minted_avatars.push(avatar_id);
 					},
-					ForgeOutput::Consumed(avatar_id) => {
-						Self::remove_avatar_from(player, season_id, &avatar_id)
-					},
+					ForgeOutput::Consumed(avatar_id) =>
+						Self::remove_avatar_from(player, season_id, &avatar_id),
 				}
 			}
 
@@ -2059,11 +2053,11 @@ pub mod pallet {
 			config: &BoundedVec<u8, ConstU32<5>>,
 			account_stats: &SeasonInfo,
 		) -> bool {
-			config[0] <= account_stats.minted as u8
-				&& config[1] <= account_stats.free_minted as u8
-				&& config[2] <= account_stats.forged as u8
-				&& config[3] <= account_stats.bought as u8
-				&& config[4] <= account_stats.sold as u8
+			config[0] <= account_stats.minted as u8 &&
+				config[1] <= account_stats.free_minted as u8 &&
+				config[2] <= account_stats.forged as u8 &&
+				config[3] <= account_stats.bought as u8 &&
+				config[4] <= account_stats.sold as u8
 		}
 	}
 }

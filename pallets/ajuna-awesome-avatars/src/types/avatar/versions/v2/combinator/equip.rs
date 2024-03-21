@@ -17,8 +17,8 @@ impl<T: Config> AvatarCombinator<T> {
 			.map(|slot| slot.iter().sum::<u8>() == 0)
 			.collect::<Vec<_>>();
 
-		let are_slots_maxed = equipment_slots_state.iter().filter(|slot| !**slot).count()
-			>= (MAX_EQUIPPED_SLOTS + leader.get_spec::<u8>(SpecIdx::Byte16) as usize);
+		let are_slots_maxed = equipment_slots_state.iter().filter(|slot| !**slot).count() >=
+			(MAX_EQUIPPED_SLOTS + leader.get_spec::<u8>(SpecIdx::Byte16) as usize);
 
 		for (_, sacrifice) in input_sacrifices.iter() {
 			new_souls += sacrifice.get_souls();
@@ -137,9 +137,9 @@ mod test {
 				&mut hash_provider,
 			);
 
-			let total_soul_points = leader.1.get_souls()
-				+ armor_sacrifices.iter().map(|(_, avatar)| avatar.get_souls()).sum::<SoulCount>()
-				+ weapon_sacrifice.1.get_souls();
+			let total_soul_points = leader.1.get_souls() +
+				armor_sacrifices.iter().map(|(_, avatar)| avatar.get_souls()).sum::<SoulCount>() +
+				weapon_sacrifice.1.get_souls();
 			assert_eq!(total_soul_points, 500);
 
 			let expected_dna = [

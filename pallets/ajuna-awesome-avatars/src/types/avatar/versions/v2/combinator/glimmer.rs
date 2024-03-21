@@ -26,8 +26,8 @@ impl<T: Config> AvatarCombinator<T> {
 			let leader_quantity = leader.get_quantity();
 			let sacrifice_quantity = sacrifice.get_quantity();
 
-			if leader_quantity < GLIMMER_FORGE_GLIMMER_USE
-				|| sacrifice_quantity < GLIMMER_FORGE_MATERIAL_USE
+			if leader_quantity < GLIMMER_FORGE_GLIMMER_USE ||
+				sacrifice_quantity < GLIMMER_FORGE_MATERIAL_USE
 			{
 				// If we skip the loop then the sacrifice remains unused
 				other_output.push(ForgeOutput::Forged((sacrifice_id, sacrifice.unwrap()), 0));
@@ -67,8 +67,8 @@ impl<T: Config> AvatarCombinator<T> {
 					);
 					gen_avatar =
 						gen_avatar.into_egg(&RarityTier::Rare, 0x00, soul_points, progress_array);
-				} else if rand_1
-					== (DnaUtils::high_nibble_of(rand_1) + DnaUtils::low_nibble_of(rand_2))
+				} else if rand_1 ==
+					(DnaUtils::high_nibble_of(rand_1) + DnaUtils::low_nibble_of(rand_2))
 				{
 					let color_pair = (
 						ColorType::from_byte(rand_1 % (color_types + 1)),
@@ -100,9 +100,9 @@ impl<T: Config> AvatarCombinator<T> {
 					);
 					gen_avatar = gen_avatar.into_glow_spark(&force, soul_points, progress_array);
 				}
-			} else if (rand_0 as u32 * SCALING_FACTOR_PERC
-				< (GLIMMER_PROB_PERC + TOOLBOX_PERC) * MAX_BYTE)
-				&& leader.can_use(GLIMMER_FORGE_TOOLBOX_USE)
+			} else if (rand_0 as u32 * SCALING_FACTOR_PERC <
+				(GLIMMER_PROB_PERC + TOOLBOX_PERC) * MAX_BYTE) &&
+				leader.can_use(GLIMMER_FORGE_TOOLBOX_USE)
 			{
 				let (_, consumed, out_leader_souls) = leader.use_avatar(GLIMMER_FORGE_TOOLBOX_USE);
 				leader_consumed = consumed;
@@ -246,11 +246,11 @@ mod test {
 			let sacrifice_3 = create_random_material(&ALICE, &MaterialItemType::Ceramics, 20);
 			let sacrifice_4 = create_random_material(&ALICE, &MaterialItemType::Metals, 20);
 
-			let total_soul_points = leader.1.get_souls()
-				+ sacrifice_1.1.get_souls()
-				+ sacrifice_2.1.get_souls()
-				+ sacrifice_3.1.get_souls()
-				+ sacrifice_4.1.get_souls();
+			let total_soul_points = leader.1.get_souls() +
+				sacrifice_1.1.get_souls() +
+				sacrifice_2.1.get_souls() +
+				sacrifice_3.1.get_souls() +
+				sacrifice_4.1.get_souls();
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::glimmer_avatars(
 				leader,
@@ -355,11 +355,11 @@ mod test {
 			let sacrifice_3 = create_random_material(&ALICE, &MaterialItemType::Ceramics, 20);
 			let sacrifice_4 = create_random_material(&ALICE, &MaterialItemType::Metals, 20);
 
-			let total_soul_points = leader.1.get_souls()
-				+ sacrifice_1.1.get_souls()
-				+ sacrifice_2.1.get_souls()
-				+ sacrifice_3.1.get_souls()
-				+ sacrifice_4.1.get_souls();
+			let total_soul_points = leader.1.get_souls() +
+				sacrifice_1.1.get_souls() +
+				sacrifice_2.1.get_souls() +
+				sacrifice_3.1.get_souls() +
+				sacrifice_4.1.get_souls();
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::glimmer_avatars(
 				leader,

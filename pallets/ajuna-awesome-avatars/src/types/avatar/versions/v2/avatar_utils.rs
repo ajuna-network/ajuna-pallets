@@ -243,8 +243,8 @@ impl WrappedAvatar {
 	}
 
 	pub fn same_spec_at(&self, other: &WrappedAvatar, position: SpecIdx) -> bool {
-		DnaUtils::read_spec_raw(&self.inner, position)
-			== DnaUtils::read_spec_raw(&other.inner, position)
+		DnaUtils::read_spec_raw(&self.inner, position) ==
+			DnaUtils::read_spec_raw(&other.inner, position)
 	}
 
 	pub fn get_progress(&self) -> [u8; 11] {
@@ -584,8 +584,8 @@ impl AvatarBuilder {
 		soul_points: SoulCount,
 		progress_array: [u8; 11],
 	) -> Self {
-		let color_bytes = ((color_pair.0.as_byte().saturating_sub(1)) << 6)
-			| ((color_pair.1.as_byte().saturating_sub(1)) << 4);
+		let color_bytes = ((color_pair.0.as_byte().saturating_sub(1)) << 6) |
+			((color_pair.1.as_byte().saturating_sub(1)) << 4);
 
 		self.with_attribute(AvatarAttr::ItemType, &ItemType::Essence)
 			.with_attribute(AvatarAttr::ItemSubType, &EssenceItemType::PaintFlask)
@@ -656,8 +656,8 @@ impl AvatarBuilder {
 
 			if color_pair.0 != ColorType::Null && color_pair.1 != ColorType::Null {
 				color_flag = 0b0000_1000;
-				progress |= ((color_pair.0.as_byte().saturating_sub(1)) << 6)
-					| ((color_pair.1.as_byte().saturating_sub(1)) << 4)
+				progress |= ((color_pair.0.as_byte().saturating_sub(1)) << 6) |
+					((color_pair.1.as_byte().saturating_sub(1)) << 4)
 			}
 
 			(progress, color_flag)
@@ -715,8 +715,8 @@ impl AvatarBuilder {
 
 			if color_pair.0 != ColorType::Null && color_pair.1 != ColorType::Null {
 				color_flag = 0b0000_1000;
-				info |= ((color_pair.0.as_byte().saturating_sub(1)) << 6)
-					| ((color_pair.1.as_byte().saturating_sub(1)) << 4)
+				info |= ((color_pair.0.as_byte().saturating_sub(1)) << 6) |
+					((color_pair.1.as_byte().saturating_sub(1)) << 4)
 			}
 
 			(info, color_flag)
@@ -791,9 +791,9 @@ impl AvatarBuilder {
 		force: Force,
 		soul_points: SoulCount,
 	) -> Self {
-		let git_info = 0b0000_1111
-			| ((color_pair.0.as_byte().saturating_sub(1)) << 6
-				| (color_pair.1.as_byte().saturating_sub(1)) << 4);
+		let git_info = 0b0000_1111 |
+			((color_pair.0.as_byte().saturating_sub(1)) << 6 |
+				(color_pair.1.as_byte().saturating_sub(1)) << 4);
 
 		self.with_attribute(AvatarAttr::ItemType, &ItemType::Special)
 			.with_attribute(AvatarAttr::ItemSubType, &SpecialItemType::Unidentified)
@@ -856,14 +856,12 @@ impl DnaUtils {
 	fn write_strand(avatar: &mut Avatar, position: usize, byte_type: ByteType, value: u8) {
 		match byte_type {
 			ByteType::Full => avatar.dna[position] = value,
-			ByteType::High => {
+			ByteType::High =>
 				avatar.dna[position] =
-					(avatar.dna[position] & (ByteType::High as u8)) | (value << 4)
-			},
-			ByteType::Low => {
-				avatar.dna[position] = (avatar.dna[position] & (ByteType::Low as u8))
-					| (value & (ByteType::High as u8))
-			},
+					(avatar.dna[position] & (ByteType::High as u8)) | (value << 4),
+			ByteType::Low =>
+				avatar.dna[position] = (avatar.dna[position] & (ByteType::Low as u8)) |
+					(value & (ByteType::High as u8)),
 		}
 	}
 
@@ -878,13 +876,11 @@ impl DnaUtils {
 	fn write_at(dna: &mut [u8], position: usize, byte_type: ByteType, value: u8) {
 		match byte_type {
 			ByteType::Full => dna[position] = value,
-			ByteType::High => {
-				dna[position] = (dna[position] & (ByteType::High as u8)) | (value << 4)
-			},
-			ByteType::Low => {
+			ByteType::High =>
+				dna[position] = (dna[position] & (ByteType::High as u8)) | (value << 4),
+			ByteType::Low =>
 				dna[position] =
-					(dna[position] & (ByteType::Low as u8)) | (value & (ByteType::High as u8))
-			},
+					(dna[position] & (ByteType::Low as u8)) | (value & (ByteType::High as u8)),
 		}
 	}
 
@@ -1043,8 +1039,8 @@ impl DnaUtils {
 			let is_maxed = rarity_1 > lowest_1;
 			let byte_match = Self::match_progress_byte(variation_1, variation_2);
 
-			if have_same_rarity
-				&& !is_maxed && (rarity_1 < rarity_level || variation_2 == 0x0B || byte_match)
+			if have_same_rarity &&
+				!is_maxed && (rarity_1 < rarity_level || variation_2 == 0x0B || byte_match)
 			{
 				matches.push(i as u32);
 			} else if is_maxed && ((variation_1 == variation_2) || variation_2 == 0x0B) {
