@@ -34,7 +34,7 @@ impl<T: Config> SlotRoller<T> {
 
 			if roll == 0 {
 				item_rolled = slot_item.clone();
-				break
+				break;
 			}
 		}
 

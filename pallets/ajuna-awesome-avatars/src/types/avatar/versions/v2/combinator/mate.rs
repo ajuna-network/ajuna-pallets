@@ -18,7 +18,7 @@ impl<T: Config> AvatarCombinator<T> {
 					.into_iter()
 					.map(|(id, sacrifice)| ForgeOutput::Forged((id, sacrifice.unwrap()), 0))
 					.collect(),
-			))
+			));
 		}
 
 		let (leader_id, mut leader) = input_leader;

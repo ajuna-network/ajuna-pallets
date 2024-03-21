@@ -55,7 +55,7 @@ impl WrappedAvatar {
 		let current_qty = self.get_quantity();
 
 		if current_qty < quantity {
-			return (false, false, 0)
+			return (false, false, 0);
 		}
 
 		let new_qty = current_qty - quantity;
@@ -647,7 +647,7 @@ impl AvatarBuilder {
 		hash_provider: &mut HashProvider<T, 32>,
 	) -> Result<Self, ()> {
 		if equippable_type.is_empty() || equippable_type.iter().any(|equip| !equip.is_armor()) {
-			return Err(())
+			return Err(());
 		}
 
 		let (armor_assemble_progress, color_flag) = {
@@ -706,7 +706,7 @@ impl AvatarBuilder {
 		hash_provider: &mut HashProvider<T, 32>,
 	) -> Result<Self, ()> {
 		if !equippable_type.is_weapon() {
-			return Err(())
+			return Err(());
 		}
 
 		let (weapon_info, color_flag) = {
@@ -1025,7 +1025,7 @@ impl DnaUtils {
 		let lowest_2 = Self::lowest_progress_byte(&array_2, ByteType::High);
 
 		if lowest_1 > lowest_2 {
-			return (mirrors, matches)
+			return (mirrors, matches);
 		}
 
 		for i in 0..array_1.len() {
