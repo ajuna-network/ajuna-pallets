@@ -92,7 +92,7 @@ pub mod pallet {
 		type EntityId: Member + Parameter + MaxEncodedLen + PartialOrd + Ord;
 
 		/// The ranked entities type
-		type RankedEntity: Member + Parameter + MaxEncodedLen + PartialOrd + Ord;
+		type RankedEntity: Member + Parameter + MaxEncodedLen;
 
 		/// Minimum duration of the tournament active and claim periods in blocks.
 		#[pallet::constant]
