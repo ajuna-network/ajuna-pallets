@@ -2,8 +2,14 @@ use super::{TournamentConfig, TournamentId};
 use sp_runtime::{traits::Member, DispatchError, DispatchResult};
 
 pub trait EntityRank {
+	type EntityId: Member + PartialOrd + Ord;
 	type Entity: Member + PartialOrd + Ord;
-	fn rank_against(&self, entity: &Self::Entity, other: &Self::Entity) -> sp_std::cmp::Ordering;
+
+	fn rank_against(
+		&self,
+		entity: (&Self::EntityId, &Self::Entity),
+		other: (&Self::EntityId, &Self::Entity),
+	) -> sp_std::cmp::Ordering;
 }
 
 pub trait TournamentInspector<SeasonId, BlockNumber, Balance, AccountId> {
@@ -27,11 +33,12 @@ pub trait TournamentMutator<AccountId, SeasonId, BlockNumber, Balance> {
 pub trait TournamentRanker<SeasonId, Entity, EntityId> {
 	fn try_rank_entity_in_tournament_for<R>(
 		season_id: &SeasonId,
+		entity_id: &EntityId,
 		entity: &Entity,
 		ranker: &R,
 	) -> DispatchResult
 	where
-		R: EntityRank<Entity = Entity>;
+		R: EntityRank<EntityId = EntityId, Entity = Entity>;
 
 	fn try_rank_entity_for_golden_duck(
 		season_id: &SeasonId,
@@ -41,11 +48,11 @@ pub trait TournamentRanker<SeasonId, Entity, EntityId> {
 		EntityId: Member + PartialOrd + Ord;
 }
 
-pub trait TournamentClaimer<SeasonId, AccountId, Entity, EntityId> {
+pub trait TournamentClaimer<SeasonId, AccountId, EntityId> {
 	fn try_claim_tournament_reward_for(
 		season_id: &SeasonId,
 		account: &AccountId,
-		entity: &Entity,
+		entity_id: &EntityId,
 	) -> DispatchResult;
 
 	fn try_claim_golden_duck_for(

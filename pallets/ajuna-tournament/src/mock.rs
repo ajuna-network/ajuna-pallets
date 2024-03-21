@@ -111,10 +111,19 @@ pub type MockEntity = u32;
 pub struct MockRanker;
 
 impl EntityRank for MockRanker {
+	type EntityId = MockEntityId;
 	type Entity = MockEntity;
 
-	fn rank_against(&self, entity: &Self::Entity, other: &Self::Entity) -> Ordering {
-		entity.cmp(other)
+	fn rank_against(
+		&self,
+		entity: (&Self::EntityId, &Self::Entity),
+		other: (&Self::EntityId, &Self::Entity),
+	) -> Ordering {
+		if entity.0.cmp(other.0) == Ordering::Equal {
+			Ordering::Equal
+		} else {
+			entity.1.cmp(other.1)
+		}
 	}
 }
 

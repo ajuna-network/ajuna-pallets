@@ -396,37 +396,37 @@ mod tournament_ranker {
 
 			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 				&SEASON_ID_1,
+				&H256::from_low_u64_be(7),
 				&10_u32,
 				&MockRanker
 			));
 
-			assert_eq!(
-				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-				RankingTableFor::<Test, Instance1>::try_from(vec![10])
-					.expect("Should build player_table")
-			);
-
-			let rankings: [MockEntity; 5] = [5, 12, 3, 50, 17];
-
-			for entity in rankings {
-				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
-					&SEASON_ID_1,
-					&entity,
-					&MockRanker
-				));
-			}
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::EntityEnteredRanking {
+					season_id: SEASON_ID_1,
+					tournament_id,
+					entity_id: H256::from_low_u64_be(7),
+				},
+			));
 
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-				RankingTableFor::<Test, Instance1>::try_from(vec![50, 17, 12, 10, 5, 3])
+				RankingTableFor::<Test, Instance1>::try_from(vec![(H256::from_low_u64_be(7), 10)])
 					.expect("Should build player_table")
 			);
 
-			let rankings: [MockEntity; 6] = [70, 80, 1, 25, 35, 9];
+			let rankings: [(MockEntityId, MockEntity); 5] = [
+				(H256::from_low_u64_be(1), 5),
+				(H256::from_low_u64_be(2), 12),
+				(H256::from_low_u64_be(3), 3),
+				(H256::from_low_u64_be(4), 50),
+				(H256::from_low_u64_be(5), 17),
+			];
 
-			for entity in rankings {
+			for (entity_id, entity) in rankings {
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&entity_id,
 					&entity,
 					&MockRanker
 				));
@@ -435,7 +435,47 @@ mod tournament_ranker {
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
 				RankingTableFor::<Test, Instance1>::try_from(vec![
-					80, 70, 50, 35, 25, 17, 12, 10, 9, 5,
+					(H256::from_low_u64_be(4), 50),
+					(H256::from_low_u64_be(5), 17),
+					(H256::from_low_u64_be(2), 12),
+					(H256::from_low_u64_be(7), 10),
+					(H256::from_low_u64_be(1), 5),
+					(H256::from_low_u64_be(3), 3)
+				])
+				.expect("Should build player_table")
+			);
+
+			let rankings: [(MockEntityId, MockEntity); 6] = [
+				(H256::from_low_u64_be(14), 70),
+				(H256::from_low_u64_be(11), 80),
+				(H256::from_low_u64_be(23), 1),
+				(H256::from_low_u64_be(156), 25),
+				(H256::from_low_u64_be(67), 35),
+				(H256::from_low_u64_be(9), 9),
+			];
+
+			for (entity_id, entity) in rankings {
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&entity_id,
+					&entity,
+					&MockRanker
+				));
+			}
+
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				RankingTableFor::<Test, Instance1>::try_from(vec![
+					(H256::from_low_u64_be(11), 80),
+					(H256::from_low_u64_be(14), 70),
+					(H256::from_low_u64_be(4), 50),
+					(H256::from_low_u64_be(67), 35),
+					(H256::from_low_u64_be(156), 25),
+					(H256::from_low_u64_be(5), 17),
+					(H256::from_low_u64_be(2), 12),
+					(H256::from_low_u64_be(7), 10),
+					(H256::from_low_u64_be(9), 9),
+					(H256::from_low_u64_be(1), 5)
 				])
 				.expect("Should build player_table")
 			);
@@ -448,6 +488,7 @@ mod tournament_ranker {
 			assert_noop!(
 				TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&H256::from_low_u64_be(3),
 					&10_u32,
 					&MockRanker
 				),
@@ -490,11 +531,13 @@ mod tournament_claimer {
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&H256::from_low_u64_be(3),
 					&10_u32,
 					&MockRanker
 				));
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&H256::from_low_u64_be(7),
 					&15_u32,
 					&MockRanker
 				));
@@ -502,6 +545,14 @@ mod tournament_claimer {
 				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
 					&SEASON_ID_1,
 					&H256::from_low_u64_be(10),
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::EntityBecameGoldenDuck {
+						season_id: SEASON_ID_1,
+						tournament_id,
+						entity_id: H256::from_low_u64_be(10),
+					},
 				));
 
 				assert_eq!(Balances::free_balance(tournament_account), 100);
@@ -519,20 +570,41 @@ mod tournament_claimer {
 
 				assert_eq!(
 					TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-					RankingTableFor::<Test, Instance1>::try_from(vec![15, 10])
-						.expect("Should build player_table")
+					RankingTableFor::<Test, Instance1>::try_from(vec![
+						(H256::from_low_u64_be(7), 15),
+						(H256::from_low_u64_be(3), 10)
+					])
+					.expect("Should build player_table")
 				);
 
 				assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 					&SEASON_ID_1,
 					&ALICE,
-					&10_u32
+					&H256::from_low_u64_be(3),
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::RankingRewardClaimed {
+						season_id: SEASON_ID_1,
+						tournament_id,
+						entity_id: H256::from_low_u64_be(3),
+						account: ALICE,
+					},
 				));
 
 				assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 					&SEASON_ID_1,
 					&BOB,
-					&15_u32
+					&H256::from_low_u64_be(7),
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::RankingRewardClaimed {
+						season_id: SEASON_ID_1,
+						tournament_id,
+						entity_id: H256::from_low_u64_be(7),
+						account: BOB,
+					},
 				));
 
 				assert_eq!(Balances::free_balance(tournament_account), 20);
@@ -543,6 +615,15 @@ mod tournament_claimer {
 					&SEASON_ID_1,
 					&ALICE,
 					&H256::from_low_u64_be(10),
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::GoldenDuckRewardClaimed {
+						season_id: SEASON_ID_1,
+						tournament_id,
+						entity_id: H256::from_low_u64_be(10),
+						account: ALICE,
+					},
 				));
 
 				assert_eq!(Balances::free_balance(ALICE), 950);
@@ -585,12 +666,14 @@ mod tournament_claimer {
 
 			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 				&SEASON_ID_1,
+				&H256::from_low_u64_be(3),
 				&10_u32,
 				&MockRanker
 			));
 
 			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 				&SEASON_ID_1,
+				&H256::from_low_u64_be(9),
 				&15_u32,
 				&MockRanker
 			));
@@ -611,20 +694,23 @@ mod tournament_claimer {
 
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-				RankingTableFor::<Test, Instance1>::try_from(vec![15, 10])
-					.expect("Should build player_table")
+				RankingTableFor::<Test, Instance1>::try_from(vec![
+					(H256::from_low_u64_be(9), 15),
+					(H256::from_low_u64_be(3), 10)
+				])
+				.expect("Should build player_table")
 			);
 
 			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 				&SEASON_ID_1,
 				&ALICE,
-				&10_u32
+				&H256::from_low_u64_be(3),
 			));
 
 			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 				&SEASON_ID_1,
 				&BOB,
-				&15_u32
+				&H256::from_low_u64_be(9),
 			));
 
 			assert_eq!(Balances::free_balance(tournament_account), 340);
@@ -670,11 +756,13 @@ mod tournament_claimer {
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&H256::from_low_u64_be(3),
 					&10_u32,
 					&MockRanker
 				));
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&H256::from_low_u64_be(6),
 					&15_u32,
 					&MockRanker
 				));
@@ -686,7 +774,11 @@ mod tournament_claimer {
 
 				// Trying to claim reward while still in active state
 				assert_noop!(
-					TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &ALICE, &10_u32),
+					TournamentAlpha::try_claim_tournament_reward_for(
+						&SEASON_ID_1,
+						&ALICE,
+						&H256::from_low_u64_be(3)
+					),
 					Error::<Test, Instance1>::TournamentNotInClaimPeriod
 				);
 
@@ -714,9 +806,13 @@ mod tournament_claimer {
 					crate::Event::TournamentEnded { season_id: SEASON_ID_1, tournament_id },
 				));
 
-				// Trying to claim reward while still in active state
+				// Trying to claim reward when the tournament already ended
 				assert_noop!(
-					TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &ALICE, &10_u32),
+					TournamentAlpha::try_claim_tournament_reward_for(
+						&SEASON_ID_1,
+						&ALICE,
+						&H256::from_low_u64_be(3)
+					),
 					Error::<Test, Instance1>::NoActiveTournamentForSeason
 				);
 
@@ -736,13 +832,9 @@ mod tournament_claimer {
 	fn try_claim_tournament_rewards_fails_with_non_winner_entities() {
 		ExtBuilder::default().build().execute_with(|| {
 			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
-				.initial_reward(Some(100))
 				.start(10)
 				.active_end(50)
 				.claim_end(90)
-				.reward_distribution(
-					RewardDistributionTable::try_from(vec![50, 30]).expect("Should create table"),
-				)
 				.max_players(2);
 			ExtBuilder::default().build().execute_with(|| {
 				let tournament_id = {
@@ -759,11 +851,13 @@ mod tournament_claimer {
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&H256::from_low_u64_be(3),
 					&10_u32,
 					&MockRanker
 				));
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&H256::from_low_u64_be(12),
 					&15_u32,
 					&MockRanker
 				));
@@ -784,7 +878,11 @@ mod tournament_claimer {
 
 				// Trying to claim reward while still in active state
 				assert_noop!(
-					TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &ALICE, &13_u32),
+					TournamentAlpha::try_claim_tournament_reward_for(
+						&SEASON_ID_1,
+						&ALICE,
+						&H256::from_low_u64_be(45)
+					),
 					Error::<Test, Instance1>::RankingCandidateNotInWinnerTable
 				);
 
@@ -875,6 +973,7 @@ fn test_full_tournament_workflow() {
 			for (entity, entity_id) in rankings_1 {
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&entity_id,
 					&entity,
 					&MockRanker
 				));
@@ -887,8 +986,12 @@ fn test_full_tournament_workflow() {
 
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-				RankingTableFor::<Test, Instance1>::try_from(vec![120, 30, 22])
-					.expect("Should build player_table")
+				RankingTableFor::<Test, Instance1>::try_from(vec![
+					(H256::from_low_u64_be(10), 120),
+					(H256::from_low_u64_be(45), 30),
+					(H256::from_low_u64_be(3), 22)
+				])
+				.expect("Should build player_table")
 			);
 			assert_eq!(
 				GoldenDucks::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
@@ -904,6 +1007,7 @@ fn test_full_tournament_workflow() {
 			for (entity, entity_id) in rankings_2 {
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
+					&entity_id,
 					&entity,
 					&MockRanker
 				));
@@ -916,8 +1020,12 @@ fn test_full_tournament_workflow() {
 
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
-				RankingTableFor::<Test, Instance1>::try_from(vec![120, 99, 70])
-					.expect("Should build player_table")
+				RankingTableFor::<Test, Instance1>::try_from(vec![
+					(H256::from_low_u64_be(10), 120),
+					(H256::from_low_u64_be(26), 99),
+					(H256::from_low_u64_be(71), 70)
+				])
+				.expect("Should build player_table")
 			);
 			assert_eq!(
 				GoldenDucks::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
@@ -942,24 +1050,28 @@ fn test_full_tournament_workflow() {
 			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 				&SEASON_ID_1,
 				&ALICE,
-				&120_u32
+				&H256::from_low_u64_be(10)
 			));
 
 			assert_noop!(
-				TournamentAlpha::try_claim_tournament_reward_for(&SEASON_ID_1, &BOB, &30_u32),
+				TournamentAlpha::try_claim_tournament_reward_for(
+					&SEASON_ID_1,
+					&BOB,
+					&H256::from_low_u64_be(45)
+				),
 				Error::<Test, Instance1>::RankingCandidateNotInWinnerTable
 			);
 
 			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 				&SEASON_ID_1,
 				&CHARLIE,
-				&99_u32
+				&H256::from_low_u64_be(26)
 			));
 
 			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 				&SEASON_ID_1,
 				&DAVE,
-				&70_u32
+				&H256::from_low_u64_be(71)
 			));
 
 			assert_eq!(Balances::free_balance(tournament_account), 210);

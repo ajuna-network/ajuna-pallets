@@ -55,7 +55,8 @@ pub mod pallet {
 	pub(crate) type TournamentScheduledActionFor<T, I> =
 		TournamentScheduledAction<<T as Config<I>>::SeasonId>;
 	pub type TournamentConfigFor<T, I> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T, I>>;
-	pub(crate) type RankingTableFor<T, I> = RankingTable<<T as Config<I>>::RankedEntity>;
+	pub(crate) type RankingTableFor<T, I> =
+		RankingTable<(<T as Config<I>>::EntityId, <T as Config<I>>::RankedEntity)>;
 	pub(crate) type TournamentStateFor<T, I> = TournamentState<BalanceOf<T, I>>;
 	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
 
@@ -154,10 +155,44 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
-		TournamentCreated { season_id: T::SeasonId, tournament_id: TournamentId },
-		TournamentActivePeriodStarted { season_id: T::SeasonId, tournament_id: TournamentId },
-		TournamentClaimPeriodStarted { season_id: T::SeasonId, tournament_id: TournamentId },
-		TournamentEnded { season_id: T::SeasonId, tournament_id: TournamentId },
+		TournamentCreated {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+		},
+		TournamentActivePeriodStarted {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+		},
+		TournamentClaimPeriodStarted {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+		},
+		TournamentEnded {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+		},
+		EntityEnteredRanking {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+			entity_id: T::EntityId,
+		},
+		EntityBecameGoldenDuck {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+			entity_id: T::EntityId,
+		},
+		RankingRewardClaimed {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+			entity_id: T::EntityId,
+			account: AccountIdFor<T>,
+		},
+		GoldenDuckRewardClaimed {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+			entity_id: T::EntityId,
+			account: AccountIdFor<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -354,18 +389,22 @@ pub mod pallet {
 			table: &mut RankingTableFor<T, I>,
 			tournament_config: &TournamentConfigFor<T, I>,
 			index: usize,
+			entity_id: &T::EntityId,
 			entity: &T::RankedEntity,
-		) -> DispatchResult {
+		) -> Option<bool> {
 			if index < tournament_config.max_players as usize {
 				if table.len() == tournament_config.max_players as usize {
 					let _ = table.pop();
 				}
-				table
-					.force_insert_keep_left(index, entity.clone())
-					.map(|_| ())
-					.map_err(|_| Error::<T, I>::FailedToRankEntity.into())
+
+				if table.force_insert_keep_left(index, (entity_id.clone(), entity.clone())).is_ok()
+				{
+					Some(true)
+				} else {
+					Some(false)
+				}
 			} else {
-				Ok(())
+				None
 			}
 		}
 
@@ -536,21 +575,41 @@ pub mod pallet {
 	{
 		fn try_rank_entity_in_tournament_for<R>(
 			season_id: &T::SeasonId,
+			entity_id: &T::EntityId,
 			entity: &T::RankedEntity,
 			ranker: &R,
 		) -> DispatchResult
 		where
-			R: EntityRank<Entity = T::RankedEntity>,
+			R: EntityRank<EntityId = T::EntityId, Entity = T::RankedEntity>,
 		{
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 			let tournament_config = Self::get_active_tournament_config_for(season_id)
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
 
 			TournamentRankings::<T, I>::mutate(season_id, tournament_id, |table| {
-				if let Err(index) =
-					table.binary_search_by(|other| ranker.rank_against(entity, other))
-				{
-					Self::try_update_rank_table(table, &tournament_config, index, entity)
+				if let Err(index) = table.binary_search_by(|(other_id, other)| {
+					ranker.rank_against((entity_id, entity), (other_id, other))
+				}) {
+					match Self::try_update_rank_table(
+						table,
+						&tournament_config,
+						index,
+						entity_id,
+						entity,
+					) {
+						None => Ok(()),
+						Some(true) => {
+							Self::deposit_event(
+								crate::pallet::Event::<T, I>::EntityEnteredRanking {
+									season_id: *season_id,
+									tournament_id,
+									entity_id: entity_id.clone(),
+								},
+							);
+							Ok(())
+						},
+						Some(false) => Err(Error::<T, I>::FailedToRankEntity.into()),
+					}
 				} else {
 					Ok(())
 				}
@@ -566,11 +625,23 @@ pub mod pallet {
 			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| match state {
 				GoldenDuckState::Enabled(payout_perc, None) => {
 					*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
+
+					Self::deposit_event(crate::pallet::Event::<T, I>::EntityBecameGoldenDuck {
+						season_id: *season_id,
+						tournament_id,
+						entity_id: entity_id.clone(),
+					});
 				},
 				GoldenDuckState::Enabled(payout_perc, Some(ref entry_id))
 					if entity_id < entry_id =>
 				{
 					*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
+
+					Self::deposit_event(crate::pallet::Event::<T, I>::EntityBecameGoldenDuck {
+						season_id: *season_id,
+						tournament_id,
+						entity_id: entity_id.clone(),
+					});
 				},
 				_ => {},
 			});
@@ -579,13 +650,13 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config<I>, I: 'static>
-		TournamentClaimer<T::SeasonId, AccountIdFor<T>, T::RankedEntity, T::EntityId> for Pallet<T, I>
+	impl<T: Config<I>, I: 'static> TournamentClaimer<T::SeasonId, AccountIdFor<T>, T::EntityId>
+		for Pallet<T, I>
 	{
 		fn try_claim_tournament_reward_for(
 			season_id: &T::SeasonId,
 			account: &AccountIdFor<T>,
-			entity: &T::RankedEntity,
+			entity_id: &T::EntityId,
 		) -> DispatchResult {
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
@@ -594,7 +665,7 @@ pub mod pallet {
 				TournamentState::ClaimPeriod(tournament_id, reward_pot) => {
 					if let Some(index) = TournamentRankings::<T, I>::get(season_id, tournament_id)
 						.iter()
-						.position(|entry| entry == entity)
+						.position(|(entry_id, _)| entry_id == entity_id)
 					{
 						let tournament_config = Tournaments::<T, I>::get(season_id, tournament_id)
 							.ok_or(Error::<T, I>::TournamentNotFound)?;
@@ -619,6 +690,13 @@ pub mod pallet {
 								ExistenceRequirement::AllowDeath,
 							)?;
 						}
+
+						Self::deposit_event(crate::pallet::Event::<T, I>::RankingRewardClaimed {
+							season_id: *season_id,
+							tournament_id,
+							entity_id: entity_id.clone(),
+							account: account.clone(),
+						});
 
 						Ok(())
 					} else {
@@ -655,6 +733,15 @@ pub mod pallet {
 								account_payout,
 								ExistenceRequirement::AllowDeath,
 							)?;
+
+							Self::deposit_event(
+								crate::pallet::Event::<T, I>::GoldenDuckRewardClaimed {
+									season_id: *season_id,
+									tournament_id,
+									entity_id: entity_id.clone(),
+									account: account.clone(),
+								},
+							);
 
 							Ok(())
 						},
