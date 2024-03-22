@@ -17,10 +17,12 @@
 mod force;
 mod nft;
 mod rarity_tier;
+mod tournament;
 mod versions;
 
 pub use force::*;
 pub use rarity_tier::*;
+pub use tournament::*;
 pub(crate) use versions::*;
 
 use frame_support::pallet_prelude::*;
@@ -47,14 +49,14 @@ pub enum LogicGeneration {
 }
 
 /// Used to indicate the layout of an avatars DNA byte sequence.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
 pub enum DnaEncoding {
 	#[default]
 	V1,
 	V2,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Avatar {
 	pub season_id: SeasonId,
 	pub encoding: DnaEncoding,
