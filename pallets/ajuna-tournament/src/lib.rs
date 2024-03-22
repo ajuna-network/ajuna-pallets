@@ -96,7 +96,7 @@ pub mod pallet {
 
 		/// Minimum duration of the tournament active and claim periods in blocks.
 		#[pallet::constant]
-		type MinimumTournamentDuration: Get<BlockNumberFor<Self>>;
+		type MinimumTournamentPhaseDuration: Get<BlockNumberFor<Self>>;
 	}
 
 	#[pallet::storage]
@@ -123,11 +123,6 @@ pub mod pallet {
 	#[pallet::getter(fn active_tournaments)]
 	pub type ActiveTournaments<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, T::SeasonId, TournamentStateFor<T, I>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn latest_tournaments)]
-	pub type LatestTournaments<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Identity, T::SeasonId, TournamentId, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn rankings)]
@@ -225,24 +220,21 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
 		fn on_initialize(now: BlockNumberFor<T>) -> Weight {
-			let weight = T::DbWeight::get().reads(1);
+			let mut weight = T::DbWeight::get().reads(1);
 
 			if let Some(action) = TournamentSchedules::<T, I>::take(now) {
-				weight +
-					match action {
-						TournamentScheduledAction::StartActivePhase(season_id, tournament_id) =>
-							Self::try_start_next_tournament_for(season_id, tournament_id),
-						TournamentScheduledAction::SwitchToClaimPhase(season_id, tournament_id) =>
-							Self::try_switch_tournament_to_claim_period_for(
-								season_id,
-								tournament_id,
-							),
-						TournamentScheduledAction::EndClaimPhase(season_id, tournament_id) =>
-							Self::try_finish_tournament_claim_period_for(season_id, tournament_id),
-					}
-			} else {
-				weight
-			}
+				let w = match action {
+					TournamentScheduledAction::StartActivePhase(season_id, tournament_id) =>
+						Self::try_start_next_tournament_for(season_id, tournament_id),
+					TournamentScheduledAction::SwitchToClaimPhase(season_id, tournament_id) =>
+						Self::try_switch_tournament_to_claim_period_for(season_id, tournament_id),
+					TournamentScheduledAction::EndClaimPhase(season_id, tournament_id) =>
+						Self::try_finish_tournament_claim_period_for(season_id, tournament_id),
+				};
+				weight.saturating_accrue(w);
+			};
+
+			weight
 		}
 	}
 
@@ -265,12 +257,12 @@ pub mod pallet {
 
 			ensure!(
 				config.active_end.saturating_sub(config.start) >=
-					T::MinimumTournamentDuration::get(),
+					T::MinimumTournamentPhaseDuration::get(),
 				Error::<T, I>::InvalidTournamentConfig
 			);
 			ensure!(
 				config.claim_end.saturating_sub(config.active_end) >=
-					T::MinimumTournamentDuration::get(),
+					T::MinimumTournamentPhaseDuration::get(),
 				Error::<T, I>::InvalidTournamentConfig
 			);
 
@@ -475,7 +467,6 @@ pub mod pallet {
 					return T::DbWeight::get().reads(1)
 				}
 
-				LatestTournaments::<T, I>::insert(season_id, tournament_id);
 				ActiveTournaments::<T, I>::mutate(season_id, |state| {
 					*state = TournamentState::Inactive
 				});

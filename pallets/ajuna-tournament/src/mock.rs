@@ -130,7 +130,7 @@ impl EntityRank for MockRanker {
 parameter_types! {
 	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
 	pub const TournamentPalletId2: PalletId = PalletId(*b"aj/trmt2");
-	pub const MinimumTournamentDuration: MockBlockNumber = 2;
+	pub const MinimumTournamentPhaseDuration: MockBlockNumber = 2;
 }
 
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
@@ -141,7 +141,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type SeasonId = MockSeasonId;
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
-	type MinimumTournamentDuration = MinimumTournamentDuration;
+	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
@@ -152,7 +152,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type SeasonId = MockSeasonId;
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
-	type MinimumTournamentDuration = MinimumTournamentDuration;
+	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 
 pub struct ExtBuilder {

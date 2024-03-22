@@ -256,10 +256,10 @@ mod tournament_mutator {
 				Error::<Test, Instance1>::InvalidTournamentConfig
 			);
 
-			let min_duration = MinimumTournamentDuration::get().saturating_sub(1);
+			let min_duration = MinimumTournamentPhaseDuration::get().saturating_sub(1);
 
 			// The amount of blocks between start and end should be greater or equal than
-			// 'MinimumTournamentDuration'
+			// 'MinimumTournamentPhaseDuration'
 			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
 				.start(10)
 				.active_end(10 + min_duration);
@@ -269,7 +269,7 @@ mod tournament_mutator {
 			);
 
 			// The amount of blocks between end and claim_end should be greater or equal than
-			// 'MinimumTournamentDuration'
+			// 'MinimumTournamentPhaseDuration'
 			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
 				.start(5)
 				.active_end(10)
@@ -957,7 +957,6 @@ fn test_full_tournament_workflow() {
 				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
 				TournamentState::ActivePeriod(tournament_id)
 			);
-			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
 			assert_eq!(
 				TournamentAlpha::get_active_tournament_config_for(&SEASON_ID_1),
 				Some(tournament_config)
@@ -1045,7 +1044,6 @@ fn test_full_tournament_workflow() {
 				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
 				TournamentState::ClaimPeriod(tournament_id, 120)
 			);
-			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), None);
 
 			assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 				&SEASON_ID_1,
@@ -1113,6 +1111,5 @@ fn test_full_tournament_workflow() {
 				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
 				TournamentState::Inactive
 			);
-			assert_eq!(LatestTournaments::<Test, Instance1>::get(SEASON_ID_1), Some(tournament_id));
 		});
 }
