@@ -589,31 +589,42 @@ pub mod pallet {
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
 
 			TournamentRankings::<T, I>::mutate(season_id, tournament_id, |table| {
-				if let Err(index) = table.binary_search_by(|(other_id, other)| {
+				match table.binary_search_by(|(other_id, other)| {
 					ranker.rank_against((entity_id, entity), (other_id, other))
 				}) {
-					match Self::try_update_rank_table(
-						table,
-						&tournament_config,
-						index,
-						entity_id,
-						entity,
-					) {
-						None => Ok(()),
-						Some(true) => {
-							Self::deposit_event(
-								crate::pallet::Event::<T, I>::EntityEnteredRanking {
-									season_id: *season_id,
-									tournament_id,
-									entity_id: entity_id.clone(),
-								},
-							);
-							Ok(())
-						},
-						Some(false) => Err(Error::<T, I>::FailedToRankEntity.into()),
-					}
-				} else {
-					Ok(())
+					// The entity is already in the ranking table,
+					// nothing to do here
+					Ok(_) => Ok(()),
+					// The entity is not in the table,
+					// we need to check if it should be
+					// inserted or not
+					Err(index) => {
+						match Self::try_update_rank_table(
+							table,
+							&tournament_config,
+							index,
+							entity_id,
+							entity,
+						) {
+							// The entity didn't make it to the ranking
+							None => Ok(()),
+							// The entity made it to the ranking and the
+							// table has been successfully updated
+							Some(true) => {
+								Self::deposit_event(
+									crate::pallet::Event::<T, I>::EntityEnteredRanking {
+										season_id: *season_id,
+										tournament_id,
+										entity_id: entity_id.clone(),
+									},
+								);
+								Ok(())
+							},
+							// The entity made it to the ranking but the
+							// table updated failed; qed
+							Some(false) => Err(Error::<T, I>::FailedToRankEntity.into()),
+						}
+					},
 				}
 			})
 		}
@@ -624,28 +635,22 @@ pub mod pallet {
 		) -> DispatchResult {
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 
-			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| match state {
-				GoldenDuckState::Enabled(payout_perc, None) => {
-					*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
+			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| {
+				if let GoldenDuckState::Enabled(payout_perc, ref maybe_entry_id) = state {
+					match maybe_entry_id {
+						None =>
+							*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone())),
+						Some(entry_id) if entity_id < entry_id =>
+							*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone())),
+						_ => {},
+					}
 
 					Self::deposit_event(crate::pallet::Event::<T, I>::EntityBecameGoldenDuck {
 						season_id: *season_id,
 						tournament_id,
 						entity_id: entity_id.clone(),
 					});
-				},
-				GoldenDuckState::Enabled(payout_perc, Some(ref entry_id))
-					if entity_id < entry_id =>
-				{
-					*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
-
-					Self::deposit_event(crate::pallet::Event::<T, I>::EntityBecameGoldenDuck {
-						season_id: *season_id,
-						tournament_id,
-						entity_id: entity_id.clone(),
-					});
-				},
-				_ => {},
+				}
 			});
 
 			Ok(())
@@ -665,45 +670,43 @@ pub mod pallet {
 				TournamentState::ActivePeriod(_) =>
 					Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 				TournamentState::ClaimPeriod(tournament_id, reward_pot) => {
-					if let Some(index) = TournamentRankings::<T, I>::get(season_id, tournament_id)
+					let index = TournamentRankings::<T, I>::get(season_id, tournament_id)
 						.iter()
 						.position(|(entry_id, _)| entry_id == entity_id)
-					{
-						let tournament_config = Tournaments::<T, I>::get(season_id, tournament_id)
-							.ok_or(Error::<T, I>::TournamentNotFound)?;
-						let treasury_account = Self::tournament_treasury_account_id(*season_id);
+						.ok_or(Error::<T, I>::RankingCandidateNotInWinnerTable)?;
 
-						let payout_percentage = tournament_config
-							.reward_distribution
-							.into_iter()
-							.nth(index)
-							.unwrap_or_default();
+					let tournament_config = Tournaments::<T, I>::get(season_id, tournament_id)
+						.ok_or(Error::<T, I>::TournamentNotFound)?;
+					let treasury_account = Self::tournament_treasury_account_id(*season_id);
 
-						let account_payout = reward_pot
-							.saturating_mul(payout_percentage.into())
-							.checked_div(&100_u32.into())
-							.unwrap_or_default();
+					let payout_percentage = tournament_config
+						.reward_distribution
+						.get(index)
+						.copied()
+						.unwrap_or_default();
 
-						if account_payout > 0_u32.into() {
-							T::Currency::transfer(
-								&treasury_account,
-								account,
-								account_payout,
-								ExistenceRequirement::AllowDeath,
-							)?;
-						}
+					let account_payout = reward_pot
+						.saturating_mul(payout_percentage.into())
+						.checked_div(&100_u32.into())
+						.unwrap_or_default();
 
-						Self::deposit_event(crate::pallet::Event::<T, I>::RankingRewardClaimed {
-							season_id: *season_id,
-							tournament_id,
-							entity_id: entity_id.clone(),
-							account: account.clone(),
-						});
-
-						Ok(())
-					} else {
-						Err(Error::<T, I>::RankingCandidateNotInWinnerTable.into())
+					if account_payout > 0_u32.into() {
+						T::Currency::transfer(
+							&treasury_account,
+							account,
+							account_payout,
+							ExistenceRequirement::AllowDeath,
+						)?;
 					}
+
+					Self::deposit_event(crate::pallet::Event::<T, I>::RankingRewardClaimed {
+						season_id: *season_id,
+						tournament_id,
+						entity_id: entity_id.clone(),
+						account: account.clone(),
+					});
+
+					Ok(())
 				},
 			}
 		}
