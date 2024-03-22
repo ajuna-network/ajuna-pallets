@@ -1465,8 +1465,8 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(30)]
-		#[pallet::weight({1000})]
-		pub fn try_create_tournament(
+		#[pallet::weight({10_000})]
+		pub fn create_tournament(
 			origin: OriginFor<T>,
 			season_id: SeasonId,
 			config: TournamentConfigFor<T>,
@@ -1485,8 +1485,8 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(31)]
-		#[pallet::weight({1000})]
-		pub fn try_claim_tournament_reward_for(
+		#[pallet::weight({10_000})]
+		pub fn claim_tournament_reward_for(
 			origin: OriginFor<T>,
 			season_id: SeasonId,
 			avatar_id: AvatarIdOf<T>,
@@ -1496,8 +1496,8 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(32)]
-		#[pallet::weight({1000})]
-		pub fn try_claim_golden_duck_for(
+		#[pallet::weight({10_000})]
+		pub fn claim_golden_duck_for(
 			origin: OriginFor<T>,
 			season_id: SeasonId,
 			avatar_id: AvatarIdOf<T>,
