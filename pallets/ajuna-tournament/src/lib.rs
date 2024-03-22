@@ -35,6 +35,8 @@ use account::*;
 pub use config::*;
 pub use traits::*;
 
+const LOG_TARGET: &str = "runtime::ajuna-tournament";
+
 pub const MAX_PLAYERS: u32 = 10;
 
 pub type TournamentId = u32;
@@ -293,6 +295,8 @@ pub mod pallet {
 				ensure!(fee_perc <= 100, Error::<T, I>::InvalidTournamentConfig);
 			}
 
+			// Because the entries in the 'reward_distribution' table are u8, by upcasting them to
+			// u16 before folding them together, we can avoid any potential overflows
 			let reward_table_total_dist =
 				config.reward_distribution.iter().fold(0_u16, |a, b| a + (*b as u16));
 			let golden_duck_dist = match config.golden_duck_config {
@@ -409,6 +413,7 @@ pub mod pallet {
 				let current_block = <frame_system::Pallet<T>>::block_number();
 
 				if tournament_config.start > current_block {
+					log::error!(target: LOG_TARGET, "Tried to start a tournament in the incorrect block!");
 					return T::DbWeight::get().reads(1)
 				}
 
@@ -424,6 +429,7 @@ pub mod pallet {
 
 				T::DbWeight::get().reads_writes(1, 1)
 			} else {
+				log::error!(target: LOG_TARGET, "Tried to start a tournament with missing config!");
 				T::DbWeight::get().reads(1)
 			}
 		}
@@ -436,6 +442,7 @@ pub mod pallet {
 
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
 				if tournament_config.active_end > current_block {
+					log::error!(target: LOG_TARGET, "Tried to switch to claim a tournament in the incorrect block!");
 					return T::DbWeight::get().reads(1)
 				}
 
@@ -452,6 +459,7 @@ pub mod pallet {
 
 				T::DbWeight::get().reads_writes(1, 1)
 			} else {
+				log::error!(target: LOG_TARGET, "Tried to switch a tournament to claim phase with missing config!");
 				T::DbWeight::get().reads(1)
 			}
 		}
@@ -464,6 +472,7 @@ pub mod pallet {
 
 			if let Some(tournament_config) = Tournaments::<T, I>::get(season_id, tournament_id) {
 				if tournament_config.claim_end > current_block {
+					log::error!(target: LOG_TARGET, "Tried to finish a tournament in the incorrect block!");
 					return T::DbWeight::get().reads(1)
 				}
 
@@ -475,7 +484,8 @@ pub mod pallet {
 
 				T::DbWeight::get().reads_writes(1, 2)
 			} else {
-				T::DbWeight::get().reads(0)
+				log::error!(target: LOG_TARGET, "Tried to finish a tournament with missing config!");
+				T::DbWeight::get().reads(1)
 			}
 		}
 	}

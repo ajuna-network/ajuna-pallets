@@ -12,6 +12,9 @@ version.workspace    = true
 targets = [ "x86_64-unknown-linux-gnu" ]
 
 [dependencies]
+# General
+log = { workspace = true }
+
 # Substrate (wasm)
 frame-support      = { workspace = true }
 frame-system       = { workspace = true }
