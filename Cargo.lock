@@ -2151,7 +2151,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "pallet-ajuna-affiliates"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2165,7 +2165,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-awesome-avatars"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2187,7 +2187,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-awesome-avatars-benchmarking"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2211,7 +2211,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-battle-mogs"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2228,7 +2228,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-nft-staking"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2244,7 +2244,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-nft-staking-benchmarking"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2263,7 +2263,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-nft-transfer"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2278,7 +2278,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-tournament"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
