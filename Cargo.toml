@@ -29,6 +29,7 @@ frame-system                               = { git = "https://github.com/parityt
 pallet-balances                            = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 pallet-nfts                                = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
+sp-arithmetic                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 sp-core                                    = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 sp-io                                      = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 sp-runtime                                 = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
@@ -41,3 +42,4 @@ pallet-ajuna-battle-mogs                  = { path = "pallets/ajuna-battle-mogs"
 pallet-ajuna-awesome-avatars-benchmarking = { path = "pallets/ajuna-awesome-avatars/benchmarking", default-features = false }
 pallet-ajuna-nft-transfer                 = { path = "pallets/ajuna-nft-transfer", default-features = false }
 pallet-ajuna-nft-staking                  = { path = "pallets/ajuna-nft-staking", default-features = false }
+pallet-ajuna-tournament                   = { path = "pallets/ajuna-tournament", default-features = false }

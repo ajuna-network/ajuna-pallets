@@ -101,8 +101,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T, I = ()> {
-		/// There is no account set as the organizer
-		OrganizerNotSet,
 		/// An account cannot affiliate itself
 		CannotAffiliateSelf,
 		/// The account is not allowed to receive affiliates
