@@ -1,6 +1,7 @@
 use frame_support::PalletId;
 use parity_scale_codec::{Decode, Encode, Error, Input};
 use sp_runtime::TypeId;
+use sp_std::vec::Vec;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct TournamentTreasuryAccount<SeasonId> {
