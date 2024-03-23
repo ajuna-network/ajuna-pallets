@@ -406,7 +406,7 @@ mod tournament_ranker {
 					season_id: SEASON_ID_1,
 					tournament_id,
 					entity_id: H256::from_low_u64_be(7),
-					rank: 10_u32,
+					rank: 0_u32,
 				},
 			));
 
