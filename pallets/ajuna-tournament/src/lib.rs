@@ -40,6 +40,7 @@ const LOG_TARGET: &str = "runtime::ajuna-tournament";
 pub const MAX_PLAYERS: u32 = 10;
 
 pub type TournamentId = u32;
+pub type Rank = u32;
 pub type RankingTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
 
 #[frame_support::pallet]
@@ -48,7 +49,7 @@ pub mod pallet {
 	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_arithmetic::traits::AtLeast16BitUnsigned;
 	use sp_runtime::{
-		traits::{AccountIdConversion, CheckedDiv},
+		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
 		Saturating,
 	};
 
@@ -173,6 +174,7 @@ pub mod pallet {
 			season_id: T::SeasonId,
 			tournament_id: TournamentId,
 			entity_id: T::EntityId,
+			rank: Rank,
 		},
 		EntityBecameGoldenDuck {
 			season_id: T::SeasonId,
@@ -388,20 +390,18 @@ pub mod pallet {
 			index: usize,
 			entity_id: &T::EntityId,
 			entity: &T::RankedEntity,
-		) -> Option<bool> {
+		) -> Result<RankingResult, DispatchError> {
 			if index < tournament_config.max_players as usize {
 				if table.len() == tournament_config.max_players as usize {
 					let _ = table.pop();
 				}
 
-				if table.force_insert_keep_left(index, (entity_id.clone(), entity.clone())).is_ok()
-				{
-					Some(true)
-				} else {
-					Some(false)
-				}
+				table
+					.force_insert_keep_left(index, (entity_id.clone(), entity.clone()))
+					.map(|_| RankingResult::Ranked { rank: index.saturated_into() })
+					.map_err(|_| Error::<T, I>::FailedToRankEntity.into())
 			} else {
-				None
+				Ok(RankingResult::ScoreTooLow)
 			}
 		}
 
@@ -605,24 +605,22 @@ pub mod pallet {
 							index,
 							entity_id,
 							entity,
-						) {
+						)? {
 							// The entity didn't make it to the ranking
-							None => Ok(()),
+							RankingResult::ScoreTooLow => Ok(()),
 							// The entity made it to the ranking and the
 							// table has been successfully updated
-							Some(true) => {
+							RankingResult::Ranked { rank } => {
 								Self::deposit_event(
 									crate::pallet::Event::<T, I>::EntityEnteredRanking {
 										season_id: *season_id,
 										tournament_id,
 										entity_id: entity_id.clone(),
+										rank,
 									},
 								);
 								Ok(())
 							},
-							// The entity made it to the ranking but the
-							// table updated failed; qed
-							Some(false) => Err(Error::<T, I>::FailedToRankEntity.into()),
 						}
 					},
 				}
@@ -755,4 +753,13 @@ pub mod pallet {
 			}
 		}
 	}
+}
+
+/// Result of an attempt to enter the ranks.
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone)]
+pub enum RankingResult {
+	/// The entity was successfully ranked.
+	Ranked { rank: Rank },
+	/// The entity did not make it into the rankings.
+	ScoreTooLow,
 }
