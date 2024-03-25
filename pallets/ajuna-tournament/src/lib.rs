@@ -505,6 +505,14 @@ pub mod pallet {
 			}
 		}
 
+		fn get_active_tournament_period_for(season_id: &T::SeasonId) -> TournamentPeriod {
+			match ActiveTournaments::<T, I>::get(season_id) {
+				TournamentState::Inactive => TournamentPeriod::Inactive,
+				TournamentState::ActivePeriod(_) => TournamentPeriod::Active,
+				TournamentState::ClaimPeriod(_, _) => TournamentPeriod::Claim,
+			}
+		}
+
 		fn is_golden_duck_enabled_for(season_id: &T::SeasonId) -> bool {
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => false,
@@ -584,6 +592,11 @@ pub mod pallet {
 		where
 			R: EntityRank<EntityId = T::EntityId, Entity = T::RankedEntity>,
 		{
+			ensure!(
+				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Active,
+				Error::<T, I>::NoActiveTournamentForSeason
+			);
+
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 			let tournament_config = Self::get_active_tournament_config_for(season_id)
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
@@ -631,6 +644,11 @@ pub mod pallet {
 			season_id: &T::SeasonId,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
+			ensure!(
+				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Active,
+				Error::<T, I>::NoActiveTournamentForSeason
+			);
+
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 
 			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| {
@@ -663,6 +681,11 @@ pub mod pallet {
 			account: &AccountIdFor<T>,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
+			ensure!(
+				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Claim,
+				Error::<T, I>::TournamentNotInClaimPeriod
+			);
+
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 				TournamentState::ActivePeriod(_) =>
@@ -714,6 +737,11 @@ pub mod pallet {
 			account: &AccountIdFor<T>,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
+			ensure!(
+				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Claim,
+				Error::<T, I>::TournamentNotInClaimPeriod
+			);
+
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 				TournamentState::ActivePeriod(_) =>

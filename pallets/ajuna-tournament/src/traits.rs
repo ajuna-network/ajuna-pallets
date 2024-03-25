@@ -1,4 +1,5 @@
 use super::{TournamentConfig, TournamentId};
+use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use sp_runtime::{traits::Member, DispatchError, DispatchResult};
 
 pub trait EntityRank {
@@ -12,10 +13,20 @@ pub trait EntityRank {
 	) -> sp_std::cmp::Ordering;
 }
 
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub enum TournamentPeriod {
+	#[default]
+	Inactive,
+	Active,
+	Claim,
+}
+
 pub trait TournamentInspector<SeasonId, BlockNumber, Balance, AccountId> {
 	fn get_active_tournament_config_for(
 		season_id: &SeasonId,
 	) -> Option<TournamentConfig<BlockNumber, Balance>>;
+
+	fn get_active_tournament_period_for(season_id: &SeasonId) -> TournamentPeriod;
 
 	fn is_golden_duck_enabled_for(season_id: &SeasonId) -> bool;
 
