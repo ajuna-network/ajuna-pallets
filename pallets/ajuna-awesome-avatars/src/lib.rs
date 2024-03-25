@@ -81,7 +81,10 @@ use pallet_ajuna_affiliates::traits::{
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use pallet_ajuna_tournament::{
 	config::TournamentConfig,
-	traits::{TournamentClaimer, TournamentInspector, TournamentMutator, TournamentRanker},
+	traits::{
+		TournamentClaimer, TournamentInspector, TournamentMutator, TournamentPeriod,
+		TournamentRanker,
+	},
 };
 use sp_runtime::{
 	traits::{
@@ -1644,9 +1647,15 @@ pub mod pallet {
 				}
 			});
 
-			if T::TournamentHandler::is_golden_duck_enabled_for(&season_id) {
-				for avatar_id in generated_avatar_ids.iter() {
-					T::TournamentHandler::try_rank_entity_for_golden_duck(&season_id, avatar_id)?;
+			if T::TournamentHandler::get_active_tournament_period_for(&season_id) ==
+				TournamentPeriod::Active
+			{
+				if T::TournamentHandler::is_golden_duck_enabled_for(&season_id) {
+					for avatar_id in generated_avatar_ids.iter() {
+						T::TournamentHandler::try_rank_entity_for_golden_duck(
+							&season_id, avatar_id,
+						)?;
+					}
 				}
 			}
 

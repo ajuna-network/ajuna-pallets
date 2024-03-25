@@ -33,8 +33,14 @@ where
 		} else {
 			match self.category {
 				AvatarRankingCategory::MinSoulPoints =>
-					entity.1.souls.cmp(&other.1.souls).reverse(),
-				AvatarRankingCategory::MaxSoulPoints => entity.1.souls.cmp(&other.1.souls),
+					match entity.1.souls.cmp(&other.1.souls).reverse() {
+						Ordering::Equal => Ordering::Less,
+						ordering => ordering,
+					},
+				AvatarRankingCategory::MaxSoulPoints => match entity.1.souls.cmp(&other.1.souls) {
+					Ordering::Equal => Ordering::Less,
+					ordering => ordering,
+				},
 			}
 		}
 	}
