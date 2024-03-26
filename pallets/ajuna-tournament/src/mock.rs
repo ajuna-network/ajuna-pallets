@@ -58,18 +58,21 @@ frame_support::construct_runtime!(
 );
 
 impl frame_system::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
+	type Nonce = u32;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = MockAccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
+	type Block = MockBlock;
 	type BlockHashCount = ConstU64<250>;
+	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<MockBalance>;
@@ -79,9 +82,6 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type Nonce = u32;
-	type Block = MockBlock;
-	type RuntimeTask = RuntimeTask;
 }
 
 parameter_types! {
@@ -89,19 +89,19 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = MockBalance;
-	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = MockExistentialDeposit;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type WeightInfo = ();
+	type Balance = MockBalance;
+	type DustRemoval = ();
+	type ExistentialDeposit = MockExistentialDeposit;
+	type AccountStore = System;
+	type ReserveIdentifier = [u8; 8];
+	type FreezeIdentifier = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type MaxFreezes = ();
 }
 
 pub type MockSeasonId = u32;
