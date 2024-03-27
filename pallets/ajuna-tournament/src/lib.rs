@@ -505,12 +505,8 @@ pub mod pallet {
 			}
 		}
 
-		fn get_active_tournament_period_for(season_id: &T::SeasonId) -> TournamentPeriod {
-			match ActiveTournaments::<T, I>::get(season_id) {
-				TournamentState::Inactive => TournamentPeriod::Inactive,
-				TournamentState::ActivePeriod(_) => TournamentPeriod::Active,
-				TournamentState::ClaimPeriod(_, _) => TournamentPeriod::Claim,
-			}
+		fn get_active_tournament_state_for(season_id: &T::SeasonId) -> TournamentStateFor<T, I> {
+			ActiveTournaments::<T, I>::get(season_id)
 		}
 
 		fn is_golden_duck_enabled_for(season_id: &T::SeasonId) -> bool {
@@ -593,7 +589,10 @@ pub mod pallet {
 			R: EntityRank<EntityId = T::EntityId, Entity = T::RankedEntity>,
 		{
 			ensure!(
-				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Active,
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ActivePeriod(_)
+				),
 				Error::<T, I>::NoActiveTournamentForSeason
 			);
 
@@ -645,7 +644,10 @@ pub mod pallet {
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
 			ensure!(
-				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Active,
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ActivePeriod(_)
+				),
 				Error::<T, I>::NoActiveTournamentForSeason
 			);
 
@@ -682,7 +684,10 @@ pub mod pallet {
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
 			ensure!(
-				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Claim,
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ClaimPeriod(_, _)
+				),
 				Error::<T, I>::TournamentNotInClaimPeriod
 			);
 
@@ -738,7 +743,10 @@ pub mod pallet {
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
 			ensure!(
-				Self::get_active_tournament_period_for(season_id) == TournamentPeriod::Claim,
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ClaimPeriod(_, _)
+				),
 				Error::<T, I>::TournamentNotInClaimPeriod
 			);
 
