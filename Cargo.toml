@@ -26,9 +26,11 @@ scale-info         = { version = "2.1.1", default-features = false }
 frame-benchmarking                         = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 frame-support                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 frame-system                               = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
+pallet-assets                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 pallet-balances                            = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 pallet-nfts                                = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
+pallet-timestamp                           = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 sp-arithmetic                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 sp-core                                    = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
 sp-io                                      = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
@@ -43,3 +45,4 @@ pallet-ajuna-awesome-avatars-benchmarking = { path = "pallets/ajuna-awesome-avat
 pallet-ajuna-nft-transfer                 = { path = "pallets/ajuna-nft-transfer", default-features = false }
 pallet-ajuna-nft-staking                  = { path = "pallets/ajuna-nft-staking", default-features = false }
 pallet-ajuna-tournament                   = { path = "pallets/ajuna-tournament", default-features = false }
+pallet-ajuna-wildcard                     = { path = "pallets/ajuna-wildcard", default-features = false }
