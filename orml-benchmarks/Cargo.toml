@@ -10,6 +10,9 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+parity-scale-codec = { workspace = true }
+scale-info         = { workspace = true }
+
 orml-vesting = { features = ["runtime-benchmarks"], workspace = true }
 
 frame-benchmarking = { features = ["runtime-benchmarks"], workspace = true }
@@ -17,17 +20,21 @@ frame-support = { features = ["runtime-benchmarks"], workspace = true }
 frame-system = { features = ["runtime-benchmarks"], workspace = true }
 pallet-balances = {features = ["runtime-benchmarks"], workspace = true }
 
+sp-io = { workspace = true }
 sp-std = { workspace = true }
 sp-runtime = { features = ["runtime-benchmarks"], workspace = true }
 
 [features]
 default = ["std"]
 std = [
+    "parity-scale-codec/std",
+    "scale-info/std",
     "orml-vesting/std",
     "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-balances/std",
+    "sp-io/std",
     "sp-std/std",
     "sp-runtime/std",
 ]

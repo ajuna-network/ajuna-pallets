@@ -1913,6 +1913,9 @@ dependencies = [
  "frame-system",
  "orml-vesting",
  "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
