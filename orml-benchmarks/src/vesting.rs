@@ -41,7 +41,6 @@ pub fn schedule<T: Config>(start: u32, period: u32, period_count: u32, per_perio
 }
 
 benchmarks! {
-	where_clause {  where T: pallet_balances::Config }
 	vested_transfer {
 		let schedule = schedule::<T>(
 			0, 2,3,<T as Config>::MinVestedTransfer::get()
