@@ -524,9 +524,11 @@ pub mod pallet {
 		FeatureLocked,
 		/// The feature trying to be unlocked is not available for the selected season
 		FeatureUnlockableInSeason,
-		/// The feature trying to be unlocked has missing requirements to be fullfilled by
-		/// the accoutn trying to unlock it
-		UnlockCriteriaNotFullfilled,
+		/// The feature trying to be unlocked has missing requirements to be fulfilled by
+		/// the account trying to unlock it
+		UnlockCriteriaNotFulfilled,
+		/// Couldn't find a tournament ranker for the active tournament; qed
+		TournamentRankerNotFound,
 	}
 
 	#[pallet::hooks]
@@ -1264,7 +1266,7 @@ pub mod pallet {
 						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
 							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 						} else {
-							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
@@ -1347,7 +1349,7 @@ pub mod pallet {
 
 							Ok(())
 						} else {
-							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
@@ -1412,7 +1414,7 @@ pub mod pallet {
 
 							Ok(())
 						} else {
-							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
@@ -1678,7 +1680,7 @@ pub mod pallet {
 					season_id,
 					&season,
 					input_leader.clone(),
-					input_sacrifices,
+					input_sacrifices.clone(),
 					false,
 				),
 				LogicGeneration::Second => ForgerV2::<T>::forge(
@@ -1686,7 +1688,7 @@ pub mod pallet {
 					season_id,
 					&season,
 					input_leader.clone(),
-					input_sacrifices,
+					input_sacrifices.clone(),
 					restricted_forge,
 				),
 			}?;
@@ -1697,6 +1699,7 @@ pub mod pallet {
 				&season,
 				input_leader,
 				output_leader,
+				input_sacrifices,
 			)?;
 			Self::process_other_forge_outputs(player, &season_id, output_other)?;
 			Self::update_forging_statistics_for_player(player, season_id)?;
@@ -1883,6 +1886,7 @@ pub mod pallet {
 			season: &SeasonOf<T>,
 			input_leader: ForgeItem<T>,
 			output_leader: LeaderForgeOutput<T>,
+			input_sacrifices: Vec<ForgeItem<T>>,
 		) -> DispatchResult {
 			match output_leader {
 				LeaderForgeOutput::Forged((leader_id, leader), upgraded_components) => {
@@ -1903,7 +1907,19 @@ pub mod pallet {
 						if let Some(config) =
 							T::TournamentHandler::get_active_tournament_config_for(season_id)
 						{
-							if let Some(ranker) = TournamentConfigRankers::<T>::get(config) {
+							let sacrifices_are_in_bounds =
+								input_sacrifices.into_iter().all(|(_, sacrifice)| {
+									sacrifice.minted_at >= config.start &&
+										sacrifice.minted_at <= config.active_end
+								});
+
+							let leader_in_bounds = input_leader.1.minted_at >= config.start &&
+								input_leader.1.minted_at <= config.active_end;
+
+							if sacrifices_are_in_bounds && leader_in_bounds {
+								let ranker = TournamentConfigRankers::<T>::get(config)
+									.ok_or(Error::<T>::TournamentRankerNotFound)?;
+
 								T::TournamentHandler::try_rank_entity_in_tournament_for(
 									season_id, &leader_id, &leader, &ranker,
 								)?;
