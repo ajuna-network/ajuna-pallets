@@ -23,9 +23,11 @@ use frame_support::traits::{Currency, Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use frame_system::RawOrigin;
 use sp_std::prelude::*;
+use sp_runtime::Saturating;
 
 use orml_vesting::{VestingSchedule, Config, Call};
-use sp_runtime::Saturating;
+#[cfg(test)]
+use orml_vesting::Pallet;
 
 pub type Schedule<T> = VestingSchedule<BlockNumberFor<T>, BalanceFor<T>>;
 
