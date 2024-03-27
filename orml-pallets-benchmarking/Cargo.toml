@@ -1,6 +1,6 @@
 [package]
 description = "Implement benchmarks for orml pallets"
-name = "orml-benchmarks"
+name = "orml-pallets-benchmarking"
 
 
 authors.workspace = true

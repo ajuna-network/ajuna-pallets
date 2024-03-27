@@ -26,8 +26,8 @@ use sp_std::prelude::*;
 use sp_runtime::Saturating;
 
 use orml_vesting::{VestingSchedule, Config, Call};
-#[cfg(test)]
-use orml_vesting::Pallet;
+
+pub struct Pallet<T: Config>(orml_vesting::Pallet<T>);
 
 pub type Schedule<T> = VestingSchedule<BlockNumberFor<T>, BalanceFor<T>>;
 
@@ -70,7 +70,7 @@ benchmarks! {
 
 		let from: AccountIdFor<T> = get_vesting_account::<T>();
 		let ed_times_two = CurrencyFor::<T>::minimum_balance().saturating_mul(2u32.into());
-		set_balance::<T>(from.clone(), schedule.total_amount().unwrap() + ed_times_two);
+		set_balance::<T>(from.clone(), schedule.total_amount().unwrap() * i.into() + ed_times_two);
 		let to: AccountIdFor<T> = whitelisted_caller();
 		let to_lookup = lookup_of_account::<T>(to.clone());
 

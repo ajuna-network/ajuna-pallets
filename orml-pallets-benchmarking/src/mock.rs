@@ -24,7 +24,7 @@ use frame_system::{EnsureSigned};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
     testing::H256,
-    traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
+    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
     BuildStorage, MultiSignature,
 };
 use sp_runtime::traits::BlockNumberProvider;
@@ -33,11 +33,7 @@ pub type MockSignature = MultiSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
 pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Runtime>;
-pub type MockBlockNumber = u64;
 pub type MockBalance = u64;
-pub type MockCollectionId = u32;
-
-pub type Balance = u128;
 
 frame_support::construct_runtime!(
 	pub struct Runtime {
@@ -94,10 +90,6 @@ impl pallet_balances::Config for Runtime {
     type RuntimeFreezeReason = ();
 }
 
-parameter_types! {
-	pub const MinVestedTransfer: Balance = MockExistentialDeposit;
-}
-
 
 parameter_types! {
 	pub static MockBlockNumberProvider: u64 = 0;
@@ -115,7 +107,7 @@ impl BlockNumberProvider for MockBlockNumberProvider {
 impl orml_vesting::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
-    type MinVestedTransfer = MinVestedTransfer;
+    type MinVestedTransfer = MockExistentialDeposit;
     type VestedTransferOrigin = EnsureSigned<MockAccountId>;
     type WeightInfo = ();
     type MaxVestingSchedules = frame_support::traits::ConstU32<100>;
