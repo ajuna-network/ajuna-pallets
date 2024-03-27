@@ -4,17 +4,17 @@ use crate::types::Avatar;
 pub(crate) trait AvatarMutator<T: Config> {
 	fn mutate_from_base(
 		&self,
-		base_avatar: Avatar,
+		base_avatar: AvatarOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
-	) -> Result<Avatar, ()>;
+	) -> Result<AvatarOf<T>, ()>;
 }
 
 impl<T: Config> AvatarMutator<T> for PetItemType {
 	fn mutate_from_base(
 		&self,
-		base_avatar: Avatar,
+		base_avatar: AvatarOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
-	) -> Result<Avatar, ()> {
+	) -> Result<AvatarOf<T>, ()> {
 		let avatar = match self {
 			PetItemType::Pet => {
 				let pet_type = PetType::from_byte((hash_provider.next() % 4) + 1);
@@ -22,7 +22,7 @@ impl<T: Config> AvatarMutator<T> for PetItemType {
 
 				let spec_bytes = [0; 16];
 
-				let progress_array = DnaUtils::generate_progress(
+				let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 					&RarityTier::Legendary,
 					SCALING_FACTOR_PERC,
 					None,
@@ -57,7 +57,7 @@ impl<T: Config> AvatarMutator<T> for PetItemType {
 
 				let egg_rarity = RarityTier::Rare;
 
-				let progress_array = DnaUtils::generate_progress(
+				let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 					&egg_rarity,
 					SCALING_FACTOR_PERC,
 					Some(PROGRESS_PROBABILITY_PERC),
@@ -81,9 +81,9 @@ impl<T: Config> AvatarMutator<T> for PetItemType {
 impl<T: Config> AvatarMutator<T> for MaterialItemType {
 	fn mutate_from_base(
 		&self,
-		base_avatar: Avatar,
+		base_avatar: AvatarOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
-	) -> Result<Avatar, ()> {
+	) -> Result<AvatarOf<T>, ()> {
 		let avatar = AvatarBuilder::with_base_avatar(base_avatar)
 			.into_material(self, (hash_provider.next() % MAX_QUANTITY) + 1)
 			.build();
@@ -95,9 +95,9 @@ impl<T: Config> AvatarMutator<T> for MaterialItemType {
 impl<T: Config> AvatarMutator<T> for EssenceItemType {
 	fn mutate_from_base(
 		&self,
-		base_avatar: Avatar,
+		base_avatar: AvatarOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
-	) -> Result<Avatar, ()> {
+	) -> Result<AvatarOf<T>, ()> {
 		let souls = (hash_provider.next() % 99) + 1;
 
 		let avatar = match *self {
@@ -106,12 +106,12 @@ impl<T: Config> AvatarMutator<T> for EssenceItemType {
 			EssenceItemType::ColorSpark | EssenceItemType::PaintFlask => {
 				let hash_byte = hash_provider.next();
 				let color_pair = (
-					ColorType::from_byte(DnaUtils::high_nibble_of(hash_byte)),
-					ColorType::from_byte(DnaUtils::low_nibble_of(hash_byte)),
+					ColorType::from_byte(DnaUtils::<BlockNumberFor<T>>::high_nibble_of(hash_byte)),
+					ColorType::from_byte(DnaUtils::<BlockNumberFor<T>>::low_nibble_of(hash_byte)),
 				);
 
 				if *self == EssenceItemType::ColorSpark {
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Rare,
 						SCALING_FACTOR_PERC,
 						Some(SPARK_PROGRESS_PROB_PERC),
@@ -124,7 +124,7 @@ impl<T: Config> AvatarMutator<T> for EssenceItemType {
 						progress_array,
 					)
 				} else {
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Epic,
 						SCALING_FACTOR_PERC,
 						Some(SPARK_PROGRESS_PROB_PERC),
@@ -142,7 +142,7 @@ impl<T: Config> AvatarMutator<T> for EssenceItemType {
 				let force = Force::from_byte(hash_provider.next() % Force::range().end as u8);
 
 				if *self == EssenceItemType::GlowSpark {
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Rare,
 						SCALING_FACTOR_PERC,
 						Some(SPARK_PROGRESS_PROB_PERC),
@@ -155,7 +155,7 @@ impl<T: Config> AvatarMutator<T> for EssenceItemType {
 						progress_array,
 					)
 				} else {
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Epic,
 						SCALING_FACTOR_PERC,
 						Some(SPARK_PROGRESS_PROB_PERC),
@@ -179,9 +179,9 @@ impl<T: Config> AvatarMutator<T> for EssenceItemType {
 impl<T: Config> AvatarMutator<T> for EquippableItemType {
 	fn mutate_from_base(
 		&self,
-		base_avatar: Avatar,
+		base_avatar: AvatarOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
-	) -> Result<Avatar, ()> {
+	) -> Result<AvatarOf<T>, ()> {
 		let soul_count = (hash_provider.next() as SoulCount % 25) + 1;
 		let pet_type = SlotRoller::<T>::roll_on(&PET_TYPE_PROBABILITIES, hash_provider);
 
@@ -218,8 +218,8 @@ impl<T: Config> AvatarMutator<T> for EquippableItemType {
 
 				let hash_byte = hash_provider.next();
 				let color_pair = (
-					ColorType::from_byte(DnaUtils::high_nibble_of(hash_byte)),
-					ColorType::from_byte(DnaUtils::low_nibble_of(hash_byte)),
+					ColorType::from_byte(DnaUtils::<BlockNumberFor<T>>::high_nibble_of(hash_byte)),
+					ColorType::from_byte(DnaUtils::<BlockNumberFor<T>>::low_nibble_of(hash_byte)),
 				);
 				let force = Force::from_byte(hash_provider.next() % 7);
 
@@ -243,9 +243,9 @@ impl<T: Config> AvatarMutator<T> for EquippableItemType {
 impl<T: Config> AvatarMutator<T> for BlueprintItemType {
 	fn mutate_from_base(
 		&self,
-		base_avatar: Avatar,
+		base_avatar: AvatarOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
-	) -> Result<Avatar, ()> {
+	) -> Result<AvatarOf<T>, ()> {
 		let soul_count = (hash_provider.next() % 25) + 1;
 
 		let pet_type = SlotRoller::<T>::roll_on(&PET_TYPE_PROBABILITIES, hash_provider);
@@ -254,7 +254,7 @@ impl<T: Config> AvatarMutator<T> for BlueprintItemType {
 			SlotRoller::<T>::roll_on(&EQUIPMENT_TYPE_PROBABILITIES, hash_provider);
 
 		let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-		let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+		let pattern = DnaUtils::<BlockNumberFor<T>>::create_pattern::<MaterialItemType>(
 			base_seed,
 			equippable_item_type.as_byte() as usize,
 		);
@@ -277,17 +277,17 @@ impl<T: Config> AvatarMutator<T> for BlueprintItemType {
 impl<T: Config> AvatarMutator<T> for SpecialItemType {
 	fn mutate_from_base(
 		&self,
-		base_avatar: Avatar,
+		base_avatar: AvatarOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
-	) -> Result<Avatar, ()> {
+	) -> Result<AvatarOf<T>, ()> {
 		let avatar = match self {
 			SpecialItemType::Dust => AvatarBuilder::with_base_avatar(base_avatar).into_dust(1),
 			SpecialItemType::Unidentified => {
 				let soul_count = (hash_provider.next() as SoulCount % 25) + 1;
 				let hash_byte = hash_provider.next();
 				let color_pair = (
-					ColorType::from_byte(DnaUtils::high_nibble_of(hash_byte)),
-					ColorType::from_byte(DnaUtils::low_nibble_of(hash_byte)),
+					ColorType::from_byte(DnaUtils::<BlockNumberFor<T>>::high_nibble_of(hash_byte)),
+					ColorType::from_byte(DnaUtils::<BlockNumberFor<T>>::low_nibble_of(hash_byte)),
 				);
 				let force = Force::from_byte(hash_provider.next() % 7);
 

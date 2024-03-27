@@ -15,10 +15,11 @@ impl<T: Config> AvatarCombinator<T> {
 			hash_provider,
 		);
 
-		let progress_rarity = RarityTier::from_byte(DnaUtils::lowest_progress_byte(
-			&leader.get_progress(),
-			ByteType::High,
-		));
+		let progress_rarity =
+			RarityTier::from_byte(DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(
+				&leader.get_progress(),
+				ByteType::High,
+			));
 		let essence_type = leader.get_item_sub_type::<EssenceItemType>();
 
 		if essence_type == EssenceItemType::ColorSpark && progress_rarity == RarityTier::Epic {

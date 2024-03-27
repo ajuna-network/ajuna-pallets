@@ -238,7 +238,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type Currency = Balances;
 	type SeasonId = SeasonId;
 	type EntityId = AvatarIdOf<Test>;
-	type RankedEntity = Avatar;
+	type RankedEntity = AvatarOf<Test>;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 

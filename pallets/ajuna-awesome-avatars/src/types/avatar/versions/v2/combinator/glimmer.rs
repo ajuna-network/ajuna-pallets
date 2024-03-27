@@ -15,6 +15,8 @@ impl<T: Config> AvatarCombinator<T> {
 
 		let mut other_output = Vec::new();
 
+		let current_block = <frame_system::Pallet<T>>::block_number();
+
 		for (i, (sacrifice_id, mut sacrifice)) in input_sacrifices.into_iter().enumerate() {
 			if leader_consumed {
 				// If we consumed the leader in a previous step, we collect all
@@ -55,11 +57,11 @@ impl<T: Config> AvatarCombinator<T> {
 
 			let dna = MinterV2::<T>::generate_empty_dna::<32>()?;
 
-			let mut gen_avatar = AvatarBuilder::with_dna(season_id, dna);
+			let mut gen_avatar = AvatarBuilder::with_dna(season_id, dna, current_block);
 
 			if rand_0 as u32 * SCALING_FACTOR_PERC < GLIMMER_PROB_PERC * MAX_BYTE {
 				if rand_1 == rand_2 {
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Rare,
 						SCALING_FACTOR_PERC,
 						Some(SPARK_PROGRESS_PROB_PERC),
@@ -68,7 +70,8 @@ impl<T: Config> AvatarCombinator<T> {
 					gen_avatar =
 						gen_avatar.into_egg(&RarityTier::Rare, 0x00, soul_points, progress_array);
 				} else if rand_1 ==
-					(DnaUtils::high_nibble_of(rand_1) + DnaUtils::low_nibble_of(rand_2))
+					(DnaUtils::<BlockNumberFor<T>>::high_nibble_of(rand_1) +
+						DnaUtils::<BlockNumberFor<T>>::low_nibble_of(rand_2))
 				{
 					let color_pair = (
 						ColorType::from_byte(rand_1 % (color_types + 1)),
@@ -82,7 +85,7 @@ impl<T: Config> AvatarCombinator<T> {
 						ColorType::from_byte(rand_2 % (color_types + 1)),
 						ColorType::from_byte(rand_3 % (color_types + 1)),
 					);
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Rare,
 						SCALING_FACTOR_PERC,
 						Some(SPARK_PROGRESS_PROB_PERC),
@@ -92,7 +95,7 @@ impl<T: Config> AvatarCombinator<T> {
 						gen_avatar.into_color_spark(&color_pair, soul_points, progress_array);
 				} else {
 					let force = Force::from_byte((rand_2 % forces) + 1);
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Rare,
 						SCALING_FACTOR_PERC,
 						Some(SPARK_PROGRESS_PROB_PERC),
@@ -817,7 +820,7 @@ mod test {
 				],
 			];
 
-			let unit_fn = |avatar: Avatar| {
+			let unit_fn = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 100;
 				WrappedAvatar::new(avatar)

@@ -4,7 +4,10 @@ use crate::{
 	ByteConvertible, Config, Force, Ranged, RarityTier,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use sp_runtime::{traits::Hash, SaturatedConversion};
+use sp_runtime::{
+	traits::{BlockNumber, Hash},
+	SaturatedConversion,
+};
 use sp_std::{
 	cmp::Ordering,
 	marker::PhantomData,
@@ -13,17 +16,20 @@ use sp_std::{
 };
 
 #[derive(Clone)]
-pub(crate) struct WrappedAvatar {
-	inner: Avatar,
+pub(crate) struct WrappedAvatar<BlockNumber> {
+	inner: Avatar<BlockNumber>,
 }
 
 #[allow(dead_code)]
-impl WrappedAvatar {
-	pub fn new(avatar: Avatar) -> Self {
+impl<BlockNumber> WrappedAvatar<BlockNumber>
+where
+	BlockNumber: sp_runtime::traits::BlockNumber,
+{
+	pub fn new(avatar: Avatar<BlockNumber>) -> Self {
 		Self { inner: avatar }
 	}
 
-	pub fn unwrap(self) -> Avatar {
+	pub fn unwrap(self) -> Avatar<BlockNumber> {
 		self.inner
 	}
 
@@ -101,7 +107,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute(&mut self.inner, AvatarAttr::ItemType, &item_type)
 	}
 
-	pub fn same_item_type(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_item_type(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_item_type().cmp(&other.get_item_type()).is_eq()
 	}
 
@@ -119,7 +125,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute::<T>(&mut self.inner, AvatarAttr::ItemSubType, &item_sub_type)
 	}
 
-	pub fn same_item_sub_type(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_item_sub_type(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_item_sub_type::<u8>().cmp(&other.get_item_sub_type::<u8>()).is_eq()
 	}
 
@@ -137,7 +143,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute::<T>(&mut self.inner, AvatarAttr::ClassType1, &class_type_1)
 	}
 
-	pub fn same_class_type_1(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_class_type_1(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_class_type_1::<u8>().cmp(&other.get_class_type_1::<u8>()).is_eq()
 	}
 
@@ -155,7 +161,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute::<T>(&mut self.inner, AvatarAttr::ClassType2, &class_type_2)
 	}
 
-	pub fn same_class_type_2(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_class_type_2(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_class_type_2::<u8>().cmp(&other.get_class_type_2::<u8>()).is_eq()
 	}
 
@@ -173,7 +179,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute::<T>(&mut self.inner, AvatarAttr::CustomType1, &custom_type_1)
 	}
 
-	pub fn same_custom_type_1(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_custom_type_1(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_custom_type_1::<u8>().cmp(&other.get_custom_type_1::<u8>()).is_eq()
 	}
 
@@ -191,7 +197,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute::<T>(&mut self.inner, AvatarAttr::CustomType2, &custom_type_2)
 	}
 
-	pub fn same_custom_type_2(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_custom_type_2(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_custom_type_2::<u8>().cmp(&other.get_custom_type_2::<u8>()).is_eq()
 	}
 
@@ -203,7 +209,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute::<RarityTier>(&mut self.inner, AvatarAttr::RarityTier, &rarity)
 	}
 
-	pub fn same_rarity(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_rarity(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_rarity().cmp(&other.get_rarity()).is_eq()
 	}
 
@@ -215,7 +221,7 @@ impl WrappedAvatar {
 		DnaUtils::write_attribute_raw(&mut self.inner, AvatarAttr::Quantity, quantity)
 	}
 
-	pub fn same_quantity(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_quantity(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_quantity().cmp(&other.get_quantity()).is_eq()
 	}
 
@@ -238,11 +244,11 @@ impl WrappedAvatar {
 		DnaUtils::write_specs(&mut self.inner, spec_bytes)
 	}
 
-	pub fn same_specs(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_specs(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_specs() == other.get_specs()
 	}
 
-	pub fn same_spec_at(&self, other: &WrappedAvatar, position: SpecIdx) -> bool {
+	pub fn same_spec_at(&self, other: &WrappedAvatar<BlockNumber>, position: SpecIdx) -> bool {
 		DnaUtils::read_spec_raw(&self.inner, position) ==
 			DnaUtils::read_spec_raw(&other.inner, position)
 	}
@@ -255,7 +261,7 @@ impl WrappedAvatar {
 		DnaUtils::write_progress(&mut self.inner, progress_array)
 	}
 
-	pub fn same_progress(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_progress(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.get_progress() == other.get_progress()
 	}
 
@@ -281,15 +287,15 @@ impl WrappedAvatar {
 		self.get_class_type_1::<u8>() == 0 && self.get_class_type_2::<u8>() == 0
 	}
 
-	pub fn same_full_type(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_full_type(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.same_item_type(other) && self.same_item_sub_type(other)
 	}
 
-	pub fn same_full_and_class_types(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_full_and_class_types(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.same_full_type(other) && self.same_class_type_1(other) && self.same_class_type_2(other)
 	}
 
-	pub fn same_assemble_version(&self, other: &WrappedAvatar) -> bool {
+	pub fn same_assemble_version(&self, other: &WrappedAvatar<BlockNumber>) -> bool {
 		self.same_item_type(other) && self.same_class_type_1(other) && self.same_class_type_2(other)
 	}
 }
@@ -335,16 +341,19 @@ pub enum SpecIdx {
 }
 
 #[derive(Default)]
-pub(crate) struct AvatarBuilder {
-	inner: Avatar,
+pub(crate) struct AvatarBuilder<BlockNumber> {
+	inner: Avatar<BlockNumber>,
 }
 
-impl AvatarBuilder {
-	pub fn with_dna(season_id: SeasonId, dna: Dna) -> Self {
-		Self { inner: Avatar { season_id, encoding: DnaEncoding::V2, dna, souls: 0 } }
+impl<BlockNumber> AvatarBuilder<BlockNumber>
+where
+	BlockNumber: sp_runtime::traits::BlockNumber,
+{
+	pub fn with_dna(season_id: SeasonId, dna: Dna, minted_at: BlockNumber) -> Self {
+		Self { inner: Avatar { season_id, encoding: DnaEncoding::V2, dna, souls: 0, minted_at } }
 	}
 
-	pub fn with_base_avatar(avatar: Avatar) -> Self {
+	pub fn with_base_avatar(avatar: Avatar<BlockNumber>) -> Self {
 		Self { inner: avatar }
 	}
 
@@ -356,17 +365,17 @@ impl AvatarBuilder {
 	}
 
 	pub fn with_attribute_raw(mut self, attribute: AvatarAttr, value: u8) -> Self {
-		DnaUtils::write_attribute_raw(&mut self.inner, attribute, value);
+		DnaUtils::<BlockNumber>::write_attribute_raw(&mut self.inner, attribute, value);
 		self
 	}
 
 	pub fn with_spec_byte_raw(mut self, spec_byte: SpecIdx, value: u8) -> Self {
-		DnaUtils::write_spec(&mut self.inner, spec_byte, value);
+		DnaUtils::<BlockNumber>::write_spec(&mut self.inner, spec_byte, value);
 		self
 	}
 
 	pub fn with_spec_bytes(mut self, spec_bytes: [u8; 16]) -> Self {
-		DnaUtils::write_specs(&mut self.inner, spec_bytes);
+		DnaUtils::<BlockNumber>::write_specs(&mut self.inner, spec_bytes);
 		self
 	}
 
@@ -376,7 +385,7 @@ impl AvatarBuilder {
 	}
 
 	pub fn with_progress_array(mut self, progress_array: [u8; 11]) -> Self {
-		DnaUtils::write_progress(&mut self.inner, progress_array);
+		DnaUtils::<BlockNumber>::write_progress(&mut self.inner, progress_array);
 		self
 	}
 
@@ -405,7 +414,7 @@ impl AvatarBuilder {
 		let custom_type_1 = HexType::X1;
 
 		let spec_bytes = {
-			let mut spec_bytes = DnaUtils::read_specs(&self.inner);
+			let mut spec_bytes = DnaUtils::<BlockNumber>::read_specs(&self.inner);
 
 			for slot_index in slot_types.iter().map(|slot_type| slot_type.as_byte() as usize) {
 				spec_bytes[slot_index] = spec_bytes[slot_index].saturating_add(1);
@@ -431,19 +440,19 @@ impl AvatarBuilder {
 		let custom_type_1 = HexType::X1;
 
 		let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-		let base_0 = DnaUtils::create_pattern::<NibbleType>(
+		let base_0 = DnaUtils::<BlockNumber>::create_pattern::<NibbleType>(
 			base_seed,
 			EquippableItemType::ArmorBase.as_byte() as usize,
 		);
-		let comp_1 = DnaUtils::create_pattern::<NibbleType>(
+		let comp_1 = DnaUtils::<BlockNumber>::create_pattern::<NibbleType>(
 			base_seed,
 			EquippableItemType::ArmorComponent1.as_byte() as usize,
 		);
-		let comp_2 = DnaUtils::create_pattern::<NibbleType>(
+		let comp_2 = DnaUtils::<BlockNumber>::create_pattern::<NibbleType>(
 			base_seed,
 			EquippableItemType::ArmorComponent2.as_byte() as usize,
 		);
-		let comp_3 = DnaUtils::create_pattern::<NibbleType>(
+		let comp_3 = DnaUtils::<BlockNumber>::create_pattern::<NibbleType>(
 			base_seed,
 			EquippableItemType::ArmorComponent3.as_byte() as usize,
 		);
@@ -457,14 +466,38 @@ impl AvatarBuilder {
 			.with_attribute_raw(AvatarAttr::Quantity, quantity)
 			// Unused
 			.with_attribute(AvatarAttr::CustomType2, &HexType::X0)
-			.with_spec_byte_raw(SpecIdx::Byte1, DnaUtils::enums_to_bits(&base_0) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte2, DnaUtils::enums_order_to_bits(&base_0) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte3, DnaUtils::enums_to_bits(&comp_1) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte4, DnaUtils::enums_order_to_bits(&comp_1) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte5, DnaUtils::enums_to_bits(&comp_2) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte6, DnaUtils::enums_order_to_bits(&comp_2) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte7, DnaUtils::enums_to_bits(&comp_3) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte8, DnaUtils::enums_order_to_bits(&comp_3) as u8)
+			.with_spec_byte_raw(
+				SpecIdx::Byte1,
+				DnaUtils::<BlockNumber>::enums_to_bits(&base_0) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte2,
+				DnaUtils::<BlockNumber>::enums_order_to_bits(&base_0) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte3,
+				DnaUtils::<BlockNumber>::enums_to_bits(&comp_1) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte4,
+				DnaUtils::<BlockNumber>::enums_order_to_bits(&comp_1) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte5,
+				DnaUtils::<BlockNumber>::enums_to_bits(&comp_2) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte6,
+				DnaUtils::<BlockNumber>::enums_order_to_bits(&comp_2) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte7,
+				DnaUtils::<BlockNumber>::enums_to_bits(&comp_3) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte8,
+				DnaUtils::<BlockNumber>::enums_order_to_bits(&comp_3) as u8,
+			)
 			.with_soul_count(quantity as SoulCount * custom_type_1 as SoulCount)
 	}
 
@@ -652,7 +685,7 @@ impl AvatarBuilder {
 
 		let (armor_assemble_progress, color_flag) = {
 			let mut color_flag = 0b0000_0000;
-			let mut progress = DnaUtils::enums_to_bits(equippable_type) as u8;
+			let mut progress = DnaUtils::<BlockNumber>::enums_to_bits(equippable_type) as u8;
 
 			if color_pair.0 != ColorType::Null && color_pair.1 != ColorType::Null {
 				color_flag = 0b0000_1000;
@@ -666,7 +699,7 @@ impl AvatarBuilder {
 		// Guaranteed to work because of check above
 		let first_equippable = equippable_type.first().unwrap();
 
-		let progress_array = DnaUtils::generate_progress(
+		let progress_array = DnaUtils::<BlockNumber>::generate_progress(
 			rarity,
 			SCALING_FACTOR_PERC,
 			Some(PROGRESS_PROBABILITY_PERC),
@@ -711,7 +744,7 @@ impl AvatarBuilder {
 
 		let (weapon_info, color_flag) = {
 			let mut color_flag = 0b0000_0000;
-			let mut info = DnaUtils::enums_to_bits(&[*equippable_type]) as u8 >> 4;
+			let mut info = DnaUtils::<BlockNumber>::enums_to_bits(&[*equippable_type]) as u8 >> 4;
 
 			if color_pair.0 != ColorType::Null && color_pair.1 != ColorType::Null {
 				color_flag = 0b0000_1000;
@@ -724,8 +757,12 @@ impl AvatarBuilder {
 
 		let rarity = RarityTier::Legendary;
 
-		let progress_array =
-			DnaUtils::generate_progress(&rarity, SCALING_FACTOR_PERC, None, hash_provider);
+		let progress_array = DnaUtils::<BlockNumber>::generate_progress(
+			&rarity,
+			SCALING_FACTOR_PERC,
+			None,
+			hash_provider,
+		);
 
 		Ok(self
 			.with_attribute(AvatarAttr::ItemType, &ItemType::Equippable)
@@ -775,8 +812,14 @@ impl AvatarBuilder {
 			.with_attribute_raw(AvatarAttr::Quantity, quantity)
 			// Unused
 			.with_attribute(AvatarAttr::CustomType2, &HexType::X0)
-			.with_spec_byte_raw(SpecIdx::Byte1, DnaUtils::enums_to_bits(pattern) as u8)
-			.with_spec_byte_raw(SpecIdx::Byte2, DnaUtils::enums_order_to_bits(pattern) as u8)
+			.with_spec_byte_raw(
+				SpecIdx::Byte1,
+				DnaUtils::<BlockNumber>::enums_to_bits(pattern) as u8,
+			)
+			.with_spec_byte_raw(
+				SpecIdx::Byte2,
+				DnaUtils::<BlockNumber>::enums_order_to_bits(pattern) as u8,
+			)
 			.with_spec_byte_raw(SpecIdx::Byte3, equippable_item_type.as_byte())
 			.with_spec_byte_raw(SpecIdx::Byte4, mat_req1)
 			.with_spec_byte_raw(SpecIdx::Byte5, mat_req2)
@@ -834,26 +877,36 @@ impl AvatarBuilder {
 			.with_soul_count(soul_points)
 	}
 
-	pub fn build(self) -> Avatar {
+	pub fn build(self) -> Avatar<BlockNumber> {
 		self.inner
 	}
 
 	#[allow(dead_code)]
-	pub fn build_wrapped(self) -> WrappedAvatar {
+	pub fn build_wrapped(self) -> WrappedAvatar<BlockNumber> {
 		WrappedAvatar::new(self.inner)
 	}
 }
 
 /// Struct to wrap DNA interactions with Avatars from V2 upwards.
 /// Don't use with Avatars with V1.
-pub(crate) struct DnaUtils;
+pub(crate) struct DnaUtils<BlockNumber> {
+	_marker: PhantomData<BlockNumber>,
+}
 
-impl DnaUtils {
-	fn read_strand(avatar: &Avatar, position: usize, byte_type: ByteType) -> u8 {
+impl<BlockNumber> DnaUtils<BlockNumber>
+where
+	BlockNumber: sp_runtime::traits::BlockNumber,
+{
+	fn read_strand(avatar: &Avatar<BlockNumber>, position: usize, byte_type: ByteType) -> u8 {
 		Self::read_at(avatar.dna.as_slice(), position, byte_type)
 	}
 
-	fn write_strand(avatar: &mut Avatar, position: usize, byte_type: ByteType, value: u8) {
+	fn write_strand(
+		avatar: &mut Avatar<BlockNumber>,
+		position: usize,
+		byte_type: ByteType,
+		value: u8,
+	) {
 		match byte_type {
 			ByteType::Full => avatar.dna[position] = value,
 			ByteType::High =>
@@ -892,14 +945,14 @@ impl DnaUtils {
 		byte & 0x0F
 	}
 
-	pub fn read_attribute<T>(avatar: &Avatar, attribute: AvatarAttr) -> T
+	pub fn read_attribute<T>(avatar: &Avatar<BlockNumber>, attribute: AvatarAttr) -> T
 	where
 		T: ByteConvertible,
 	{
 		T::from_byte(Self::read_attribute_raw(avatar, attribute))
 	}
 
-	pub fn read_attribute_raw(avatar: &Avatar, attribute: AvatarAttr) -> u8 {
+	pub fn read_attribute_raw(avatar: &Avatar<BlockNumber>, attribute: AvatarAttr) -> u8 {
 		match attribute {
 			AvatarAttr::ItemType => Self::read_strand(avatar, 0, ByteType::High),
 			AvatarAttr::ItemSubType => Self::read_strand(avatar, 0, ByteType::Low),
@@ -912,14 +965,14 @@ impl DnaUtils {
 		}
 	}
 
-	pub fn write_attribute<T>(avatar: &mut Avatar, attribute: AvatarAttr, value: &T)
+	pub fn write_attribute<T>(avatar: &mut Avatar<BlockNumber>, attribute: AvatarAttr, value: &T)
 	where
 		T: ByteConvertible,
 	{
 		Self::write_attribute_raw(avatar, attribute, value.as_byte())
 	}
 
-	pub fn write_attribute_raw(avatar: &mut Avatar, attribute: AvatarAttr, value: u8) {
+	pub fn write_attribute_raw(avatar: &mut Avatar<BlockNumber>, attribute: AvatarAttr, value: u8) {
 		match attribute {
 			AvatarAttr::ItemType => Self::write_strand(avatar, 0, ByteType::High, value),
 			AvatarAttr::ItemSubType => Self::write_strand(avatar, 0, ByteType::Low, value),
@@ -932,13 +985,13 @@ impl DnaUtils {
 		}
 	}
 
-	pub fn read_specs(avatar: &Avatar) -> [u8; 16] {
+	pub fn read_specs(avatar: &Avatar<BlockNumber>) -> [u8; 16] {
 		let mut out = [0; 16];
 		out.copy_from_slice(&avatar.dna[5..21]);
 		out
 	}
 
-	pub fn read_spec_raw(avatar: &Avatar, index: SpecIdx) -> u8 {
+	pub fn read_spec_raw(avatar: &Avatar<BlockNumber>, index: SpecIdx) -> u8 {
 		match index {
 			SpecIdx::Byte1 => Self::read_strand(avatar, 5, ByteType::Full),
 			SpecIdx::Byte2 => Self::read_strand(avatar, 6, ByteType::Full),
@@ -959,18 +1012,18 @@ impl DnaUtils {
 		}
 	}
 
-	pub fn read_spec<T>(avatar: &Avatar, spec_byte: SpecIdx) -> T
+	pub fn read_spec<T>(avatar: &Avatar<BlockNumber>, spec_byte: SpecIdx) -> T
 	where
 		T: ByteConvertible,
 	{
 		T::from_byte(Self::read_spec_raw(avatar, spec_byte))
 	}
 
-	pub fn write_specs(avatar: &mut Avatar, value: [u8; 16]) {
+	pub fn write_specs(avatar: &mut Avatar<BlockNumber>, value: [u8; 16]) {
 		(avatar.dna[5..21]).copy_from_slice(&value);
 	}
 
-	pub fn write_spec(avatar: &mut Avatar, spec_byte: SpecIdx, value: u8) {
+	pub fn write_spec(avatar: &mut Avatar<BlockNumber>, spec_byte: SpecIdx, value: u8) {
 		match spec_byte {
 			SpecIdx::Byte1 => Self::write_strand(avatar, 5, ByteType::Full, value),
 			SpecIdx::Byte2 => Self::write_strand(avatar, 6, ByteType::Full, value),
@@ -991,13 +1044,13 @@ impl DnaUtils {
 		}
 	}
 
-	pub fn read_progress(avatar: &Avatar) -> [u8; 11] {
+	pub fn read_progress(avatar: &Avatar<BlockNumber>) -> [u8; 11] {
 		let mut out = [0; 11];
 		out.copy_from_slice(&avatar.dna[21..32]);
 		out
 	}
 
-	pub fn write_progress(avatar: &mut Avatar, value: [u8; 11]) {
+	pub fn write_progress(avatar: &mut Avatar<BlockNumber>, value: [u8; 11]) {
 		(avatar.dna[21..32]).copy_from_slice(&value);
 	}
 
@@ -1324,7 +1377,7 @@ mod test {
 	fn test_bits_to_enums_consistency_1() {
 		let bits = 0b_01_01_01_01;
 
-		let result = DnaUtils::bits_to_enums::<NibbleType>(bits);
+		let result = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<NibbleType>(bits);
 		let expected = vec![NibbleType::X0, NibbleType::X2, NibbleType::X4, NibbleType::X6];
 
 		assert_eq!(result, expected);
@@ -1334,7 +1387,7 @@ mod test {
 	fn test_bits_to_enums_consistency_2() {
 		let bits = 0b_11_01_10_01;
 
-		let result = DnaUtils::bits_to_enums::<MaterialItemType>(bits);
+		let result = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<MaterialItemType>(bits);
 		let expected = vec![
 			MaterialItemType::Polymers,
 			MaterialItemType::Optics,
@@ -1351,14 +1404,15 @@ mod test {
 		let bit_order = 0b_01_10_11_00;
 		let enum_list = vec![NibbleType::X0, NibbleType::X2, NibbleType::X4, NibbleType::X6];
 
-		let result = DnaUtils::bits_order_to_enum(bit_order, 4, enum_list);
+		let result = DnaUtils::<BlockNumberFor<Test>>::bits_order_to_enum(bit_order, 4, enum_list);
 		let expected = vec![NibbleType::X2, NibbleType::X4, NibbleType::X6, NibbleType::X0];
 		assert_eq!(result, expected);
 
 		let bit_order_2 = 0b_01_11_00_10;
 		let enum_list_2 = vec![NibbleType::X4, NibbleType::X5, NibbleType::X6, NibbleType::X7];
 
-		let result_2 = DnaUtils::bits_order_to_enum(bit_order_2, 4, enum_list_2);
+		let result_2 =
+			DnaUtils::<BlockNumberFor<Test>>::bits_order_to_enum(bit_order_2, 4, enum_list_2);
 		let expected_2 = vec![NibbleType::X5, NibbleType::X7, NibbleType::X4, NibbleType::X6];
 		assert_eq!(result_2, expected_2);
 	}
@@ -1368,7 +1422,7 @@ mod test {
 		let bit_order = 0b_01_10_00_10;
 		let enum_list = vec![PetType::FoxishDude, PetType::FireDino, PetType::GiantWoodStick];
 
-		let result = DnaUtils::bits_order_to_enum(bit_order, 4, enum_list);
+		let result = DnaUtils::<BlockNumberFor<Test>>::bits_order_to_enum(bit_order, 4, enum_list);
 		let expected = vec![
 			PetType::FireDino,
 			PetType::GiantWoodStick,
@@ -1384,7 +1438,7 @@ mod test {
 		let pattern = vec![NibbleType::X2, NibbleType::X4, NibbleType::X1, NibbleType::X3];
 		let expected = 0b_00_01_11_10;
 
-		assert_eq!(DnaUtils::enums_to_bits(&pattern), expected);
+		assert_eq!(DnaUtils::<BlockNumberFor<Test>>::enums_to_bits(&pattern), expected);
 	}
 
 	#[test]
@@ -1392,7 +1446,7 @@ mod test {
 		let pattern = vec![PetType::FoxishDude, PetType::BigHybrid, PetType::GiantWoodStick];
 		let expected = 0b_00_11_00_10;
 
-		assert_eq!(DnaUtils::enums_to_bits(&pattern), expected);
+		assert_eq!(DnaUtils::<BlockNumberFor<Test>>::enums_to_bits(&pattern), expected);
 	}
 
 	#[test]
@@ -1408,7 +1462,7 @@ mod test {
 		// We group by 3 because the output is grouped by 3
 		let expected = 0b_010_000_011_100_001;
 
-		assert_eq!(DnaUtils::enums_order_to_bits(&pattern), expected);
+		assert_eq!(DnaUtils::<BlockNumberFor<Test>>::enums_order_to_bits(&pattern), expected);
 	}
 
 	#[test]
@@ -1425,18 +1479,20 @@ mod test {
 			MaterialItemType::Superconductors,
 		];
 
-		let bits = DnaUtils::enums_to_bits(&pattern);
+		let bits = DnaUtils::<BlockNumberFor<Test>>::enums_to_bits(&pattern);
 		assert_eq!(bits, 0b_01_10_00_01);
 
-		let enums = DnaUtils::bits_to_enums::<MaterialItemType>(bits);
+		let enums = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<MaterialItemType>(bits);
 		assert_eq!(enums, expected);
 	}
 
 	#[test]
 	fn test_create_pattern_consistency() {
 		let base_seed = SlotType::Head.as_byte() as usize;
-		let pattern =
-			DnaUtils::create_pattern::<NibbleType>(base_seed, SlotType::Breast.as_byte() as usize);
+		let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<NibbleType>(
+			base_seed,
+			SlotType::Breast.as_byte() as usize,
+		);
 
 		let expected = vec![NibbleType::X7, NibbleType::X5, NibbleType::X4, NibbleType::X3];
 
@@ -1447,25 +1503,27 @@ mod test {
 	fn tests_pattern_and_order() {
 		let base_seed = (PetType::FoxishDude.as_byte() + SlotType::Head.as_byte()) as usize;
 
-		let pattern_1 = DnaUtils::create_pattern::<NibbleType>(
+		let pattern_1 = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<NibbleType>(
 			base_seed,
 			EquippableItemType::ArmorBase.as_byte() as usize,
 		);
-		let p10 = DnaUtils::enums_to_bits(&pattern_1);
-		let p11 = DnaUtils::enums_order_to_bits(&pattern_1);
+		let p10 = DnaUtils::<BlockNumberFor<Test>>::enums_to_bits(&pattern_1);
+		let p11 = DnaUtils::<BlockNumberFor<Test>>::enums_order_to_bits(&pattern_1);
 
 		assert_eq!(p10, 0b_01_10_11_00);
 		assert_eq!(p11, 0b_01_11_10_00);
 
 		// Decode Blueprint
-		let unordered_1 = DnaUtils::bits_to_enums::<NibbleType>(p10);
-		let pattern_1_check = DnaUtils::bits_order_to_enum(p11, 4, unordered_1);
+		let unordered_1 = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<NibbleType>(p10);
+		let pattern_1_check =
+			DnaUtils::<BlockNumberFor<Test>>::bits_order_to_enum(p11, 4, unordered_1);
 		assert_eq!(pattern_1_check, pattern_1);
 
 		// Pattern number and enum number only match if they are according to the index in the list
-		let unordered_material = DnaUtils::bits_to_enums::<MaterialItemType>(p10);
+		let unordered_material =
+			DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<MaterialItemType>(p10);
 		assert_eq!(
-			DnaUtils::bits_order_to_enum(p11, 4, unordered_material)[0],
+			DnaUtils::<BlockNumberFor<Test>>::bits_order_to_enum(p11, 4, unordered_material)[0],
 			MaterialItemType::Optics
 		);
 
@@ -1476,18 +1534,23 @@ mod test {
 		];
 
 		for (armor_component, enum_to_bits, enum_order_to_bits) in test_set {
-			let pattern_base = DnaUtils::create_pattern::<NibbleType>(
+			let pattern_base = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<NibbleType>(
 				base_seed,
 				armor_component.as_byte() as usize,
 			);
-			let p_enum_to_bits = DnaUtils::enums_to_bits(&pattern_base);
-			let p_enum_order_to_bits = DnaUtils::enums_order_to_bits(&pattern_base);
+			let p_enum_to_bits = DnaUtils::<BlockNumberFor<Test>>::enums_to_bits(&pattern_base);
+			let p_enum_order_to_bits =
+				DnaUtils::<BlockNumberFor<Test>>::enums_order_to_bits(&pattern_base);
 			assert_eq!(p_enum_to_bits, enum_to_bits);
 			assert_eq!(p_enum_order_to_bits, enum_order_to_bits);
 			// Decode Blueprint
-			let unordered_base = DnaUtils::bits_to_enums::<NibbleType>(p_enum_to_bits);
-			let pattern_base_check =
-				DnaUtils::bits_order_to_enum(p_enum_order_to_bits, 4, unordered_base);
+			let unordered_base =
+				DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<NibbleType>(p_enum_to_bits);
+			let pattern_base_check = DnaUtils::<BlockNumberFor<Test>>::bits_order_to_enum(
+				p_enum_order_to_bits,
+				4,
+				unordered_base,
+			);
 			assert_eq!(pattern_base_check, pattern_base);
 		}
 	}
@@ -1498,77 +1561,77 @@ mod test {
 
 		let arr_1 = [0x00; 11];
 		let arr_2 = [0x00; 11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x10; 11];
 		let arr_2 = [0x00; 11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00];
 		let arr_2 = [0x00; 11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_mirrors: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, expected_mirrors);
 
 		let arr_1 = [0x00; 11];
 		let arr_2 = [0x10; 11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x10; 11];
 		let arr_2 = [0x10; 11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00];
 		let arr_2 = [0x10; 11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_mirrors: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, expected_mirrors);
 
 		let arr_1 = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00];
 		let arr_2 = [0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00, 0x05];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 		assert_eq!(matches, expected_matches);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10];
 		let arr_2 = [0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00, 0x05];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10];
 		let arr_2 = [0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x15];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 		assert_eq!(matches, expected_matches);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x00];
 		let arr_2 = [0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x15];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00];
 		let arr_2 = [0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x15];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x00, 0x11, 0x02, 0x13, 0x04, 0x15, 0x04, 0x13, 0x02, 0x11, 0x00];
 		let arr_2 = [0x01, 0x01, 0x12, 0x13, 0x04, 0x04, 0x13, 0x12, 0x01, 0x01, 0x15];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![0, 8];
 		let expected_mirrors: Vec<u32> = vec![1, 3, 9];
 		assert_eq!(matches, expected_matches);
@@ -1581,7 +1644,7 @@ mod test {
 
 		let arr_1 = [0x14, 0x12, 0x10, 0x11, 0x20, 0x21, 0x10, 0x15, 0x11, 0x25, 0x13];
 		let arr_2 = [0x12, 0x13, 0x14, 0x13, 0x14, 0x11, 0x22, 0x10, 0x14, 0x22, 0x11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![1, 7];
 		let expected_mirrors: Vec<u32> = vec![5];
 		assert_eq!(matches, expected_matches);
@@ -1589,14 +1652,14 @@ mod test {
 
 		let arr_1 = [0x14, 0x12, 0x10, 0x11, 0x20, 0x21, 0x10, 0x15, 0x11, 0x25, 0x13];
 		let arr_2 = [0x10, 0x10, 0x10, 0x14, 0x14, 0x13, 0x13, 0x12, 0x15, 0x14, 0x14];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![10];
 		assert_eq!(matches, expected_matches);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x14, 0x12, 0x10, 0x11, 0x20, 0x21, 0x10, 0x15, 0x11, 0x25, 0x13];
 		let arr_2 = [0x15, 0x10, 0x14, 0x13, 0x13, 0x11, 0x10, 0x14, 0x12, 0x20, 0x11];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![0, 7, 8];
 		let expected_mirrors: Vec<u32> = vec![5];
 		assert_eq!(matches, expected_matches);
@@ -1604,7 +1667,7 @@ mod test {
 
 		let arr_1 = [0x14, 0x12, 0x10, 0x11, 0x20, 0x21, 0x10, 0x15, 0x11, 0x25, 0x13];
 		let arr_2 = [0x11, 0x11, 0x11, 0x10, 0x15, 0x12, 0x11, 0x11, 0x13, 0x12, 0x14];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![1, 2, 3, 6, 10];
 		assert_eq!(matches, expected_matches);
 		assert_eq!(mirrors, empty_vec);
@@ -1616,21 +1679,21 @@ mod test {
 
 		let arr_1 = [0x42, 0x40, 0x40, 0x44, 0x43, 0x42, 0x41, 0x44, 0x44, 0x42, 0x45];
 		let arr_2 = [0x41, 0x51, 0x52, 0x53, 0x44, 0x52, 0x45, 0x41, 0x40, 0x41, 0x43];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![0, 4, 9];
 		assert_eq!(matches, expected_matches);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x42, 0x40, 0x40, 0x44, 0x43, 0x42, 0x41, 0x44, 0x44, 0x42, 0x45];
 		let arr_2 = [0x52, 0x41, 0x43, 0x41, 0x53, 0x45, 0x43, 0x44, 0x52, 0x43, 0x43];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![1, 9];
 		assert_eq!(matches, expected_matches);
 		assert_eq!(mirrors, empty_vec);
 
 		let arr_1 = [0x42, 0x40, 0x40, 0x44, 0x43, 0x42, 0x41, 0x54, 0x44, 0x42, 0x53];
 		let arr_2 = [0x52, 0x40, 0x43, 0x41, 0x53, 0x45, 0x41, 0x44, 0x52, 0x43, 0x43];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![9];
 		let expected_mirrors: Vec<u32> = vec![7, 10];
 		assert_eq!(matches, expected_matches);
@@ -1638,7 +1701,7 @@ mod test {
 
 		let arr_1 = [0x45, 0x45, 0x45, 0x45, 0x45, 0x45, 0x45, 0x30, 0x30, 0x30, 0x30];
 		let arr_2 = [0x45, 0x45, 0x45, 0x45, 0x45, 0x35, 0x45, 0x31, 0x30, 0x45, 0x45];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		let expected_matches: Vec<u32> = vec![7];
 		let expected_mirrors: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6];
 		assert_eq!(matches, expected_matches);
@@ -1646,7 +1709,7 @@ mod test {
 
 		let arr_1 = [0x31, 0x30, 0x35, 0x33, 0x30, 0x33, 0x31, 0x32, 0x32, 0x32, 0x34];
 		let arr_2 = [0x21, 0x21, 0x35, 0x34, 0x24, 0x33, 0x23, 0x22, 0x22, 0x22, 0x22];
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 	}
@@ -1659,7 +1722,7 @@ mod test {
 			hex::decode("3130353330333132323234").expect("Decode").try_into().unwrap();
 		let arr_2: [u8; 11] =
 			hex::decode("2121353424332322222222").expect("Decode").try_into().unwrap();
-		let (mirrors, matches) = DnaUtils::match_progress(arr_1, arr_2, 0);
+		let (mirrors, matches) = DnaUtils::<BlockNumberFor<Test>>::match_progress(arr_1, arr_2, 0);
 		assert_eq!(matches, empty_vec);
 		assert_eq!(mirrors, empty_vec);
 	}
@@ -1667,23 +1730,34 @@ mod test {
 	#[test]
 	fn test_indexes_of_max() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_eq!(DnaUtils::indexes_of_max(&[0, 2, 1, 1]), vec![1]);
-			assert_eq!(DnaUtils::indexes_of_max(&[9, 5, 3, 9, 7, 2, 1]), vec![0, 3]);
-			assert_eq!(DnaUtils::indexes_of_max(&[0, 0, 0, 0, 0]), vec![0, 1, 2, 3, 4]);
-			assert_eq!(DnaUtils::indexes_of_max(&[1, 4, 9, 2, 3, 11, 10, 11, 0, 1]), vec![5, 7]);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::indexes_of_max(&[0, 2, 1, 1]), vec![1]);
+			assert_eq!(
+				DnaUtils::<BlockNumberFor<Test>>::indexes_of_max(&[9, 5, 3, 9, 7, 2, 1]),
+				vec![0, 3]
+			);
+			assert_eq!(
+				DnaUtils::<BlockNumberFor<Test>>::indexes_of_max(&[0, 0, 0, 0, 0]),
+				vec![0, 1, 2, 3, 4]
+			);
+			assert_eq!(
+				DnaUtils::<BlockNumberFor<Test>>::indexes_of_max(&[
+					1, 4, 9, 2, 3, 11, 10, 11, 0, 1
+				]),
+				vec![5, 7]
+			);
 		});
 	}
 
 	#[test]
 	fn test_current_period() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_eq!(DnaUtils::current_period::<Test>(10, 14, 0), 0);
-			assert_eq!(DnaUtils::current_period::<Test>(10, 14, 9), 0);
-			assert_eq!(DnaUtils::current_period::<Test>(10, 14, 10), 1);
-			assert_eq!(DnaUtils::current_period::<Test>(10, 14, 19), 1);
-			assert_eq!(DnaUtils::current_period::<Test>(10, 14, 130), 13);
-			assert_eq!(DnaUtils::current_period::<Test>(10, 14, 139), 13);
-			assert_eq!(DnaUtils::current_period::<Test>(10, 14, 140), 0);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::current_period::<Test>(10, 14, 0), 0);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::current_period::<Test>(10, 14, 9), 0);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::current_period::<Test>(10, 14, 10), 1);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::current_period::<Test>(10, 14, 19), 1);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::current_period::<Test>(10, 14, 130), 13);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::current_period::<Test>(10, 14, 139), 13);
+			assert_eq!(DnaUtils::<BlockNumberFor<Test>>::current_period::<Test>(10, 14, 140), 0);
 		});
 	}
 }

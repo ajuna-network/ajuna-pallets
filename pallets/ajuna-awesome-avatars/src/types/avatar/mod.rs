@@ -57,14 +57,18 @@ pub enum DnaEncoding {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
-pub struct Avatar {
+pub struct Avatar<BlockNumber> {
 	pub season_id: SeasonId,
 	pub encoding: DnaEncoding,
 	pub dna: Dna,
 	pub souls: SoulCount,
+	pub minted_at: BlockNumber,
 }
 
-impl Avatar {
+impl<BlockNumber> Avatar<BlockNumber>
+where
+	BlockNumber: sp_runtime::traits::BlockNumber,
+{
 	pub(crate) fn rarity(&self) -> u8 {
 		match self.encoding {
 			DnaEncoding::V1 => AttributeMapperV1::rarity(self),

@@ -25,8 +25,11 @@ impl<T: Config> AvatarCombinator<T> {
 		let max_quantity = 16;
 		if new_quantity > max_quantity {
 			let dna = MinterV2::<T>::generate_empty_dna::<32>()?;
+			let current_block = <frame_system::Pallet<T>>::block_number();
 			let dust_avatar = vec![ForgeOutput::Minted(
-				AvatarBuilder::with_dna(season_id, dna).into_dust(new_souls).build(),
+				AvatarBuilder::with_dna(season_id, dna, current_block)
+					.into_dust(new_souls)
+					.build(),
 			)];
 
 			return Ok((
@@ -51,7 +54,7 @@ impl<T: Config> AvatarCombinator<T> {
 				}
 			}
 
-			let pet_type_index = (DnaUtils::current_period::<T>(
+			let pet_type_index = (DnaUtils::<BlockNumberFor<T>>::current_period::<T>(
 				PET_MOON_PHASE_SIZE,
 				PET_MOON_PHASE_AMOUNT,
 				block_number,
@@ -64,10 +67,12 @@ impl<T: Config> AvatarCombinator<T> {
 		};
 
 		if updated_spec_bytes.iter().take(8).skip(1).all(|spec_byte| *spec_byte > 0) {
-			let slot_types = DnaUtils::indexes_of_max(&updated_spec_bytes[0..8]);
+			let slot_types =
+				DnaUtils::<BlockNumberFor<T>>::indexes_of_max(&updated_spec_bytes[0..8]);
 			let final_slot_type = slot_types[hash_provider.hash[0] as usize % slot_types.len()];
 
-			let pet_types = DnaUtils::indexes_of_max(&updated_spec_bytes[8..16]);
+			let pet_types =
+				DnaUtils::<BlockNumberFor<T>>::indexes_of_max(&updated_spec_bytes[8..16]);
 			let final_pet_type = pet_types[hash_provider.hash[1] as usize % pet_types.len()];
 
 			leader.set_rarity(RarityTier::Rare);
@@ -76,31 +81,55 @@ impl<T: Config> AvatarCombinator<T> {
 
 			let base_seed = final_slot_type + final_pet_type;
 
-			let base_0 = DnaUtils::create_pattern::<NibbleType>(
+			let base_0 = DnaUtils::<BlockNumberFor<T>>::create_pattern::<NibbleType>(
 				base_seed,
 				EquippableItemType::ArmorBase.as_byte() as usize,
 			);
-			let comp_1 = DnaUtils::create_pattern::<NibbleType>(
+			let comp_1 = DnaUtils::<BlockNumberFor<T>>::create_pattern::<NibbleType>(
 				base_seed,
 				EquippableItemType::ArmorComponent1.as_byte() as usize,
 			);
-			let comp_2 = DnaUtils::create_pattern::<NibbleType>(
+			let comp_2 = DnaUtils::<BlockNumberFor<T>>::create_pattern::<NibbleType>(
 				base_seed,
 				EquippableItemType::ArmorComponent2.as_byte() as usize,
 			);
-			let comp_3 = DnaUtils::create_pattern::<NibbleType>(
+			let comp_3 = DnaUtils::<BlockNumberFor<T>>::create_pattern::<NibbleType>(
 				base_seed,
 				EquippableItemType::ArmorComponent3.as_byte() as usize,
 			);
 
-			leader.set_spec(SpecIdx::Byte1, DnaUtils::enums_to_bits(&base_0) as u8);
-			leader.set_spec(SpecIdx::Byte2, DnaUtils::enums_order_to_bits(&base_0) as u8);
-			leader.set_spec(SpecIdx::Byte3, DnaUtils::enums_to_bits(&comp_1) as u8);
-			leader.set_spec(SpecIdx::Byte4, DnaUtils::enums_order_to_bits(&comp_1) as u8);
-			leader.set_spec(SpecIdx::Byte5, DnaUtils::enums_to_bits(&comp_2) as u8);
-			leader.set_spec(SpecIdx::Byte6, DnaUtils::enums_order_to_bits(&comp_2) as u8);
-			leader.set_spec(SpecIdx::Byte7, DnaUtils::enums_to_bits(&comp_3) as u8);
-			leader.set_spec(SpecIdx::Byte8, DnaUtils::enums_order_to_bits(&comp_3) as u8);
+			leader.set_spec(
+				SpecIdx::Byte1,
+				DnaUtils::<BlockNumberFor<T>>::enums_to_bits(&base_0) as u8,
+			);
+			leader.set_spec(
+				SpecIdx::Byte2,
+				DnaUtils::<BlockNumberFor<T>>::enums_order_to_bits(&base_0) as u8,
+			);
+			leader.set_spec(
+				SpecIdx::Byte3,
+				DnaUtils::<BlockNumberFor<T>>::enums_to_bits(&comp_1) as u8,
+			);
+			leader.set_spec(
+				SpecIdx::Byte4,
+				DnaUtils::<BlockNumberFor<T>>::enums_order_to_bits(&comp_1) as u8,
+			);
+			leader.set_spec(
+				SpecIdx::Byte5,
+				DnaUtils::<BlockNumberFor<T>>::enums_to_bits(&comp_2) as u8,
+			);
+			leader.set_spec(
+				SpecIdx::Byte6,
+				DnaUtils::<BlockNumberFor<T>>::enums_order_to_bits(&comp_2) as u8,
+			);
+			leader.set_spec(
+				SpecIdx::Byte7,
+				DnaUtils::<BlockNumberFor<T>>::enums_to_bits(&comp_3) as u8,
+			);
+			leader.set_spec(
+				SpecIdx::Byte8,
+				DnaUtils::<BlockNumberFor<T>>::enums_order_to_bits(&comp_3) as u8,
+			);
 		}
 
 		let output_vec: Vec<ForgeOutput<T>> = input_sacrifices

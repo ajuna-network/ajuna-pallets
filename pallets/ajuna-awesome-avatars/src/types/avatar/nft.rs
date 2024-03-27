@@ -21,10 +21,11 @@ use parity_scale_codec::alloc::string::ToString;
 use scale_info::prelude::format;
 use sp_std::prelude::*;
 
-impl<KL, VL> NftConvertible<KL, VL> for Avatar
+impl<KL, VL, BlockNumber> NftConvertible<KL, VL> for Avatar<BlockNumber>
 where
 	KL: Get<u32>,
 	VL: Get<u32>,
+	BlockNumber: sp_runtime::traits::BlockNumber,
 {
 	const ITEM_CODE: &'static [u8] = b"AVATAR";
 	const IPFS_URL_CODE: &'static [u8] = b"IPFS_URL";
@@ -36,6 +37,7 @@ where
 			BoundedVec::try_from(b"RARITY".to_vec()).unwrap(),
 			BoundedVec::try_from(b"FORCE".to_vec()).unwrap(),
 			BoundedVec::try_from(b"SEASON_ID".to_vec()).unwrap(),
+			BoundedVec::try_from(b"MINTED_AT".to_vec()).unwrap(),
 		]
 	}
 
@@ -70,6 +72,10 @@ where
 			(
 				BoundedVec::try_from(b"SEASON_ID".to_vec()).unwrap(),
 				BoundedVec::try_from(format!("{}", self.season_id).into_bytes()).unwrap(),
+			),
+			(
+				BoundedVec::try_from(b"MINTED_AT".to_vec()).unwrap(),
+				BoundedVec::try_from(format!("{}", self.minted_at).into_bytes()).unwrap(),
 			),
 		]
 	}

@@ -27,7 +27,7 @@ impl<T: Config> AvatarCombinator<T> {
 			let mut leader_progress_array = leader.get_progress();
 			let flask_progress_array = flask_avatar.get_progress();
 
-			if let Some(mut matches) = DnaUtils::is_progress_match(
+			if let Some(mut matches) = DnaUtils::<BlockNumberFor<T>>::is_progress_match(
 				leader_progress_array,
 				flask_progress_array,
 				MATCH_ALGO_START_RARITY.as_byte(),
@@ -69,8 +69,10 @@ impl<T: Config> AvatarCombinator<T> {
 					}
 				}
 
-				let rarity_type =
-					DnaUtils::lowest_progress_byte(&leader_progress_array, ByteType::High);
+				let rarity_type = DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(
+					&leader_progress_array,
+					ByteType::High,
+				);
 				leader.set_rarity(RarityTier::from_byte(rarity_type));
 				leader.set_progress(leader_progress_array);
 			}
@@ -161,7 +163,7 @@ mod test {
 			let sacrifice_progress_array = paint_flask.1.get_progress();
 			assert_eq!(sacrifice_progress_array, expected_sacrifice_progress_array);
 
-			assert!(DnaUtils::is_progress_match(
+			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
 				leader_progress_array,
 				sacrifice_progress_array,
 				MATCH_ALGO_START_RARITY.as_byte()
@@ -210,7 +212,7 @@ mod test {
 				0x45, 0x41, 0x55, 0x43,
 			];
 
-			let unit_closure = |avatar: Avatar| {
+			let unit_closure = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 623;
 				WrappedAvatar::new(avatar)
@@ -246,7 +248,7 @@ mod test {
 				[0x45, 0x43, 0x54, 0x53, 0x54, 0x51, 0x52, 0x50, 0x54, 0x55, 0x42];
 			assert_eq!(sacrifice_progress_array, expected_progress_array_other);
 
-			assert!(DnaUtils::is_progress_match(
+			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
 				leader_progress_array,
 				sacrifice_progress_array,
 				MATCH_ALGO_START_RARITY.as_byte()
@@ -338,7 +340,7 @@ mod test {
 				[0x45, 0x43, 0x54, 0x53, 0x54, 0x51, 0x52, 0x50, 0x54, 0x55, 0x42];
 			assert_eq!(sacrifice_progress_array, expected_progress_array_other);
 
-			assert!(DnaUtils::is_progress_match(
+			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
 				leader_progress_array,
 				sacrifice_progress_array,
 				MATCH_ALGO_START_RARITY.as_byte()
@@ -397,7 +399,7 @@ mod test {
 				],
 			];
 
-			let unit_fn = |avatar: Avatar| {
+			let unit_fn = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 623;
 				WrappedAvatar::new(avatar)
@@ -411,7 +413,7 @@ mod test {
 
 			let total_soul_points = leader.1.get_souls() + sac_1.1.get_souls();
 
-			assert!(DnaUtils::is_progress_match(
+			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
 				leader_progress_array,
 				sacrifice_progress_array,
 				MATCH_ALGO_START_RARITY.as_byte()
@@ -457,7 +459,7 @@ mod test {
 				0x45, 0x41, 0x55, 0x43,
 			];
 
-			let unit_closure = |avatar: Avatar| {
+			let unit_closure = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 623;
 				WrappedAvatar::new(avatar)
@@ -493,7 +495,7 @@ mod test {
 				[0x45, 0x43, 0x54, 0x53, 0x54, 0x51, 0x52, 0x50, 0x54, 0x55, 0x41];
 			assert_eq!(sacrifice_progress_array, expected_progress_array_other);
 
-			assert!(DnaUtils::is_progress_match(
+			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
 				leader_progress_array,
 				sacrifice_progress_array,
 				MATCH_ALGO_START_RARITY.as_byte()

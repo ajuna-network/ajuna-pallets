@@ -48,7 +48,7 @@ type CollectionIdOf<T> = <<T as AvatarsConfig>::NftHandler as NftHandler<
 	AvatarIdOf<T>,
 	KeyLimitOf<T>,
 	ValueLimitOf<T>,
-	Avatar,
+	AvatarOf<T>,
 >>::CollectionId;
 
 type NftCollectionConfigOf<T> =

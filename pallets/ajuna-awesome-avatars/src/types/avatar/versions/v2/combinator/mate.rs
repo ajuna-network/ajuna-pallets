@@ -21,6 +21,8 @@ impl<T: Config> AvatarCombinator<T> {
 			));
 		}
 
+		let current_block = <frame_system::Pallet<T>>::block_number();
+
 		let (leader_id, mut leader) = input_leader;
 		let (partner_id, mut partner) = {
 			let mut input_sacrifices = input_sacrifices;
@@ -31,21 +33,22 @@ impl<T: Config> AvatarCombinator<T> {
 		let filled_slots_partner = partner.spec_byte_split_ten_count();
 		let partner_pet_type_match = partner.get_class_type_2::<PetType>() ==
 			PetType::from_byte(
-				(DnaUtils::current_period::<T>(
+				(DnaUtils::<BlockNumberFor<T>>::current_period::<T>(
 					PET_MOON_PHASE_SIZE,
 					PET_MOON_PHASE_AMOUNT,
 					block_number,
 				) % 7) as u8 + 1,
 			);
 
-		let progress_match = DnaUtils::is_progress_match(
+		let progress_match = DnaUtils::<BlockNumberFor<T>>::is_progress_match(
 			leader.get_progress(),
 			partner.get_progress(),
 			RarityTier::Common.as_byte(),
 		);
 
 		let leader_pet_type =
-			DnaUtils::enums_to_bits(&[leader.get_class_type_2::<PetType>()]) as u8;
+			DnaUtils::<BlockNumberFor<T>>::enums_to_bits(&[leader.get_class_type_2::<PetType>()])
+				as u8;
 
 		let leader_pet_variation = leader.get_custom_type_2::<u8>();
 		let partner_pet_variation = partner.get_custom_type_2::<u8>();
@@ -81,7 +84,7 @@ impl<T: Config> AvatarCombinator<T> {
 			let generated_dust = {
 				let dna = MinterV2::<T>::generate_empty_dna::<32>()?;
 
-				AvatarBuilder::with_dna(season_id, dna)
+				AvatarBuilder::with_dna(season_id, dna, current_block)
 					.into_dust(leader.get_souls() + partner.get_souls())
 					.build()
 			};
@@ -101,15 +104,17 @@ impl<T: Config> AvatarCombinator<T> {
 					progress_match.is_none() ||
 					!partner_pet_type_match
 				{
-					AvatarBuilder::with_dna(season_id, dna).into_dust(soul_points).build()
+					AvatarBuilder::with_dna(season_id, dna, current_block)
+						.into_dust(soul_points)
+						.build()
 				} else {
-					let progress_array = DnaUtils::generate_progress(
+					let progress_array = DnaUtils::<BlockNumberFor<T>>::generate_progress(
 						&RarityTier::Rare,
 						SCALING_FACTOR_PERC,
 						Some(PROGRESS_PROBABILITY_PERC),
 						hash_provider,
 					);
-					AvatarBuilder::with_dna(season_id, dna)
+					AvatarBuilder::with_dna(season_id, dna, current_block)
 						.into_egg(&RarityTier::Rare, pet_variation, soul_points, progress_array)
 						.build()
 				};

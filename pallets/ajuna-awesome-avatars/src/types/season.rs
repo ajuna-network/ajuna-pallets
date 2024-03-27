@@ -91,7 +91,7 @@ impl DerefMut for TradeFilters {
 }
 
 impl TradeFilters {
-	pub(crate) fn is_tradable(&self, avatar: &Avatar) -> bool {
+	pub(crate) fn is_tradable<BlockNumber>(&self, avatar: &Avatar<BlockNumber>) -> bool {
 		// No filter means we allow everything to be traded.
 		if self.is_empty() {
 			return true;
