@@ -21,6 +21,6 @@ pub fn lookup_of_account<T: frame_system::Config>(
     <T as frame_system::Config>::Lookup::unlookup(who)
 }
 
-pub fn set_balance<T: pallet_balances::Config + orml_vesting::Config>(account: AccountIdFor<T>, schedule_amount: BalanceFor<T>) {
+pub fn set_balance<T: orml_vesting::Config>(account: AccountIdFor<T>, schedule_amount: BalanceFor<T>) {
     CurrencyFor::<T>::make_free_balance_be(&account, schedule_amount);
 }
