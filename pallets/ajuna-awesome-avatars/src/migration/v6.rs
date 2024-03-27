@@ -255,8 +255,31 @@ pub struct SeasonInfoV5 {
 }
 
 impl SeasonInfoV5 {
-	fn migration_to_v6(self, bought: Stat, sold: Stat) -> SeasonInfo {
+	fn migrate_to_v6(self, bought: Stat, sold: Stat) -> SeasonInfo {
 		SeasonInfo { minted: self.minted, free_minted: 0, forged: self.forged, bought, sold }
+	}
+}
+
+#[derive(Decode)]
+pub struct AvatarV5 {
+	pub season_id: SeasonId,
+	pub encoding: DnaEncoding,
+	pub dna: Dna,
+	pub souls: SoulCount,
+}
+
+impl AvatarV5 {
+	fn migrate_to_v6<BlockNumber>(self) -> Avatar<BlockNumber>
+	where
+		BlockNumber: sp_runtime::traits::BlockNumber,
+	{
+		Avatar {
+			season_id: self.season_id,
+			encoding: self.encoding,
+			dna: self.dna,
+			souls: self.souls,
+			minted_at: Default::default(),
+		}
 	}
 }
 
@@ -330,7 +353,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 					if let Some((bought, sold)) = trade_stats_map.remove(&(season_id, account)) {
 						season_stats_translated += 1;
 
-						Some(old_season_info.migration_to_v6(bought, sold))
+						Some(old_season_info.migrate_to_v6(bought, sold))
 					} else {
 						log::error!(target: LOG_TARGET, "Missing trade mapping in SeasonStats from v5 to v6");
 						None
@@ -340,14 +363,27 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 
 			log::info!(target: LOG_TARGET, "Updated {} SeasonStats entries from v5 to v6", season_stats_translated);
 
+			let mut avatars_translated = 0;
+
+			Avatars::<T>::translate::<(AccountIdFor<T>, AvatarV5), _>(|_, (account, avatar)| {
+				avatars_translated += 1;
+
+				Some((account, avatar.migrate_to_v6()))
+			});
+
+			log::info!(target: LOG_TARGET, "Updated {} Avatar entries from v5 to v6", avatars_translated);
+
 			current_version.put::<Pallet<T>>();
 			log::info!(target: LOG_TARGET, "Upgraded storage to version {:?}", current_version);
 
-			let total_reads =
-				seasons_translated + player_season_configs_translated + season_stats_translated;
+			let total_reads = seasons_translated +
+				player_season_configs_translated +
+				season_stats_translated +
+				avatars_translated;
 			let total_writes = (seasons_translated * 4) +
 				player_season_configs_translated +
-				season_stats_translated;
+				season_stats_translated +
+				avatars_translated;
 
 			T::DbWeight::get().reads_writes(total_reads, total_writes)
 		} else {

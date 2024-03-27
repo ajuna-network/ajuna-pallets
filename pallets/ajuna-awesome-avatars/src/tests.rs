@@ -3598,6 +3598,7 @@ mod nft_transfer {
 						],
 						souls: 60,
 						encoding: DnaEncoding::V2,
+						minted_at: season_schedule.start,
 					}
 				);
 
@@ -3606,14 +3607,14 @@ mod nft_transfer {
 					<Nft as Inspect<MockAccountId>>::system_attribute(
 						&CollectionId::<Test>::get().unwrap(),
 						Some(&avatar_id),
-						<Avatar as NftConvertible<KeyLimit, ValueLimit>>::ITEM_CODE,
+						<AvatarOf<Test> as NftConvertible<KeyLimit, ValueLimit>>::ITEM_CODE,
 					)
 					.unwrap(),
 					avatar.encode(),
 				);
 
 				// Ensure attributes encoding
-				for (attribute_code, attribute) in <Avatar as NftConvertible<
+				for (attribute_code, attribute) in <AvatarOf<Test> as NftConvertible<
 					KeyLimit,
 					ValueLimit,
 				>>::get_attribute_codes()

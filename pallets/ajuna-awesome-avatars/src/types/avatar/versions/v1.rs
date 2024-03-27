@@ -4,12 +4,12 @@ use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, vec::Vec};
 
 pub(crate) struct AttributeMapperV1;
 
-impl AttributeMapper for AttributeMapperV1 {
-	fn rarity(target: &Avatar) -> u8 {
+impl<BlockNumber> AttributeMapper<BlockNumber> for AttributeMapperV1 {
+	fn rarity(target: &Avatar<BlockNumber>) -> u8 {
 		target.dna.iter().map(|x| *x >> 4).min().unwrap_or_default()
 	}
 
-	fn force(target: &Avatar) -> u8 {
+	fn force(target: &Avatar<BlockNumber>) -> u8 {
 		(target.dna.last().unwrap_or(&0) & 0b0000_1111).saturating_add(1)
 	}
 }
@@ -29,8 +29,14 @@ impl<T: Config> Minter<T> for MinterV1<T> {
 				let avatar_id = Pallet::<T>::random_hash(b"create_avatar", player);
 				let dna = Self::random_dna(&avatar_id, &season, is_batched)?;
 				let souls = (dna.iter().map(|x| *x as SoulCount).sum::<SoulCount>() % 100) + 1;
-				let avatar =
-					Avatar { season_id: *season_id, encoding: DnaEncoding::V1, dna, souls };
+				let current_block = <frame_system::Pallet<T>>::block_number();
+				let avatar = Avatar {
+					season_id: *season_id,
+					encoding: DnaEncoding::V1,
+					dna,
+					souls,
+					minted_at: current_block,
+				};
 				Avatars::<T>::insert(avatar_id, (player, avatar));
 				Owners::<T>::try_append(&player, &season_id, avatar_id)
 					.map_err(|_| Error::<T>::MaxOwnershipReached)?;
@@ -100,7 +106,7 @@ impl<T: Config> Forger<T> for ForgerV1<T> {
 		let max_tier = season.max_tier() as u8;
 		let current_block = <frame_system::Pallet<T>>::block_number();
 
-		let (sacrifice_ids, sacrifice_avatars): (Vec<AvatarIdOf<T>>, Vec<Avatar>) =
+		let (sacrifice_ids, sacrifice_avatars): (Vec<AvatarIdOf<T>>, Vec<AvatarOf<T>>) =
 			input_sacrifices.into_iter().unzip();
 
 		let (mut unique_matched_indexes, matches, soul_count) = Self::compare_all(
@@ -152,8 +158,8 @@ impl<T: Config> Forger<T> for ForgerV1<T> {
 
 impl<T: Config> ForgerV1<T> {
 	fn compare_all(
-		target: &Avatar,
-		others: &[Avatar],
+		target: &AvatarOf<T>,
+		others: &[AvatarOf<T>],
 		max_variations: u8,
 		max_tier: u8,
 	) -> Result<(BTreeSet<usize>, u8, SoulCount), DispatchError> {
@@ -180,7 +186,7 @@ impl<T: Config> ForgerV1<T> {
 		)
 	}
 
-	fn upgradable_indexes_for_target(target: &Avatar) -> Result<Vec<usize>, DispatchError> {
+	fn upgradable_indexes_for_target(target: &AvatarOf<T>) -> Result<Vec<usize>, DispatchError> {
 		let min_tier = AttributeMapperV1::rarity(target);
 		Ok(target
 			.dna
@@ -192,8 +198,8 @@ impl<T: Config> ForgerV1<T> {
 	}
 
 	fn compare(
-		target: &Avatar,
-		other: &Avatar,
+		target: &AvatarOf<T>,
+		other: &AvatarOf<T>,
 		indexes: &[usize],
 		max_variations: u8,
 		max_tier: u8,
@@ -239,7 +245,7 @@ impl<T: Config> ForgerV1<T> {
 	}
 
 	fn forge_probability(
-		target: &Avatar,
+		target: &AvatarOf<T>,
 		season: &SeasonOf<T>,
 		now: &BlockNumberFor<T>,
 		matches: u8,
@@ -251,7 +257,7 @@ impl<T: Config> ForgerV1<T> {
 				period_multiplier
 	}
 
-	fn forge_multiplier(target: &Avatar, season: &SeasonOf<T>, now: &BlockNumberFor<T>) -> u8 {
+	fn forge_multiplier(target: &AvatarOf<T>, season: &SeasonOf<T>, now: &BlockNumberFor<T>) -> u8 {
 		let current_period = season.current_period(now).saturating_add(1);
 		let last_variation = AttributeMapperV1::force(target) as u16;
 		let max_variations = season.max_variations as u16;
@@ -275,7 +281,7 @@ mod test {
 	use crate::mock::*;
 	use frame_support::assert_ok;
 
-	impl Avatar {
+	impl Avatar<BlockNumberFor<Test>> {
 		pub(crate) fn season_id(mut self, season_id: SeasonId) -> Self {
 			self.season_id = season_id;
 			self
@@ -464,7 +470,7 @@ mod test {
 				let leader_id = owned_avatar_ids[0];
 				let sacrifice_ids = &owned_avatar_ids[1..3];
 
-				let original_leader: Avatar = Avatars::<Test>::get(leader_id).unwrap().1;
+				let original_leader: AvatarOf<Test> = Avatars::<Test>::get(leader_id).unwrap().1;
 				let original_sacrifices = sacrifice_ids
 					.iter()
 					.map(|id| Avatars::<Test>::get(id).unwrap().1)
@@ -567,7 +573,7 @@ mod test {
 				let leader_id = owned_avatar_ids[0];
 				let sacrifice_id = owned_avatar_ids[1];
 
-				let original_leader: Avatar = Avatars::<Test>::get(leader_id).unwrap().1;
+				let original_leader: AvatarOf<Test> = Avatars::<Test>::get(leader_id).unwrap().1;
 				let original_sacrifice = Avatars::<Test>::get(sacrifice_id).unwrap().1;
 
 				assert_ok!(AAvatars::forge(

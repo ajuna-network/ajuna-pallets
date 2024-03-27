@@ -55,6 +55,8 @@ impl<T: Config> AvatarCombinator<T> {
 			LeaderForgeOutput::Consumed(leader_id)
 		};
 
+		let current_block = <frame_system::Pallet<T>>::block_number();
+
 		let glimmer_avatar = if total_soul_points > 0 {
 			let glimmer_quantity = total_soul_points / GLIMMER_SP as SoulCount;
 			dust_quantity += total_soul_points % GLIMMER_SP as SoulCount;
@@ -62,7 +64,7 @@ impl<T: Config> AvatarCombinator<T> {
 			if glimmer_quantity > 0 {
 				let dna = MinterV2::<T>::generate_empty_dna::<32>()?;
 				Some(
-					AvatarBuilder::with_dna(season_id, dna)
+					AvatarBuilder::with_dna(season_id, dna, current_block)
 						.into_glimmer(glimmer_quantity as u8)
 						.build(),
 				)
@@ -83,8 +85,11 @@ impl<T: Config> AvatarCombinator<T> {
 				let soul_points = if dust_qty > MAX_BYTE { MAX_BYTE } else { dust_qty };
 
 				let dna = MinterV2::<T>::generate_empty_dna::<32>()?;
-				dust_avatars
-					.push(AvatarBuilder::with_dna(season_id, dna).into_dust(soul_points).build());
+				dust_avatars.push(
+					AvatarBuilder::with_dna(season_id, dna, current_block)
+						.into_dust(soul_points)
+						.build(),
+				);
 				dust_qty = dust_qty.saturating_sub(MAX_BYTE);
 
 				if dust_qty == 0 {

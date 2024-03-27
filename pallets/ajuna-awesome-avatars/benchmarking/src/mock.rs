@@ -21,7 +21,7 @@ use frame_support::{
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
 	PalletId,
 };
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSigned};
 use pallet_ajuna_awesome_avatars::{
 	types::{AffiliateMethods, Avatar, SeasonId},
 	FeePropagationOf,
@@ -238,7 +238,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type Currency = Balances;
 	type SeasonId = SeasonId;
 	type EntityId = crate::AvatarIdOf<Runtime>;
-	type RankedEntity = Avatar;
+	type RankedEntity = Avatar<BlockNumberFor<Runtime>>;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 

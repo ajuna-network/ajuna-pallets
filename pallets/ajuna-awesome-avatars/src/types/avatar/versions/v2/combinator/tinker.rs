@@ -22,10 +22,12 @@ impl<T: Config> AvatarCombinator<T> {
 			.take(4)
 			.map(|chunk| {
 				sacrifice_pattern ==
-					DnaUtils::bits_order_to_enum(
+					DnaUtils::<BlockNumberFor<T>>::bits_order_to_enum(
 						chunk[1] as u32,
 						4,
-						DnaUtils::bits_to_enums::<MaterialItemType>(chunk[0] as u32),
+						DnaUtils::<BlockNumberFor<T>>::bits_to_enums::<MaterialItemType>(
+							chunk[0] as u32,
+						),
 					)
 			})
 			.collect::<Vec<_>>();
@@ -84,7 +86,8 @@ impl<T: Config> AvatarCombinator<T> {
 			let slot_type = leader.get_class_type_1::<SlotType>();
 
 			let dna = MinterV2::<T>::generate_empty_dna::<32>()?;
-			let generated_blueprint = AvatarBuilder::with_dna(season_id, dna)
+			let current_block = <frame_system::Pallet<T>>::block_number();
+			let generated_blueprint = AvatarBuilder::with_dna(season_id, dna, current_block)
 				.into_blueprint(
 					&BlueprintItemType::Blueprint,
 					&pet_type,
@@ -129,7 +132,7 @@ mod test {
 			let slot_type = SlotType::Head;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				EquippableItemType::ArmorBase.as_byte() as usize,
 			);
@@ -203,7 +206,7 @@ mod test {
 			let slot_type = SlotType::Head;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				EquippableItemType::ArmorBase.as_byte() as usize,
 			);
@@ -286,7 +289,7 @@ mod test {
 			let slot_type = SlotType::Head;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				EquippableItemType::ArmorBase.as_byte() as usize,
 			);
@@ -358,7 +361,7 @@ mod test {
 			let slot_type = SlotType::Head;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				EquippableItemType::ArmorBase.as_byte() as usize,
 			);
@@ -432,7 +435,7 @@ mod test {
 			let slot_type = SlotType::Head;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				EquippableItemType::ArmorBase.as_byte() as usize,
 			);
@@ -508,7 +511,7 @@ mod test {
 			let slot_type = SlotType::Breast;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				EquippableItemType::ArmorComponent3.as_byte() as usize,
 			);
@@ -584,7 +587,7 @@ mod test {
 		ExtBuilder::default().build().execute_with(|| {
 			let season_id = 0 as SeasonId;
 
-			let unit_fn = |avatar: Avatar| {
+			let unit_fn = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 1;
 				WrappedAvatar::new(avatar)

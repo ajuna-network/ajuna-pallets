@@ -28,7 +28,7 @@ impl<T: Config> AvatarCombinator<T> {
 					.same_full_and_class_types(&input_leader)
 					.not()
 					.then(|| {
-						DnaUtils::is_progress_match(
+						DnaUtils::<BlockNumberFor<T>>::is_progress_match(
 							leader_progress_array,
 							sacrifice.get_progress(),
 							MATCH_ALGO_START_RARITY.as_byte(),
@@ -38,10 +38,11 @@ impl<T: Config> AvatarCombinator<T> {
 					.unwrap_or(false)
 			});
 
-		let progress_rarity = RarityTier::from_byte(DnaUtils::lowest_progress_byte(
-			&input_leader.get_progress(),
-			ByteType::High,
-		));
+		let progress_rarity =
+			RarityTier::from_byte(DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(
+				&input_leader.get_progress(),
+				ByteType::High,
+			));
 
 		if input_leader.has_full_type(ItemType::Equippable, EquippableItemType::ArmorBase) &&
 			input_leader.get_rarity() < progress_rarity
@@ -315,7 +316,7 @@ mod test {
 				[0x21, 0x10, 0x25, 0x23, 0x20, 0x23, 0x21, 0x22, 0x22, 0x22, 0x24];
 			assert_eq!(leader_armor_component.1.get_progress(), expected_progress_array);
 
-			let pre_assemble = DnaUtils::bits_to_enums::<EquippableItemType>(
+			let pre_assemble = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<EquippableItemType>(
 				leader_armor_component.1.get_spec::<u8>(SpecIdx::Byte1) as u32,
 			);
 			assert_eq!(pre_assemble.len(), 1);
@@ -336,9 +337,9 @@ mod test {
 				let wrapped = WrappedAvatar::new(avatar);
 				assert_eq!(wrapped.get_souls(), 10);
 
-				let post_assemble = DnaUtils::bits_to_enums::<EquippableItemType>(
-					wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32,
-				);
+				let post_assemble = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<
+					EquippableItemType,
+				>(wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32);
 				assert_eq!(post_assemble.len(), 2);
 				assert_eq!(post_assemble[0], EquippableItemType::ArmorBase);
 				assert_eq!(post_assemble[1], EquippableItemType::ArmorComponent1);
@@ -443,9 +444,9 @@ mod test {
 				let wrapped = WrappedAvatar::new(avatar);
 				assert_eq!(wrapped.get_souls(), 10);
 
-				let post_assemble = DnaUtils::bits_to_enums::<EquippableItemType>(
-					wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32,
-				);
+				let post_assemble = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<
+					EquippableItemType,
+				>(wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32);
 				assert_eq!(post_assemble.len(), 2);
 				assert_eq!(post_assemble[0], EquippableItemType::ArmorBase);
 				assert_eq!(post_assemble[1], EquippableItemType::ArmorComponent2);
@@ -557,9 +558,9 @@ mod test {
 				let wrapped = WrappedAvatar::new(avatar);
 				assert_eq!(wrapped.get_souls(), 10);
 
-				let post_assemble = DnaUtils::bits_to_enums::<EquippableItemType>(
-					wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32,
-				);
+				let post_assemble = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<
+					EquippableItemType,
+				>(wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32);
 				assert_eq!(post_assemble.len(), 2);
 				assert_eq!(post_assemble[0], EquippableItemType::ArmorBase);
 				assert_eq!(post_assemble[1], EquippableItemType::ArmorComponent3);
@@ -671,9 +672,9 @@ mod test {
 				let wrapped = WrappedAvatar::new(avatar);
 				assert_eq!(wrapped.get_souls(), 10);
 
-				let post_assemble = DnaUtils::bits_to_enums::<EquippableItemType>(
-					wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32,
-				);
+				let post_assemble = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<
+					EquippableItemType,
+				>(wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32);
 				assert_eq!(post_assemble.len(), 3);
 				assert_eq!(post_assemble[0], EquippableItemType::ArmorBase);
 				assert_eq!(post_assemble[1], EquippableItemType::ArmorComponent1);
@@ -786,9 +787,9 @@ mod test {
 				let wrapped = WrappedAvatar::new(avatar);
 				assert_eq!(wrapped.get_souls(), 10);
 
-				let post_assemble = DnaUtils::bits_to_enums::<EquippableItemType>(
-					wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32,
-				);
+				let post_assemble = DnaUtils::<BlockNumberFor<Test>>::bits_to_enums::<
+					EquippableItemType,
+				>(wrapped.get_spec::<u8>(SpecIdx::Byte1) as u32);
 				assert_eq!(post_assemble.len(), 2);
 				assert_eq!(post_assemble[0], EquippableItemType::ArmorBase);
 				assert_eq!(post_assemble[1], EquippableItemType::ArmorComponent1);
@@ -1075,7 +1076,7 @@ mod test {
 				],
 			];
 
-			let unit_fn = |avatar: Avatar| {
+			let unit_fn = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 100;
 				WrappedAvatar::new(avatar)
@@ -1088,8 +1089,11 @@ mod test {
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), Some(unit_fn));
 
 			let leader_progress_array = leader.1.get_progress();
-			let lowest_count =
-				DnaUtils::lowest_progress_indexes(&leader_progress_array, ByteType::High).len();
+			let lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(
+				&leader_progress_array,
+				ByteType::High,
+			)
+			.len();
 			assert_eq!(lowest_count, 3);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
@@ -1106,9 +1110,11 @@ mod test {
 			if let LeaderForgeOutput::Forged((_, avatar), _) = leader_output {
 				let wrapped = WrappedAvatar::new(avatar);
 				let out_leader_progress_array = wrapped.get_progress();
-				let out_lowest_count =
-					DnaUtils::lowest_progress_indexes(&out_leader_progress_array, ByteType::High)
-						.len();
+				let out_lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(
+					&out_leader_progress_array,
+					ByteType::High,
+				)
+				.len();
 				assert_eq!(out_lowest_count, 11);
 
 				let expected_dna = [
@@ -1156,7 +1162,7 @@ mod test {
 				],
 			];
 
-			let unit_fn = |avatar: Avatar| {
+			let unit_fn = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 100;
 				WrappedAvatar::new(avatar)
@@ -1195,8 +1201,10 @@ mod test {
 			if let LeaderForgeOutput::Forged((_, avatar), _) = leader_output {
 				assert_eq!(avatar.souls, total_souls);
 
-				let leader_rarity =
-					DnaUtils::read_attribute::<RarityTier>(&avatar, AvatarAttr::RarityTier);
+				let leader_rarity = DnaUtils::<BlockNumberFor<Test>>::read_attribute::<RarityTier>(
+					&avatar,
+					AvatarAttr::RarityTier,
+				);
 				assert_eq!(leader_rarity, RarityTier::Legendary);
 			} else {
 				panic!("LeaderForgeOutput should have been Forged!")
@@ -1238,7 +1246,7 @@ mod test {
 			];
 
 			let avatar_fn = |souls: SoulCount| {
-				let mutate_fn = move |avatar: Avatar| {
+				let mutate_fn = move |avatar: AvatarOf<Test>| {
 					let mut avatar = avatar;
 					avatar.souls = souls;
 					WrappedAvatar::new(avatar)
@@ -1260,8 +1268,11 @@ mod test {
 					sac_3.1.get_souls() + sac_4.1.get_souls();
 
 			let leader_progress = leader.1.get_progress();
-			let lowest_count =
-				DnaUtils::lowest_progress_indexes(&leader_progress, ByteType::High).len();
+			let lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(
+				&leader_progress,
+				ByteType::High,
+			)
+			.len();
 			assert_eq!(lowest_count, 11);
 
 			assert_eq!(
@@ -1286,9 +1297,12 @@ mod test {
 			if let LeaderForgeOutput::Forged((_, avatar), _) = leader_output {
 				assert_eq!(avatar.souls, total_souls);
 
-				let leader_progress = DnaUtils::read_progress(&avatar);
-				let lowest_count =
-					DnaUtils::lowest_progress_indexes(&leader_progress, ByteType::High).len();
+				let leader_progress = DnaUtils::<BlockNumberFor<Test>>::read_progress(&avatar);
+				let lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(
+					&leader_progress,
+					ByteType::High,
+				)
+				.len();
 				assert_eq!(lowest_count, 11);
 
 				let expected_dna = [

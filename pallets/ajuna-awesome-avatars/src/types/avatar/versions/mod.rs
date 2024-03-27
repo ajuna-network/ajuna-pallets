@@ -8,12 +8,12 @@ use crate::*;
 use frame_support::pallet_prelude::*;
 use sp_std::vec::Vec;
 
-pub(crate) trait AttributeMapper {
+pub(crate) trait AttributeMapper<BlockNumber> {
 	/// Used to obtain the RarityTier of a given avatar as an u8.
-	fn rarity(target: &Avatar) -> u8;
+	fn rarity(target: &Avatar<BlockNumber>) -> u8;
 
 	/// Used to get the Force of a given avatar as an u8.
-	fn force(target: &Avatar) -> u8;
+	fn force(target: &Avatar<BlockNumber>) -> u8;
 }
 
 pub(crate) trait Minter<T: Config> {
@@ -25,7 +25,7 @@ pub(crate) trait Minter<T: Config> {
 }
 
 /// A tuple containing and avatar identifier with its represented avatar, used as forging inputs.
-pub(crate) type ForgeItem<T> = (AvatarIdOf<T>, Avatar);
+pub(crate) type ForgeItem<T> = (AvatarIdOf<T>, AvatarOf<T>);
 /// Number of components upgraded after a forge in a given Avatar.
 pub(crate) type UpgradedComponents = u8;
 
@@ -43,7 +43,7 @@ pub(crate) enum ForgeOutput<T: Config> {
 	/// The avatar was forged (mutate) in some way.
 	Forged(ForgeItem<T>, UpgradedComponents),
 	/// A new avatar was created from the forging process.
-	Minted(Avatar),
+	Minted(AvatarOf<T>),
 	/// The avatar was consumed in the forging process.
 	Consumed(AvatarIdOf<T>),
 }

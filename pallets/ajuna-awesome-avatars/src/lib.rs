@@ -103,6 +103,7 @@ pub mod pallet {
 	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
 	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
+	pub type AvatarOf<T> = Avatar<BlockNumberFor<T>>;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
 	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>, BalanceOf<T>>;
 	pub(crate) type KeyLimitOf<T> = <T as Config>::KeyLimit;
@@ -112,10 +113,10 @@ pub mod pallet {
 		AvatarIdOf<T>,
 		KeyLimitOf<T>,
 		ValueLimitOf<T>,
-		Avatar,
+		AvatarOf<T>,
 	>>::CollectionId;
 	pub type FeePropagationOf<T> = FeePropagation<<T as Config>::FeeChainMaxLength>;
-	pub type AvatarRankerFor<T> = AvatarRanker<AvatarIdOf<T>>;
+	pub type AvatarRankerFor<T> = AvatarRanker<AvatarIdOf<T>, BlockNumberFor<T>>;
 	pub type TournamentConfigFor<T> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T>>;
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
@@ -155,7 +156,7 @@ pub mod pallet {
 			Self::Hash,
 			Self::KeyLimit,
 			Self::ValueLimit,
-			Avatar,
+			AvatarOf<Self>,
 		>;
 
 		/// The maximum depth of the propagation fee chain,
@@ -170,7 +171,7 @@ pub mod pallet {
 
 		type TournamentHandler: TournamentInspector<SeasonId, BlockNumberFor<Self>, BalanceOf<Self>, AccountIdFor<Self>>
 			+ TournamentMutator<AccountIdFor<Self>, SeasonId, BlockNumberFor<Self>, BalanceOf<Self>>
-			+ TournamentRanker<SeasonId, Avatar, AvatarIdOf<Self>>
+			+ TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>
 			+ TournamentClaimer<SeasonId, AccountIdFor<Self>, AvatarIdOf<Self>>;
 
 		type WeightInfo: WeightInfo;
@@ -222,7 +223,8 @@ pub mod pallet {
 	pub type GlobalConfigs<T: Config> = StorageValue<_, GlobalConfigOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	pub type Avatars<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, (T::AccountId, Avatar)>;
+	pub type Avatars<T: Config> =
+		StorageMap<_, Identity, AvatarIdOf<T>, (T::AccountId, AvatarOf<T>)>;
 
 	#[pallet::storage]
 	pub type Owners<T: Config> = StorageDoubleMap<
@@ -522,9 +524,11 @@ pub mod pallet {
 		FeatureLocked,
 		/// The feature trying to be unlocked is not available for the selected season
 		FeatureUnlockableInSeason,
-		/// The feature trying to be unlocked has missing requirements to be fullfilled by
-		/// the accoutn trying to unlock it
-		UnlockCriteriaNotFullfilled,
+		/// The feature trying to be unlocked has missing requirements to be fulfilled by
+		/// the account trying to unlock it
+		UnlockCriteriaNotFulfilled,
+		/// Couldn't find a tournament ranker for the active tournament; qed
+		TournamentRankerNotFound,
 	}
 
 	#[pallet::hooks]
@@ -1262,7 +1266,7 @@ pub mod pallet {
 						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
 							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 						} else {
-							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
@@ -1345,7 +1349,7 @@ pub mod pallet {
 
 							Ok(())
 						} else {
-							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
@@ -1410,7 +1414,7 @@ pub mod pallet {
 
 							Ok(())
 						} else {
-							Err(Error::<T>::UnlockCriteriaNotFullfilled.into())
+							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
 						Err(Error::<T>::FeatureUnlockableInSeason.into())
@@ -1676,7 +1680,7 @@ pub mod pallet {
 					season_id,
 					&season,
 					input_leader.clone(),
-					input_sacrifices,
+					input_sacrifices.clone(),
 					false,
 				),
 				LogicGeneration::Second => ForgerV2::<T>::forge(
@@ -1684,7 +1688,7 @@ pub mod pallet {
 					season_id,
 					&season,
 					input_leader.clone(),
-					input_sacrifices,
+					input_sacrifices.clone(),
 					restricted_forge,
 				),
 			}?;
@@ -1695,6 +1699,7 @@ pub mod pallet {
 				&season,
 				input_leader,
 				output_leader,
+				input_sacrifices,
 			)?;
 			Self::process_other_forge_outputs(player, &season_id, output_other)?;
 			Self::update_forging_statistics_for_player(player, season_id)?;
@@ -1758,7 +1763,9 @@ pub mod pallet {
 			Ok((current_status.season_id, season_schedule))
 		}
 
-		fn season_with_id_for(avatar: &Avatar) -> Result<(SeasonId, SeasonOf<T>), DispatchError> {
+		fn season_with_id_for(
+			avatar: &AvatarOf<T>,
+		) -> Result<(SeasonId, SeasonOf<T>), DispatchError> {
 			let season_id = avatar.season_id;
 			let season = Self::seasons(&season_id)?;
 
@@ -1768,7 +1775,7 @@ pub mod pallet {
 		fn ensure_ownership(
 			player: &T::AccountId,
 			avatar_id: &AvatarIdOf<T>,
-		) -> Result<Avatar, DispatchError> {
+		) -> Result<AvatarOf<T>, DispatchError> {
 			let (owner, avatar) = Self::avatars(avatar_id)?;
 			ensure!(player == &owner, Error::<T>::Ownership);
 			Ok(avatar)
@@ -1822,8 +1829,10 @@ pub mod pallet {
 			player: &T::AccountId,
 			leader_id: &AvatarIdOf<T>,
 			sacrifice_ids: Vec<AvatarIdOf<T>>,
-		) -> Result<(Avatar, Vec<AvatarIdOf<T>>, Vec<Avatar>, SeasonId, SeasonOf<T>), DispatchError>
-		{
+		) -> Result<
+			(AvatarOf<T>, Vec<AvatarIdOf<T>>, Vec<AvatarOf<T>>, SeasonId, SeasonOf<T>),
+			DispatchError,
+		> {
 			let sacrifice_count = sacrifice_ids.len() as u8;
 
 			let leader = Self::ensure_ownership(player, leader_id)?;
@@ -1866,7 +1875,7 @@ pub mod pallet {
 					Self::ensure_unprepared(id)?;
 					Ok(avatar)
 				})
-				.collect::<Result<Vec<Avatar>, DispatchError>>()?;
+				.collect::<Result<Vec<AvatarOf<T>>, DispatchError>>()?;
 
 			Ok((leader, deduplicated_sacrifice_ids, sacrifices, season_id, season))
 		}
@@ -1877,6 +1886,7 @@ pub mod pallet {
 			season: &SeasonOf<T>,
 			input_leader: ForgeItem<T>,
 			output_leader: LeaderForgeOutput<T>,
+			input_sacrifices: Vec<ForgeItem<T>>,
 		) -> DispatchResult {
 			match output_leader {
 				LeaderForgeOutput::Forged((leader_id, leader), upgraded_components) => {
@@ -1897,7 +1907,19 @@ pub mod pallet {
 						if let Some(config) =
 							T::TournamentHandler::get_active_tournament_config_for(season_id)
 						{
-							if let Some(ranker) = TournamentConfigRankers::<T>::get(config) {
+							let sacrifices_are_in_bounds =
+								input_sacrifices.into_iter().all(|(_, sacrifice)| {
+									sacrifice.minted_at >= config.start &&
+										sacrifice.minted_at <= config.active_end
+								});
+
+							let leader_in_bounds = input_leader.1.minted_at >= config.start &&
+								input_leader.1.minted_at <= config.active_end;
+
+							if sacrifices_are_in_bounds && leader_in_bounds {
+								let ranker = TournamentConfigRankers::<T>::get(config)
+									.ok_or(Error::<T>::TournamentRankerNotFound)?;
+
 								T::TournamentHandler::try_rank_entity_in_tournament_for(
 									season_id, &leader_id, &leader, &ranker,
 								)?;
@@ -1986,7 +2008,7 @@ pub mod pallet {
 			player: &AccountIdFor<T>,
 			season_id: &SeasonId,
 			avatar_id: AvatarIdOf<T>,
-			avatar: Avatar,
+			avatar: AvatarOf<T>,
 		) -> DispatchResult {
 			Avatars::<T>::insert(avatar_id, (player, avatar));
 			Owners::<T>::try_append(&player, &season_id, avatar_id)
@@ -2024,7 +2046,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn ensure_tradable(avatar: &Avatar) -> DispatchResult {
+		fn ensure_tradable(avatar: &AvatarOf<T>) -> DispatchResult {
 			let trade_filters = SeasonTradeFilters::<T>::get(avatar.season_id)
 				.ok_or::<DispatchError>(Error::<T>::UnknownSeason.into())?;
 			ensure!(trade_filters.is_tradable(avatar), Error::<T>::AvatarCannotBeTraded);
@@ -2076,7 +2098,9 @@ pub mod pallet {
 			}
 		}
 
-		fn avatars(avatar_id: &AvatarIdOf<T>) -> Result<(T::AccountId, Avatar), DispatchError> {
+		fn avatars(
+			avatar_id: &AvatarIdOf<T>,
+		) -> Result<(T::AccountId, AvatarOf<T>), DispatchError> {
 			let (owner, avatar) = Avatars::<T>::get(avatar_id).ok_or(Error::<T>::UnknownAvatar)?;
 			Ok((owner, avatar))
 		}

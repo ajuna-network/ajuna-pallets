@@ -12,8 +12,14 @@ impl<T: Config> AvatarCombinator<T> {
 		let mut output_sacrifices = Vec::with_capacity(input_sacrifices.len());
 
 		let leader_spec_bytes = leader.get_specs();
-		let unord_1 = DnaUtils::bits_to_enums::<MaterialItemType>(leader_spec_bytes[0] as u32);
-		let pat_1 = DnaUtils::bits_order_to_enum(leader_spec_bytes[1] as u32, 4, unord_1);
+		let unord_1 = DnaUtils::<BlockNumberFor<T>>::bits_to_enums::<MaterialItemType>(
+			leader_spec_bytes[0] as u32,
+		);
+		let pat_1 = DnaUtils::<BlockNumberFor<T>>::bits_order_to_enum(
+			leader_spec_bytes[1] as u32,
+			4,
+			unord_1,
+		);
 
 		let quantities = [
 			leader_spec_bytes[3],
@@ -69,6 +75,8 @@ impl<T: Config> AvatarCombinator<T> {
 
 			let mut generated_equippables = Vec::with_capacity(3);
 
+			let current_block = <frame_system::Pallet<T>>::block_number();
+
 			for i in 0..max_build {
 				if soul_points > 0 &&
 					(build_prop * MAX_BYTE >= hash_provider.hash[i] as u32 * SCALING_FACTOR_PERC)
@@ -101,19 +109,20 @@ impl<T: Config> AvatarCombinator<T> {
 					};
 
 					let dna = MinterV2::<T>::generate_empty_dna::<32>()?;
-					let generated_equippable = AvatarBuilder::with_dna(season_id, dna)
-						.try_into_armor_and_component(
-							&pet_type,
-							&slot_type,
-							&[equippable_item_type],
-							&rarity_value,
-							&(ColorType::Null, ColorType::Null),
-							&Force::Null,
-							item_sp,
-							hash_provider,
-						)
-						.map_err(|_| Error::<T>::IncompatibleForgeComponents)?
-						.build();
+					let generated_equippable =
+						AvatarBuilder::with_dna(season_id, dna, current_block)
+							.try_into_armor_and_component(
+								&pet_type,
+								&slot_type,
+								&[equippable_item_type],
+								&rarity_value,
+								&(ColorType::Null, ColorType::Null),
+								&Force::Null,
+								item_sp,
+								hash_provider,
+							)
+							.map_err(|_| Error::<T>::IncompatibleForgeComponents)?
+							.build();
 
 					generated_equippables.push(generated_equippable);
 
@@ -170,7 +179,7 @@ mod test {
 			let equip_type = EquippableItemType::ArmorBase;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				equip_type.as_byte() as usize,
 			);
@@ -252,7 +261,7 @@ mod test {
 			let equip_type = EquippableItemType::ArmorBase;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				equip_type.as_byte() as usize,
 			);
@@ -350,7 +359,7 @@ mod test {
 			let equip_type = EquippableItemType::ArmorBase;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				equip_type.as_byte() as usize,
 			);
@@ -448,7 +457,7 @@ mod test {
 			let equip_type = EquippableItemType::ArmorBase;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				equip_type.as_byte() as usize,
 			);
@@ -533,7 +542,7 @@ mod test {
 			let equip_type = EquippableItemType::ArmorBase;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				equip_type.as_byte() as usize,
 			);
@@ -627,7 +636,7 @@ mod test {
 			let equip_type = EquippableItemType::ArmorComponent2;
 
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				equip_type.as_byte() as usize,
 			);
@@ -733,7 +742,7 @@ mod test {
 			];
 
 			let avatar_fn = |souls: SoulCount| {
-				let mutate_fn = move |avatar: Avatar| {
+				let mutate_fn = move |avatar: AvatarOf<Test>| {
 					let mut avatar = avatar;
 					avatar.souls = souls;
 					WrappedAvatar::new(avatar)
@@ -840,7 +849,7 @@ mod test {
 			];
 
 			let avatar_fn = |souls: SoulCount| {
-				let mutate_fn = move |avatar: Avatar| {
+				let mutate_fn = move |avatar: AvatarOf<Test>| {
 					let mut avatar = avatar;
 					avatar.souls = souls;
 					WrappedAvatar::new(avatar)

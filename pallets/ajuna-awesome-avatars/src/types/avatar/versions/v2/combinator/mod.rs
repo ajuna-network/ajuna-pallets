@@ -13,7 +13,7 @@ mod tinker;
 
 use super::*;
 
-pub(super) type WrappedForgeItem<T> = (AvatarIdOf<T>, WrappedAvatar);
+pub(super) type WrappedForgeItem<T> = (AvatarIdOf<T>, WrappedAvatar<BlockNumberFor<T>>);
 
 pub(super) struct AvatarCombinator<T: Config>(pub PhantomData<T>);
 
@@ -91,7 +91,7 @@ impl<T: Config> AvatarCombinator<T> {
 		for (_, sacrifice) in sacrifices.iter() {
 			let sacrifice_progress_array = sacrifice.get_progress();
 
-			if let Some(matched_indexes) = DnaUtils::is_progress_match(
+			if let Some(matched_indexes) = DnaUtils::<BlockNumberFor<T>>::is_progress_match(
 				leader_progress_array,
 				sacrifice_progress_array,
 				rarity_level,

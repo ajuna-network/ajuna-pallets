@@ -28,12 +28,15 @@ use sp_runtime::DispatchError;
 
 pub(crate) struct AttributeMapperV2;
 
-impl AttributeMapper for AttributeMapperV2 {
-	fn rarity(target: &Avatar) -> u8 {
+impl<BlockNumber> AttributeMapper<BlockNumber> for AttributeMapperV2
+where
+	BlockNumber: sp_runtime::traits::BlockNumber,
+{
+	fn rarity(target: &Avatar<BlockNumber>) -> u8 {
 		DnaUtils::read_attribute_raw(target, AvatarAttr::RarityTier)
 	}
 
-	fn force(target: &Avatar) -> u8 {
+	fn force(target: &Avatar<BlockNumber>) -> u8 {
 		// TODO: Determine proper mapping
 		DnaUtils::read_spec_raw(target, SpecIdx::Byte1)
 	}
@@ -49,6 +52,8 @@ impl<T: Config> Minter<T> for MinterV2<T> {
 	) -> Result<Vec<AvatarIdOf<T>>, DispatchError> {
 		let mut hash_provider =
 			HashProvider::<T, 32>::new(&Pallet::<T>::random_hash(b"avatar_minter_v2", player));
+
+		let current_block = <frame_system::Pallet<T>>::block_number();
 
 		let roll_amount = mint_option.pack_size.as_mint_count() as usize;
 		(0..roll_amount)
@@ -69,6 +74,7 @@ impl<T: Config> Minter<T> for MinterV2<T> {
 					encoding: DnaEncoding::V2,
 					dna: base_dna,
 					souls: SoulCount::zero(),
+					minted_at: current_block,
 				};
 
 				let avatar = Self::mutate_from_item_type(
@@ -102,8 +108,8 @@ impl<T: Config> MinterV2<T> {
 		pack_type: PackType,
 		item_type: ItemType,
 		hash_provider: &mut HashProvider<T, 32>,
-		avatar: Avatar,
-	) -> Result<Avatar, DispatchError> {
+		avatar: AvatarOf<T>,
+	) -> Result<AvatarOf<T>, DispatchError> {
 		match item_type {
 			ItemType::Pet => SlotRoller::<T>::roll_on_pack_type(
 				pack_type,
@@ -228,7 +234,10 @@ impl<T: Config> Forger<T> for ForgerV2<T> {
 }
 
 impl<T: Config> ForgerV2<T> {
-	fn determine_forge_type(leader: &WrappedAvatar, sacrifices: &[&WrappedAvatar]) -> ForgeType {
+	fn determine_forge_type(
+		leader: &WrappedAvatar<BlockNumberFor<T>>,
+		sacrifices: &[&WrappedAvatar<BlockNumberFor<T>>],
+	) -> ForgeType {
 		match leader.get_item_type() {
 			ItemType::Pet => match leader.get_item_sub_type::<PetItemType>() {
 				PetItemType::Pet => {
@@ -569,7 +578,7 @@ mod test {
 			let slot_type = SlotType::ArmBack;
 			let equip_type = EquippableItemType::ArmorComponent2;
 			let base_seed = pet_type.as_byte() as usize + slot_type.as_byte() as usize;
-			let pattern = DnaUtils::create_pattern::<MaterialItemType>(
+			let pattern = DnaUtils::<BlockNumberFor<Test>>::create_pattern::<MaterialItemType>(
 				base_seed,
 				equip_type.as_byte() as usize,
 			);
@@ -1060,7 +1069,7 @@ mod test {
 				ForgeType::None
 			);
 
-			let unit_fn = |avatar: Avatar| {
+			let unit_fn = |avatar: AvatarOf<Test>| {
 				let mut avatar = avatar;
 				avatar.souls = 100;
 				WrappedAvatar::new(avatar)
@@ -1175,7 +1184,7 @@ mod test {
 				let item_type =
 					allowed_item_types[random_hash.next() as usize % allowed_item_types.len()];
 
-				move |avatar: Avatar| {
+				move |avatar: AvatarOf<Test>| {
 					let mut avatar = avatar;
 
 					let class_type_1 = SlotType::from_byte(

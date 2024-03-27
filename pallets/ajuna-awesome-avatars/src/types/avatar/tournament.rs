@@ -10,17 +10,18 @@ pub enum AvatarRankingCategory {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
-pub struct AvatarRanker<T> {
+pub struct AvatarRanker<Id, BlockNumber> {
 	pub category: AvatarRankingCategory,
-	pub _marker: PhantomData<T>,
+	pub _marker: PhantomData<(Id, BlockNumber)>,
 }
 
-impl<T> EntityRank for AvatarRanker<T>
+impl<Id, BlockNumber> EntityRank for AvatarRanker<Id, BlockNumber>
 where
-	T: Member,
+	Id: Member,
+	BlockNumber: sp_runtime::traits::BlockNumber,
 {
-	type EntityId = T;
-	type Entity = Avatar;
+	type EntityId = Id;
+	type Entity = Avatar<BlockNumber>;
 
 	fn rank_against(
 		&self,
