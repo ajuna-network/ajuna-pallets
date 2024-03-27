@@ -107,6 +107,11 @@ pub mod pallet {
 		StorageMap<_, Identity, BlockNumberFor<T>, TournamentScheduledActionFor<T, I>, OptionQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn treasury_accounts)]
+	pub type TreasuryAccountsCache<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, T::SeasonId, AccountIdFor<T>, OptionQuery>;
+
+	#[pallet::storage]
 	pub type NextTournamentIds<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, T::SeasonId, TournamentId, ValueQuery>;
 
@@ -245,9 +250,15 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// The account ID of the sub-account for a given season_id/tournament_id.
 		pub fn tournament_treasury_account_id(season_id: T::SeasonId) -> T::AccountId {
-			let account =
-				TournamentTreasuryAccount::<T::SeasonId>::new(T::PalletId::get(), season_id);
-			account.into_account_truncating()
+			if let Some(account) = TreasuryAccountsCache::<T, I>::get(season_id) {
+				account
+			} else {
+				let account_builder =
+					TournamentTreasuryAccount::<T::SeasonId>::new(T::PalletId::get(), season_id);
+				let account: AccountIdFor<T> = account_builder.into_account_truncating();
+				TreasuryAccountsCache::<T, I>::insert(season_id, account.clone());
+				account
+			}
 		}
 
 		fn ensure_valid_tournament(
