@@ -497,6 +497,53 @@ mod tournament_ranker {
 			);
 		});
 	}
+
+	#[test]
+	fn tournament_ranker_cannot_rank_same_avatar_twice() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.max_players(MAX_PLAYERS)
+			.start(10)
+			.active_end(50)
+			.claim_end(90);
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_id = {
+				let result = TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_1,
+					tournament_config.clone(),
+				);
+				assert_ok!(result);
+				result.unwrap()
+			};
+
+			run_to_block(15);
+
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				RankingTableFor::<Test, Instance1>::default()
+			);
+
+			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+				&SEASON_ID_1,
+				&H256::from_low_u64_be(77),
+				&20_u32,
+				&MockRanker
+			));
+
+			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+				&SEASON_ID_1,
+				&H256::from_low_u64_be(77),
+				&20_u32,
+				&MockRanker
+			));
+
+			assert_eq!(
+				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
+				RankingTableFor::<Test, Instance1>::try_from(vec![(H256::from_low_u64_be(77), 20)])
+					.expect("Should build player_table")
+			);
+		});
+	}
 }
 
 mod tournament_claimer {
@@ -814,7 +861,7 @@ mod tournament_claimer {
 						&ALICE,
 						&H256::from_low_u64_be(3)
 					),
-					Error::<Test, Instance1>::NoActiveTournamentForSeason
+					Error::<Test, Instance1>::TournamentNotInClaimPeriod
 				);
 
 				assert_noop!(
@@ -823,7 +870,7 @@ mod tournament_claimer {
 						&ALICE,
 						&H256::from_low_u64_be(10),
 					),
-					Error::<Test, Instance1>::NoActiveTournamentForSeason
+					Error::<Test, Instance1>::TournamentNotInClaimPeriod
 				);
 			});
 		});

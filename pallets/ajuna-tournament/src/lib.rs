@@ -107,6 +107,11 @@ pub mod pallet {
 		StorageMap<_, Identity, BlockNumberFor<T>, TournamentScheduledActionFor<T, I>, OptionQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn treasury_accounts)]
+	pub type TreasuryAccountsCache<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, T::SeasonId, AccountIdFor<T>, OptionQuery>;
+
+	#[pallet::storage]
 	pub type NextTournamentIds<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, T::SeasonId, TournamentId, ValueQuery>;
 
@@ -245,9 +250,15 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// The account ID of the sub-account for a given season_id/tournament_id.
 		pub fn tournament_treasury_account_id(season_id: T::SeasonId) -> T::AccountId {
-			let account =
-				TournamentTreasuryAccount::<T::SeasonId>::new(T::PalletId::get(), season_id);
-			account.into_account_truncating()
+			if let Some(account) = TreasuryAccountsCache::<T, I>::get(season_id) {
+				account
+			} else {
+				let account_builder =
+					TournamentTreasuryAccount::<T::SeasonId>::new(T::PalletId::get(), season_id);
+				let account: AccountIdFor<T> = account_builder.into_account_truncating();
+				TreasuryAccountsCache::<T, I>::insert(season_id, account.clone());
+				account
+			}
 		}
 
 		fn ensure_valid_tournament(
@@ -505,6 +516,10 @@ pub mod pallet {
 			}
 		}
 
+		fn get_active_tournament_state_for(season_id: &T::SeasonId) -> TournamentStateFor<T, I> {
+			ActiveTournaments::<T, I>::get(season_id)
+		}
+
 		fn is_golden_duck_enabled_for(season_id: &T::SeasonId) -> bool {
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => false,
@@ -584,6 +599,14 @@ pub mod pallet {
 		where
 			R: EntityRank<EntityId = T::EntityId, Entity = T::RankedEntity>,
 		{
+			ensure!(
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ActivePeriod(_)
+				),
+				Error::<T, I>::NoActiveTournamentForSeason
+			);
+
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 			let tournament_config = Self::get_active_tournament_config_for(season_id)
 				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
@@ -631,6 +654,14 @@ pub mod pallet {
 			season_id: &T::SeasonId,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
+			ensure!(
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ActivePeriod(_)
+				),
+				Error::<T, I>::NoActiveTournamentForSeason
+			);
+
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 
 			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| {
@@ -663,6 +694,14 @@ pub mod pallet {
 			account: &AccountIdFor<T>,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
+			ensure!(
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ClaimPeriod(_, _)
+				),
+				Error::<T, I>::TournamentNotInClaimPeriod
+			);
+
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 				TournamentState::ActivePeriod(_) =>
@@ -714,6 +753,14 @@ pub mod pallet {
 			account: &AccountIdFor<T>,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
+			ensure!(
+				matches!(
+					Self::get_active_tournament_state_for(season_id),
+					TournamentState::ClaimPeriod(_, _)
+				),
+				Error::<T, I>::TournamentNotInClaimPeriod
+			);
+
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 				TournamentState::ActivePeriod(_) =>

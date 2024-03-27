@@ -1,4 +1,4 @@
-use super::{TournamentConfig, TournamentId};
+use super::{TournamentConfig, TournamentId, TournamentState};
 use sp_runtime::{traits::Member, DispatchError, DispatchResult};
 
 pub trait EntityRank {
@@ -11,11 +11,12 @@ pub trait EntityRank {
 		other: (&Self::EntityId, &Self::Entity),
 	) -> sp_std::cmp::Ordering;
 }
-
 pub trait TournamentInspector<SeasonId, BlockNumber, Balance, AccountId> {
 	fn get_active_tournament_config_for(
 		season_id: &SeasonId,
 	) -> Option<TournamentConfig<BlockNumber, Balance>>;
+
+	fn get_active_tournament_state_for(season_id: &SeasonId) -> TournamentState<Balance>;
 
 	fn is_golden_duck_enabled_for(season_id: &SeasonId) -> bool;
 
