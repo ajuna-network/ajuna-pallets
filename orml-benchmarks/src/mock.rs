@@ -18,10 +18,9 @@
 
 use frame_support::{
     parameter_types,
-    traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-    PalletId,
+    traits::{ConstU16, ConstU64},
 };
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::{EnsureSigned};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
     testing::H256,
@@ -38,7 +37,7 @@ pub type MockBlockNumber = u64;
 pub type MockBalance = u64;
 pub type MockCollectionId = u32;
 
-impl crate::Config for Runtime {}
+pub type Balance = u128;
 
 frame_support::construct_runtime!(
 	pub struct Runtime {
@@ -117,7 +116,7 @@ impl orml_vesting::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type MinVestedTransfer = MinVestedTransfer;
-    type VestedTransferOrigin = EnsureSigned<AccountId>;
+    type VestedTransferOrigin = EnsureSigned<MockAccountId>;
     type WeightInfo = ();
     type MaxVestingSchedules = frame_support::traits::ConstU32<100>;
     type BlockNumberProvider = MockBlockNumberProvider;
