@@ -16,16 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use super::utils::{AccountIdFor, BalanceFor, CurrencyFor, get_vesting_account, lookup_of_account, set_balance};
-use frame_benchmarking::benchmarks;
-use frame_benchmarking::{account, whitelisted_caller};
+use super::utils::{
+	get_vesting_account, lookup_of_account, set_balance, AccountIdFor, BalanceFor, CurrencyFor,
+};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::traits::{Currency, Get};
-use frame_system::pallet_prelude::BlockNumberFor;
-use frame_system::RawOrigin;
-use sp_std::prelude::*;
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_runtime::Saturating;
+use sp_std::prelude::*;
 
-use orml_vesting::{VestingSchedule, Config, Call};
+use orml_vesting::{Call, Config, VestingSchedule};
 
 pub struct Pallet<T: Config>(orml_vesting::Pallet<T>);
 
@@ -33,7 +33,12 @@ pub type Schedule<T> = VestingSchedule<BlockNumberFor<T>, BalanceFor<T>>;
 
 const SEED: u32 = 0;
 
-pub fn schedule<T: Config>(start: u32, period: u32, period_count: u32, per_period: BalanceFor<T>) -> Schedule<T> {
+pub fn schedule<T: Config>(
+	start: u32,
+	period: u32,
+	period_count: u32,
+	per_period: BalanceFor<T>,
+) -> Schedule<T> {
 	Schedule::<T> {
 		start: start.into(),
 		period: period.into(),
