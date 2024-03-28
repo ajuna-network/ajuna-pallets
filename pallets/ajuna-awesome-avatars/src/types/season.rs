@@ -94,7 +94,7 @@ impl TradeFilters {
 	pub(crate) fn is_tradable(&self, avatar: &Avatar) -> bool {
 		// No filter means we allow everything to be traded.
 		if self.is_empty() {
-			return true;
+			return true
 		}
 
 		let dna = &avatar.dna.as_slice()[..4];
