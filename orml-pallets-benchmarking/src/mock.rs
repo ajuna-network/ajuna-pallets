@@ -20,12 +20,10 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-use frame_system::pallet_prelude::BlockNumberFor;
-use frame_system::EnsureSigned;
-use sp_runtime::traits::BlockNumberProvider;
+use frame_system::{pallet_prelude::BlockNumberFor, EnsureSigned};
 use sp_runtime::{
 	testing::H256,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	traits::{BlakeTwo256, BlockNumberProvider, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, MultiSignature,
 };
 
