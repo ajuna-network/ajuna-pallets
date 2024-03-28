@@ -42,7 +42,7 @@ pub fn schedule<T: Config>(
 	Schedule::<T> {
 		start: start.into(),
 		period: period.into(),
-		period_count: period_count.into(),
+		period_count,
 		per_period,
 	}
 }
