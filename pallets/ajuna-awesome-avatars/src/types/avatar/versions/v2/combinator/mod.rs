@@ -121,7 +121,7 @@ impl<T: Config> AvatarCombinator<T> {
 
 					matching_score.retain(|item| *item != pos);
 					if matching_score.is_empty() {
-						break;
+						break
 					}
 				}
 			}
