@@ -22,7 +22,7 @@ impl<T: Config> AvatarCombinator<T> {
 				// If we consumed the leader in a previous step, we collect all
 				// sacrifices and skip all future loops
 				other_output.push(ForgeOutput::Forged((sacrifice_id, sacrifice.unwrap()), 0));
-				continue;
+				continue
 			}
 
 			let leader_quantity = leader.get_quantity();
@@ -33,7 +33,7 @@ impl<T: Config> AvatarCombinator<T> {
 			{
 				// If we skip the loop then the sacrifice remains unused
 				other_output.push(ForgeOutput::Forged((sacrifice_id, sacrifice.unwrap()), 0));
-				continue;
+				continue
 			}
 
 			let (_, consumed, out_leader_souls) = leader.use_avatar(GLIMMER_FORGE_GLIMMER_USE);

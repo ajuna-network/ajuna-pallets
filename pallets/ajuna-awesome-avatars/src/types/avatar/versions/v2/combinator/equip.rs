@@ -26,7 +26,7 @@ impl<T: Config> AvatarCombinator<T> {
 			let slot_type = sacrifice.get_class_type_1::<u8>() as usize - 1;
 
 			if are_slots_maxed && equipment_slots_state[slot_type] {
-				continue;
+				continue
 			}
 
 			let sacrifice_spec_byte_1 = sacrifice.get_spec::<u8>(SpecIdx::Byte1);

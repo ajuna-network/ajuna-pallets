@@ -79,7 +79,7 @@ impl<T: Config> MinterV1<T> {
 				let new_cumulative_sum = cumulative_sum + probs[i];
 				if random_prob >= cumulative_sum && random_prob < new_cumulative_sum {
 					random_tier = &season.tiers[i];
-					break;
+					break
 				}
 				cumulative_sum = new_cumulative_sum;
 			}

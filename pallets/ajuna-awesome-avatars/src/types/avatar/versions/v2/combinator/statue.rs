@@ -39,7 +39,7 @@ impl<T: Config> AvatarCombinator<T> {
 					.map(|(sacrifice_id, _)| ForgeOutput::Consumed(sacrifice_id))
 					.chain(dust_avatar)
 					.collect::<Vec<_>>(),
-			));
+			))
 		}
 
 		leader.set_quantity(new_quantity as u8);

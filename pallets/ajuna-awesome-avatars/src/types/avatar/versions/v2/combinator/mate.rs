@@ -18,7 +18,7 @@ impl<T: Config> AvatarCombinator<T> {
 					.into_iter()
 					.map(|(id, sacrifice)| ForgeOutput::Forged((id, sacrifice.unwrap()), 0))
 					.collect(),
-			));
+			))
 		}
 
 		let current_block = <frame_system::Pallet<T>>::block_number();

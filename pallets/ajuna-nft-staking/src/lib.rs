@@ -906,7 +906,7 @@ pub mod pallet {
 			for contract_id in contract_ids {
 				// If the contract is part of another contracts stake it cannot be sniped
 				if Self::contract_owner(&contract_id)? == technical_account {
-					return Err(Error::<T>::Staking.into());
+					return Err(Error::<T>::Staking.into())
 				}
 
 				let Contract { stake_duration, .. } = Self::contract(&contract_id)?;
@@ -914,7 +914,7 @@ pub mod pallet {
 				let end = accepted.checked_add(&stake_duration).ok_or(ArithmeticError::Overflow)?;
 				// Not a sniper if any contracts are in claimable phase.
 				if now > end {
-					return Err(Error::<T>::NotSniper.into());
+					return Err(Error::<T>::NotSniper.into())
 				}
 			}
 			Ok(())

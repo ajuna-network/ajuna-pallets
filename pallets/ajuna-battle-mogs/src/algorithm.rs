@@ -382,7 +382,7 @@ impl Breeding {
 			for i in 0..max_rarity {
 				if rand[i as usize] > prob {
 					result = i;
-					break;
+					break
 				}
 			}
 		}

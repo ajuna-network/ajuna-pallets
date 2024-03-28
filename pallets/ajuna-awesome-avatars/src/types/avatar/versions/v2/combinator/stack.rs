@@ -93,7 +93,7 @@ impl<T: Config> AvatarCombinator<T> {
 				dust_qty = dust_qty.saturating_sub(MAX_BYTE);
 
 				if dust_qty == 0 {
-					break;
+					break
 				}
 			}
 
