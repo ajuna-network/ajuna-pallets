@@ -507,12 +507,19 @@ pub mod pallet {
 	{
 		fn get_active_tournament_config_for(
 			season_id: &T::SeasonId,
-		) -> Option<TournamentConfigFor<T, I>> {
+		) -> Option<(TournamentId, TournamentConfigFor<T, I>)> {
 			match ActiveTournaments::<T, I>::get(season_id) {
 				TournamentState::Inactive => None,
 				TournamentState::ActivePeriod(tournament_id) |
 				TournamentState::ClaimPeriod(tournament_id, _) =>
-					Tournaments::<T, I>::get(season_id, tournament_id),
+					if let Some(tournament_config) =
+						Tournaments::<T, I>::get(season_id, tournament_id)
+					{
+						Some((tournament_id, tournament_config))
+					} else {
+						log::error!(target: LOG_TARGET, "No tournament config found for active tournament!");
+						None
+					},
 			}
 		}
 
@@ -607,9 +614,9 @@ pub mod pallet {
 				Error::<T, I>::NoActiveTournamentForSeason
 			);
 
-			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
-			let tournament_config = Self::get_active_tournament_config_for(season_id)
-				.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
+			let (tournament_id, tournament_config) =
+				Self::get_active_tournament_config_for(season_id)
+					.ok_or::<Error<T, I>>(Error::<T, I>::TournamentNotFound)?;
 
 			TournamentRankings::<T, I>::mutate(season_id, tournament_id, |table| {
 				match table.binary_search_by(|(other_id, other)| {
