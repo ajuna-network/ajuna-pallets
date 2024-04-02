@@ -46,6 +46,7 @@ pub enum LogicGeneration {
 	#[default]
 	First,
 	Second,
+	Third,
 }
 
 /// Used to indicate the layout of an avatars DNA byte sequence.
@@ -54,6 +55,7 @@ pub enum DnaEncoding {
 	#[default]
 	V1,
 	V2,
+	V3,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
@@ -73,6 +75,7 @@ where
 		match self.encoding {
 			DnaEncoding::V1 => AttributeMapperV1::rarity(self),
 			DnaEncoding::V2 => AttributeMapperV2::rarity(self),
+			DnaEncoding::V3 => AttributeMapperV3::rarity(self),
 		}
 	}
 
@@ -80,6 +83,7 @@ where
 		match self.encoding {
 			DnaEncoding::V1 => AttributeMapperV1::force(self),
 			DnaEncoding::V2 => AttributeMapperV2::force(self),
+			DnaEncoding::V3 => AttributeMapperV3::force(self),
 		}
 	}
 }
