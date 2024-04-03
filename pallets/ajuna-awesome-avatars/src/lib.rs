@@ -96,7 +96,7 @@ use sp_std::prelude::*;
 pub mod pallet {
 	use super::*;
 	use pallet_ajuna_affiliates::traits::RuleExecutor;
-	use pallet_ajuna_tournament::TournamentId;
+	use pallet_ajuna_tournament::{Percentage, TournamentId};
 	use sp_std::collections::vec_deque::VecDeque;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -1601,18 +1601,41 @@ pub mod pallet {
 				LogicGeneration::Third => MinterV3::<T>::mint(player, &season_id, mint_option),
 			}?;
 
+			let is_tournament_active = matches!(
+				T::TournamentHandler::get_active_tournament_state_for(&season_id),
+				TournamentState::ActivePeriod(_)
+			);
+
 			let GlobalConfig { mint, affiliate_config, .. } = GlobalConfigs::<T>::get();
 			match mint_option.payment {
 				MintPayment::Normal => {
 					let mint_fee = {
 						let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
 
+						let updated_fee =
+							match T::TournamentHandler::get_active_tournament_config_for(&season_id)
+							{
+								Some((
+									_,
+									TournamentConfig {
+										take_fee_percentage: Some(fee_perc), ..
+									},
+								)) if is_tournament_active => Self::try_propagate_tournament_fee(
+									&season_id, player, fee_perc, base_fee,
+								)?,
+								_ => base_fee,
+							};
+
 						if affiliate_config.mode == AffiliateMode::Open &&
 							affiliate_config.enabled_in_mint
 						{
-							Self::try_propagate_chain_fee(AffiliateMethods::Mint, player, base_fee)?
+							Self::try_propagate_chain_fee(
+								AffiliateMethods::Mint,
+								player,
+								updated_fee,
+							)?
 						} else {
-							base_fee
+							updated_fee
 						}
 					};
 
@@ -1652,10 +1675,7 @@ pub mod pallet {
 				}
 			});
 
-			if matches!(
-				T::TournamentHandler::get_active_tournament_state_for(&season_id),
-				TournamentState::ActivePeriod(_)
-			) && T::TournamentHandler::is_golden_duck_enabled_for(&season_id)
+			if is_tournament_active && T::TournamentHandler::is_golden_duck_enabled_for(&season_id)
 			{
 				for avatar_id in generated_avatar_ids.iter() {
 					T::TournamentHandler::try_rank_entity_for_golden_duck(&season_id, avatar_id)?;
@@ -2134,6 +2154,27 @@ pub mod pallet {
 			let season_schedule =
 				SeasonSchedules::<T>::get(season_id).ok_or(Error::<T>::UnknownSeason)?;
 			Ok(season_schedule)
+		}
+
+		fn try_propagate_tournament_fee(
+			season_id: &SeasonId,
+			account: &T::AccountId,
+			percentage: Percentage,
+			base_fee: BalanceOf<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
+			let tournament_fee = base_fee
+				.saturating_mul(percentage.into())
+				.checked_div(&100_u32.into())
+				.unwrap_or_default();
+
+			if tournament_fee > 0_u32.into() {
+				let tournament_account = T::TournamentHandler::get_treasury_account_for(season_id);
+
+				T::Currency::transfer(account, &tournament_account, tournament_fee, AllowDeath)?;
+				Ok(base_fee.saturating_sub(tournament_fee))
+			} else {
+				Ok(base_fee)
+			}
 		}
 
 		fn try_propagate_chain_fee(
