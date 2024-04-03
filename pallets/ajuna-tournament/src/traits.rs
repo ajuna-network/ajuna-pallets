@@ -14,7 +14,7 @@ pub trait EntityRank {
 pub trait TournamentInspector<SeasonId, BlockNumber, Balance, AccountId> {
 	fn get_active_tournament_config_for(
 		season_id: &SeasonId,
-	) -> Option<TournamentConfig<BlockNumber, Balance>>;
+	) -> Option<(TournamentId, TournamentConfig<BlockNumber, Balance>)>;
 
 	fn get_active_tournament_state_for(season_id: &SeasonId) -> TournamentState<Balance>;
 

@@ -88,7 +88,7 @@ mod tournament_inspector {
 
 			assert_eq!(
 				TournamentAlpha::get_active_tournament_config_for(&SEASON_ID_1),
-				Some(tournament_config)
+				Some((0, tournament_config))
 			);
 			assert_eq!(TournamentAlpha::get_active_tournament_config_for(&SEASON_ID_2), None);
 		});
@@ -1007,7 +1007,7 @@ fn test_full_tournament_workflow() {
 			);
 			assert_eq!(
 				TournamentAlpha::get_active_tournament_config_for(&SEASON_ID_1),
-				Some(tournament_config)
+				Some((0, tournament_config))
 			);
 
 			// Ranking some entities

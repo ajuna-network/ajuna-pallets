@@ -96,6 +96,7 @@ use sp_std::prelude::*;
 pub mod pallet {
 	use super::*;
 	use pallet_ajuna_affiliates::traits::RuleExecutor;
+	use pallet_ajuna_tournament::TournamentId;
 	use sp_std::collections::vec_deque::VecDeque;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -273,8 +274,16 @@ pub mod pallet {
 	pub type Preparation<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, IpfsUrl, OptionQuery>;
 
 	#[pallet::storage]
-	pub type TournamentConfigRankers<T: Config> =
-		StorageMap<_, Identity, TournamentConfigFor<T>, AvatarRankerFor<T>, OptionQuery>;
+	#[pallet::getter(fn rankers)]
+	pub type TournamentRankers<T: Config> = StorageDoubleMap<
+		_,
+		Identity,
+		SeasonId,
+		Identity,
+		TournamentId,
+		AvatarRankerFor<T>,
+		OptionQuery,
+	>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -1477,13 +1486,11 @@ pub mod pallet {
 			with_ranker: AvatarRankerFor<T>,
 		) -> DispatchResult {
 			let organizer = Self::ensure_organizer(origin)?;
-			let _ = T::TournamentHandler::try_create_new_tournament_for(
-				&organizer,
-				&season_id,
-				config.clone(),
+			let tournament_id = T::TournamentHandler::try_create_new_tournament_for(
+				&organizer, &season_id, config,
 			)?;
 
-			TournamentConfigRankers::<T>::insert(config, with_ranker);
+			TournamentRankers::<T>::insert(season_id, tournament_id, with_ranker);
 
 			Ok(())
 		}
@@ -1917,7 +1924,7 @@ pub mod pallet {
 
 						// If the leader avatar has turned into a Legendary avatar then we try to
 						// rank it for the active tournament
-						if let Some(config) =
+						if let Some((tournament_id, config)) =
 							T::TournamentHandler::get_active_tournament_config_for(season_id)
 						{
 							let sacrifices_are_in_bounds =
@@ -1930,7 +1937,7 @@ pub mod pallet {
 								input_leader.1.minted_at <= config.active_end;
 
 							if sacrifices_are_in_bounds && leader_in_bounds {
-								let ranker = TournamentConfigRankers::<T>::get(config)
+								let ranker = TournamentRankers::<T>::get(season_id, tournament_id)
 									.ok_or(Error::<T>::TournamentRankerNotFound)?;
 
 								T::TournamentHandler::try_rank_entity_in_tournament_for(
