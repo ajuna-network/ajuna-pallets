@@ -1980,6 +1980,7 @@ pub mod pallet {
 				},
 				LeaderForgeOutput::Consumed(leader_id) =>
 					Self::remove_avatar_from(player, season_id, &leader_id),
+				LeaderForgeOutput::Unchanged(_) => {},
 			}
 
 			Ok(())
@@ -2007,6 +2008,7 @@ pub mod pallet {
 					},
 					ForgeOutput::Consumed(avatar_id) =>
 						Self::remove_avatar_from(player, season_id, &avatar_id),
+					ForgeOutput::Unchanged(_) => {},
 				}
 			}
 

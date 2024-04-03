@@ -104,6 +104,18 @@ impl<T: Config> Forger<T> for ForgerV3<T> {
 		let (leader_id, mut leader) = input_leader;
 
 		let max_tier = season.max_tier() as u8;
+
+		// If the leader is of max rarity we don't allow any forging
+		if leader.rarity() == max_tier {
+			return Ok((
+				LeaderForgeOutput::Unchanged((leader_id, leader)),
+				input_sacrifices
+					.into_iter()
+					.map(|sacrifice| ForgeOutput::Unchanged(sacrifice))
+					.collect(),
+			));
+		}
+
 		let current_block = <frame_system::Pallet<T>>::block_number();
 
 		let (sacrifice_ids, sacrifice_avatars): (Vec<AvatarIdOf<T>>, Vec<AvatarOf<T>>) =

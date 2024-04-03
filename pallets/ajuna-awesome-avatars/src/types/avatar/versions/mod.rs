@@ -38,6 +38,8 @@ pub(crate) enum LeaderForgeOutput<T: Config> {
 	Forged(ForgeItem<T>, UpgradedComponents),
 	/// The leader avatar was consumed in the forging process.
 	Consumed(AvatarIdOf<T>),
+	/// The leader avatar was left unchanged.
+	Unchanged(ForgeItem<T>),
 }
 /// Enum used to express the possible results of the forge on the other avatars, also called
 /// sacrifices.
@@ -48,6 +50,8 @@ pub(crate) enum ForgeOutput<T: Config> {
 	Minted(AvatarOf<T>),
 	/// The avatar was consumed in the forging process.
 	Consumed(AvatarIdOf<T>),
+	/// The avatar was not changed in the forging process.
+	Unchanged(ForgeItem<T>),
 }
 
 /// Trait used to define the surface logic of the forging algorithm.
