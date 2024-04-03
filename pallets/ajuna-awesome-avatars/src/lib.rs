@@ -1503,6 +1503,8 @@ pub mod pallet {
 			avatar_id: AvatarIdOf<T>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
+			Self::ensure_ownership(&account, &avatar_id)?;
+
 			T::TournamentHandler::try_claim_tournament_reward_for(&season_id, &account, &avatar_id)
 		}
 
@@ -1514,6 +1516,8 @@ pub mod pallet {
 			avatar_id: AvatarIdOf<T>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
+			Self::ensure_ownership(&account, &avatar_id)?;
+
 			T::TournamentHandler::try_claim_golden_duck_for(&season_id, &account, &avatar_id)
 		}
 	}
