@@ -1591,6 +1591,7 @@ pub mod pallet {
 			let generated_avatar_ids = match season.mint_logic {
 				LogicGeneration::First => MinterV1::<T>::mint(player, &season_id, mint_option),
 				LogicGeneration::Second => MinterV2::<T>::mint(player, &season_id, mint_option),
+				LogicGeneration::Third => MinterV3::<T>::mint(player, &season_id, mint_option),
 			}?;
 
 			let GlobalConfig { mint, affiliate_config, .. } = GlobalConfigs::<T>::get();
@@ -1694,6 +1695,14 @@ pub mod pallet {
 					input_leader.clone(),
 					input_sacrifices.clone(),
 					restricted_forge,
+				),
+				LogicGeneration::Third => ForgerV3::<T>::forge(
+					player,
+					season_id,
+					&season,
+					input_leader.clone(),
+					input_sacrifices.clone(),
+					false,
 				),
 			}?;
 
