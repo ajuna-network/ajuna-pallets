@@ -674,18 +674,26 @@ pub mod pallet {
 			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| {
 				if let GoldenDuckState::Enabled(payout_perc, ref maybe_entry_id) = state {
 					match maybe_entry_id {
-						None =>
-							*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone())),
-						Some(entry_id) if entity_id < entry_id =>
-							*state = GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone())),
+						None => {
+							*state =
+								GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
+							Self::deposit_event(Event::<T, I>::EntityBecameGoldenDuck {
+								season_id: *season_id,
+								tournament_id,
+								entity_id: entity_id.clone(),
+							});
+						},
+						Some(entry_id) if entity_id < entry_id => {
+							*state =
+								GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
+							Self::deposit_event(Event::<T, I>::EntityBecameGoldenDuck {
+								season_id: *season_id,
+								tournament_id,
+								entity_id: entity_id.clone(),
+							});
+						},
 						_ => {},
 					}
-
-					Self::deposit_event(crate::pallet::Event::<T, I>::EntityBecameGoldenDuck {
-						season_id: *season_id,
-						tournament_id,
-						entity_id: entity_id.clone(),
-					});
 				}
 			});
 
