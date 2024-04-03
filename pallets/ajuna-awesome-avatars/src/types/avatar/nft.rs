@@ -20,6 +20,7 @@ use pallet_ajuna_nft_transfer::traits::{NFTAttribute, NftConvertible};
 use parity_scale_codec::alloc::string::ToString;
 use scale_info::prelude::format;
 use sp_std::prelude::*;
+use sp_runtime::traits::UniqueSaturatedInto;
 
 impl<KL, VL, BlockNumber> NftConvertible<KL, VL> for Avatar<BlockNumber>
 where
@@ -75,7 +76,7 @@ where
 			),
 			(
 				BoundedVec::try_from(b"MINTED_AT".to_vec()).unwrap(),
-				BoundedVec::try_from(format!("{}", self.minted_at).into_bytes()).unwrap(),
+				BoundedVec::try_from(format!("{}", UniqueSaturatedInto::<u64>::unique_saturated_into(self.minted_at)).into_bytes()).unwrap(),
 			),
 		]
 	}
