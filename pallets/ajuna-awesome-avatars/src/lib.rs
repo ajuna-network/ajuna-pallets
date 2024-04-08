@@ -1283,7 +1283,6 @@ pub mod pallet {
 					// Substract amout for paying if account not affiliator
 					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
 						if !config.locks.affiliate {
-							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
 							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 							T::Currency::transfer(
 								&account,
@@ -1291,6 +1290,7 @@ pub mod pallet {
 								affiliate_config.affiliator_enable_fee,
 								AllowDeath,
 							)?;
+							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
 							config.locks.affiliate = true;
 						}
 						Ok(())
@@ -1300,7 +1300,6 @@ pub mod pallet {
 					// Substract amout for paying if other not affiliator
 					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
 						if !config.locks.affiliate {
-							T::AffiliateHandler::try_mark_account_as_affiliatable(&other)?;
 							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 							T::Currency::transfer(
 								&account,
@@ -1308,6 +1307,7 @@ pub mod pallet {
 								affiliate_config.affiliator_enable_fee,
 								AllowDeath,
 							)?;
+							T::AffiliateHandler::try_mark_account_as_affiliatable(&other)?;
 							config.locks.affiliate = true;
 						}
 						Ok(())
