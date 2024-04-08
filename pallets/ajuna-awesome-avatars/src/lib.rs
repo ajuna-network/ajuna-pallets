@@ -1239,14 +1239,8 @@ pub mod pallet {
 		pub fn add_affiliation(
 			origin: OriginFor<T>,
 			affiliate_id: AffiliateId,
-			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
-
-			ensure!(
-				PlayerSeasonConfigs::<T>::get(&account, season_id).locks.affiliate,
-				Error::<T>::FeatureLocked
-			);
 
 			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
 				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
@@ -1273,6 +1267,10 @@ pub mod pallet {
 						let player_stats = SeasonStats::<T>::get(season_id, &account);
 
 						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
+							PlayerSeasonConfigs::<T>::mutate(&account, season_id, |config| {
+								config.locks.affiliate = true;
+							});
+
 							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 						} else {
 							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
@@ -1290,6 +1288,9 @@ pub mod pallet {
 						affiliate_config.affiliator_enable_fee,
 						AllowDeath,
 					)?;
+					PlayerSeasonConfigs::<T>::mutate(&account, season_id, |config| {
+						config.locks.affiliate = true;
+					});
 					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 				},
 				UnlockTarget::OtherPaying(other) => {
@@ -1301,6 +1302,9 @@ pub mod pallet {
 						affiliate_config.affiliator_enable_fee,
 						AllowDeath,
 					)?;
+					PlayerSeasonConfigs::<T>::mutate(&account, season_id, |config| {
+						config.locks.affiliate = true;
+					});
 					T::AffiliateHandler::try_mark_account_as_affiliatable(&other)
 				},
 			}
