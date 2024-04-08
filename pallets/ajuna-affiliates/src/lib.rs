@@ -84,16 +84,17 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::RuleIdentifier, T::RuntimeRule, OptionQuery>;
 
 	#[pallet::storage]
-	pub type NextAffiliateId<T: Config<I>, I: 'static = ()> = StorageValue<_, u32, ValueQuery>;
+	pub type NextAffiliateId<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, AffiliateId, ValueQuery>;
 
 	#[pallet::storage]
 	pub type AffiliateIdMapping<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Blake2_128Concat, u32, T::AccountId, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, AffiliateId, T::AccountId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
-		AccountMarkedAsAffiliatable { account: T::AccountId, affiliate_id: u32 },
+		AccountMarkedAsAffiliatable { account: T::AccountId, affiliate_id: AffiliateId },
 		AccountAffiliated { account: T::AccountId, to: T::AccountId },
 		RuleAdded { rule_id: T::RuleIdentifier },
 		RuleCleared { rule_id: T::RuleIdentifier },
@@ -161,46 +162,40 @@ pub mod pallet {
 			Affiliators::<T, I>::get(account).affiliates
 		}
 
-		fn get_account_for_id(affiliate_id: u32) -> Option<AccountIdFor<T>> {
+		fn get_account_for_id(affiliate_id: AffiliateId) -> Option<AccountIdFor<T>> {
 			AffiliateIdMapping::<T, I>::get(affiliate_id)
 		}
 	}
 
 	impl<T: Config<I>, I: 'static> AffiliateMutator<AccountIdFor<T>> for Pallet<T, I> {
 		fn try_mark_account_as_affiliatable(account: &AccountIdFor<T>) -> DispatchResult {
-			let next_id = NextAffiliateId::<T, I>::try_mutate(|value: &mut u32| {
-				let next_id = *value;
+			Affiliators::<T, I>::try_mutate(account, |state| match state.status {
+				AffiliatableStatus::NonAffiliatable => {
+					let next_id =
+						NextAffiliateId::<T, I>::try_mutate(|value: &mut AffiliateId| {
+							let next_id = *value;
 
-				*value = value
-					.checked_add(1)
-					.ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+							*value = value
+								.checked_add(1)
+								.ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
 
-				Ok::<u32, DispatchError>(next_id)
-			})?;
+							Ok::<AffiliateId, DispatchError>(next_id)
+						})?;
 
-			AffiliateIdMapping::<T, I>::insert(next_id, account.clone());
+					AffiliateIdMapping::<T, I>::insert(next_id, account.clone());
 
-			Affiliators::<T, I>::try_mutate(account, |state| {
-				ensure!(
-					state.status != AffiliatableStatus::Blocked,
-					Error::<T, I>::CannotAffiliateBlocked
-				);
+					state.status = AffiliatableStatus::Affiliatable(next_id);
 
-				state.status = AffiliatableStatus::Affiliatable;
+					Self::deposit_event(Event::AccountMarkedAsAffiliatable {
+						account: account.clone(),
+						affiliate_id: next_id,
+					});
 
-				Self::deposit_event(Event::AccountMarkedAsAffiliatable {
-					account: account.clone(),
-					affiliate_id: next_id,
-				});
-
-				Ok(())
+					Ok(())
+				},
+				AffiliatableStatus::Affiliatable(_) => Ok(()),
+				AffiliatableStatus::Blocked => Err(Error::<T, I>::CannotAffiliateBlocked.into()),
 			})
-		}
-
-		fn force_mark_account_as_affiliatable(account: &AccountIdFor<T>) {
-			Affiliators::<T, I>::mutate(account, |state| {
-				state.status = AffiliatableStatus::Affiliatable;
-			});
 		}
 
 		fn mark_account_as_blocked(account: &AccountIdFor<T>) {
@@ -228,7 +223,7 @@ pub mod pallet {
 
 			let affiliator_state = Affiliators::<T, I>::get(account);
 			ensure!(
-				affiliator_state.status == AffiliatableStatus::Affiliatable,
+				matches!(affiliator_state.status, AffiliatableStatus::Affiliatable(_)),
 				Error::<T, I>::TargetAccountIsNotAffiliatable
 			);
 
