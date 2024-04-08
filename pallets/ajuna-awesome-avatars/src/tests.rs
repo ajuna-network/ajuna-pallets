@@ -4211,7 +4211,7 @@ mod affiliates {
 			.execute_with(|| {
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 0 }
 				);
 
 				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0, SEASON_ID));
@@ -4227,7 +4227,7 @@ mod affiliates {
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 1 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 1 }
 				);
 			});
 	}
@@ -4268,7 +4268,7 @@ mod affiliates {
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
 				);
 				assert_eq!(
 					pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::get(),
@@ -4310,7 +4310,7 @@ mod affiliates {
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
 				);
 				assert_eq!(
 					pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::get(),
@@ -4359,7 +4359,7 @@ mod affiliates {
 				);
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(BOB),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
 				);
 				assert_eq!(
 					pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::get(),
@@ -4396,7 +4396,7 @@ mod affiliates {
 			.execute_with(|| {
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 0 }
 				);
 
 				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0, SEASON_ID));
@@ -4408,7 +4408,7 @@ mod affiliates {
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 1 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 1 }
 				);
 
 				assert_ok!(AAvatars::remove_affiliation(RuntimeOrigin::signed(ALICE), BOB));
@@ -4420,7 +4420,7 @@ mod affiliates {
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
-					AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 }
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 0 }
 				);
 			});
 	}

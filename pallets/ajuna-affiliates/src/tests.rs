@@ -102,7 +102,8 @@ mod affiliate_to {
 	#[test]
 	fn affiliate_to_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
-			let state = AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 };
+			let state =
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
 			Affiliators::<Test, Instance1>::insert(BOB, state);
 
 			assert_ok!(
@@ -123,7 +124,8 @@ mod affiliate_to {
 	#[test]
 	fn affiliate_to_should_work_with_chain() {
 		ExtBuilder::default().build().execute_with(|| {
-			let state = AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 };
+			let state =
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
 			Affiliators::<Test, Instance1>::insert(BOB, state);
 			Affiliators::<Test, Instance1>::insert(ALICE, state);
 			Affiliators::<Test, Instance1>::insert(CHARLIE, state);
@@ -211,7 +213,8 @@ mod affiliate_to {
 	#[test]
 	fn affiliate_to_rejects_if_account_is_affiliator() {
 		ExtBuilder::default().build().execute_with(|| {
-			let state = AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 };
+			let state =
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
 			Affiliators::<Test, Instance1>::insert(BOB, state);
 			Affiliators::<Test, Instance1>::insert(ALICE, state);
 
@@ -233,7 +236,8 @@ mod affiliate_to {
 	#[test]
 	fn affiliate_to_rejects_affiliating_to_more_than_one_account() {
 		ExtBuilder::default().build().execute_with(|| {
-			let state = AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 };
+			let state =
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
 			Affiliators::<Test, Instance1>::insert(BOB, state);
 			Affiliators::<Test, Instance1>::insert(CHARLIE, state);
 
@@ -287,7 +291,8 @@ mod clear_affiliation {
 	#[test]
 	fn clear_affiliation_should_work() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000_000)]).build().execute_with(|| {
-			let state = AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 };
+			let state =
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
 			Affiliators::<Test, Instance1>::insert(BOB, state);
 
 			assert_ok!(
@@ -337,7 +342,7 @@ mod multi_instance_tests {
 	fn affiliates_in_one_instance_dont_affect_other_instance() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000_000)]).build().execute_with(|| {
 			let state_alpha =
-				AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 };
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
 			Affiliators::<Test, Instance1>::insert(BOB, state_alpha);
 
 			assert_ok!(
@@ -358,7 +363,7 @@ mod multi_instance_tests {
 			assert_eq!(Affiliatees::<Test, Instance2>::get(ALICE), None);
 
 			let state_beta =
-				AffiliatorState { status: AffiliatableStatus::Affiliatable, affiliates: 0 };
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
 			Affiliators::<Test, Instance2>::insert(ALICE, state_beta);
 
 			// Trying to affiliate to ALICE on AffiliatesAlpha will fail since

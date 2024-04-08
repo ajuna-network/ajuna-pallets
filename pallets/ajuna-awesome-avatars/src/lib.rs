@@ -95,7 +95,7 @@ use sp_std::prelude::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use pallet_ajuna_affiliates::traits::RuleExecutor;
+	use pallet_ajuna_affiliates::traits::{AffiliateId, RuleExecutor};
 	use pallet_ajuna_tournament::{Percentage, TournamentId};
 	use sp_std::collections::vec_deque::VecDeque;
 
@@ -1238,7 +1238,7 @@ pub mod pallet {
 		#[pallet::weight({1000})]
 		pub fn add_affiliation(
 			origin: OriginFor<T>,
-			affiliate_id: u32,
+			affiliate_id: AffiliateId,
 			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
@@ -1282,7 +1282,7 @@ pub mod pallet {
 					}
 				},
 				UnlockTarget::OneselfPaying => {
-					// Substract amout for paying if account not affiliator
+					// Subtract an amount for paying if account not affiliator
 					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 					T::Currency::transfer(
 						&account,
@@ -1293,7 +1293,7 @@ pub mod pallet {
 					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 				},
 				UnlockTarget::OtherPaying(other) => {
-					// Substract amout for paying if other not affiliator
+					// Subtract an amount for paying if other not affiliator
 					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 					T::Currency::transfer(
 						&account,

@@ -1,6 +1,8 @@
 use frame_support::pallet_prelude::*;
 use sp_std::vec::Vec;
 
+pub type AffiliateId = u32;
+
 pub trait AffiliateInspector<AccountId> {
 	/// Returns a vector of accounts that 'account' is affiliated to.
 	///
@@ -13,17 +15,13 @@ pub trait AffiliateInspector<AccountId> {
 	/// Returns the number of accounts that are affiliated with 'account'.
 	fn get_affiliate_count_for(account: &AccountId) -> u32;
 
-	fn get_account_for_id(affiliate_id: u32) -> Option<AccountId>;
+	fn get_account_for_id(affiliate_id: AffiliateId) -> Option<AccountId>;
 }
 
 pub trait AffiliateMutator<AccountId> {
 	/// Tries to mark an account as [AffiliatableStatus::Affiliatable], fails
 	/// to do so if the account is in the [AffiliatableStatus::Blocked] state.
 	fn try_mark_account_as_affiliatable(account: &AccountId) -> DispatchResult;
-
-	/// Forces the marking on an account as [AffiliatableStatus::Affiliatable] ignoring
-	/// its current state.
-	fn force_mark_account_as_affiliatable(account: &AccountId);
 
 	/// Marks an account as [AffiliatableStatus::Blocked]
 	fn mark_account_as_blocked(account: &AccountId);
@@ -62,7 +60,7 @@ pub trait RuleExecutor<RuleId, Rule> {
 pub enum AffiliatableStatus {
 	#[default]
 	NonAffiliatable,
-	Affiliatable,
+	Affiliatable(AffiliateId),
 	Blocked,
 }
 
