@@ -1236,10 +1236,7 @@ pub mod pallet {
 
 		#[pallet::call_index(22)]
 		#[pallet::weight({1000})]
-		pub fn add_affiliation(
-			origin: OriginFor<T>,
-			affiliate_id: AffiliateId,
-		) -> DispatchResult {
+		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: AffiliateId) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
 			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
