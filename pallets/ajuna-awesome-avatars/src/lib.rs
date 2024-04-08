@@ -1236,17 +1236,8 @@ pub mod pallet {
 
 		#[pallet::call_index(22)]
 		#[pallet::weight({1000})]
-		pub fn add_affiliation(
-			origin: OriginFor<T>,
-			affiliate_id: AffiliateId,
-			season_id: SeasonId,
-		) -> DispatchResult {
+		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: AffiliateId) -> DispatchResult {
 			let account = ensure_signed(origin)?;
-
-			ensure!(
-				PlayerSeasonConfigs::<T>::get(&account, season_id).locks.affiliate,
-				Error::<T>::FeatureLocked
-			);
 
 			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
 				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
@@ -1273,6 +1264,10 @@ pub mod pallet {
 						let player_stats = SeasonStats::<T>::get(season_id, &account);
 
 						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
+							PlayerSeasonConfigs::<T>::mutate(&account, season_id, |config| {
+								config.locks.affiliate = true;
+							});
+
 							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
 						} else {
 							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
@@ -1282,26 +1277,38 @@ pub mod pallet {
 					}
 				},
 				UnlockTarget::OneselfPaying => {
-					// Subtract an amount for paying if account not affiliator
-					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
-					T::Currency::transfer(
-						&account,
-						&Self::treasury_account_id(),
-						affiliate_config.affiliator_enable_fee,
-						AllowDeath,
-					)?;
-					T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
+					// Substract amout for paying if account not affiliator
+					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
+						if !config.locks.affiliate {
+							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+							T::Currency::transfer(
+								&account,
+								&Self::treasury_account_id(),
+								affiliate_config.affiliator_enable_fee,
+								AllowDeath,
+							)?;
+							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
+							config.locks.affiliate = true;
+						}
+						Ok(())
+					})
 				},
 				UnlockTarget::OtherPaying(other) => {
-					// Subtract an amount for paying if other not affiliator
-					let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
-					T::Currency::transfer(
-						&account,
-						&Self::treasury_account_id(),
-						affiliate_config.affiliator_enable_fee,
-						AllowDeath,
-					)?;
-					T::AffiliateHandler::try_mark_account_as_affiliatable(&other)
+					// Substract amout for paying if other not affiliator
+					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
+						if !config.locks.affiliate {
+							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+							T::Currency::transfer(
+								&account,
+								&Self::treasury_account_id(),
+								affiliate_config.affiliator_enable_fee,
+								AllowDeath,
+							)?;
+							T::AffiliateHandler::try_mark_account_as_affiliatable(&other)?;
+							config.locks.affiliate = true;
+						}
+						Ok(())
+					})
 				},
 			}
 		}
@@ -1366,35 +1373,35 @@ pub mod pallet {
 				},
 				UnlockTarget::OneselfPaying => {
 					// Substract amout for paying if account not set price unlocked
-					let Season { fee, .. } = Self::seasons(&season_id)?;
-					T::Currency::transfer(
-						&account,
-						&Self::treasury_account_id(),
-						fee.set_price_unlock,
-						AllowDeath,
-					)?;
-
-					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
-						config.locks.set_price = true;
-					});
-
-					Ok(())
+					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
+						if !config.locks.set_price {
+							let Season { fee, .. } = Self::seasons(&season_id)?;
+							T::Currency::transfer(
+								&account,
+								&Self::treasury_account_id(),
+								fee.set_price_unlock,
+								AllowDeath,
+							)?;
+							config.locks.set_price = true;
+						}
+						Ok(())
+					})
 				},
 				UnlockTarget::OtherPaying(other) => {
 					// Substract amout for paying if other not affiliator
-					let Season { fee, .. } = Self::seasons(&season_id)?;
-					T::Currency::transfer(
-						&account,
-						&Self::treasury_account_id(),
-						fee.set_price_unlock,
-						AllowDeath,
-					)?;
-
-					PlayerSeasonConfigs::<T>::mutate(other, season_id, |config| {
-						config.locks.set_price = true;
-					});
-
-					Ok(())
+					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
+						if !config.locks.set_price {
+							let Season { fee, .. } = Self::seasons(&season_id)?;
+							T::Currency::transfer(
+								&account,
+								&Self::treasury_account_id(),
+								fee.set_price_unlock,
+								AllowDeath,
+							)?;
+							config.locks.set_price = true;
+						}
+						Ok(())
+					})
 				},
 			}
 		}
@@ -1431,35 +1438,35 @@ pub mod pallet {
 				},
 				UnlockTarget::OneselfPaying => {
 					// Substract amout for paying if account not set price unlocked
-					let Season { fee, .. } = Self::seasons(&season_id)?;
-					T::Currency::transfer(
-						&account,
-						&Self::treasury_account_id(),
-						fee.avatar_transfer_unlock,
-						AllowDeath,
-					)?;
-
-					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
-						config.locks.avatar_transfer = true;
-					});
-
-					Ok(())
+					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
+						if !config.locks.avatar_transfer {
+							let Season { fee, .. } = Self::seasons(&season_id)?;
+							T::Currency::transfer(
+								&account,
+								&Self::treasury_account_id(),
+								fee.set_price_unlock,
+								AllowDeath,
+							)?;
+							config.locks.avatar_transfer = true;
+						}
+						Ok(())
+					})
 				},
 				UnlockTarget::OtherPaying(other) => {
 					// Substract amout for paying if other not affiliator
-					let Season { fee, .. } = Self::seasons(&season_id)?;
-					T::Currency::transfer(
-						&account,
-						&Self::treasury_account_id(),
-						fee.avatar_transfer_unlock,
-						AllowDeath,
-					)?;
-
-					PlayerSeasonConfigs::<T>::mutate(other, season_id, |config| {
-						config.locks.avatar_transfer = true;
-					});
-
-					Ok(())
+					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
+						if !config.locks.avatar_transfer {
+							let Season { fee, .. } = Self::seasons(&season_id)?;
+							T::Currency::transfer(
+								&account,
+								&Self::treasury_account_id(),
+								fee.set_price_unlock,
+								AllowDeath,
+							)?;
+							config.locks.avatar_transfer = true;
+						}
+						Ok(())
+					})
 				},
 			}
 		}
