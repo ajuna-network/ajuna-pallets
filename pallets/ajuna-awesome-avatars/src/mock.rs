@@ -383,7 +383,7 @@ impl ExtBuilder {
 					self.affiliators.len() as u32,
 				);
 				for (i, account) in self.affiliators.into_iter().enumerate() {
-					let _ = Affiliates::try_mark_account_as_affiliatable(&account)
+					Affiliates::try_mark_account_as_affiliatable(&account)
 						.expect("Should mark as affiliatable");
 					pallet_ajuna_affiliates::AffiliateIdMapping::<Test, AffiliatesInstance1>::insert(i as u32, account);
 				}
