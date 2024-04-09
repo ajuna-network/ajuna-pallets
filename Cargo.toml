@@ -23,19 +23,19 @@ parity-scale-codec = { version = "3.0.0", default-features = false }
 scale-info         = { version = "2.1.1", default-features = false }
 
 # Substrate
-frame-benchmarking                         = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-frame-support                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-frame-system                               = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-pallet-assets                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-pallet-balances                            = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-pallet-nfts                                = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-pallet-timestamp                           = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-sp-arithmetic                              = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-sp-core                                    = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-sp-io                                      = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-sp-runtime                                 = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
-sp-std                                     = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.7.0", default-features = false }
+frame-benchmarking                         = { version = "31.0.0", default-features = false }
+frame-support                              = { version = "31.0.0", default-features = false }
+frame-system                               = { version = "31.0.0", default-features = false }
+pallet-assets                              = { version = "32.0.0", default-features = false }
+pallet-balances                            = { version = "31.0.0", default-features = false }
+pallet-insecure-randomness-collective-flip = { version = "19.0.0", default-features = false }
+pallet-nfts                                = { version = "25.0.0", default-features = false }
+pallet-timestamp                           = { version = "30.0.0", default-features = false }
+sp-arithmetic                              = { version = "25.0.0", default-features = false }
+sp-core                                    = { version = "31.0.0", default-features = false }
+sp-io                                      = { version = "33.0.0", default-features = false }
+sp-runtime                                 = { version = "34.0.0", default-features = false }
+sp-std                                     = { version = "14.0.0", default-features = false }
 
 # Ajuna
 pallet-ajuna-affiliates                   = { path = "pallets/ajuna-affiliates", default-features = false }
