@@ -243,7 +243,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type Currency = Balances;
 	type SeasonId = SeasonId;
 	type EntityId = crate::AvatarIdOf<Runtime>;
-	type RankedEntity = Avatar;
+	type RankedEntity = Avatar<BlockNumberFor<Runtime>>;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 
