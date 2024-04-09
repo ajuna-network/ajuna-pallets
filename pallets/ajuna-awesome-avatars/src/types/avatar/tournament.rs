@@ -51,12 +51,18 @@ where
 					if entity.1.force() == force.as_byte() && entity.1.force() == other.1.force() {
 						entity.1.souls.cmp(&other.1.souls).reverse()
 					} else {
+						// Returning Ordering::Equal makes that entity not get ranked in the table
+						// in both the case the table is still empty, or when comparing to another entity
+						// already in the ranks
 						Ordering::Equal
 					},
 				AvatarRankingCategory::MaxSoulPointsWithForce(ref force) =>
 					if entity.1.force() == force.as_byte() && entity.1.force() == other.1.force() {
 						entity.1.souls.cmp(&other.1.souls)
 					} else {
+						// Returning Ordering::Equal makes that entity not get ranked in the table
+						// in both the case the table is still empty, or when comparing to another entity
+						// already in the ranks
 						Ordering::Equal
 					},
 			}
