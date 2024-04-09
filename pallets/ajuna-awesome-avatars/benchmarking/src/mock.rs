@@ -82,6 +82,11 @@ impl frame_system::Config for Runtime {
 	type Nonce = u32;
 	type Block = MockBlock;
 	type RuntimeTask = RuntimeTask;
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 parameter_types! {
@@ -238,7 +243,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type Currency = Balances;
 	type SeasonId = SeasonId;
 	type EntityId = crate::AvatarIdOf<Runtime>;
-	type RankedEntity = Avatar<BlockNumberFor<Runtime>>;
+	type RankedEntity = Avatar;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 
