@@ -229,7 +229,7 @@ pub(crate) type CurrentSeasonId<T: Config> = StorageValue<Pallet<T>, SeasonId, V
 pub struct MigrateToV5<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for MigrateToV5<T> {
 	fn on_runtime_upgrade() -> Weight {
-		let current_version = Pallet::<T>::current_storage_version();
+		let current_version = Pallet::<T>::in_code_storage_version();
 		let onchain_version = Pallet::<T>::on_chain_storage_version();
 		if onchain_version == 4 && current_version == 5 {
 			let _ = GlobalConfigs::<T>::translate::<OldGlobalConfig<T>, _>(|old_config| {
