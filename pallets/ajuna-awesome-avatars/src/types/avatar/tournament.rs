@@ -7,6 +7,10 @@ pub enum AvatarRankingCategory {
 	#[default]
 	MinSoulPoints,
 	MaxSoulPoints,
+	DnaAscending,
+	DnaDescending,
+	MinSoulPointsWithForce(Force),
+	MaxSoulPointsWithForce(Force),
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
@@ -41,6 +45,20 @@ where
 					Ordering::Equal => Ordering::Less,
 					ordering => ordering,
 				},
+				AvatarRankingCategory::DnaAscending => entity.1.dna.cmp(&other.1.dna),
+				AvatarRankingCategory::DnaDescending => entity.1.dna.cmp(&other.1.dna).reverse(),
+				AvatarRankingCategory::MinSoulPointsWithForce(ref force) =>
+					if entity.1.force() == force.as_byte() && entity.1.force() == other.1.force() {
+						entity.1.souls.cmp(&other.1.souls).reverse()
+					} else {
+						Ordering::Equal
+					},
+				AvatarRankingCategory::MaxSoulPointsWithForce(ref force) =>
+					if entity.1.force() == force.as_byte() && entity.1.force() == other.1.force() {
+						entity.1.souls.cmp(&other.1.souls)
+					} else {
+						Ordering::Equal
+					},
 			}
 		}
 	}
