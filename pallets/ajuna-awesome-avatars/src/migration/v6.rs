@@ -287,7 +287,7 @@ pub struct MigrateToV6<T>(sp_std::marker::PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 	fn on_runtime_upgrade() -> Weight {
-		let current_version = Pallet::<T>::current_storage_version();
+		let current_version = Pallet::<T>::in_code_storage_version();
 		let onchain_version = Pallet::<T>::on_chain_storage_version();
 		if onchain_version == 5 && current_version == 6 {
 			let _ = GlobalConfigs::<T>::translate::<GlobalConfigV5<T>, _>(|old_config| {
@@ -397,7 +397,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
-		let current_version = Pallet::<T>::current_storage_version();
+		let current_version = Pallet::<T>::in_code_storage_version();
 		let onchain_version = Pallet::<T>::on_chain_storage_version();
 
 		if onchain_version == 5 && current_version == 6 {
