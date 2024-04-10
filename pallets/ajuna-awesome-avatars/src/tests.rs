@@ -4214,7 +4214,43 @@ mod affiliates {
 					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 0 }
 				);
 
-				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0));
+				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), None, 0));
+
+				System::assert_last_event(mock::RuntimeEvent::Affiliates(
+					pallet_ajuna_affiliates::Event::AccountAffiliated { account: BOB, to: ALICE },
+				));
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					Some(bounded_vec![ALICE])
+				);
+
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 1 }
+				);
+			});
+	}
+
+	#[test]
+	fn add_affiliate_to_another_account() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.affiliators(&[ALICE])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 0 }
+				);
+
+				WhitelistedAccounts::<Test>::mutate(|accs| {
+					accs.force_push(CHARLIE);
+				});
+
+				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(CHARLIE), Some(BOB), 0));
 
 				System::assert_last_event(mock::RuntimeEvent::Affiliates(
 					pallet_ajuna_affiliates::Event::AccountAffiliated { account: BOB, to: ALICE },
@@ -4246,8 +4282,29 @@ mod affiliates {
 				);
 
 				assert_noop!(
-					AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0),
+					AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), None, 0),
 					Error::<Test>::AffiliatorNotFound
+				);
+			});
+	}
+
+	#[test]
+	fn cannot_affiliate_another_account_if_not_in_whitelist() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.affiliators(&[ALICE])
+			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 0 }
+				);
+
+				assert_noop!(
+					AAvatars::add_affiliation(RuntimeOrigin::signed(CHARLIE), Some(BOB), 0),
+					Error::<Test>::AffiliateOthersOnlyWhiteListed
 				);
 			});
 	}
@@ -4399,7 +4456,7 @@ mod affiliates {
 					AffiliatorState { status: AffiliatableStatus::Affiliatable(1), affiliates: 0 }
 				);
 
-				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), 0));
+				assert_ok!(AAvatars::add_affiliation(RuntimeOrigin::signed(BOB), None, 0));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
