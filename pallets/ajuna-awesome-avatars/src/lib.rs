@@ -491,6 +491,8 @@ pub mod pallet {
 		AvatarInTrade,
 		/// The avatar is currently locked and cannot be used.
 		AvatarLocked,
+		/// The avatar is not currently locked and cannot be unlocked.
+		AvatarNotLocked,
 		/// The avatar is currently unlocked and cannot be locked again.
 		AvatarUnlocked,
 		/// Tried to forge avatars from different seasons.
@@ -1048,7 +1050,7 @@ pub mod pallet {
 		///
 		/// The origin of this call must specify an avatar, owned by the origin, to prevent it from
 		/// forging, trading and transferring it to other players. When successful, the ownership of
-		/// the avatar is transferred from the player to the pallet's technical account.
+		/// the avatar is removed from the player.
 		///
 		/// Locking an avatar allows for new
 		/// ways of interacting with it currently under development.
@@ -1065,12 +1067,7 @@ pub mod pallet {
 			Self::ensure_unlocked(&avatar_id)?;
 			ensure!(Preparation::<T>::contains_key(avatar_id), Error::<T>::NotPrepared);
 
-			Self::do_transfer_avatar(
-				&player,
-				&Self::technical_account_id(),
-				&avatar.season_id,
-				&avatar_id,
-			)?;
+			Self::try_remove_avatar_ownership_from(&player, &avatar.season_id, &avatar_id)?;
 
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
 			let url = Preparation::<T>::take(avatar_id).ok_or(Error::<T>::UnknownPreparation)?;
@@ -1099,12 +1096,7 @@ pub mod pallet {
 			ensure!(GlobalConfigs::<T>::get().nft_transfer.open, Error::<T>::NftTransferClosed);
 			ensure!(LockedAvatars::<T>::contains_key(avatar_id), Error::<T>::AvatarUnlocked);
 
-			Self::do_transfer_avatar(
-				&Self::technical_account_id(),
-				&player,
-				&avatar.season_id,
-				&avatar_id,
-			)?;
+			Self::try_restore_avatar_ownership_to(&player, &avatar.season_id, &avatar_id)?;
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
 			let _ = T::NftHandler::recover_from_nft(player, collection_id, avatar_id)?;
 
@@ -2095,6 +2087,44 @@ pub mod pallet {
 			Owners::<T>::mutate(player, season_id, |avatars| {
 				avatars.retain(|id| id != avatar_id);
 			});
+		}
+
+		fn try_remove_avatar_ownership_from(
+			player: &AccountIdFor<T>,
+			season_id: &SeasonId,
+			avatar_id: &AvatarIdOf<T>,
+		) -> DispatchResult {
+			Owners::<T>::mutate(player, season_id, |avatars| {
+				avatars.retain(|id| id != avatar_id);
+			});
+
+			Avatars::<T>::try_mutate(avatar_id, |maybe_avatar| -> DispatchResult {
+				let (from_owner, _) = maybe_avatar.as_mut().ok_or(Error::<T>::UnknownAvatar)?;
+				*from_owner = Self::technical_account_id();
+				Ok(())
+			})
+		}
+
+		fn try_restore_avatar_ownership_to(
+			player: &AccountIdFor<T>,
+			season_id: &SeasonId,
+			avatar_id: &AvatarIdOf<T>,
+		) -> DispatchResult {
+			Owners::<T>::try_mutate(player, season_id, |avatars| {
+				avatars.try_push(*avatar_id).map_err(|_| Error::<T>::MaxOwnershipReached)?;
+				ensure!(
+					avatars.len() <=
+						PlayerSeasonConfigs::<T>::get(player, season_id).storage_tier as usize,
+					Error::<T>::MaxOwnershipReached
+				);
+				Ok::<_, DispatchError>(())
+			})?;
+
+			Avatars::<T>::try_mutate(avatar_id, |maybe_avatar| -> DispatchResult {
+				let (from_owner, _) = maybe_avatar.as_mut().ok_or(Error::<T>::UnknownAvatar)?;
+				*from_owner = player.clone();
+				Ok(())
+			})
 		}
 
 		fn ensure_for_trade(
