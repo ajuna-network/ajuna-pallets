@@ -2218,7 +2218,7 @@ pub mod pallet {
 				T::AffiliateHandler::try_execute_rule_for(rule_id, |rule| {
 					let mut final_fee = base_fee;
 					for (rule_perc, chain_acc) in rule.into_iter().zip(chain.clone()) {
-						let transfer_fee = final_fee
+						let transfer_fee = base_fee
 							.saturating_mul(rule_perc.into())
 							.checked_div(&100_u32.into())
 							.unwrap_or_default();
