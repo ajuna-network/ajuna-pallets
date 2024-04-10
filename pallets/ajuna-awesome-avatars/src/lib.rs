@@ -538,6 +538,8 @@ pub mod pallet {
 		UnlockCriteriaNotFulfilled,
 		/// Couldn't find a tournament ranker for the active tournament; qed
 		TournamentRankerNotFound,
+		/// Only whitelisted accounts can affiliate for others
+		AffiliateOthersOnlyWhiteListed,
 	}
 
 	#[pallet::hooks]
@@ -1236,8 +1238,20 @@ pub mod pallet {
 
 		#[pallet::call_index(22)]
 		#[pallet::weight({1000})]
-		pub fn add_affiliation(origin: OriginFor<T>, affiliate_id: AffiliateId) -> DispatchResult {
-			let account = ensure_signed(origin)?;
+		pub fn add_affiliation(
+			origin: OriginFor<T>, 
+			account: AccountIdFor<T>, 
+			affiliate_id: AffiliateId
+		) -> DispatchResult {
+			let signer = ensure_signed(origin)?;
+
+			if signer != account {
+				let whitelisted_accounts = WhitelistedAccounts::<T>::get();
+				ensure!(
+					whitelisted_accounts.contains(&account),
+					Error::<T>::AffiliateOthersOnlyWhiteListed
+				);
+			}
 
 			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
 				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
