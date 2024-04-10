@@ -52,8 +52,8 @@ where
 						entity.1.souls.cmp(&other.1.souls).reverse()
 					} else {
 						// Returning Ordering::Equal makes that entity not get ranked in the table
-						// in both the case the table is still empty, or when comparing to another entity
-						// already in the ranks
+						// in both the case the table is still empty, or when comparing to another
+						// entity already in the ranks
 						Ordering::Equal
 					},
 				AvatarRankingCategory::MaxSoulPointsWithForce(ref force) =>
@@ -61,8 +61,8 @@ where
 						entity.1.souls.cmp(&other.1.souls)
 					} else {
 						// Returning Ordering::Equal makes that entity not get ranked in the table
-						// in both the case the table is still empty, or when comparing to another entity
-						// already in the ranks
+						// in both the case the table is still empty, or when comparing to another
+						// entity already in the ranks
 						Ordering::Equal
 					},
 			}
