@@ -3654,7 +3654,7 @@ mod nft_transfer {
 				PlayerSeasonConfigs::<Test>::insert(technical_account, SEASON_ID, config);
 
 				assert!(!Owners::<Test>::get(ALICE, SEASON_ID).contains(&avatar_id));
-				assert_eq!(Owners::<Test>::get(technical_account, SEASON_ID)[0], avatar_id);
+				assert!(Owners::<Test>::get(technical_account, SEASON_ID).is_empty());
 				assert_eq!(Avatars::<Test>::get(avatar_id).unwrap().0, technical_account);
 
 				// Ensure locked avatars cannot be used in trading, transferring and forging
