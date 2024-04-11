@@ -1,6 +1,6 @@
 use super::*;
 use pallet_ajuna_tournament::traits::EntityRank;
-use sp_std::cmp::Ordering;
+use sp_std::{cmp::Ordering, num::NonZeroU32};
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
 pub enum AvatarRankingCategory {
@@ -11,6 +11,7 @@ pub enum AvatarRankingCategory {
 	DnaDescending,
 	MinSoulPointsWithForce(Force),
 	MaxSoulPointsWithForce(Force),
+	MintedAtModulo(NonZeroU32),
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
@@ -65,6 +66,15 @@ where
 						// entity already in the ranks
 						Ordering::Equal
 					},
+				AvatarRankingCategory::MintedAtModulo(modulo) => {
+					let block_modulo = BlockNumber::from(u32::from(modulo));
+					let entity_modulo = entity.1.minted_at % block_modulo;
+					let other_modulo = other.1.minted_at % block_modulo;
+					match entity_modulo.cmp(&other_modulo) {
+						Ordering::Equal => Ordering::Less,
+						ordering => ordering,
+					}
+				},
 			}
 		}
 	}
