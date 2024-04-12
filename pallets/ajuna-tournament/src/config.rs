@@ -52,6 +52,7 @@ pub enum TournamentState<Balance> {
 	Inactive,
 	ActivePeriod(TournamentId),
 	ClaimPeriod(TournamentId, Balance),
+	Finished(TournamentId),
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]

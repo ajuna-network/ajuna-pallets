@@ -1283,7 +1283,7 @@ fn test_full_tournament_workflow() {
 
 			assert_eq!(
 				ActiveTournaments::<Test, Instance1>::get(SEASON_ID_1),
-				TournamentState::Inactive
+				TournamentState::Finished(tournament_id)
 			);
 		});
 }
