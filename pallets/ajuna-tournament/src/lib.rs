@@ -163,6 +163,10 @@ pub mod pallet {
 			season_id: T::SeasonId,
 			tournament_id: TournamentId,
 		},
+		TournamentRemoved {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+		},
 		TournamentActivePeriodStarted {
 			season_id: T::SeasonId,
 			tournament_id: TournamentId,
@@ -206,6 +210,9 @@ pub mod pallet {
 		NoActiveTournamentForSeason,
 		/// The current tournament is not in its reward claim period.
 		TournamentNotInClaimPeriod,
+		/// The latest tournament for the selected season identifier already started,
+		/// so it cannot be removed anymore.
+		LatestTournamentAlreadyStarted,
 		/// There's already an active tournament for the selected season.
 		AnotherTournamentAlreadyActiveForSeason,
 		/// Cannot find tournament data for the selected season id and tournament id combination.
@@ -591,6 +598,34 @@ pub mod pallet {
 			});
 
 			Ok(next_tournament_id)
+		}
+
+		fn try_remove_latest_tournament_for(season_id: &T::SeasonId) -> DispatchResult {
+			match Self::get_active_tournament_state_for(season_id) {
+				TournamentState::Inactive =>
+					NextTournamentIds::<T, I>::try_mutate(season_id, |tournament_id| {
+						let prev_id = tournament_id.saturating_sub(1);
+						if let Some(config) = Tournaments::<T, I>::take(season_id, prev_id) {
+							GoldenDucks::<T, I>::remove(season_id, prev_id);
+
+							TournamentSchedules::<T, I>::remove(config.start);
+							TournamentSchedules::<T, I>::remove(config.active_end);
+							TournamentSchedules::<T, I>::remove(config.claim_end);
+
+							*tournament_id = prev_id;
+
+							Self::deposit_event(Event::<T, I>::TournamentRemoved {
+								season_id: *season_id,
+								tournament_id: prev_id,
+							});
+
+							Ok(())
+						} else {
+							Err(Error::<T, I>::TournamentNotFound.into())
+						}
+					}),
+				_ => Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
+			}
 		}
 	}
 

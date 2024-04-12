@@ -364,6 +364,132 @@ mod tournament_mutator {
 			);
 		});
 	}
+
+	#[test]
+	fn try_remove_latest_tournament_workflow() {
+		let tournament_config_1 = TournamentConfigFor::<Test, Instance1>::default()
+			.start(20)
+			.active_end(50)
+			.claim_end(100)
+			.initial_reward(Some(10))
+			.reward_distribution(
+				RewardDistributionTable::try_from(vec![40, 25, 10])
+					.expect("Should created reward table"),
+			);
+		let tournament_config_2 =
+			tournament_config_1.clone().start(105).active_end(120).claim_end(140);
+		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
+			// Create tournament 1
+			let tournament_id_1 = {
+				let result = TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_1,
+					tournament_config_1.clone(),
+				);
+				assert_ok!(result);
+				result.unwrap()
+			};
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentCreated {
+					season_id: SEASON_ID_1,
+					tournament_id: tournament_id_1,
+				},
+			));
+
+			assert_eq!(
+				Tournaments::<Test, Instance1>::get(SEASON_ID_1, tournament_id_1),
+				Some(tournament_config_1)
+			);
+			assert_eq!(NextTournamentIds::<Test, Instance1>::get(SEASON_ID_1), tournament_id_1 + 1);
+			assert_eq!(
+				TournamentSchedules::<Test, Instance1>::get(20),
+				Some(TournamentScheduledAction::StartActivePhase(SEASON_ID_1, tournament_id_1))
+			);
+			assert_eq!(
+				TournamentSchedules::<Test, Instance1>::get(50),
+				Some(TournamentScheduledAction::SwitchToClaimPhase(SEASON_ID_1, tournament_id_1))
+			);
+			assert_eq!(
+				TournamentSchedules::<Test, Instance1>::get(100),
+				Some(TournamentScheduledAction::EndClaimPhase(SEASON_ID_1, tournament_id_1))
+			);
+
+			// Create tournament 2
+			let tournament_id_2 = {
+				let result = TournamentAlpha::try_create_new_tournament_for(
+					&ALICE,
+					&SEASON_ID_1,
+					tournament_config_2.clone(),
+				);
+				assert_ok!(result);
+				result.unwrap()
+			};
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentCreated {
+					season_id: SEASON_ID_1,
+					tournament_id: tournament_id_2,
+				},
+			));
+
+			assert_eq!(
+				Tournaments::<Test, Instance1>::get(SEASON_ID_1, tournament_id_2),
+				Some(tournament_config_2)
+			);
+			assert_eq!(NextTournamentIds::<Test, Instance1>::get(SEASON_ID_1), tournament_id_2 + 1);
+			assert_eq!(
+				TournamentSchedules::<Test, Instance1>::get(105),
+				Some(TournamentScheduledAction::StartActivePhase(SEASON_ID_1, tournament_id_2))
+			);
+			assert_eq!(
+				TournamentSchedules::<Test, Instance1>::get(120),
+				Some(TournamentScheduledAction::SwitchToClaimPhase(SEASON_ID_1, tournament_id_2))
+			);
+			assert_eq!(
+				TournamentSchedules::<Test, Instance1>::get(140),
+				Some(TournamentScheduledAction::EndClaimPhase(SEASON_ID_1, tournament_id_2))
+			);
+
+			// Remove latest tournament - tournament 2
+			assert_ok!(TournamentAlpha::try_remove_latest_tournament_for(&SEASON_ID_1));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentRemoved {
+					season_id: SEASON_ID_1,
+					tournament_id: tournament_id_2,
+				},
+			));
+
+			assert_eq!(Tournaments::<Test, Instance1>::get(SEASON_ID_1, tournament_id_2), None);
+			assert_eq!(NextTournamentIds::<Test, Instance1>::get(SEASON_ID_1), tournament_id_2);
+			assert_eq!(TournamentSchedules::<Test, Instance1>::get(105), None);
+			assert_eq!(TournamentSchedules::<Test, Instance1>::get(120), None);
+			assert_eq!(TournamentSchedules::<Test, Instance1>::get(140), None);
+
+			// Remove latest tournament - tournament 1
+			assert_ok!(TournamentAlpha::try_remove_latest_tournament_for(&SEASON_ID_1));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentRemoved {
+					season_id: SEASON_ID_1,
+					tournament_id: tournament_id_1,
+				},
+			));
+
+			assert_eq!(Tournaments::<Test, Instance1>::get(SEASON_ID_1, tournament_id_1), None);
+			assert_eq!(NextTournamentIds::<Test, Instance1>::get(SEASON_ID_1), tournament_id_1);
+			assert_eq!(TournamentSchedules::<Test, Instance1>::get(20), None);
+			assert_eq!(TournamentSchedules::<Test, Instance1>::get(50), None);
+			assert_eq!(TournamentSchedules::<Test, Instance1>::get(100), None);
+
+			// Remove latest tournament - no more tournaments left to remove
+			assert_noop!(
+				TournamentAlpha::try_remove_latest_tournament_for(&SEASON_ID_1),
+				Error::<Test, Instance1>::TournamentNotFound
+			);
+		});
+	}
 }
 
 mod tournament_ranker {
