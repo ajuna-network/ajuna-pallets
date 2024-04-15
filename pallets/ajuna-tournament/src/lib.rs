@@ -163,6 +163,10 @@ pub mod pallet {
 			season_id: T::SeasonId,
 			tournament_id: TournamentId,
 		},
+		TournamentRemoved {
+			season_id: T::SeasonId,
+			tournament_id: TournamentId,
+		},
 		TournamentActivePeriodStarted {
 			season_id: T::SeasonId,
 			tournament_id: TournamentId,
@@ -206,6 +210,9 @@ pub mod pallet {
 		NoActiveTournamentForSeason,
 		/// The current tournament is not in its reward claim period.
 		TournamentNotInClaimPeriod,
+		/// The latest tournament for the selected season identifier already started,
+		/// so it cannot be removed anymore.
+		LatestTournamentAlreadyStarted,
 		/// There's already an active tournament for the selected season.
 		AnotherTournamentAlreadyActiveForSeason,
 		/// Cannot find tournament data for the selected season id and tournament id combination.
@@ -374,9 +381,9 @@ pub mod pallet {
 			season_id: &T::SeasonId,
 		) -> Result<TournamentId, DispatchError> {
 			match ActiveTournaments::<T, I>::get(season_id) {
-				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 				TournamentState::ActivePeriod(tournament_id) |
 				TournamentState::ClaimPeriod(tournament_id, _) => Ok(tournament_id),
+				_ => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 			}
 		}
 
@@ -488,7 +495,7 @@ pub mod pallet {
 				}
 
 				ActiveTournaments::<T, I>::mutate(season_id, |state| {
-					*state = TournamentState::Inactive
+					*state = TournamentState::Finished(tournament_id)
 				});
 
 				Self::deposit_event(Event::<T, I>::TournamentEnded { season_id, tournament_id });
@@ -509,7 +516,6 @@ pub mod pallet {
 			season_id: &T::SeasonId,
 		) -> Option<(TournamentId, TournamentConfigFor<T, I>)> {
 			match ActiveTournaments::<T, I>::get(season_id) {
-				TournamentState::Inactive => None,
 				TournamentState::ActivePeriod(tournament_id) |
 				TournamentState::ClaimPeriod(tournament_id, _) =>
 					if let Some(tournament_config) =
@@ -520,6 +526,7 @@ pub mod pallet {
 						log::error!(target: LOG_TARGET, "No tournament config found for active tournament!");
 						None
 					},
+				_ => None,
 			}
 		}
 
@@ -529,7 +536,6 @@ pub mod pallet {
 
 		fn is_golden_duck_enabled_for(season_id: &T::SeasonId) -> bool {
 			match ActiveTournaments::<T, I>::get(season_id) {
-				TournamentState::Inactive => false,
 				TournamentState::ActivePeriod(tournament_id) |
 				TournamentState::ClaimPeriod(tournament_id, _) => {
 					matches!(
@@ -537,6 +543,7 @@ pub mod pallet {
 						GoldenDuckStateFor::<T, I>::Enabled(_, _)
 					)
 				},
+				_ => false,
 			}
 		}
 
@@ -591,6 +598,34 @@ pub mod pallet {
 			});
 
 			Ok(next_tournament_id)
+		}
+
+		fn try_remove_latest_tournament_for(season_id: &T::SeasonId) -> DispatchResult {
+			match Self::get_active_tournament_state_for(season_id) {
+				TournamentState::Inactive =>
+					NextTournamentIds::<T, I>::try_mutate(season_id, |tournament_id| {
+						let prev_id = tournament_id.saturating_sub(1);
+						if let Some(config) = Tournaments::<T, I>::take(season_id, prev_id) {
+							GoldenDucks::<T, I>::remove(season_id, prev_id);
+
+							TournamentSchedules::<T, I>::remove(config.start);
+							TournamentSchedules::<T, I>::remove(config.active_end);
+							TournamentSchedules::<T, I>::remove(config.claim_end);
+
+							*tournament_id = prev_id;
+
+							Self::deposit_event(Event::<T, I>::TournamentRemoved {
+								season_id: *season_id,
+								tournament_id: prev_id,
+							});
+
+							Ok(())
+						} else {
+							Err(Error::<T, I>::TournamentNotFound.into())
+						}
+					}),
+				_ => Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
+			}
 		}
 	}
 
@@ -718,7 +753,6 @@ pub mod pallet {
 			);
 
 			match ActiveTournaments::<T, I>::get(season_id) {
-				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 				TournamentState::ActivePeriod(_) =>
 					Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 				TournamentState::ClaimPeriod(tournament_id, reward_pot) => {
@@ -760,6 +794,7 @@ pub mod pallet {
 
 					Ok(())
 				},
+				_ => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 			}
 		}
 
@@ -777,7 +812,6 @@ pub mod pallet {
 			);
 
 			match ActiveTournaments::<T, I>::get(season_id) {
-				TournamentState::Inactive => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 				TournamentState::ActivePeriod(_) =>
 					Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 				TournamentState::ClaimPeriod(tournament_id, reward_pot) =>
@@ -812,6 +846,7 @@ pub mod pallet {
 						},
 						_ => Err(Error::<T, I>::GoldenDuckCandidateNotWinner.into()),
 					},
+				_ => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 			}
 		}
 	}

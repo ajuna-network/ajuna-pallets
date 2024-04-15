@@ -1513,6 +1513,16 @@ pub mod pallet {
 
 		#[pallet::call_index(31)]
 		#[pallet::weight({10_000})]
+		pub fn remove_latest_tournament(
+			origin: OriginFor<T>,
+			season_id: SeasonId,
+		) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+			T::TournamentHandler::try_remove_latest_tournament_for(&season_id)
+		}
+
+		#[pallet::call_index(32)]
+		#[pallet::weight({10_000})]
 		pub fn claim_tournament_reward_for(
 			origin: OriginFor<T>,
 			season_id: SeasonId,
@@ -1524,7 +1534,7 @@ pub mod pallet {
 			T::TournamentHandler::try_claim_tournament_reward_for(&season_id, &account, &avatar_id)
 		}
 
-		#[pallet::call_index(32)]
+		#[pallet::call_index(33)]
 		#[pallet::weight({10_000})]
 		pub fn claim_golden_duck_for(
 			origin: OriginFor<T>,

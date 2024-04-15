@@ -29,6 +29,8 @@ pub trait TournamentMutator<AccountId, SeasonId, BlockNumber, Balance> {
 		season_id: &SeasonId,
 		config: TournamentConfig<BlockNumber, Balance>,
 	) -> Result<TournamentId, DispatchError>;
+
+	fn try_remove_latest_tournament_for(season_id: &SeasonId) -> DispatchResult;
 }
 
 pub trait TournamentRanker<SeasonId, Entity, EntityId> {
