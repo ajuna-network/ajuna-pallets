@@ -808,6 +808,100 @@ mod tournament_claimer {
 	}
 
 	#[test]
+	fn try_claim_tournament_rewards_fails_with_trying_to_claim_same_reward_again() {
+		ExtBuilder::default().build().execute_with(|| {
+			let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+				.initial_reward(Some(100))
+				.start(10)
+				.active_end(50)
+				.claim_end(90)
+				.reward_distribution(
+					RewardDistributionTable::try_from(vec![50, 30]).expect("Should create table"),
+				)
+				.golden_duck_config(GoldenDuckConfig::Enabled(20))
+				.max_players(2);
+			ExtBuilder::default().build().execute_with(|| {
+				let tournament_id = {
+					let result = TournamentAlpha::try_create_new_tournament_for(
+						&ALICE,
+						&SEASON_ID_1,
+						tournament_config,
+					);
+					assert_ok!(result);
+					result.unwrap()
+				};
+
+				run_to_block(15);
+
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&H256::from_low_u64_be(3),
+					&10_u32,
+					&MockRanker
+				));
+				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+					&SEASON_ID_1,
+					&H256::from_low_u64_be(7),
+					&15_u32,
+					&MockRanker
+				));
+
+				assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+					&SEASON_ID_1,
+					&H256::from_low_u64_be(10),
+				));
+
+				run_to_block(60);
+
+				assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+					&SEASON_ID_1,
+					&ALICE,
+					&H256::from_low_u64_be(3),
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+					crate::Event::RankingRewardClaimed {
+						season_id: SEASON_ID_1,
+						tournament_id,
+						entity_id: H256::from_low_u64_be(3),
+						account: ALICE,
+					},
+				));
+
+				assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
+					&SEASON_ID_1,
+					&BOB,
+					&H256::from_low_u64_be(7),
+				));
+
+				assert_ok!(TournamentAlpha::try_claim_golden_duck_for(
+					&SEASON_ID_1,
+					&ALICE,
+					&H256::from_low_u64_be(10),
+				));
+
+				assert_noop!(
+					TournamentAlpha::try_claim_tournament_reward_for(
+						&SEASON_ID_1,
+						&BOB,
+						&H256::from_low_u64_be(7),
+					),
+					Error::<Test, Instance1>::TournamentRewardAlreadyClaimed
+				);
+
+				assert_noop!(
+					TournamentAlpha::try_claim_golden_duck_for(
+						&SEASON_ID_1,
+						&ALICE,
+						&H256::from_low_u64_be(10),
+					),
+					Error::<Test, Instance1>::TournamentRewardAlreadyClaimed
+				);
+			});
+		});
+	}
+
+	#[test]
 	fn try_claim_tournament_rewards_with_max_reward() {
 		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
 			.max_reward(Some(200))

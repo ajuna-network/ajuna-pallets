@@ -61,6 +61,7 @@ pub mod pallet {
 	pub type TournamentConfigFor<T, I> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T, I>>;
 	pub(crate) type RankingTableFor<T, I> =
 		RankingTable<(<T as Config<I>>::EntityId, <T as Config<I>>::RankedEntity)>;
+	pub(crate) type RewardClaimStateFor<T> = RewardClaimState<AccountIdFor<T>>;
 	pub(crate) type TournamentStateFor<T, I> = TournamentState<BalanceOf<T, I>>;
 	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
 
@@ -145,6 +146,19 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn tournament_reward_claims)]
+	pub type TournamentRewardClaims<T: Config<I>, I: 'static = ()> = StorageNMap<
+		_,
+		(
+			NMapKey<Identity, T::SeasonId>,
+			NMapKey<Identity, TournamentId>,
+			NMapKey<Blake2_128Concat, RankingTableIndex>,
+		),
+		RewardClaimStateFor<T>,
+		OptionQuery,
+	>;
+
+	#[pallet::storage]
 	#[pallet::getter(fn golden_ducks)]
 	pub type GoldenDucks<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -154,6 +168,18 @@ pub mod pallet {
 		TournamentId,
 		GoldenDuckStateFor<T, I>,
 		ValueQuery,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn golden_duck_reward_claims)]
+	pub type GoldenDuckRewardClaims<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+		_,
+		Identity,
+		T::SeasonId,
+		Identity,
+		TournamentId,
+		RewardClaimStateFor<T>,
+		OptionQuery,
 	>;
 
 	#[pallet::event]
@@ -231,6 +257,8 @@ pub mod pallet {
 		RankingCandidateNotInWinnerTable,
 		/// A golden duck candidate proposed by an account is not the actual golden duck winner.
 		GoldenDuckCandidateNotWinner,
+		/// The reward for this tournament has already been claimed
+		TournamentRewardAlreadyClaimed,
 	}
 
 	#[pallet::hooks]
@@ -377,6 +405,29 @@ pub mod pallet {
 			Ok(())
 		}
 
+		fn update_tournament_rewards_storage_for(
+			season_id: &T::SeasonId,
+			tournament_id: TournamentId,
+		) {
+			for index in 0..TournamentRankings::<T, I>::get(season_id, tournament_id).len() {
+				TournamentRewardClaims::<T, I>::insert(
+					(season_id, tournament_id, index as u32),
+					RewardClaimState::Unclaimed,
+				);
+			}
+
+			if matches!(
+				GoldenDucks::<T, I>::get(season_id, tournament_id),
+				GoldenDuckState::Enabled(_, Some(_))
+			) {
+				GoldenDuckRewardClaims::<T, I>::insert(
+					season_id,
+					tournament_id,
+					RewardClaimState::Unclaimed,
+				);
+			}
+		}
+
 		fn try_get_active_tournament_id_for(
 			season_id: &T::SeasonId,
 		) -> Result<TournamentId, DispatchError> {
@@ -469,6 +520,8 @@ pub mod pallet {
 				ActiveTournaments::<T, I>::mutate(season_id, |state| {
 					*state = TournamentState::ClaimPeriod(tournament_id, reward_pot)
 				});
+
+				Self::update_tournament_rewards_storage_for(&season_id, tournament_id);
 
 				Self::deposit_event(Event::<T, I>::TournamentClaimPeriodStarted {
 					season_id,
@@ -761,38 +814,51 @@ pub mod pallet {
 						.position(|(entry_id, _)| entry_id == entity_id)
 						.ok_or(Error::<T, I>::RankingCandidateNotInWinnerTable)?;
 
-					let tournament_config = Tournaments::<T, I>::get(season_id, tournament_id)
-						.ok_or(Error::<T, I>::TournamentNotFound)?;
-					let treasury_account = Self::tournament_treasury_account_id(*season_id);
+					TournamentRewardClaims::<T, I>::try_mutate(
+						(season_id, tournament_id, index as u32),
+						|state| {
+							ensure!(
+								matches!(state, Some(RewardClaimState::Unclaimed)),
+								Error::<T, I>::TournamentRewardAlreadyClaimed
+							);
 
-					let payout_percentage = tournament_config
-						.reward_distribution
-						.get(index)
-						.copied()
-						.unwrap_or_default();
+							let tournament_config =
+								Tournaments::<T, I>::get(season_id, tournament_id)
+									.ok_or(Error::<T, I>::TournamentNotFound)?;
+							let treasury_account = Self::tournament_treasury_account_id(*season_id);
 
-					let account_payout = reward_pot
-						.saturating_mul(payout_percentage.into())
-						.checked_div(&100_u32.into())
-						.unwrap_or_default();
+							let payout_percentage = tournament_config
+								.reward_distribution
+								.get(index)
+								.copied()
+								.unwrap_or_default();
 
-					if account_payout > 0_u32.into() {
-						T::Currency::transfer(
-							&treasury_account,
-							account,
-							account_payout,
-							ExistenceRequirement::AllowDeath,
-						)?;
-					}
+							let account_payout = reward_pot
+								.saturating_mul(payout_percentage.into())
+								.checked_div(&100_u32.into())
+								.unwrap_or_default();
 
-					Self::deposit_event(crate::pallet::Event::<T, I>::RankingRewardClaimed {
-						season_id: *season_id,
-						tournament_id,
-						entity_id: entity_id.clone(),
-						account: account.clone(),
-					});
+							if account_payout > 0_u32.into() {
+								T::Currency::transfer(
+									&treasury_account,
+									account,
+									account_payout,
+									ExistenceRequirement::AllowDeath,
+								)?;
+							}
 
-					Ok(())
+							*state = Some(RewardClaimState::Claimed(account.clone()));
+
+							Self::deposit_event(Event::<T, I>::RankingRewardClaimed {
+								season_id: *season_id,
+								tournament_id,
+								entity_id: entity_id.clone(),
+								account: account.clone(),
+							});
+
+							Ok(())
+						},
+					)
 				},
 				_ => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),
 			}
@@ -818,32 +884,42 @@ pub mod pallet {
 					match GoldenDucks::<T, I>::get(season_id, tournament_id) {
 						GoldenDuckState::Enabled(payout_percentage, Some(ref winner_id))
 							if winner_id == entity_id =>
-						{
-							let treasury_account = Self::tournament_treasury_account_id(*season_id);
+							GoldenDuckRewardClaims::<T, I>::try_mutate(
+								season_id,
+								tournament_id,
+								|state| {
+									ensure!(
+										matches!(state, Some(RewardClaimState::Unclaimed)),
+										Error::<T, I>::TournamentRewardAlreadyClaimed
+									);
 
-							let account_payout = reward_pot
-								.saturating_mul(payout_percentage.into())
-								.checked_div(&100_u32.into())
-								.unwrap_or_default();
+									let treasury_account =
+										Self::tournament_treasury_account_id(*season_id);
 
-							T::Currency::transfer(
-								&treasury_account,
-								account,
-								account_payout,
-								ExistenceRequirement::AllowDeath,
-							)?;
+									let account_payout = reward_pot
+										.saturating_mul(payout_percentage.into())
+										.checked_div(&100_u32.into())
+										.unwrap_or_default();
 
-							Self::deposit_event(
-								crate::pallet::Event::<T, I>::GoldenDuckRewardClaimed {
-									season_id: *season_id,
-									tournament_id,
-									entity_id: entity_id.clone(),
-									account: account.clone(),
+									T::Currency::transfer(
+										&treasury_account,
+										account,
+										account_payout,
+										ExistenceRequirement::AllowDeath,
+									)?;
+
+									*state = Some(RewardClaimState::Claimed(account.clone()));
+
+									Self::deposit_event(Event::<T, I>::GoldenDuckRewardClaimed {
+										season_id: *season_id,
+										tournament_id,
+										entity_id: entity_id.clone(),
+										account: account.clone(),
+									});
+
+									Ok(())
 								},
-							);
-
-							Ok(())
-						},
+							),
 						_ => Err(Error::<T, I>::GoldenDuckCandidateNotWinner.into()),
 					},
 				_ => Err(Error::<T, I>::NoActiveTournamentForSeason.into()),

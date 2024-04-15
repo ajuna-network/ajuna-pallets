@@ -4,6 +4,15 @@ use frame_support::{
 	BoundedVec,
 };
 
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub enum RewardClaimState<Account> {
+	#[default]
+	Unclaimed,
+	Claimed(Account),
+}
+
+pub type RankingTableIndex = u32;
+
 pub type Percentage = u8;
 
 pub type RewardDistributionTable = BoundedVec<Percentage, ConstU32<MAX_PLAYERS>>;
