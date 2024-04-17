@@ -22,7 +22,11 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use sp_runtime::{testing::H256, traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify}, BuildStorage, MultiSignature};
+use sp_runtime::{
+	testing::H256,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	BuildStorage, MultiSignature,
+};
 use std::cmp::Ordering;
 
 pub type MockSignature = MultiSignature;
