@@ -224,7 +224,6 @@ parameter_types! {
 	pub MockKeyPair: sp_core::sr25519::Pair = sp_core::sr25519::Pair::from_seed(&KEY_SEED);
 }
 
-pub const NULL_SIGNATURE: sp_core::sr25519::Signature = sp_core::sr25519::Signature([0; 64]);
 pub const AUTHORITY_ID: MockAccountId = 37;
 
 parameter_types! {
