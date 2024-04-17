@@ -729,7 +729,7 @@ mod tournament_claimer {
 					},
 				));
 
-				assert_eq!(Balances::free_balance(tournament_account), 100);
+				assert_eq!(Balances::free_balance(&tournament_account), 100);
 				assert_eq!(Balances::free_balance(ALICE), 900);
 				assert_eq!(Balances::free_balance(BOB), 1_000);
 
@@ -781,7 +781,7 @@ mod tournament_claimer {
 					},
 				));
 
-				assert_eq!(Balances::free_balance(tournament_account), 20);
+				assert_eq!(Balances::free_balance(&tournament_account), 20);
 				assert_eq!(Balances::free_balance(ALICE), 930);
 				assert_eq!(Balances::free_balance(BOB), 1_050);
 
@@ -802,7 +802,7 @@ mod tournament_claimer {
 
 				assert_eq!(Balances::free_balance(ALICE), 950);
 				assert_eq!(Balances::free_balance(BOB), 1_050);
-				assert_eq!(Balances::free_balance(tournament_account), 0);
+				assert_eq!(Balances::free_balance(&tournament_account), 0);
 			});
 		});
 	}
@@ -926,7 +926,7 @@ mod tournament_claimer {
 
 			let tournament_account = TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
-			assert_eq!(Balances::free_balance(tournament_account), 500);
+			assert_eq!(Balances::free_balance(&tournament_account), 500);
 			assert_eq!(Balances::free_balance(ALICE), 500);
 			assert_eq!(Balances::free_balance(BOB), 1_000);
 
@@ -981,7 +981,7 @@ mod tournament_claimer {
 				&H256::from_low_u64_be(9),
 			));
 
-			assert_eq!(Balances::free_balance(tournament_account), 340);
+			assert_eq!(Balances::free_balance(&tournament_account), 340);
 			assert_eq!(Balances::free_balance(ALICE), 560);
 			assert_eq!(Balances::free_balance(BOB), 1_100);
 
@@ -991,7 +991,7 @@ mod tournament_claimer {
 				&H256::from_low_u64_be(10),
 			));
 
-			assert_eq!(Balances::free_balance(tournament_account), 300);
+			assert_eq!(Balances::free_balance(&tournament_account), 300);
 			assert_eq!(Balances::free_balance(ALICE), 600);
 			assert_eq!(Balances::free_balance(BOB), 1_100);
 		});
@@ -1201,7 +1201,7 @@ fn test_full_tournament_workflow() {
 
 			let tournament_account = TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
-			assert_eq!(Balances::free_balance(tournament_account), 300);
+			assert_eq!(Balances::free_balance(&tournament_account), 300);
 			assert_eq!(Balances::free_balance(ALICE), 700);
 			assert_eq!(Balances::free_balance(BOB), 1_000);
 			assert_eq!(Balances::free_balance(CHARLIE), 1_000);
@@ -1340,7 +1340,7 @@ fn test_full_tournament_workflow() {
 				&H256::from_low_u64_be(71)
 			));
 
-			assert_eq!(Balances::free_balance(tournament_account), 210);
+			assert_eq!(Balances::free_balance(&tournament_account), 210);
 			assert_eq!(Balances::free_balance(ALICE), 748);
 			assert_eq!(Balances::free_balance(BOB), 1_000);
 			assert_eq!(Balances::free_balance(CHARLIE), 1_030);
@@ -1362,7 +1362,7 @@ fn test_full_tournament_workflow() {
 				&H256::from_low_u64_be(3),
 			));
 
-			assert_eq!(Balances::free_balance(tournament_account), 180);
+			assert_eq!(Balances::free_balance(&tournament_account), 180);
 			assert_eq!(Balances::free_balance(ALICE), 748);
 			assert_eq!(Balances::free_balance(BOB), 1_000);
 			assert_eq!(Balances::free_balance(CHARLIE), 1_030);

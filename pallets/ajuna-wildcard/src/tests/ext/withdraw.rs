@@ -186,7 +186,7 @@ mod fungible_native {
 					Error::<Test>::NativeAssetMappingNotFound
 				);
 
-				let invalid_signature = sp_core::sr25519::Signature([34; 64]);
+				let invalid_signature = sp_core::sr25519::Signature::from_raw([34; 64]);
 				let proof = BalanceProof::using_deposit(&deposit, now, ALICE, true, 0);
 
 				assert_noop!(
@@ -437,7 +437,7 @@ mod fungible_foreign {
 				primary_id: generate_foreign_fungible_wide_id(asset_id),
 				secondary_id: generate_wide_id_for_amount(token_amt),
 			};
-			let invalid_signature = sp_core::sr25519::Signature([34; 64]);
+			let invalid_signature = sp_core::sr25519::Signature::from_raw([34; 64]);
 
 			assert_noop!(
 				Wildcard::withdraw(RuntimeOrigin::signed(ALICE), proof, invalid_signature),
@@ -530,7 +530,7 @@ mod non_fungible {
 			);
 
 			let proof = BalanceProof::using_deposit(&deposit, now, ALICE, true, 0);
-			let invalid_signature = sp_core::sr25519::Signature([34; 64]);
+			let invalid_signature = sp_core::sr25519::Signature::from_raw([34; 64]);
 
 			assert_noop!(
 				Wildcard::withdraw(RuntimeOrigin::signed(ALICE), proof, invalid_signature),
