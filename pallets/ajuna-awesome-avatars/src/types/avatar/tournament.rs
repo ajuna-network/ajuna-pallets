@@ -28,6 +28,14 @@ where
 	type EntityId = Id;
 	type Entity = Avatar<BlockNumber>;
 
+	fn can_rank(&self, entity: (&Self::EntityId, &Self::Entity)) -> bool {
+		match self.category {
+			AvatarRankingCategory::MinSoulPointsWithForce(ref force) |
+			AvatarRankingCategory::MaxSoulPointsWithForce(ref force) => entity.1.force() == force.as_byte(),
+			_ => true,
+		}
+	}
+
 	fn rank_against(
 		&self,
 		entity: (&Self::EntityId, &Self::Entity),
@@ -37,35 +45,19 @@ where
 			Ordering::Equal
 		} else {
 			match self.category {
-				AvatarRankingCategory::MinSoulPoints =>
+				AvatarRankingCategory::MinSoulPoints |
+				AvatarRankingCategory::MinSoulPointsWithForce(_) =>
 					match entity.1.souls.cmp(&other.1.souls).reverse() {
 						Ordering::Equal => Ordering::Less,
 						ordering => ordering,
 					},
-				AvatarRankingCategory::MaxSoulPoints => match entity.1.souls.cmp(&other.1.souls) {
+				AvatarRankingCategory::MaxSoulPoints |
+				AvatarRankingCategory::MaxSoulPointsWithForce(_) => match entity.1.souls.cmp(&other.1.souls) {
 					Ordering::Equal => Ordering::Less,
 					ordering => ordering,
 				},
 				AvatarRankingCategory::DnaAscending => entity.1.dna.cmp(&other.1.dna),
 				AvatarRankingCategory::DnaDescending => entity.1.dna.cmp(&other.1.dna).reverse(),
-				AvatarRankingCategory::MinSoulPointsWithForce(ref force) =>
-					if entity.1.force() == force.as_byte() && entity.1.force() == other.1.force() {
-						entity.1.souls.cmp(&other.1.souls).reverse()
-					} else {
-						// Returning Ordering::Equal makes that entity not get ranked in the table
-						// in both the case the table is still empty, or when comparing to another
-						// entity already in the ranks
-						Ordering::Equal
-					},
-				AvatarRankingCategory::MaxSoulPointsWithForce(ref force) =>
-					if entity.1.force() == force.as_byte() && entity.1.force() == other.1.force() {
-						entity.1.souls.cmp(&other.1.souls)
-					} else {
-						// Returning Ordering::Equal makes that entity not get ranked in the table
-						// in both the case the table is still empty, or when comparing to another
-						// entity already in the ranks
-						Ordering::Equal
-					},
 				AvatarRankingCategory::MintedAtModulo(modulo) => {
 					let block_modulo = BlockNumber::from(u32::from(modulo));
 					let entity_modulo = entity.1.minted_at % block_modulo;
