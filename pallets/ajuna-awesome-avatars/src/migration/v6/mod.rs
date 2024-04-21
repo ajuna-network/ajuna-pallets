@@ -14,6 +14,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Migrations for the AAA pallet version 5 to version 6.
+//!
+//! It consists of a classical single block migration and several multiblock migrations (mbm).
+//!
+//! ** All migrations have to be employed in a single runtime upgrade! **
+//!
+//! Additionally, the order of the mbm matters, which is further elaborated in the `mbm` module
+//! docs.
+
 use super::*;
 use frame_support::{
 	migrations::{SteppedMigration, SteppedMigrationError},
@@ -432,10 +441,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 ///
 /// **NOTE** We have multiple multiblock migrations and the order **matters**.
 /// Order:
-/// 	1. LazyMigrationPlayerSeasonConfigsV5ToV6
-/// 	2. LazyMigrationSeasonStatsV5ToV6
-/// 	3. LazyMigrationAvatarV5ToV6
-/// 	4. LazyTradeStatsMapCleanup
+///    1. LazyMigrationPlayerSeasonConfigsV5ToV6
+///    2. LazyMigrationSeasonStatsV5ToV6
+///    3. LazyMigrationAvatarV5ToV6
+///    4. LazyTradeStatsMapCleanup
 ///
 /// We have multiple multiblock migrations that are interdependent because one writes
 /// into the auxiliary storage `TradeStatsMap`, where a following migration reads from there, and we
