@@ -33,7 +33,7 @@ mod v5 {
 			PlayerSeasonConfig, RarityPercent, RarityTier, SacrificeCount, Season, SeasonId,
 			SeasonInfo, SoulCount, Stat, Stats, StorageTier, TradeConfig, TradeFilter,
 		},
-		AvatarOf, Config, Pallet,
+		AvatarIdOf, Config, Pallet,
 	};
 	use frame_support::{
 		pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, OptionQuery, TypeInfo},
