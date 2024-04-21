@@ -33,12 +33,10 @@ mod v5 {
 			PlayerSeasonConfig, RarityPercent, RarityTier, SacrificeCount, Season, SeasonId,
 			SeasonInfo, SoulCount, Stat, Stats, StorageTier, TradeConfig, TradeFilter,
 		},
-		AvatarIdOf, AvatarOf, Config, Pallet,
+		AvatarOf, Config, Pallet,
 	};
 	use frame_support::{
-		pallet_prelude::{
-			ConstU32, Decode, Encode, MaxEncodedLen, OptionQuery, StorageMap, TypeInfo,
-		},
+		pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, OptionQuery, TypeInfo},
 		storage_alias, BoundedBTreeSet, BoundedVec, Identity,
 	};
 	use frame_system::pallet_prelude::BlockNumberFor;
@@ -333,8 +331,12 @@ mod v5 {
 	>;
 
 	#[storage_alias]
-	pub type Avatars<T: Config> =
-		StorageMap<Pallet<T>, Identity, AvatarIdOf<T>, (T::AccountId, AvatarV5)>;
+	pub type Avatars<T: Config> = StorageMap<
+		Pallet<T>,
+		Identity,
+		AvatarIdOf<T>,
+		(<T as frame_system::Config>::AccountId, AvatarV5),
+	>;
 }
 
 pub struct MigrateToV6<T>(sp_std::marker::PhantomData<T>);
