@@ -33,10 +33,12 @@ mod v5 {
 			PlayerSeasonConfig, RarityPercent, RarityTier, SacrificeCount, Season, SeasonId,
 			SeasonInfo, SoulCount, Stat, Stats, StorageTier, TradeConfig, TradeFilter,
 		},
-		Config, Pallet,
+		AvatarIdOf, AvatarOf, Config, Pallet,
 	};
 	use frame_support::{
-		pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, OptionQuery, TypeInfo},
+		pallet_prelude::{
+			ConstU32, Decode, Encode, MaxEncodedLen, OptionQuery, StorageMap, TypeInfo,
+		},
 		storage_alias, BoundedBTreeSet, BoundedVec, Identity,
 	};
 	use frame_system::pallet_prelude::BlockNumberFor;
@@ -329,6 +331,10 @@ mod v5 {
 		SeasonInfoV5,
 		OptionQuery,
 	>;
+
+	#[storage_alias]
+	pub type Avatars<T: Config> =
+		StorageMap<Pallet<T>, Identity, AvatarIdOf<T>, (T::AccountId, AvatarV5)>;
 }
 
 pub struct MigrateToV6<T>(sp_std::marker::PhantomData<T>);
@@ -613,6 +619,71 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 				}
 
 				cursor = Some((season_id, account)) // Return the processed key as the new cursor.
+			} else {
+				cursor = None; // Signal that the migration is complete (no more items to process).
+				break
+			}
+		}
+		Ok(cursor)
+	}
+}
+
+pub struct LazyMigrationAvatarV5ToV6<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
+impl<T: Config, W: weights::WeightInfo> SteppedMigration
+	for crate::migration::v6::LazyMigrationAvatarV5ToV6<T, W>
+{
+	type Cursor = AvatarIdOf<T>;
+	// Without the explicit length here the construction of the ID would not be infallible.
+	type Identifier = MigrationId<10>;
+
+	/// The identifier of this migration. Which should be globally unique.
+	fn id() -> Self::Identifier {
+		MigrationId { pallet_id: *b"aaa-avatar", version_from: 5, version_to: 6 }
+	}
+
+	/// The actual logic of the migration.
+	///
+	/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
+	/// migration is complete. Ideally, the migration should be designed in such a way that each
+	/// step consumes as much weight as possible. However, this is simplified to perform one stored
+	/// value mutation per block.
+	fn step(
+		mut cursor: Option<Self::Cursor>,
+		meter: &mut WeightMeter,
+	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+		let required = W::step();
+		// If there is not enough weight for a single step, return an error. This case can be
+		// problematic if it is the first migration that ran in this block. But there is nothing
+		// that we can do about it here.
+		if meter.remaining().any_lt(required) {
+			return Err(SteppedMigrationError::InsufficientWeight { required });
+		}
+
+		// We loop here to do as much progress as possible per step.
+		loop {
+			if meter.try_consume(required).is_err() {
+				break;
+			}
+
+			let mut iter = if let Some(last_key) = cursor {
+				// If a cursor is provided, start iterating from the stored value
+				// corresponding to the last key processed in the previous step.
+				// Note that this only works if the old and the new map use the same way to hash
+				// storage keys.
+				v5::Avatars::<T>::iter_from(v5::Avatars::<T>::hashed_key_for(last_key))
+			} else {
+				// If no cursor is provided, start iterating from the beginning.
+				v5::Avatars::<T>::iter()
+			};
+
+			// If there's a next item in the iterator, perform the migration.
+			if let Some((avatar_id, old_account_avatar_tuple)) = iter.next() {
+				Avatars::<T>::insert(
+					&avatar_id,
+					(old_account_avatar_tuple.0, old_account_avatar_tuple.1.migrate_to_v6()),
+				);
+
+				cursor = Some(avatar_id) // Return the processed key as the new cursor.
 			} else {
 				cursor = None; // Signal that the migration is complete (no more items to process).
 				break
