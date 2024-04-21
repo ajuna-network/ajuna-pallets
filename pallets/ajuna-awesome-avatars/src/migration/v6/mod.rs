@@ -609,6 +609,7 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 					);
 				} else {
 					log::error!(target: LOG_TARGET, "Missing trade mapping in SeasonStats from v5 to v6");
+					SeasonStats::<T>::remove(&season_id, &account);
 				}
 
 				cursor = Some((season_id, account)) // Return the processed key as the new cursor.
