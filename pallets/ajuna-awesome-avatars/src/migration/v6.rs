@@ -285,48 +285,57 @@ impl AvatarV5 {
 
 pub struct MigrateToV6<T>(sp_std::marker::PhantomData<T>);
 
+/// We only have one global config and 2 seasons, we assume that we can do this in one block.
+pub fn migrate_global_config_and_seasons<T: Config>() -> Weight {
+	let _ = GlobalConfigs::<T>::translate::<GlobalConfigV5<T>, _>(|old_config| {
+		old_config.map(|old| old.migrate_to_v6())
+	});
+
+	log::info!(target: LOG_TARGET, "Updated GlobalConfig from v5 to v6");
+
+	let mut seasons_translated = 0;
+
+	Seasons::<T>::translate::<SeasonV5<T>, _>(|season_id, old_season| {
+		SeasonMetas::<T>::insert(
+			season_id,
+			SeasonMeta {
+				name: old_season.name.clone(),
+				description: old_season.description.clone(),
+			},
+		);
+
+		SeasonSchedules::<T>::insert(
+			season_id,
+			SeasonSchedule {
+				early_start: old_season.early_start,
+				start: old_season.start,
+				end: old_season.end,
+			},
+		);
+
+		SeasonTradeFilters::<T>::insert(season_id, TradeFilters(old_season.trade_filters.clone()));
+
+		seasons_translated += 1;
+
+		Some(old_season.migrate_to_v6())
+	});
+
+	log::info!(target: LOG_TARGET, "Updated {} Season entries from v5 to v6", seasons_translated);
+
+	let total_reads = seasons_translated;
+	let total_writes = seasons_translated * 4;
+
+	T::DbWeight::get().reads_writes(total_reads, total_writes)
+}
+
 impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 	fn on_runtime_upgrade() -> Weight {
 		let current_version = Pallet::<T>::in_code_storage_version();
 		let onchain_version = Pallet::<T>::on_chain_storage_version();
 		if onchain_version == 5 && current_version == 6 {
-			let _ = GlobalConfigs::<T>::translate::<GlobalConfigV5<T>, _>(|old_config| {
-				old_config.map(|old| old.migrate_to_v6())
-			});
+			let mut weight = Weight::default();
 
-			log::info!(target: LOG_TARGET, "Updated GlobalConfig from v5 to v6");
-
-			let mut seasons_translated = 0;
-
-			Seasons::<T>::translate::<SeasonV5<T>, _>(|season_id, old_season| {
-				SeasonMetas::<T>::insert(
-					season_id,
-					SeasonMeta {
-						name: old_season.name.clone(),
-						description: old_season.description.clone(),
-					},
-				);
-
-				SeasonSchedules::<T>::insert(
-					season_id,
-					SeasonSchedule {
-						early_start: old_season.early_start,
-						start: old_season.start,
-						end: old_season.end,
-					},
-				);
-
-				SeasonTradeFilters::<T>::insert(
-					season_id,
-					TradeFilters(old_season.trade_filters.clone()),
-				);
-
-				seasons_translated += 1;
-
-				Some(old_season.migrate_to_v6())
-			});
-
-			log::info!(target: LOG_TARGET, "Updated {} Season entries from v5 to v6", seasons_translated);
+			weight.saturating_accrue(migrate_global_config_and_seasons::<T>());
 
 			let mut trade_stats_map = BTreeMap::<(SeasonId, T::AccountId), (Stat, Stat)>::new();
 			let mut player_season_configs_translated = 0;
@@ -376,16 +385,14 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 			current_version.put::<Pallet<T>>();
 			log::info!(target: LOG_TARGET, "Upgraded storage to version {:?}", current_version);
 
-			let total_reads = seasons_translated +
-				player_season_configs_translated +
-				season_stats_translated +
-				avatars_translated;
-			let total_writes = (seasons_translated * 4) +
-				player_season_configs_translated +
-				season_stats_translated +
-				avatars_translated;
+			let total_reads =
+				player_season_configs_translated + season_stats_translated + avatars_translated;
+			let total_writes =
+				player_season_configs_translated + season_stats_translated + avatars_translated;
 
-			T::DbWeight::get().reads_writes(total_reads, total_writes)
+			weight.saturating_accrue(T::DbWeight::get().reads_writes(total_reads, total_writes));
+
+			weight
 		} else {
 			log::info!(
 				target: LOG_TARGET,
