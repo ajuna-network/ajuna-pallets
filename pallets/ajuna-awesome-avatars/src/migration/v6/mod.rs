@@ -338,6 +338,8 @@ mod v5 {
 	>;
 }
 
+/// This migration updates the `GlobalConfig` and the `Seasons` in the classical single
+/// block migration and it also sets the storage version to t6.
 pub struct MigrateToV6<T>(sp_std::marker::PhantomData<T>);
 
 /// We only have one global config and 2 seasons, we assume that we can do this in one block.
@@ -426,328 +428,353 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 	}
 }
 
-pub struct LazyMigrationPlayerSeasonConfigsV5ToV6<T: Config, W: weights::WeightInfo>(
-	PhantomData<(T, W)>,
-);
-impl<T: Config, W: weights::WeightInfo> SteppedMigration
-	for LazyMigrationPlayerSeasonConfigsV5ToV6<T, W>
-{
-	type Cursor = (T::AccountId, SeasonId);
-	// Without the explicit length here the construction of the ID would not be infallible.
-	type Identifier = MigrationId<25>;
+/// The code following here is for the multiblock migration.
+///
+/// **NOTE** We have multiple multiblock migrations and the order **matters**.
+/// Order:
+/// 	1. LazyMigrationPlayerSeasonConfigsV5ToV6
+/// 	2. LazyMigrationSeasonStatsV5ToV6
+/// 	3. LazyMigrationAvatarV5ToV6
+/// 	4. LazyTradeStatsMapCleanup
+///
+/// We have multiple multiblock migrations that are interdependent because one writes
+/// into the auxiliary storage `TradeStatsMap`, where a following migration reads from there, and we
+/// also have a cleanup migration, which removes all the remaining entries from the `TradeStatsMap`
+/// storage.
+///
+/// The code is inspired by the following example:
+/// https://github.com/paritytech/polkadot-sdk/blob/master/substrate/frame/examples/multi-block-migrations/src/lib.rs
+pub mod mbm {
+	use super::*;
 
-	/// The identifier of this migration. Which should be globally unique.
-	fn id() -> Self::Identifier {
-		MigrationId { pallet_id: *b"aaa-player-season-configs", version_from: 5, version_to: 6 }
-	}
+	pub struct LazyMigrationPlayerSeasonConfigsV5ToV6<T: Config, W: weights::WeightInfo>(
+		PhantomData<(T, W)>,
+	);
+	impl<T: Config, W: weights::WeightInfo> SteppedMigration
+		for LazyMigrationPlayerSeasonConfigsV5ToV6<T, W>
+	{
+		type Cursor = (T::AccountId, SeasonId);
+		// Without the explicit length here the construction of the ID would not be infallible.
+		type Identifier = MigrationId<25>;
 
-	/// The actual logic of the migration.
-	///
-	/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
-	/// migration is complete. Ideally, the migration should be designed in such a way that each
-	/// step consumes as much weight as possible. However, this is simplified to perform one stored
-	/// value mutation per block.
-	fn step(
-		mut cursor: Option<Self::Cursor>,
-		meter: &mut WeightMeter,
-	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-		let required = W::step();
-		// If there is not enough weight for a single step, return an error. This case can be
-		// problematic if it is the first migration that ran in this block. But there is nothing
-		// that we can do about it here.
-		if meter.remaining().any_lt(required) {
-			return Err(SteppedMigrationError::InsufficientWeight { required });
+		/// The identifier of this migration. Which should be globally unique.
+		fn id() -> Self::Identifier {
+			MigrationId { pallet_id: *b"aaa-player-season-configs", version_from: 5, version_to: 6 }
 		}
 
-		let mut migration_count = 0u32;
-		// We loop here to do as much progress as possible per step.
-		loop {
-			if meter.try_consume(required).is_err() {
-				log::info!(
-					target: LOG_TARGET,
-					"Migrated {migration_count} PlayerSeasonConfigs. MBM is not finished yet."
-				);
-				break;
+		/// The actual logic of the migration.
+		///
+		/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
+		/// migration is complete. Ideally, the migration should be designed in such a way that each
+		/// step consumes as much weight as possible. However, this is simplified to perform one
+		/// stored value mutation per block.
+		fn step(
+			mut cursor: Option<Self::Cursor>,
+			meter: &mut WeightMeter,
+		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+			let required = W::step();
+			// If there is not enough weight for a single step, return an error. This case can be
+			// problematic if it is the first migration that ran in this block. But there is nothing
+			// that we can do about it here.
+			if meter.remaining().any_lt(required) {
+				return Err(SteppedMigrationError::InsufficientWeight { required });
 			}
 
-			let mut iter = if let Some(last_key) = cursor {
-				// If a cursor is provided, start iterating from the stored value
-				// corresponding to the last key processed in the previous step.
-				// Note that this only works if the old and the new map use the same way to hash
-				// storage keys.
-				v5::PlayerSeasonConfigs::<T>::iter_from(
-					v5::PlayerSeasonConfigs::<T>::hashed_key_for(last_key.0, last_key.1),
-				)
-			} else {
-				// If no cursor is provided, start iterating from the beginning.
-				v5::PlayerSeasonConfigs::<T>::iter()
-			};
-
-			// If there's a next item in the iterator, perform the migration.
-			if let Some((account, season_id, old_config)) = iter.next() {
-				// Migrate the inner value: u32 -> u64.
-				// We can just insert here since the old and the new map share the same key-space.
-				// Otherwise it would have to invert the concat hash function and re-hash it.
-
-				TradeStatsMap::<T>::insert(
-					&season_id,
-					&account,
-					(old_config.stats.trade.bought, old_config.stats.trade.sold),
-				);
-
-				PlayerSeasonConfigs::<T>::insert(&account, &season_id, old_config.migrate_to_v6());
-
-				migration_count.saturating_inc();
-				cursor = Some((account, season_id)) // Return the processed key as the new cursor.
-			} else {
-				log::info!(
-					target: LOG_TARGET,
-					"Migrated {migration_count} PlayerSeasonConfigs. Finished MBM Migration."
-				);
-				cursor = None; // Signal that the migration is complete (no more items to process).
-				break
-			}
-		}
-		Ok(cursor)
-	}
-}
-
-pub struct LazyMigrationSeasonStatsV5ToV6<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
-impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyMigrationSeasonStatsV5ToV6<T, W> {
-	type Cursor = (SeasonId, T::AccountId);
-	// Without the explicit length here the construction of the ID would not be infallible.
-	type Identifier = MigrationId<16>;
-
-	/// The identifier of this migration. Which should be globally unique.
-	fn id() -> Self::Identifier {
-		MigrationId { pallet_id: *b"aaa-season-stats", version_from: 5, version_to: 6 }
-	}
-
-	/// The actual logic of the migration.
-	///
-	/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
-	/// migration is complete. Ideally, the migration should be designed in such a way that each
-	/// step consumes as much weight as possible. However, this is simplified to perform one stored
-	/// value mutation per block.
-	fn step(
-		mut cursor: Option<Self::Cursor>,
-		meter: &mut WeightMeter,
-	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-		let required = W::step();
-		// If there is not enough weight for a single step, return an error. This case can be
-		// problematic if it is the first migration that ran in this block. But there is nothing
-		// that we can do about it here.
-		if meter.remaining().any_lt(required) {
-			return Err(SteppedMigrationError::InsufficientWeight { required });
-		}
-
-		let mut migration_count = 0u32;
-		// We loop here to do as much progress as possible per step.
-		loop {
-			if meter.try_consume(required).is_err() {
-				log::info!(
-				target: LOG_TARGET,
-				"Migrated {migration_count} SeasonStats. MBM is not finished yet."
-				);
-				break;
-			}
-
-			let mut iter = if let Some(last_key) = cursor {
-				// If a cursor is provided, start iterating from the stored value
-				// corresponding to the last key processed in the previous step.
-				// Note that this only works if the old and the new map use the same way to hash
-				// storage keys.
-				v5::SeasonStats::<T>::iter_from(v5::SeasonStats::<T>::hashed_key_for(
-					last_key.0, last_key.1,
-				))
-			} else {
-				// If no cursor is provided, start iterating from the beginning.
-				v5::SeasonStats::<T>::iter()
-			};
-
-			// If there's a next item in the iterator, perform the migration.
-			if let Some((season_id, account, old_season_info)) = iter.next() {
-				if let Some((bought, sold)) = TradeStatsMap::<T>::take(&season_id, &account) {
-					SeasonStats::<T>::insert(
-						&season_id,
-						&account,
-						old_season_info.migrate_to_v6(bought, sold),
+			let mut migration_count = 0u32;
+			// We loop here to do as much progress as possible per step.
+			loop {
+				if meter.try_consume(required).is_err() {
+					log::info!(
+						target: LOG_TARGET,
+						"Migrated {migration_count} PlayerSeasonConfigs. MBM is not finished yet."
 					);
-				} else {
-					log::error!(target: LOG_TARGET, "Missing trade mapping in SeasonStats from v5 to v6");
-					SeasonStats::<T>::remove(&season_id, &account);
+					break;
 				}
 
-				migration_count.saturating_inc();
-				cursor = Some((season_id, account)) // Return the processed key as the new cursor.
-			} else {
-				log::info!(
-				target: LOG_TARGET,
-				"Migrated {migration_count} SeasonStats. Finished MBM Migration."
-				);
-				cursor = None; // Signal that the migration is complete (no more items to process).
-				break
+				let mut iter = if let Some(last_key) = cursor {
+					// If a cursor is provided, start iterating from the stored value
+					// corresponding to the last key processed in the previous step.
+					// Note that this only works if the old and the new map use the same way to hash
+					// storage keys.
+					v5::PlayerSeasonConfigs::<T>::iter_from(
+						v5::PlayerSeasonConfigs::<T>::hashed_key_for(last_key.0, last_key.1),
+					)
+				} else {
+					// If no cursor is provided, start iterating from the beginning.
+					v5::PlayerSeasonConfigs::<T>::iter()
+				};
+
+				// If there's a next item in the iterator, perform the migration.
+				if let Some((account, season_id, old_config)) = iter.next() {
+					// Migrate the inner value: u32 -> u64.
+					// We can just insert here since the old and the new map share the same
+					// key-space. Otherwise it would have to invert the concat hash function and
+					// re-hash it.
+
+					TradeStatsMap::<T>::insert(
+						&season_id,
+						&account,
+						(old_config.stats.trade.bought, old_config.stats.trade.sold),
+					);
+
+					PlayerSeasonConfigs::<T>::insert(
+						&account,
+						&season_id,
+						old_config.migrate_to_v6(),
+					);
+
+					migration_count.saturating_inc();
+					cursor = Some((account, season_id)) // Return the processed key as the new cursor.
+				} else {
+					log::info!(
+						target: LOG_TARGET,
+						"Migrated {migration_count} PlayerSeasonConfigs. Finished MBM Migration."
+					);
+					cursor = None; // Signal that the migration is complete (no more items to process).
+					break
+				}
 			}
+			Ok(cursor)
 		}
-		Ok(cursor)
-	}
-}
-
-pub struct LazyMigrationAvatarV5ToV6<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
-impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyMigrationAvatarV5ToV6<T, W> {
-	type Cursor = AvatarIdOf<T>;
-	// Without the explicit length here the construction of the ID would not be infallible.
-	type Identifier = MigrationId<10>;
-
-	/// The identifier of this migration. Which should be globally unique.
-	fn id() -> Self::Identifier {
-		MigrationId { pallet_id: *b"aaa-avatar", version_from: 5, version_to: 6 }
 	}
 
-	/// The actual logic of the migration.
+	pub struct LazyMigrationSeasonStatsV5ToV6<T: Config, W: weights::WeightInfo>(
+		PhantomData<(T, W)>,
+	);
+	impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyMigrationSeasonStatsV5ToV6<T, W> {
+		type Cursor = (SeasonId, T::AccountId);
+		// Without the explicit length here the construction of the ID would not be infallible.
+		type Identifier = MigrationId<16>;
+
+		/// The identifier of this migration. Which should be globally unique.
+		fn id() -> Self::Identifier {
+			MigrationId { pallet_id: *b"aaa-season-stats", version_from: 5, version_to: 6 }
+		}
+
+		/// The actual logic of the migration.
+		///
+		/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
+		/// migration is complete. Ideally, the migration should be designed in such a way that each
+		/// step consumes as much weight as possible. However, this is simplified to perform one
+		/// stored value mutation per block.
+		fn step(
+			mut cursor: Option<Self::Cursor>,
+			meter: &mut WeightMeter,
+		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+			let required = W::step();
+			// If there is not enough weight for a single step, return an error. This case can be
+			// problematic if it is the first migration that ran in this block. But there is nothing
+			// that we can do about it here.
+			if meter.remaining().any_lt(required) {
+				return Err(SteppedMigrationError::InsufficientWeight { required });
+			}
+
+			let mut migration_count = 0u32;
+			// We loop here to do as much progress as possible per step.
+			loop {
+				if meter.try_consume(required).is_err() {
+					log::info!(
+					target: LOG_TARGET,
+					"Migrated {migration_count} SeasonStats. MBM is not finished yet."
+					);
+					break;
+				}
+
+				let mut iter = if let Some(last_key) = cursor {
+					// If a cursor is provided, start iterating from the stored value
+					// corresponding to the last key processed in the previous step.
+					// Note that this only works if the old and the new map use the same way to hash
+					// storage keys.
+					v5::SeasonStats::<T>::iter_from(v5::SeasonStats::<T>::hashed_key_for(
+						last_key.0, last_key.1,
+					))
+				} else {
+					// If no cursor is provided, start iterating from the beginning.
+					v5::SeasonStats::<T>::iter()
+				};
+
+				// If there's a next item in the iterator, perform the migration.
+				if let Some((season_id, account, old_season_info)) = iter.next() {
+					if let Some((bought, sold)) = TradeStatsMap::<T>::take(&season_id, &account) {
+						SeasonStats::<T>::insert(
+							&season_id,
+							&account,
+							old_season_info.migrate_to_v6(bought, sold),
+						);
+					} else {
+						log::error!(target: LOG_TARGET, "Missing trade mapping in SeasonStats from v5 to v6");
+						SeasonStats::<T>::remove(&season_id, &account);
+					}
+
+					migration_count.saturating_inc();
+					cursor = Some((season_id, account)) // Return the processed key as the new cursor.
+				} else {
+					log::info!(
+					target: LOG_TARGET,
+					"Migrated {migration_count} SeasonStats. Finished MBM Migration."
+					);
+					cursor = None; // Signal that the migration is complete (no more items to process).
+					break
+				}
+			}
+			Ok(cursor)
+		}
+	}
+
+	pub struct LazyMigrationAvatarV5ToV6<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
+	impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyMigrationAvatarV5ToV6<T, W> {
+		type Cursor = AvatarIdOf<T>;
+		// Without the explicit length here the construction of the ID would not be infallible.
+		type Identifier = MigrationId<10>;
+
+		/// The identifier of this migration. Which should be globally unique.
+		fn id() -> Self::Identifier {
+			MigrationId { pallet_id: *b"aaa-avatar", version_from: 5, version_to: 6 }
+		}
+
+		/// The actual logic of the migration.
+		///
+		/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
+		/// migration is complete. Ideally, the migration should be designed in such a way that each
+		/// step consumes as much weight as possible. However, this is simplified to perform one
+		/// stored value mutation per block.
+		fn step(
+			mut cursor: Option<Self::Cursor>,
+			meter: &mut WeightMeter,
+		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+			let required = W::step();
+			// If there is not enough weight for a single step, return an error. This case can be
+			// problematic if it is the first migration that ran in this block. But there is nothing
+			// that we can do about it here.
+			if meter.remaining().any_lt(required) {
+				return Err(SteppedMigrationError::InsufficientWeight { required });
+			}
+
+			let mut migration_count = 0u32;
+			// We loop here to do as much progress as possible per step.
+			loop {
+				if meter.try_consume(required).is_err() {
+					log::info!(
+						target: LOG_TARGET,
+						"Migrated {migration_count} Avatars. MBM is not finished yet."
+					);
+					break;
+				}
+
+				let mut iter = if let Some(last_key) = cursor {
+					// If a cursor is provided, start iterating from the stored value
+					// corresponding to the last key processed in the previous step.
+					// Note that this only works if the old and the new map use the same way to hash
+					// storage keys.
+					v5::Avatars::<T>::iter_from(v5::Avatars::<T>::hashed_key_for(last_key))
+				} else {
+					// If no cursor is provided, start iterating from the beginning.
+					v5::Avatars::<T>::iter()
+				};
+
+				// If there's a next item in the iterator, perform the migration.
+				if let Some((avatar_id, old_account_avatar_tuple)) = iter.next() {
+					Avatars::<T>::insert(
+						&avatar_id,
+						(old_account_avatar_tuple.0, old_account_avatar_tuple.1.migrate_to_v6()),
+					);
+
+					migration_count.saturating_inc();
+					cursor = Some(avatar_id) // Return the processed key as the new cursor.
+				} else {
+					log::info!(
+						target: LOG_TARGET,
+						"Migrated {migration_count} Avatars. Finished MBM Migration."
+					);
+					cursor = None; // Signal that the migration is complete (no more items to process).
+					break
+				}
+			}
+			Ok(cursor)
+		}
+	}
+
+	pub struct LazyTradeStatsMapCleanup<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
+	impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyTradeStatsMapCleanup<T, W> {
+		type Cursor = (SeasonId, T::AccountId);
+		// Without the explicit length here the construction of the ID would not be infallible.
+		type Identifier = MigrationId<23>;
+
+		/// The identifier of this migration. Which should be globally unique.
+		fn id() -> Self::Identifier {
+			MigrationId { pallet_id: *b"aaa-trade-stats-cleanup", version_from: 5, version_to: 6 }
+		}
+
+		/// The actual logic of the migration.
+		///
+		/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
+		/// migration is complete. Ideally, the migration should be designed in such a way that each
+		/// step consumes as much weight as possible. However, this is simplified to perform one
+		/// stored value mutation per block.
+		fn step(
+			mut cursor: Option<Self::Cursor>,
+			meter: &mut WeightMeter,
+		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+			let required = W::step();
+			// If there is not enough weight for a single step, return an error. This case can be
+			// problematic if it is the first migration that ran in this block. But there is nothing
+			// that we can do about it here.
+			if meter.remaining().any_lt(required) {
+				return Err(SteppedMigrationError::InsufficientWeight { required });
+			}
+
+			let mut migration_count = 0u32;
+			// We loop here to do as much progress as possible per step.
+			loop {
+				if meter.try_consume(required).is_err() {
+					log::info!(
+						target: LOG_TARGET,
+						"Cleaned up {migration_count} TradeStats. MBM is not finished yet."
+					);
+					break;
+				}
+
+				let mut iter = if let Some(last_key) = cursor {
+					// If a cursor is provided, start iterating from the stored value
+					// corresponding to the last key processed in the previous step.
+					// Note that this only works if the old and the new map use the same way to hash
+					// storage keys.
+					TradeStatsMap::<T>::iter_from(TradeStatsMap::<T>::hashed_key_for(
+						last_key.0, last_key.1,
+					))
+				} else {
+					// If no cursor is provided, start iterating from the beginning.
+					TradeStatsMap::<T>::iter()
+				};
+
+				// If there's a next item in the iterator, perform the migration.
+				if let Some((season_id, account_id, _stats)) = iter.next() {
+					TradeStatsMap::<T>::remove(&season_id, &account_id);
+
+					migration_count.saturating_inc();
+					cursor = Some((season_id, account_id)) // Return the processed key as the new cursor.
+				} else {
+					log::info!(
+						target: LOG_TARGET,
+						"Cleaned up {migration_count} TradeStats. Finished MBM Migration."
+					);
+					cursor = None; // Signal that the migration is complete (no more items to process).
+					break
+				}
+			}
+			Ok(cursor)
+		}
+	}
+
+	/// This has been introduced on latest master, but it doesn't exist yet in v1.10.0.
 	///
-	/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
-	/// migration is complete. Ideally, the migration should be designed in such a way that each
-	/// step consumes as much weight as possible. However, this is simplified to perform one stored
-	/// value mutation per block.
-	fn step(
-		mut cursor: Option<Self::Cursor>,
-		meter: &mut WeightMeter,
-	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-		let required = W::step();
-		// If there is not enough weight for a single step, return an error. This case can be
-		// problematic if it is the first migration that ran in this block. But there is nothing
-		// that we can do about it here.
-		if meter.remaining().any_lt(required) {
-			return Err(SteppedMigrationError::InsufficientWeight { required });
-		}
-
-		let mut migration_count = 0u32;
-		// We loop here to do as much progress as possible per step.
-		loop {
-			if meter.try_consume(required).is_err() {
-				log::info!(
-					target: LOG_TARGET,
-					"Migrated {migration_count} Avatars. MBM is not finished yet."
-				);
-				break;
-			}
-
-			let mut iter = if let Some(last_key) = cursor {
-				// If a cursor is provided, start iterating from the stored value
-				// corresponding to the last key processed in the previous step.
-				// Note that this only works if the old and the new map use the same way to hash
-				// storage keys.
-				v5::Avatars::<T>::iter_from(v5::Avatars::<T>::hashed_key_for(last_key))
-			} else {
-				// If no cursor is provided, start iterating from the beginning.
-				v5::Avatars::<T>::iter()
-			};
-
-			// If there's a next item in the iterator, perform the migration.
-			if let Some((avatar_id, old_account_avatar_tuple)) = iter.next() {
-				Avatars::<T>::insert(
-					&avatar_id,
-					(old_account_avatar_tuple.0, old_account_avatar_tuple.1.migrate_to_v6()),
-				);
-
-				migration_count.saturating_inc();
-				cursor = Some(avatar_id) // Return the processed key as the new cursor.
-			} else {
-				log::info!(
-					target: LOG_TARGET,
-					"Migrated {migration_count} Avatars. Finished MBM Migration."
-				);
-				cursor = None; // Signal that the migration is complete (no more items to process).
-				break
-			}
-		}
-		Ok(cursor)
-	}
-}
-
-pub struct LazyTradeStatsMapCleanup<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
-impl<T: Config, W: weights::WeightInfo> SteppedMigration
-	for crate::migration::v6::LazyTradeStatsMapCleanup<T, W>
-{
-	type Cursor = (SeasonId, T::AccountId);
-	// Without the explicit length here the construction of the ID would not be infallible.
-	type Identifier = MigrationId<23>;
-
-	/// The identifier of this migration. Which should be globally unique.
-	fn id() -> Self::Identifier {
-		MigrationId { pallet_id: *b"aaa-trade-stats-cleanup", version_from: 5, version_to: 6 }
-	}
-
-	/// The actual logic of the migration.
+	/// A generic migration identifier that can be used by MBMs.
 	///
-	/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
-	/// migration is complete. Ideally, the migration should be designed in such a way that each
-	/// step consumes as much weight as possible. However, this is simplified to perform one stored
-	/// value mutation per block.
-	fn step(
-		mut cursor: Option<Self::Cursor>,
-		meter: &mut WeightMeter,
-	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-		let required = W::step();
-		// If there is not enough weight for a single step, return an error. This case can be
-		// problematic if it is the first migration that ran in this block. But there is nothing
-		// that we can do about it here.
-		if meter.remaining().any_lt(required) {
-			return Err(SteppedMigrationError::InsufficientWeight { required });
-		}
-
-		let mut migration_count = 0u32;
-		// We loop here to do as much progress as possible per step.
-		loop {
-			if meter.try_consume(required).is_err() {
-				log::info!(
-					target: LOG_TARGET,
-					"Cleaned up {migration_count} TradeStats. MBM is not finished yet."
-				);
-				break;
-			}
-
-			let mut iter = if let Some(last_key) = cursor {
-				// If a cursor is provided, start iterating from the stored value
-				// corresponding to the last key processed in the previous step.
-				// Note that this only works if the old and the new map use the same way to hash
-				// storage keys.
-				TradeStatsMap::<T>::iter_from(TradeStatsMap::<T>::hashed_key_for(
-					last_key.0, last_key.1,
-				))
-			} else {
-				// If no cursor is provided, start iterating from the beginning.
-				TradeStatsMap::<T>::iter()
-			};
-
-			// If there's a next item in the iterator, perform the migration.
-			if let Some((season_id, account_id, _stats)) = iter.next() {
-				TradeStatsMap::<T>::remove(&season_id, &account_id);
-
-				migration_count.saturating_inc();
-				cursor = Some((season_id, account_id)) // Return the processed key as the new cursor.
-			} else {
-				log::info!(
-					target: LOG_TARGET,
-					"Cleaned up {migration_count} TradeStats. Finished MBM Migration."
-				);
-				cursor = None; // Signal that the migration is complete (no more items to process).
-				break
-			}
-		}
-		Ok(cursor)
+	/// It is not required that migrations use this identifier type, but it can help.
+	#[derive(MaxEncodedLen, Encode, Decode)]
+	pub struct MigrationId<const N: usize> {
+		pub pallet_id: [u8; N],
+		pub version_from: u8,
+		pub version_to: u8,
 	}
-}
-
-/// This has been introduced on latest master, but it doesn't exist yet in v1.10.0.
-///
-/// A generic migration identifier that can be used by MBMs.
-///
-/// It is not required that migrations use this identifier type, but it can help.
-#[derive(MaxEncodedLen, Encode, Decode)]
-pub struct MigrationId<const N: usize> {
-	pub pallet_id: [u8; N],
-	pub version_from: u8,
-	pub version_to: u8,
 }
