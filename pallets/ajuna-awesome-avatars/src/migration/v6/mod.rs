@@ -695,6 +695,70 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 	}
 }
 
+pub struct LazyTradeStatsMapCleanup<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
+impl<T: Config, W: weights::WeightInfo> SteppedMigration
+	for crate::migration::v6::LazyTradeStatsMapCleanup<T, W>
+{
+	type Cursor = (SeasonId, T::AccountId);
+	// Without the explicit length here the construction of the ID would not be infallible.
+	type Identifier = MigrationId<23>;
+
+	/// The identifier of this migration. Which should be globally unique.
+	fn id() -> Self::Identifier {
+		MigrationId { pallet_id: *b"aaa-trade-stats-cleanup", version_from: 5, version_to: 6 }
+	}
+
+	/// The actual logic of the migration.
+	///
+	/// This function is called repeatedly until it returns `Ok(None)`, indicating that the
+	/// migration is complete. Ideally, the migration should be designed in such a way that each
+	/// step consumes as much weight as possible. However, this is simplified to perform one stored
+	/// value mutation per block.
+	fn step(
+		mut cursor: Option<Self::Cursor>,
+		meter: &mut WeightMeter,
+	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+		let required = W::step();
+		// If there is not enough weight for a single step, return an error. This case can be
+		// problematic if it is the first migration that ran in this block. But there is nothing
+		// that we can do about it here.
+		if meter.remaining().any_lt(required) {
+			return Err(SteppedMigrationError::InsufficientWeight { required });
+		}
+
+		// We loop here to do as much progress as possible per step.
+		loop {
+			if meter.try_consume(required).is_err() {
+				break;
+			}
+
+			let mut iter = if let Some(last_key) = cursor {
+				// If a cursor is provided, start iterating from the stored value
+				// corresponding to the last key processed in the previous step.
+				// Note that this only works if the old and the new map use the same way to hash
+				// storage keys.
+				TradeStatsMap::<T>::iter_from(TradeStatsMap::<T>::hashed_key_for(
+					last_key.0, last_key.1,
+				))
+			} else {
+				// If no cursor is provided, start iterating from the beginning.
+				TradeStatsMap::<T>::iter()
+			};
+
+			// If there's a next item in the iterator, perform the migration.
+			if let Some((season_id, account_id, _stats)) = iter.next() {
+				TradeStatsMap::<T>::remove(&season_id, &account_id);
+
+				cursor = Some((season_id, account_id)) // Return the processed key as the new cursor.
+			} else {
+				cursor = None; // Signal that the migration is complete (no more items to process).
+				break
+			}
+		}
+		Ok(cursor)
+	}
+}
+
 /// This has been introduced on latest master, but it doesn't exist yet in v1.10.0.
 ///
 /// A generic migration identifier that can be used by MBMs.
