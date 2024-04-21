@@ -25,15 +25,13 @@ mod weights;
 
 mod v5 {
     use frame_support::{BoundedBTreeSet, BoundedVec, Identity, storage_alias};
-    use frame_support::pallet_prelude::{ConstU32, Decode, ValueQuery};
+    use frame_support::pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, OptionQuery, TypeInfo};
     use frame_system::pallet_prelude::BlockNumberFor;
     use crate::{Config, Pallet};
     use crate::pallet::BalanceOf;
     use crate::types::{AffiliateConfig, Avatar, AvatarTransferConfig, Dna, DnaEncoding, Fee, ForgeConfig, FreemintTransferConfig, FreeMintTransferMode, GlobalConfig, Locks, LogicGeneration, MaxSeasons, MintConfig, MintCount, MintFees, NftTransferConfig, PlayerSeasonConfig, PlayStats, RarityPercent, RarityTier, SacrificeCount, Season, SeasonId, SeasonInfo, SoulCount, Stat, Stats, StorageTier, TradeConfig, TradeFilter};
 
-
-
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct MintConfigV5<T: Config> {
         pub open: bool,
         pub cooldown: BlockNumberFor<T>,
@@ -53,7 +51,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct ForgeConfigV5 {
         pub open: bool,
     }
@@ -64,7 +62,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct TransferConfigV5 {
         pub open: bool,
         pub free_mint_transfer_fee: MintCount,
@@ -77,7 +75,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct TradeConfigV5 {
         pub open: bool,
     }
@@ -88,7 +86,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct NftTransferConfigV5 {
         pub open: bool,
     }
@@ -99,7 +97,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct GlobalConfigV5<T: Config> {
         pub mint: MintConfigV5<T>,
         pub forge: ForgeConfigV5,
@@ -132,7 +130,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct FeeV5<T: Config> {
         pub mint: MintFees<BalanceOf<T>>,
         pub transfer_avatar: BalanceOf<T>,
@@ -160,7 +158,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct SeasonV5<T: Config> {
         pub name: BoundedVec<u8, ConstU32<100>>,
         pub description: BoundedVec<u8, ConstU32<1_000>>,
@@ -208,13 +206,13 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct TradeStatsV5 {
         pub bought: Stat,
         pub sold: Stat,
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct PlayStatsV5<T: Config> {
         pub first: BlockNumberFor<T>,
         pub last: BlockNumberFor<T>,
@@ -230,7 +228,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct StatsV5<T: Config> {
         pub mint: PlayStatsV5<T>,
         pub forge: PlayStatsV5<T>,
@@ -245,7 +243,8 @@ mod v5 {
             Stats { mint: self.mint.migrate_to_v6(), forge: self.forge.migrate_to_v6() }
         }
     }
-    #[derive(Decode)]
+
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct PlayerSeasonConfigV5<T: Config> {
         pub storage_tier: StorageTier,
         pub stats: StatsV5<T>,
@@ -264,7 +263,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct SeasonInfoV5 {
         pub minted: Stat,
         pub forged: Stat,
@@ -276,7 +275,7 @@ mod v5 {
         }
     }
 
-    #[derive(Decode)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
     pub struct AvatarV5 {
         pub season_id: SeasonId,
         pub encoding: DnaEncoding,
@@ -307,8 +306,8 @@ mod v5 {
         <T as frame_system::Config>::AccountId,
         Identity,
         SeasonId,
-        PlayerSeasonConfig<BlockNumberFor<T>>,
-        ValueQuery,
+        PlayerSeasonConfigV5<T>,
+        OptionQuery,
     >;
 }
 
@@ -499,11 +498,15 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyMigrationPlayer
             };
 
             // If there's a next item in the iterator, perform the migration.
-            if let Some((account, season_id, config)) = iter.next() {
+            if let Some((account, season_id, old_config)) = iter.next() {
                 // Migrate the inner value: u32 -> u64.
                 // We can just insert here since the old and the new map share the same key-space.
                 // Otherwise it would have to invert the concat hash function and re-hash it.
-                PlayerSeasonConfigs::<T>::insert(&account, &season_id, config);
+
+                TradeStatsMap::<T>::insert(&season_id, &account, (old_config.stats.trade.bought, old_config.stats.trade.sold));
+
+                PlayerSeasonConfigs::<T>::insert(&account, &season_id, old_config.migrate_to_v6());
+
                 cursor = Some((account, season_id)) // Return the processed key as the new cursor.
             } else {
                 cursor = None; // Signal that the migration is complete (no more items to process).
