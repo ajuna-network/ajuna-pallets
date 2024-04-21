@@ -19,7 +19,6 @@ use frame_support::{
 	migrations::{SteppedMigration, SteppedMigrationError},
 	weights::WeightMeter,
 };
-use sp_std::collections::btree_map::BTreeMap;
 
 mod weights;
 
@@ -393,62 +392,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV6<T> {
 
 			weight.saturating_accrue(migrate_global_config_and_seasons::<T>());
 
-			let mut trade_stats_map = BTreeMap::<(SeasonId, T::AccountId), (Stat, Stat)>::new();
-			let mut player_season_configs_translated = 0;
-
-			PlayerSeasonConfigs::<T>::translate::<v5::PlayerSeasonConfigV5<T>, _>(
-				|account, season_id, old_config| {
-					trade_stats_map.insert(
-						(season_id, account),
-						(old_config.stats.trade.bought, old_config.stats.trade.sold),
-					);
-
-					player_season_configs_translated += 1;
-
-					Some(old_config.migrate_to_v6())
-				},
-			);
-
-			log::info!(target: LOG_TARGET, "Updated {} PlayerSeasonConfigs entries from v5 to v6", player_season_configs_translated);
-
-			let mut season_stats_translated = 0;
-
-			SeasonStats::<T>::translate::<v5::SeasonInfoV5, _>(
-				|season_id, account, old_season_info| {
-					if let Some((bought, sold)) = trade_stats_map.remove(&(season_id, account)) {
-						season_stats_translated += 1;
-
-						Some(old_season_info.migrate_to_v6(bought, sold))
-					} else {
-						log::error!(target: LOG_TARGET, "Missing trade mapping in SeasonStats from v5 to v6");
-						None
-					}
-				},
-			);
-
-			log::info!(target: LOG_TARGET, "Updated {} SeasonStats entries from v5 to v6", season_stats_translated);
-
-			let mut avatars_translated = 0;
-
-			Avatars::<T>::translate::<(AccountIdFor<T>, v5::AvatarV5), _>(
-				|_, (account, avatar)| {
-					avatars_translated += 1;
-
-					Some((account, avatar.migrate_to_v6()))
-				},
-			);
-
-			log::info!(target: LOG_TARGET, "Updated {} Avatar entries from v5 to v6", avatars_translated);
-
 			current_version.put::<Pallet<T>>();
 			log::info!(target: LOG_TARGET, "Upgraded storage to version {:?}", current_version);
-
-			let total_reads =
-				player_season_configs_translated + season_stats_translated + avatars_translated;
-			let total_writes =
-				player_season_configs_translated + season_stats_translated + avatars_translated;
-
-			weight.saturating_accrue(T::DbWeight::get().reads_writes(total_reads, total_writes));
 
 			weight
 		} else {
@@ -514,9 +459,14 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 			return Err(SteppedMigrationError::InsufficientWeight { required });
 		}
 
+		let mut migration_count = 0u32;
 		// We loop here to do as much progress as possible per step.
 		loop {
 			if meter.try_consume(required).is_err() {
+				log::info!(
+					target: LOG_TARGET,
+					"Migrated {migration_count} PlayerSeasonConfigs. MBM is not finished yet."
+				);
 				break;
 			}
 
@@ -547,8 +497,13 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 
 				PlayerSeasonConfigs::<T>::insert(&account, &season_id, old_config.migrate_to_v6());
 
+				migration_count.saturating_inc();
 				cursor = Some((account, season_id)) // Return the processed key as the new cursor.
 			} else {
+				log::info!(
+					target: LOG_TARGET,
+					"Migrated {migration_count} PlayerSeasonConfigs. Finished MBM Migration."
+				);
 				cursor = None; // Signal that the migration is complete (no more items to process).
 				break
 			}
@@ -558,9 +513,7 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 }
 
 pub struct LazyMigrationSeasonStatsV5ToV6<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
-impl<T: Config, W: weights::WeightInfo> SteppedMigration
-	for crate::migration::v6::LazyMigrationSeasonStatsV5ToV6<T, W>
-{
+impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyMigrationSeasonStatsV5ToV6<T, W> {
 	type Cursor = (SeasonId, T::AccountId);
 	// Without the explicit length here the construction of the ID would not be infallible.
 	type Identifier = MigrationId<16>;
@@ -588,9 +541,14 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 			return Err(SteppedMigrationError::InsufficientWeight { required });
 		}
 
+		let mut migration_count = 0u32;
 		// We loop here to do as much progress as possible per step.
 		loop {
 			if meter.try_consume(required).is_err() {
+				log::info!(
+				target: LOG_TARGET,
+				"Migrated {migration_count} SeasonStats. MBM is not finished yet."
+				);
 				break;
 			}
 
@@ -620,8 +578,13 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 					SeasonStats::<T>::remove(&season_id, &account);
 				}
 
+				migration_count.saturating_inc();
 				cursor = Some((season_id, account)) // Return the processed key as the new cursor.
 			} else {
+				log::info!(
+				target: LOG_TARGET,
+				"Migrated {migration_count} SeasonStats. Finished MBM Migration."
+				);
 				cursor = None; // Signal that the migration is complete (no more items to process).
 				break
 			}
@@ -631,9 +594,7 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 }
 
 pub struct LazyMigrationAvatarV5ToV6<T: Config, W: weights::WeightInfo>(PhantomData<(T, W)>);
-impl<T: Config, W: weights::WeightInfo> SteppedMigration
-	for crate::migration::v6::LazyMigrationAvatarV5ToV6<T, W>
-{
+impl<T: Config, W: weights::WeightInfo> SteppedMigration for LazyMigrationAvatarV5ToV6<T, W> {
 	type Cursor = AvatarIdOf<T>;
 	// Without the explicit length here the construction of the ID would not be infallible.
 	type Identifier = MigrationId<10>;
@@ -661,9 +622,14 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 			return Err(SteppedMigrationError::InsufficientWeight { required });
 		}
 
+		let mut migration_count = 0u32;
 		// We loop here to do as much progress as possible per step.
 		loop {
 			if meter.try_consume(required).is_err() {
+				log::info!(
+					target: LOG_TARGET,
+					"Migrated {migration_count} Avatars. MBM is not finished yet."
+				);
 				break;
 			}
 
@@ -685,8 +651,13 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 					(old_account_avatar_tuple.0, old_account_avatar_tuple.1.migrate_to_v6()),
 				);
 
+				migration_count.saturating_inc();
 				cursor = Some(avatar_id) // Return the processed key as the new cursor.
 			} else {
+				log::info!(
+					target: LOG_TARGET,
+					"Migrated {migration_count} Avatars. Finished MBM Migration."
+				);
 				cursor = None; // Signal that the migration is complete (no more items to process).
 				break
 			}
@@ -726,9 +697,14 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 			return Err(SteppedMigrationError::InsufficientWeight { required });
 		}
 
+		let mut migration_count = 0u32;
 		// We loop here to do as much progress as possible per step.
 		loop {
 			if meter.try_consume(required).is_err() {
+				log::info!(
+					target: LOG_TARGET,
+					"Cleaned up {migration_count} TradeStats. MBM is not finished yet."
+				);
 				break;
 			}
 
@@ -749,8 +725,13 @@ impl<T: Config, W: weights::WeightInfo> SteppedMigration
 			if let Some((season_id, account_id, _stats)) = iter.next() {
 				TradeStatsMap::<T>::remove(&season_id, &account_id);
 
+				migration_count.saturating_inc();
 				cursor = Some((season_id, account_id)) // Return the processed key as the new cursor.
 			} else {
+				log::info!(
+					target: LOG_TARGET,
+					"Cleaned up {migration_count} TradeStats. Finished MBM Migration."
+				);
 				cursor = None; // Signal that the migration is complete (no more items to process).
 				break
 			}

@@ -22,7 +22,7 @@ use frame_support::traits::OnRuntimeUpgrade;
 // The current storage version.
 pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
 
-const LOG_TARGET: &str = "runtime::ajuna-awesome-avatars";
+const LOG_TARGET: &str = "runtime::ajuna-awesome-avatars::migration";
 
 /// A unique identifier across all pallets.
 ///
