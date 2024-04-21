@@ -263,7 +263,7 @@ pub mod pallet {
 	/// migration of v5 to v6. It should be removed afterward.
 	#[pallet::storage]
 	pub type TradeStatsMap<T: Config> =
-		StorageDoubleMap<_, Identity, SeasonId, Identity, T::AccountId, (Stat, Stat), ValueQuery>;
+		StorageDoubleMap<_, Identity, SeasonId, Identity, T::AccountId, (Stat, Stat), OptionQuery>;
 
 	#[pallet::storage]
 	pub type SeasonStats<T: Config> =
