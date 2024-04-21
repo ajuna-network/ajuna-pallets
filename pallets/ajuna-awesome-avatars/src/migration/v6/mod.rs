@@ -512,14 +512,14 @@ pub mod mbm {
 					// re-hash it.
 
 					TradeStatsMap::<T>::insert(
-						&season_id,
+						season_id,
 						&account,
 						(old_config.stats.trade.bought, old_config.stats.trade.sold),
 					);
 
 					PlayerSeasonConfigs::<T>::insert(
 						&account,
-						&season_id,
+						season_id,
 						old_config.migrate_to_v6(),
 					);
 
@@ -595,15 +595,15 @@ pub mod mbm {
 
 				// If there's a next item in the iterator, perform the migration.
 				if let Some((season_id, account, old_season_info)) = iter.next() {
-					if let Some((bought, sold)) = TradeStatsMap::<T>::take(&season_id, &account) {
+					if let Some((bought, sold)) = TradeStatsMap::<T>::take(season_id, &account) {
 						SeasonStats::<T>::insert(
-							&season_id,
+							season_id,
 							&account,
 							old_season_info.migrate_to_v6(bought, sold),
 						);
 					} else {
 						log::error!(target: LOG_TARGET, "Missing trade mapping in SeasonStats from v5 to v6");
-						SeasonStats::<T>::remove(&season_id, &account);
+						SeasonStats::<T>::remove(season_id, &account);
 					}
 
 					migration_count.saturating_inc();
@@ -675,7 +675,7 @@ pub mod mbm {
 				// If there's a next item in the iterator, perform the migration.
 				if let Some((avatar_id, old_account_avatar_tuple)) = iter.next() {
 					Avatars::<T>::insert(
-						&avatar_id,
+						avatar_id,
 						(old_account_avatar_tuple.0, old_account_avatar_tuple.1.migrate_to_v6()),
 					);
 
@@ -749,7 +749,7 @@ pub mod mbm {
 
 				// If there's a next item in the iterator, perform the migration.
 				if let Some((season_id, account_id, _stats)) = iter.next() {
-					TradeStatsMap::<T>::remove(&season_id, &account_id);
+					TradeStatsMap::<T>::remove(season_id, &account_id);
 
 					migration_count.saturating_inc();
 					cursor = Some((season_id, account_id)) // Return the processed key as the new cursor.
