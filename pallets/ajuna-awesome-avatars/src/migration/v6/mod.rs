@@ -29,7 +29,7 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
-mod weights;
+pub mod weights;
 
 mod v5 {
 	use crate::{
