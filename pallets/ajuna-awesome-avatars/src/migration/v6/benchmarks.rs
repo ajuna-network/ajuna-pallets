@@ -50,7 +50,10 @@ mod benches {
 		);
 
 		// uses twice the weight once for migration and then for checking if there is another key.
-		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
+		assert_eq!(
+			meter.consumed(),
+			weights::SubstrateWeight::<T>::player_season_configs_step() * 2
+		);
 	}
 
 	#[benchmark]
@@ -81,7 +84,7 @@ mod benches {
 		);
 
 		// uses twice the weight once for migration and then for checking if there is another key.
-		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
+		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::season_stats_step() * 2);
 	}
 
 	#[benchmark]
@@ -117,7 +120,7 @@ mod benches {
 		);
 
 		// uses twice the weight once for migration and then for checking if there is another key.
-		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
+		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::avatar_step() * 2);
 	}
 
 	#[benchmark]
@@ -141,7 +144,10 @@ mod benches {
 		assert!(!TradeStatsMap::<T>::contains_key(season_id, &test_account));
 
 		// uses twice the weight once for migration and then for checking if there is another key.
-		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
+		assert_eq!(
+			meter.consumed(),
+			weights::SubstrateWeight::<T>::trade_stats_map_cleanup_step() * 2
+		);
 	}
 
 	impl_benchmark_test_suite!(Pallet, new_test_ext(), crate::mock::Test);
