@@ -288,7 +288,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 	pub struct AvatarV5 {
 		pub season_id: SeasonId,
 		pub encoding: DnaEncoding,

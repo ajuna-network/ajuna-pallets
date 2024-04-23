@@ -21,7 +21,7 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 #[benchmarks]
 mod benches {
 	use super::*;
-	use crate::TradeStatsMap;
+	use crate::{AvatarIdOf, TradeStatsMap};
 	use frame_system::pallet_prelude::BlockNumberFor;
 
 	/// Benchmark a single step of the `v1::LazyMigrationV1` migration.
@@ -78,6 +78,42 @@ mod benches {
 		assert_eq!(
 			crate::SeasonStats::<T>::get(season_id, &test_account),
 			crate::SeasonInfo { bought: 1, sold: 2, ..Default::default() }
+		);
+
+		// uses twice the weight once for migration and then for checking if there is another key.
+		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
+	}
+
+	#[benchmark]
+	fn avatar_step() {
+		let test_account = account::<T>("test-account");
+		let old_avatar = v6::v5::AvatarV5::default();
+		let avatar_id = AvatarIdOf::<T>::default();
+
+		v6::v5::Avatars::<T>::insert(&avatar_id, (test_account.clone(), old_avatar.clone()));
+
+		let mut meter = WeightMeter::new();
+
+		#[block]
+		{
+			v6::mbm::LazyMigrationAvatarV5ToV6::<T, weights::SubstrateWeight<T>>::step(
+				None, &mut meter,
+			)
+			.unwrap();
+		}
+
+		assert_eq!(
+			crate::Avatars::<T>::get(&avatar_id),
+			Some((
+				test_account,
+				crate::Avatar::<BlockNumberFor<T>> {
+					season_id: old_avatar.season_id,
+					encoding: old_avatar.encoding,
+					dna: old_avatar.dna,
+					souls: old_avatar.souls,
+					minted_at: BlockNumberFor::<T>::default(),
+				}
+			))
 		);
 
 		// uses twice the weight once for migration and then for checking if there is another key.
