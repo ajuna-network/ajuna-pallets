@@ -11,7 +11,6 @@ use crate::{
 };
 use frame_benchmarking::v2::*;
 use frame_support::{migrations::SteppedMigration, weights::WeightMeter};
-use sp_runtime::BuildStorage;
 
 fn account<T: Config>(name: &'static str) -> T::AccountId {
 	let index = 0;
@@ -58,6 +57,8 @@ mod benches {
 
 #[cfg(test)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
+	use sp_runtime::BuildStorage;
+
 	let t = frame_system::GenesisConfig::<crate::mock::Test>::default()
 		.build_storage()
 		.unwrap();
