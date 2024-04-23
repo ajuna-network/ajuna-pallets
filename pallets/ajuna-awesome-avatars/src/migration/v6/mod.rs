@@ -476,7 +476,7 @@ pub mod mbm {
 			mut cursor: Option<Self::Cursor>,
 			meter: &mut WeightMeter,
 		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-			let required = W::step();
+			let required = W::player_season_configs_step();
 			// If there is not enough weight for a single step, return an error. This case can be
 			// problematic if it is the first migration that ran in this block. But there is nothing
 			// that we can do about it here.
@@ -565,7 +565,7 @@ pub mod mbm {
 			mut cursor: Option<Self::Cursor>,
 			meter: &mut WeightMeter,
 		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-			let required = W::step();
+			let required = W::season_stats_step();
 			// If there is not enough weight for a single step, return an error. This case can be
 			// problematic if it is the first migration that ran in this block. But there is nothing
 			// that we can do about it here.
@@ -646,7 +646,7 @@ pub mod mbm {
 			mut cursor: Option<Self::Cursor>,
 			meter: &mut WeightMeter,
 		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-			let required = W::step();
+			let required = W::avatar_step();
 			// If there is not enough weight for a single step, return an error. This case can be
 			// problematic if it is the first migration that ran in this block. But there is nothing
 			// that we can do about it here.
@@ -719,7 +719,7 @@ pub mod mbm {
 			mut cursor: Option<Self::Cursor>,
 			meter: &mut WeightMeter,
 		) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-			let required = W::step();
+			let required = W::trade_stats_map_cleanup_step();
 			// If there is not enough weight for a single step, return an error. This case can be
 			// problematic if it is the first migration that ran in this block. But there is nothing
 			// that we can do about it here.
