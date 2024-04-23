@@ -21,11 +21,12 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 #[benchmarks]
 mod benches {
 	use super::*;
+	use crate::TradeStatsMap;
 	use frame_system::pallet_prelude::BlockNumberFor;
 
 	/// Benchmark a single step of the `v1::LazyMigrationV1` migration.
 	#[benchmark]
-	fn step() {
+	fn player_season_configs_step() {
 		let test_account = account::<T>("test-account");
 		let season_id = 1;
 		let old_player_season_config = v6::v5::PlayerSeasonConfigV5::<BlockNumberFor<T>>::default();
@@ -46,6 +47,37 @@ mod benches {
 		assert_eq!(
 			crate::PlayerSeasonConfigs::<T>::get(&test_account, season_id),
 			crate::PlayerSeasonConfig::default()
+		);
+
+		// uses twice the weight once for migration and then for checking if there is another key.
+		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
+	}
+
+	#[benchmark]
+	fn season_stats_step() {
+		let season_id = 1;
+		let test_account = account::<T>("test-account");
+		let old_season_info = v6::v5::SeasonInfoV5::default();
+		let trade_stats = (1, 2);
+
+		v6::v5::SeasonStats::<T>::insert(season_id, &test_account, old_season_info);
+
+		// Worst case scenario is when we have trade stats for the given key.
+		TradeStatsMap::<T>::insert(season_id, &test_account, trade_stats);
+
+		let mut meter = WeightMeter::new();
+
+		#[block]
+		{
+			v6::mbm::LazyMigrationSeasonStatsV5ToV6::<T, weights::SubstrateWeight<T>>::step(
+				None, &mut meter,
+			)
+			.unwrap();
+		}
+
+		assert_eq!(
+			crate::SeasonStats::<T>::get(season_id, &test_account),
+			crate::SeasonInfo { bought: 1, sold: 2, ..Default::default() }
 		);
 
 		// uses twice the weight once for migration and then for checking if there is another key.
