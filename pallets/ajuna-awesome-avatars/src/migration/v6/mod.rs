@@ -23,7 +23,8 @@
 //! Additionally, the order of the mbm matters, which is further elaborated in the `mbm` module
 //! docs.
 
-use super::*;
+use super::{OnRuntimeUpgrade, LOG_TARGET};
+use crate::*;
 use frame_support::{
 	migrations::{SteppedMigration, SteppedMigrationError},
 	weights::WeightMeter,
@@ -31,6 +32,8 @@ use frame_support::{
 
 pub mod benchmarks;
 pub mod weights;
+
+pub use weights::WeightInfo;
 
 mod v5 {
 	use crate::{

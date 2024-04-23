@@ -16,8 +16,7 @@
 
 pub mod v6;
 
-use super::*;
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::{pallet_prelude::StorageVersion, traits::OnRuntimeUpgrade};
 
 // The current storage version.
 pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
