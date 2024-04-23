@@ -55,48 +55,59 @@ pub trait WeightInfo {
     fn trade_stats_map_cleanup_step() -> Weight;
 }
 
-/// Weights for `pallet_example_mbm` using the Substrate node and recommended hardware.
-pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-    /// Storage: `PalletExampleMbms::MyMap` (r:2 w:1)
-    /// Proof: `PalletExampleMbms::MyMap` (`max_values`: None, `max_size`: Some(28), added: 2503, mode: `MaxEncodedLen`)
+/// Weights run with the recommended hardware on the Bajun Parachain.
+pub struct BajunWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for BajunWeight<T> {
+    /// Storage: `AwesomeAvatars::PlayerSeasonConfigs` (r:2 w:1)
+    /// Proof: `AwesomeAvatars::PlayerSeasonConfigs` (`max_values`: None, `max_size`: Some(54), added: 2529, mode: `MaxEncodedLen`)
+    /// Storage: `AwesomeAvatars::TradeStatsMap` (r:0 w:1)
+    /// Proof: `AwesomeAvatars::TradeStatsMap` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
     fn player_season_configs_step() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `28`
-        //  Estimated: `5996`
-        // Minimum execution time: 6_000_000 picoseconds.
-        Weight::from_parts(8_000_000, 5996)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(1_u64))
+        //  Measured:  `156`
+        //  Estimated: `6048`
+        // Minimum execution time: 26_000_000 picoseconds.
+        Weight::from_parts(57_200_000, 0)
+            .saturating_add(Weight::from_parts(0, 6048))
+            .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().writes(2))
     }
-
+    /// Storage: `AwesomeAvatars::SeasonStats` (r:2 w:1)
+    /// Proof: `AwesomeAvatars::SeasonStats` (`max_values`: None, `max_size`: Some(54), added: 2529, mode: `MaxEncodedLen`)
+    /// Storage: `AwesomeAvatars::TradeStatsMap` (r:1 w:1)
+    /// Proof: `AwesomeAvatars::TradeStatsMap` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
     fn season_stats_step() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `28`
-        //  Estimated: `5996`
-        // Minimum execution time: 6_000_000 picoseconds.
-        Weight::from_parts(8_000_000, 5996)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(1_u64))
+        //  Measured:  `199`
+        //  Estimated: `6048`
+        // Minimum execution time: 40_200_000 picoseconds.
+        Weight::from_parts(46_000_000, 0)
+            .saturating_add(Weight::from_parts(0, 6048))
+            .saturating_add(T::DbWeight::get().reads(3))
+            .saturating_add(T::DbWeight::get().writes(2))
     }
-
+    /// Storage: `AwesomeAvatars::Avatars` (r:2 w:1)
+    /// Proof: `AwesomeAvatars::Avatars` (`max_values`: None, `max_size`: Some(177), added: 2652, mode: `MaxEncodedLen`)
     fn avatar_step() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `28`
-        //  Estimated: `5996`
-        // Minimum execution time: 6_000_000 picoseconds.
-        Weight::from_parts(8_000_000, 5996)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(1_u64))
+        //  Measured:  `168`
+        //  Estimated: `6294`
+        // Minimum execution time: 31_400_000 picoseconds.
+        Weight::from_parts(32_900_000, 0)
+            .saturating_add(Weight::from_parts(0, 6294))
+            .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().writes(1))
     }
-
+    /// Storage: `AwesomeAvatars::TradeStatsMap` (r:2 w:1)
+    /// Proof: `AwesomeAvatars::TradeStatsMap` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
     fn trade_stats_map_cleanup_step() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `28`
-        //  Estimated: `5996`
-        // Minimum execution time: 6_000_000 picoseconds.
-        Weight::from_parts(8_000_000, 5996)
-            .saturating_add(T::DbWeight::get().reads(2_u64))
-            .saturating_add(T::DbWeight::get().writes(1_u64))
+        //  Measured:  `136`
+        //  Estimated: `6024`
+        // Minimum execution time: 25_900_000 picoseconds.
+        Weight::from_parts(32_200_000, 0)
+            .saturating_add(Weight::from_parts(0, 6024))
+            .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().writes(1))
     }
 }
