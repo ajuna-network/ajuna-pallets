@@ -93,7 +93,7 @@ mod benches {
 		let old_avatar = v6::v5::AvatarV5::default();
 		let avatar_id = AvatarIdOf::<T>::default();
 
-		v6::v5::Avatars::<T>::insert(&avatar_id, (test_account.clone(), old_avatar.clone()));
+		v6::v5::Avatars::<T>::insert(avatar_id, (test_account.clone(), old_avatar.clone()));
 
 		let mut meter = WeightMeter::new();
 
@@ -106,7 +106,7 @@ mod benches {
 		}
 
 		assert_eq!(
-			crate::Avatars::<T>::get(&avatar_id),
+			crate::Avatars::<T>::get(avatar_id),
 			Some((
 				test_account,
 				crate::Avatar::<BlockNumberFor<T>> {
