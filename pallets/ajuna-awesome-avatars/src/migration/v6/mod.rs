@@ -49,7 +49,7 @@ mod v5 {
 	};
 	use frame_system::pallet_prelude::BlockNumberFor;
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct MintConfigV5<T: Config> {
 		pub open: bool,
 		pub cooldown: BlockNumberFor<T>,
@@ -69,7 +69,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct ForgeConfigV5 {
 		pub open: bool,
 	}
@@ -80,7 +80,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct TransferConfigV5 {
 		pub open: bool,
 		pub free_mint_transfer_fee: MintCount,
@@ -93,7 +93,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct TradeConfigV5 {
 		pub open: bool,
 	}
@@ -104,7 +104,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct NftTransferConfigV5 {
 		pub open: bool,
 	}
@@ -115,7 +115,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct GlobalConfigV5<T: Config> {
 		pub mint: MintConfigV5<T>,
 		pub forge: ForgeConfigV5,
@@ -148,7 +148,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct FeeV5<T: Config> {
 		pub mint: MintFees<BalanceOf<T>>,
 		pub transfer_avatar: BalanceOf<T>,
@@ -176,7 +176,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct SeasonV5<T: Config> {
 		pub name: BoundedVec<u8, ConstU32<100>>,
 		pub description: BoundedVec<u8, ConstU32<1_000>>,
@@ -224,55 +224,46 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct TradeStatsV5 {
 		pub bought: Stat,
 		pub sold: Stat,
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
-	pub struct PlayStatsV5<T: Config> {
-		pub first: BlockNumberFor<T>,
-		pub last: BlockNumberFor<T>,
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
+	pub struct PlayStatsV5<BlockNumber> {
+		pub first: BlockNumber,
+		pub last: BlockNumber,
 		pub seasons_participated: BoundedBTreeSet<SeasonId, MaxSeasons>,
 	}
 
-	impl<T> PlayStatsV5<T>
-	where
-		T: Config,
-	{
-		pub fn migrate_to_v6(self) -> PlayStats<BlockNumberFor<T>> {
+	impl<BlockNumber> PlayStatsV5<BlockNumber> {
+		pub fn migrate_to_v6(self) -> PlayStats<BlockNumber> {
 			PlayStats { first: self.first, last: self.last }
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
-	pub struct StatsV5<T: Config> {
-		pub mint: PlayStatsV5<T>,
-		pub forge: PlayStatsV5<T>,
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
+	pub struct StatsV5<BlockNumber> {
+		pub mint: PlayStatsV5<BlockNumber>,
+		pub forge: PlayStatsV5<BlockNumber>,
 		pub trade: TradeStatsV5,
 	}
 
-	impl<T> StatsV5<T>
-	where
-		T: Config,
-	{
-		pub fn migrate_to_v6(self) -> Stats<BlockNumberFor<T>> {
+	impl<BlockNumber> StatsV5<BlockNumber> {
+		pub fn migrate_to_v6(self) -> Stats<BlockNumber> {
 			Stats { mint: self.mint.migrate_to_v6(), forge: self.forge.migrate_to_v6() }
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
-	pub struct PlayerSeasonConfigV5<T: Config> {
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
+	pub struct PlayerSeasonConfigV5<BlockNumber> {
 		pub storage_tier: StorageTier,
-		pub stats: StatsV5<T>,
+		pub stats: StatsV5<BlockNumber>,
 	}
 
-	impl<T> PlayerSeasonConfigV5<T>
-	where
-		T: Config,
-	{
-		pub fn migrate_to_v6(self) -> PlayerSeasonConfig<BlockNumberFor<T>> {
+	impl<BlockNumber> PlayerSeasonConfigV5<BlockNumber> {
+		pub fn migrate_to_v6(self) -> PlayerSeasonConfig<BlockNumber> {
 			PlayerSeasonConfig {
 				storage_tier: self.storage_tier,
 				stats: self.stats.migrate_to_v6(),
@@ -281,7 +272,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct SeasonInfoV5 {
 		pub minted: Stat,
 		pub forged: Stat,
@@ -293,7 +284,7 @@ mod v5 {
 		}
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 	pub struct AvatarV5 {
 		pub season_id: SeasonId,
 		pub encoding: DnaEncoding,
@@ -323,7 +314,7 @@ mod v5 {
 		<T as frame_system::Config>::AccountId,
 		Identity,
 		SeasonId,
-		PlayerSeasonConfigV5<T>,
+		PlayerSeasonConfigV5<BlockNumberFor<T>>,
 		OptionQuery,
 	>;
 

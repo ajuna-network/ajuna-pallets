@@ -58,19 +58,19 @@ impl Get<u32> for MaxSeasons {
 
 pub type Stat = u32;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
 pub struct PlayStats<BlockNumber> {
 	pub first: BlockNumber,
 	pub last: BlockNumber,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
 pub struct Stats<BlockNumber> {
 	pub mint: PlayStats<BlockNumber>,
 	pub forge: PlayStats<BlockNumber>,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Default)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Default, Debug, PartialEq)]
 pub struct Locks {
 	pub avatar_transfer: bool,
 	pub set_price: bool,
@@ -83,14 +83,14 @@ impl Locks {
 	}
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
 pub struct PlayerSeasonConfig<BlockNumber> {
 	pub storage_tier: StorageTier,
 	pub stats: Stats<BlockNumber>,
 	pub locks: Locks,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
 pub struct SeasonInfo {
 	pub minted: Stat,
 	pub free_minted: Stat,
@@ -99,7 +99,7 @@ pub struct SeasonInfo {
 	pub sold: Stat,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
 pub struct PlayerConfig {
 	pub free_mints: MintCount,
 }
