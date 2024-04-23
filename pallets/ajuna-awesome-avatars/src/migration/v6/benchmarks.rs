@@ -120,6 +120,30 @@ mod benches {
 		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
 	}
 
+	#[benchmark]
+	fn trade_stats_map_cleanup_step() {
+		let season_id = 1;
+		let test_account = account::<T>("test-account");
+		let trade_stats = (1, 2);
+
+		TradeStatsMap::<T>::insert(season_id, &test_account, trade_stats);
+
+		let mut meter = WeightMeter::new();
+
+		#[block]
+		{
+			v6::mbm::LazyTradeStatsMapCleanup::<T, weights::SubstrateWeight<T>>::step(
+				None, &mut meter,
+			)
+			.unwrap();
+		}
+
+		assert!(!TradeStatsMap::<T>::contains_key(season_id, &test_account));
+
+		// uses twice the weight once for migration and then for checking if there is another key.
+		assert_eq!(meter.consumed(), weights::SubstrateWeight::<T>::step() * 2);
+	}
+
 	impl_benchmark_test_suite!(Pallet, new_test_ext(), crate::mock::Test);
 }
 
