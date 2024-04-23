@@ -17,8 +17,10 @@ hex = { workspace = true, features = ["alloc"] }
 log = { workspace = true }
 
 # Substrate - FRAME
+frame-benchmarking = { workspace = true, optional = true }
 frame-support      = { workspace = true }
 frame-system       = { workspace = true }
+
 # Substrate - SCALE codec
 parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
 scale-info         = { workspace = true, features = [ "derive" ] }
@@ -34,6 +36,7 @@ pallet-ajuna-tournament   = { workspace = true }
 
 [dev-dependencies]
 # Substrate - FRAME
+frame-benchmarking                         = { workspace = true }
 pallet-balances                            = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-nfts                                = { workspace = true }
@@ -43,6 +46,7 @@ sp-core                                    = { workspace = true }
 [features]
 default = [ "std" ]
 runtime-benchmarks = [
+    "frame-benchmarking",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-ajuna-nft-transfer/runtime-benchmarks",
@@ -53,6 +57,7 @@ runtime-benchmarks = [
 std = [
     "hex/std",
     "log/std",
+    "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-ajuna-affiliates/std",

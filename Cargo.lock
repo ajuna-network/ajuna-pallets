@@ -1743,6 +1743,7 @@ dependencies = [
 name = "pallet-ajuna-awesome-avatars"
 version = "0.6.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",

@@ -29,6 +29,7 @@ use frame_support::{
 	weights::WeightMeter,
 };
 
+pub mod benchmarks;
 pub mod weights;
 
 mod v5 {
