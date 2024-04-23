@@ -56,6 +56,7 @@ mod benches {
 	impl_benchmark_test_suite!(Pallet, new_test_ext(), crate::mock::Test);
 }
 
+#[cfg(test)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<crate::mock::Test>::default()
 		.build_storage()
