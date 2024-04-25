@@ -694,6 +694,10 @@ pub mod pallet {
 		where
 			R: EntityRank<EntityId = T::EntityId, Entity = T::RankedEntity>,
 		{
+			if !ranker.can_rank((entity_id, entity)) {
+				return Ok(());
+			}
+
 			ensure!(
 				matches!(
 					Self::get_active_tournament_state_for(season_id),
