@@ -41,6 +41,8 @@ frame_support::construct_runtime!(
 	}
 );
 
+impl crate::vesting::Config for Runtime {}
+
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();

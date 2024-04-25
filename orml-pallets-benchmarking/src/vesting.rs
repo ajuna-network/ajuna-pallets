@@ -25,9 +25,11 @@ use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_runtime::Saturating;
 use sp_std::prelude::*;
 
-use orml_vesting::{Call, Config, VestingSchedule};
+use orml_vesting::{Call, VestingSchedule};
 
 pub struct Pallet<T: Config>(orml_vesting::Pallet<T>);
+
+pub trait Config: orml_vesting::Config + pallet_balances::Config {}
 
 pub type Schedule<T> = VestingSchedule<BlockNumberFor<T>, BalanceFor<T>>;
 
@@ -39,18 +41,13 @@ pub fn schedule<T: Config>(
 	period_count: u32,
 	per_period: BalanceFor<T>,
 ) -> Schedule<T> {
-	Schedule::<T> {
-		start: start.into(),
-		period: period.into(),
-		period_count,
-		per_period,
-	}
+	Schedule::<T> { start: start.into(), period: period.into(), period_count, per_period }
 }
 
 benchmarks! {
 	vested_transfer {
 		let schedule = schedule::<T>(
-			0, 2,3,<T as Config>::MinVestedTransfer::get()
+			0, 2,3,<T>::MinVestedTransfer::get()
 		);
 
 		let from = get_vesting_account::<T>();
@@ -67,10 +64,10 @@ benchmarks! {
 	}
 
 	claim {
-		let i in 1 .. <T as orml_vesting::Config>::MaxVestingSchedules::get();
+		let i in 1 .. <T>::MaxVestingSchedules::get();
 
 		let mut schedule = schedule::<T>(
-			0, 2,3,<T as Config>::MinVestedTransfer::get()
+			0, 2,3,<T>::MinVestedTransfer::get()
 		);
 
 		let from: AccountIdFor<T> = get_vesting_account::<T>();
@@ -93,10 +90,10 @@ benchmarks! {
 	}
 
 	update_vesting_schedules {
-		let i in 1 .. <T as orml_vesting::Config>::MaxVestingSchedules::get();
+		let i in 1 .. <T>::MaxVestingSchedules::get();
 
 		let mut schedule = schedule::<T>(
-			0, 2,3,<T as Config>::MinVestedTransfer::get()
+			0, 2,3,<T>::MinVestedTransfer::get()
 		);
 
 		let to: AccountIdFor<T>= account("to", 0, SEED);
