@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg(feature = "runtime-benchmarks")]
 
 pub mod mock;
 pub mod utils;
