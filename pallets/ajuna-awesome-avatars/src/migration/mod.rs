@@ -16,10 +16,17 @@
 
 pub mod v6;
 
-use super::*;
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::{pallet_prelude::StorageVersion, traits::OnRuntimeUpgrade};
 
 // The current storage version.
 pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
 
-const LOG_TARGET: &str = "runtime::ajuna-awesome-avatars";
+const LOG_TARGET: &str = "runtime::ajuna-awesome-avatars::migration";
+
+/// A unique identifier across all pallets.
+///
+/// This constant represents a unique identifier for the migrations of this pallet.
+/// It helps differentiate migrations for this pallet from those of others. Note that we don't
+/// directly pull the crate name from the environment, since that would change if the crate were
+/// ever to be renamed and could cause historic migrations to run again.
+pub const PALLET_MIGRATIONS_ID: &[u8; 32] = b"pallet-ajuna-awesome-avatars-mbm";

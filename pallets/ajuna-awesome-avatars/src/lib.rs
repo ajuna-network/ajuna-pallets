@@ -259,6 +259,12 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// This is only an intermediate storage that is being used during the multiblock runtime
+	/// migration of v5 to v6. It should be removed afterward.
+	#[pallet::storage]
+	pub type TradeStatsMap<T: Config> =
+		StorageDoubleMap<_, Identity, SeasonId, Identity, T::AccountId, (Stat, Stat), OptionQuery>;
+
 	#[pallet::storage]
 	pub type SeasonStats<T: Config> =
 		StorageDoubleMap<_, Identity, SeasonId, Identity, T::AccountId, SeasonInfo, ValueQuery>;
