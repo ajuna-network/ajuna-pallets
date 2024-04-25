@@ -117,6 +117,10 @@ impl EntityRank for MockRanker {
 	type EntityId = MockEntityId;
 	type Entity = MockEntity;
 
+	fn can_rank(&self, _entity: (&Self::EntityId, &Self::Entity)) -> bool {
+		true
+	}
+
 	fn rank_against(
 		&self,
 		entity: (&Self::EntityId, &Self::Entity),

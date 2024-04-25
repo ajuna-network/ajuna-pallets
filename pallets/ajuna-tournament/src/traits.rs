@@ -5,6 +5,8 @@ pub trait EntityRank {
 	type EntityId: Member;
 	type Entity: Member;
 
+	fn can_rank(&self, entity: (&Self::EntityId, &Self::Entity)) -> bool;
+
 	fn rank_against(
 		&self,
 		entity: (&Self::EntityId, &Self::Entity),
