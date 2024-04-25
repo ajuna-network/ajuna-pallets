@@ -29,7 +29,7 @@ use orml_vesting::{Call, VestingSchedule};
 
 pub struct Pallet<T: Config>(orml_vesting::Pallet<T>);
 
-pub trait Config: orml_vesting::Config + pallet_balances::Config {}
+pub trait Config: orml_vesting::Config {}
 
 pub type Schedule<T> = VestingSchedule<BlockNumberFor<T>, BalanceFor<T>>;
 
