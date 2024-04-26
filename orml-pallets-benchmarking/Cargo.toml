@@ -1,0 +1,51 @@
+[package]
+description = "Implement benchmarks for orml pallets"
+name = "orml-pallets-benchmarking"
+
+
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+scale-info         = { workspace = true }
+
+orml-vesting = { workspace = true }
+
+frame-benchmarking = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-balances = { workspace = true }
+
+sp-io = { workspace = true }
+sp-std = { workspace = true }
+sp-runtime = { workspace = true }
+
+[features]
+default = ["std"]
+# Note: Either the `benchmarks!` or the `define_benchmarks!` macro demand the
+# existence of this feature flag. Otherwise, the benchmarks can't be found in the
+# node.
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "orml-vesting/runtime-benchmarks",
+    "pallet-balances/frame-benchmarking",
+    "sp-runtime/runtime-benchmarks",
+]
+std = [
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "orml-vesting/std",
+    "frame-benchmarking/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "sp-io/std",
+    "sp-std/std",
+    "sp-runtime/std",
+]

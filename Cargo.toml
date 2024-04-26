@@ -8,6 +8,7 @@ version    = "0.1.0"
 [workspace]
 resolver = "2"
 members = [
+    "orml-pallets-benchmarking",
     "pallets/*",
     "pallets/ajuna-awesome-avatars/benchmarking",
     "pallets/ajuna-nft-staking/benchmarking",
@@ -33,6 +34,9 @@ sp-core                                    = { version = "32.0.0", default-featu
 sp-io                                      = { version = "34.0.0", default-features = false }
 sp-runtime                                 = { version = "35.0.0", default-features = false }
 sp-std                                     = { version = "14.0.0", default-features = false }
+
+# orml
+orml-vesting = { version = "0.10.0", default-features = false }
 
 # Ajuna
 pallet-ajuna-awesome-avatars              = { path = "pallets/ajuna-awesome-avatars", default-features = false }
