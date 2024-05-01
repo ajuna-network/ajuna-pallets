@@ -1,0 +1,46 @@
+[package]
+name = "pallet-ajuna-board"
+description = "Ajuna Network pallet board pallet."
+
+authors.workspace    = true
+edition.workspace    = true
+homepage.workspace   = true
+repository.workspace = true
+version.workspace    = true
+
+[package.metadata.docs.rs]
+targets = [ "x86_64-unknown-linux-gnu" ]
+
+[dependencies]
+# Substrate (wasm)
+frame-benchmarking = { workspace = true, optional = true }
+frame-support      = { workspace = true }
+frame-system       = { workspace = true }
+parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
+scale-info         = { workspace = true, features = [ "derive" ] }
+sp-std             = { workspace = true }
+sp-runtime         = { workspace = true }
+
+# Ajuna pallets
+dot4gravity             = { default-features = false, git = "https://github.com/ajuna-network/ajuna-games", rev = "polkadot-v0.9.20-dev" }
+pallet-ajuna-matchmaker = { workspace = true }
+
+[dev-dependencies]
+sp-core = { workspace = true }
+sp-io   = { workspace = true }
+
+[features]
+default = [ "std" ]
+std = [
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "frame-benchmarking/std",
+    "frame-support/std",
+    "frame-system/std",
+    "dot4gravity/std",
+    "pallet-ajuna-matchmaker/std"
+]
+try-runtime = [ "frame-support/try-runtime" ]
+runtime-benchmarks = [ "frame-benchmarking" ]
