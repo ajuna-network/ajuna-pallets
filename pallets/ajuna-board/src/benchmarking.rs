@@ -27,7 +27,7 @@ use sp_runtime::SaturatedConversion;
 const SEED: u32 = 0;
 
 fn players<Player: Decode + Ord>(how_many: u32) -> Vec<Player> {
-	(0..how_many).into_iter().map(|i| account("player", i, SEED)).collect()
+	(0..how_many).map(|i| account("player", i, SEED)).collect()
 }
 
 fn assert_last_event<T: Config>(event: <T as Config>::RuntimeEvent) {
@@ -81,6 +81,13 @@ fn create_and_play_until_win<T: Config>(players: Vec<T::AccountId>) {
 	each_player_drops_stone(win_position, lose_position);
 	each_player_drops_stone(win_position, lose_position);
 	each_player_drops_stone(win_position, lose_position);
+	each_player_drops_stone(win_position, lose_position);
+
+	let win_position = (Side::South, 1);
+	let lose_position = (Side::South, 7);
+	each_player_drops_stone(win_position, lose_position);
+	each_player_drops_stone(win_position, lose_position);
+	each_player_drops_stone(win_position, lose_position);
 }
 
 benchmarks! {
@@ -95,10 +102,10 @@ benchmarks! {
 	play_turn_until_finished {
 		let board_id = T::BoardId::saturated_from(0_u32);
 		let players = players::<T::AccountId>(T::Players::get());
-		create_and_play_until_win::<T>( players.clone());
+		create_and_play_until_win::<T>(players.clone());
 
 		let winner = players.into_iter().next().unwrap();
-		let turn = Turn::DropStone((Side::North, 0));
+		let turn = Turn::DropStone((Side::South, 1));
 	}: play(RawOrigin::Signed(winner.clone()), turn.into())
 	verify {
 		assert_last_event::<T>(Event::GameFinished { board_id, winner }.into());

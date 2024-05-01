@@ -22,7 +22,7 @@ sp-std             = { workspace = true }
 sp-runtime         = { workspace = true }
 
 # Ajuna pallets
-dot4gravity             = { default-features = false, git = "https://github.com/ajuna-network/ajuna-games", rev = "polkadot-v0.9.20-dev" }
+dot4gravity             = { default-features = false, git = "https://github.com/ajuna-network/ajuna-games", branch = "main" }
 pallet-ajuna-matchmaker = { workspace = true }
 
 [dev-dependencies]

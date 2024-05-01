@@ -23,27 +23,15 @@ fn test_try_duplicate_queue() {
 		assert_eq!(MatchMaker::do_queue_size(0), 0);
 		assert_eq!(MatchMaker::do_add_queue(player1, 0), Ok(()));
 		// try same bracket
-		assert_eq!(
-			MatchMaker::do_add_queue(player1, 0),
-			Err(Error::<TestRuntime>::AlreadyQueued.into())
-		);
+		assert_eq!(MatchMaker::do_add_queue(player1, 0), Err(Error::<Test>::AlreadyQueued.into()));
 		// try other bracket
-		assert_eq!(
-			MatchMaker::do_add_queue(player1, 1),
-			Err(Error::<TestRuntime>::AlreadyQueued.into())
-		);
+		assert_eq!(MatchMaker::do_add_queue(player1, 1), Err(Error::<Test>::AlreadyQueued.into()));
 
 		assert_eq!(MatchMaker::do_add_queue(player2, 1), Ok(()));
 		// try same bracket
-		assert_eq!(
-			MatchMaker::do_add_queue(player2, 1),
-			Err(Error::<TestRuntime>::AlreadyQueued.into())
-		);
+		assert_eq!(MatchMaker::do_add_queue(player2, 1), Err(Error::<Test>::AlreadyQueued.into()));
 		// try other bracket
-		assert_eq!(
-			MatchMaker::do_add_queue(player2, 0),
-			Err(Error::<TestRuntime>::AlreadyQueued.into())
-		);
+		assert_eq!(MatchMaker::do_add_queue(player2, 0), Err(Error::<Test>::AlreadyQueued.into()));
 	});
 }
 

@@ -17,9 +17,9 @@
 use crate::{dot4gravity::*, mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 
-const ALICE: u32 = 1;
-const BOB: u32 = 2;
-const ERIN: u32 = 5;
+const ALICE: MockAccountId = 1;
+const BOB: MockAccountId = 2;
+const ERIN: MockAccountId = 5;
 
 const BOARD_ID: u32 = 0;
 const TEST_COORD: Coordinates = Coordinates::new(0, 0);
@@ -41,7 +41,9 @@ fn queue_works() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(AjunaBoard::queue(RuntimeOrigin::signed(ALICE)));
 		System::assert_last_event(RuntimeEvent::AjunaMatchmaker(
-			pallet_ajuna_matchmaker::Event::Queued(ALICE),
+			pallet_ajuna_matchmaker::Event::Queued(pallet_ajuna_matchmaker::PlayerStruct {
+				account: ALICE,
+			}),
 		));
 		assert_noop!(AjunaBoard::queue(RuntimeOrigin::signed(ALICE)), Error::<Test>::AlreadyQueued);
 	});
@@ -58,12 +60,19 @@ fn queue_creates_game_on_successful_match() {
 
 		// queue twice to matchmake
 		assert_ok!(AjunaBoard::queue(RuntimeOrigin::signed(ALICE)));
+		System::assert_has_event(RuntimeEvent::AjunaMatchmaker(
+			pallet_ajuna_matchmaker::Event::Queued(pallet_ajuna_matchmaker::PlayerStruct {
+				account: ALICE,
+			}),
+		));
 		assert_ok!(AjunaBoard::queue(RuntimeOrigin::signed(BOB)));
+		System::assert_has_event(RuntimeEvent::AjunaMatchmaker(
+			pallet_ajuna_matchmaker::Event::Queued(pallet_ajuna_matchmaker::PlayerStruct {
+				account: BOB,
+			}),
+		));
 
 		let players = vec![ALICE, BOB];
-		System::assert_has_event(RuntimeEvent::AjunaMatchmaker(
-			pallet_ajuna_matchmaker::Event::Matched(players.clone()),
-		));
 		System::assert_last_event(RuntimeEvent::AjunaBoard(crate::Event::GameCreated {
 			board_id: BOARD_ID,
 			players,
@@ -97,16 +106,27 @@ fn play_works() {
 		drop_bomb(Coordinates::new(7, 7));
 
 		// Play phase
-		let drop_stone = || {
+		let drop_stone_1 = || {
 			let win = (Side::North, 0);
 			let loss = (Side::North, 9);
 			let _ = AjunaBoard::play(RuntimeOrigin::signed(BOB), Turn::DropStone(win));
 			let _ = AjunaBoard::play(RuntimeOrigin::signed(ERIN), Turn::DropStone(loss));
 		};
-		drop_stone();
-		drop_stone();
-		drop_stone();
-		drop_stone();
+		drop_stone_1();
+		drop_stone_1();
+		drop_stone_1();
+		drop_stone_1();
+
+		let drop_stone_2 = || {
+			let win = (Side::South, 1);
+			let loss = (Side::South, 7);
+			let _ = AjunaBoard::play(RuntimeOrigin::signed(BOB), Turn::DropStone(win));
+			let _ = AjunaBoard::play(RuntimeOrigin::signed(ERIN), Turn::DropStone(loss));
+		};
+		drop_stone_2();
+		drop_stone_2();
+		drop_stone_2();
+		drop_stone_2();
 
 		// check if game has finished
 		System::assert_last_event(RuntimeEvent::AjunaBoard(crate::Event::GameFinished {

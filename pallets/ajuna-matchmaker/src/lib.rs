@@ -33,7 +33,7 @@ pub enum MatchingType {
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen)]
 pub struct PlayerStruct<AccountId> {
-	account: AccountId,
+	pub account: AccountId,
 }
 
 #[frame_support::pallet]

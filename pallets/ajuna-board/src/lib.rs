@@ -16,11 +16,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Codec, Decode, Encode};
 use frame_support::pallet_prelude::*;
 use frame_system::{ensure_signed, pallet_prelude::*};
 pub use pallet::*;
-use pallet_ajuna_matchmaker::{Matchmaker, DEFAULT_BRACKET};
+use pallet_ajuna_matchmaker::MatchFunc;
+use parity_scale_codec::{Codec, Decode, Encode};
 use sp_runtime::traits::{AtLeast32BitUnsigned, BlockNumberProvider, Saturating};
 use sp_std::vec::Vec;
 
@@ -37,6 +37,10 @@ pub mod dot4gravity;
 mod types;
 use types::*;
 
+pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
+pub const DEFAULT_BRACKET: u8 = 0;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -44,7 +48,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		type Matchmaker: Matchmaker<Player = Self::AccountId>;
+		type Matchmaker: MatchFunc<Self::AccountId>;
 		/// Board id
 		type BoardId: Copy + Default + AtLeast32BitUnsigned + Parameter + MaxEncodedLen;
 		/// A Turn for the game
@@ -63,7 +67,7 @@ pub mod pallet {
 	}
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub (super) trait Store)]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::event]
@@ -111,17 +115,26 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(12_345)]
+		#[pallet::weight({12_345})]
+		#[pallet::call_index(0)]
 		pub fn queue(origin: OriginFor<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
-			ensure!(T::Matchmaker::enqueue(player, DEFAULT_BRACKET), Error::<T>::AlreadyQueued);
-			if let Some(players) = T::Matchmaker::try_match(DEFAULT_BRACKET, T::Players::get()) {
+			ensure!(
+				T::Matchmaker::add_queue(player, DEFAULT_BRACKET).is_ok(),
+				Error::<T>::AlreadyQueued
+			);
+
+			let players = T::Matchmaker::try_match();
+
+			if players.len() as u32 == T::Players::get() {
 				Self::create_game(players)?;
-			};
+			}
+
 			Ok(())
 		}
 
-		#[pallet::weight(12_345)]
+		#[pallet::weight({12_345})]
+		#[pallet::call_index(1)]
 		pub fn play(origin: OriginFor<T>, turn: T::PlayersTurn) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 			let board_id = PlayerBoards::<T>::get(&player).ok_or(Error::<T>::NotPlaying)?;
@@ -139,7 +152,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(12_345)]
+		#[pallet::weight({12_345})]
+		#[pallet::call_index(2)]
 		pub fn clear_board(origin: OriginFor<T>, board_id: T::BoardId) -> DispatchResult {
 			ensure_root(origin)?;
 

@@ -15,24 +15,26 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_board};
-use frame_support::parameter_types;
-use frame_system::mocking::{MockBlock, MockUncheckedExtrinsic};
+use frame_support::{
+	parameter_types,
+	traits::{ConstU16, ConstU64},
+};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	testing::TestSignature,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
 };
 use sp_std::prelude::*;
 
-type MockAccountId = u32;
+pub type MockBlock = frame_system::mocking::MockBlock<Test>;
+pub type MockSignature = TestSignature;
+pub type MockAccountPublic = <MockSignature as Verify>::Signer;
+pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
+pub type MockNonce = u64;
 
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = MockBlock<Test>,
-		NodeBlock = MockBlock<Test>,
-		UncheckedExtrinsic = MockUncheckedExtrinsic<Test>,
-	{
+	pub struct Test {
 		System: frame_system,
 		AjunaMatchmaker: pallet_ajuna_matchmaker,
 		AjunaBoard: pallet_ajuna_board,
@@ -51,37 +53,45 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = MockAccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
+	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
+	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-}
-
-impl pallet_ajuna_matchmaker::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
+	type Nonce = MockNonce;
+	type Block = MockBlock;
+	type RuntimeTask = RuntimeTask;
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 parameter_types! {
 	pub const Players: u8 = 2;
+	pub const Brackets: u8 = 1;
+}
+
+impl pallet_ajuna_matchmaker::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type AmountPlayers = Players;
+	type AmountBrackets = Brackets;
 }
 
 impl pallet_ajuna_board::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type Matchmaker = pallet_ajuna_matchmaker::Matchmaking<Self>;
+	type Matchmaker = AjunaMatchmaker;
 	type BoardId = u32;
 	type PlayersTurn = crate::dot4gravity::Turn;
 	type GameState = crate::dot4gravity::GameState<MockAccountId>;
@@ -91,8 +101,8 @@ impl pallet_ajuna_board::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let config = GenesisConfig { system: Default::default() };
-	let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
+	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
