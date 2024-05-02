@@ -1,0 +1,35 @@
+[package]
+name = "pallet-ajuna-matchmaker"
+description = "Ajuna Network pallet matchmaker for creating matches between players."
+
+authors.workspace    = true
+edition.workspace    = true
+homepage.workspace   = true
+repository.workspace = true
+version.workspace    = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+# Substrate (wasm)
+frame-support      = { workspace = true }
+frame-system       = { workspace = true }
+parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
+scale-info         = { workspace = true, features = [ "derive" ] }
+sp-std             = { workspace = true }
+sp-runtime         = { workspace = true }
+
+[dev-dependencies]
+sp-core = { workspace = true }
+sp-io   = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+]
+try-runtime = [ "frame-support/try-runtime" ]
