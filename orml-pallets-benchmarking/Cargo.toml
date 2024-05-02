@@ -26,17 +26,6 @@ sp-runtime = { workspace = true }
 
 [features]
 default = ["std"]
-# Note: Either the `benchmarks!` or the `define_benchmarks!` macro demand the
-# existence of this feature flag. Otherwise, the benchmarks can't be found in the
-# node.
-runtime-benchmarks = [
-    "frame-benchmarking/runtime-benchmarks",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
-    "orml-vesting/runtime-benchmarks",
-    "pallet-balances/frame-benchmarking",
-    "sp-runtime/runtime-benchmarks",
-]
 std = [
     "parity-scale-codec/std",
     "scale-info/std",
@@ -48,4 +37,16 @@ std = [
     "sp-io/std",
     "sp-std/std",
     "sp-runtime/std",
+]
+# Note: Either the `benchmarks!` or the `define_benchmarks!` macro demand the
+# existence of this feature flag. Otherwise, the benchmarks can't be found in the
+# node.
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "orml-vesting/runtime-benchmarks",
+    "pallet-balances/frame-benchmarking",
+    "pallet-balances/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
 ]

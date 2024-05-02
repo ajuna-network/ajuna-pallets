@@ -45,15 +45,6 @@ sp-core                                    = { workspace = true }
 
 [features]
 default = [ "std" ]
-runtime-benchmarks = [
-    "frame-benchmarking",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
-    "pallet-ajuna-nft-transfer/runtime-benchmarks",
-    "pallet-balances/runtime-benchmarks",
-    "pallet-nfts/runtime-benchmarks",
-    "sp-runtime/runtime-benchmarks",
-]
 std = [
     "hex/std",
     "log/std",
@@ -72,6 +63,17 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-ajuna-affiliates/runtime-benchmarks",
+    "pallet-ajuna-nft-transfer/runtime-benchmarks",
+    "pallet-ajuna-tournament/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-nfts/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",
