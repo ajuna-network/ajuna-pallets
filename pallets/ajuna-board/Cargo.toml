@@ -34,6 +34,8 @@ default = [ "std" ]
 std = [
     "parity-scale-codec/std",
     "scale-info/std",
+    "sp-core/std",
+    "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
     "frame-benchmarking/std",
@@ -42,5 +44,18 @@ std = [
     "dot4gravity/std",
     "pallet-ajuna-matchmaker/std"
 ]
-try-runtime = [ "frame-support/try-runtime" ]
-runtime-benchmarks = [ "frame-benchmarking" ]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-ajuna-matchmaker/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "pallet-ajuna-matchmaker/try-runtime",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/try-runtime",
+]
