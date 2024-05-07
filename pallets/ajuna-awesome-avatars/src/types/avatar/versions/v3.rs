@@ -1,4 +1,7 @@
-use crate::*;
+use crate::{
+	types::avatar::versions::v2::{ByteType, DnaUtils},
+	*,
+};
 use sp_runtime::{traits::Zero, DispatchError, Saturating};
 use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, vec::Vec};
 
@@ -121,12 +124,8 @@ impl<T: Config> Forger<T> for ForgerV3<T> {
 		let (sacrifice_ids, sacrifice_avatars): (Vec<AvatarIdOf<T>>, Vec<AvatarOf<T>>) =
 			input_sacrifices.into_iter().unzip();
 
-		let (mut unique_matched_indexes, matches, soul_count) = Self::compare_all(
-			&leader,
-			sacrifice_avatars.as_slice(),
-			season.max_variations,
-			max_tier,
-		)?;
+		let (mut unique_matched_indexes, matches, soul_count) =
+			Self::compare_all(&leader, sacrifice_avatars.as_slice(), max_tier)?;
 
 		leader.souls += soul_count;
 
@@ -172,7 +171,6 @@ impl<T: Config> ForgerV3<T> {
 	fn compare_all(
 		target: &AvatarOf<T>,
 		others: &[AvatarOf<T>],
-		max_variations: u8,
 		max_tier: u8,
 	) -> Result<(BTreeSet<usize>, u8, SoulCount), DispatchError> {
 		let upgradable_indexes = Self::upgradable_indexes_for_target(target)?;
@@ -183,7 +181,7 @@ impl<T: Config> ForgerV3<T> {
 				let sacrifice_tier = AttributeMapperV1::rarity(other);
 				if sacrifice_tier >= leader_tier {
 					let (is_match, matching_components) =
-						Self::compare(target, other, &upgradable_indexes, max_variations, max_tier);
+						Self::compare(target, other, &upgradable_indexes, max_tier);
 
 					if is_match {
 						matches += 1;
@@ -213,46 +211,54 @@ impl<T: Config> ForgerV3<T> {
 		target: &AvatarOf<T>,
 		other: &AvatarOf<T>,
 		indexes: &[usize],
-		max_variations: u8,
 		max_tier: u8,
 	) -> (bool, BTreeSet<usize>) {
-		let compare_variation = |lhs: u8, rhs: u8| -> bool {
-			let diff = if lhs > rhs { lhs - rhs } else { rhs - lhs };
-			diff == 1 || diff == (max_variations - 1)
-		};
+		let array_1 = DnaUtils::<BlockNumberFor<T>>::read_progress_starting_at(&target, 0);
+		let array_2 = DnaUtils::<BlockNumberFor<T>>::read_progress_starting_at(&other, 0);
 
-		let (matching_indexes, matches, mirrors) =
+		let lowest_1 =
+			DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(&array_1, ByteType::High);
+		let lowest_2 =
+			DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(&array_2, ByteType::High);
+
+		if lowest_1 > lowest_2 {
+			return (false, BTreeSet::new())
+		}
+
+		let (matching_indexes, match_count, mirror_count) =
 			target.dna.clone().into_iter().zip(other.dna.clone()).enumerate().fold(
 				(BTreeSet::new(), 0, 0),
-				|(mut matching_indexes, mut matches, mut mirrors), (i, (lhs, rhs))| {
-					let lhs_variation = lhs & 0b0000_1111;
-					let rhs_variation = rhs & 0b0000_1111;
-					if lhs_variation == rhs_variation {
-						mirrors += 1;
-					}
-
+				|(mut matching_indexes, mut match_count, mut mirror_count), (i, (lhs, rhs))| {
 					if indexes.contains(&i) {
-						let lhs_tier = lhs >> 4;
-						let rhs_tier = rhs >> 4;
-						let is_matching_tier = lhs_tier == rhs_tier;
-						let is_maxed_tier = lhs_tier == max_tier;
+						let rarity_1 = lhs >> 4;
+						let variation_1 = lhs & 0b0000_1111;
 
-						let is_similar_variation = compare_variation(lhs_variation, rhs_variation);
+						let rarity_2 = rhs >> 4;
+						let variation_2 = rhs & 0b0000_1111;
 
-						if is_matching_tier && !is_maxed_tier && is_similar_variation {
+						let have_same_rarity = rarity_1 == rarity_2 || rarity_2 == 0x0B;
+						let is_maxed = rarity_1 > lowest_1;
+						let byte_match = DnaUtils::<BlockNumberFor<T>>::match_progress_byte(
+							variation_1,
+							variation_2,
+						);
+
+						if have_same_rarity &&
+							!is_maxed && (rarity_1 < max_tier || variation_2 == 0x0B || byte_match)
+						{
+							match_count += 1;
 							matching_indexes.insert(i);
-							matches += 1;
+						} else if is_maxed && ((variation_1 == variation_2) || variation_2 == 0x0B)
+						{
+							mirror_count += 1;
 						}
 					}
-					(matching_indexes, matches, mirrors)
+
+					(matching_indexes, match_count, mirror_count)
 				},
 			);
 
-		// 1 upgradable component requires 1 match + 4 mirrors
-		// 2 upgradable component requires 2 match + 2 mirrors
-		// 3 upgradable component requires 3 match + 0 mirrors
-		let mirrors_required = (3_u8.saturating_sub(matches)) * 2;
-		let is_match = matches >= 3 || (matches >= 1 && mirrors >= mirrors_required);
+		let is_match = match_count > 0 && (((match_count * 2) + mirror_count) >= 6);
 		(is_match, matching_indexes)
 	}
 
@@ -404,34 +410,235 @@ mod test {
 	}
 
 	#[test]
-	fn compare_works() {
-		let season = Season::default()
-			.max_tier_forges(100)
-			.max_variations(6)
-			.max_components(11)
-			.min_sacrifices(1)
-			.max_sacrifices(4)
-			.tiers(&[RarityTier::Common, RarityTier::Rare, RarityTier::Legendary])
-			.single_mint_probs(&[95, 5])
-			.batch_mint_probs(&[80, 20])
-			.base_prob(20)
-			.per_period(20)
-			.periods(12);
+	fn compare_easy_works() {
+		let season = Season::default();
 
 		let leader = Avatar::default()
-			.dna(&[0x21, 0x05, 0x23, 0x24, 0x20, 0x22, 0x25, 0x23, 0x05, 0x04, 0x02]);
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 		let other = Avatar::default()
-			.dna(&[0x04, 0x00, 0x00, 0x04, 0x02, 0x04, 0x02, 0x00, 0x05, 0x05, 0x04]);
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
 		assert_eq!(
 			ForgerV3::<Test>::compare(
 				&leader,
 				&other,
-				&[1, 8, 9, 10],
-				season.max_variations,
+				&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 				season.max_tier() as u8,
 			),
-			(true, BTreeSet::from([1, 9]))
+			(true, BTreeSet::from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+		let other = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(
+				&leader,
+				&other,
+				&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+				season.max_tier() as u8,
+			),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(
+				&leader,
+				&other,
+				&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+				season.max_tier() as u8,
+			),
+			(true, BTreeSet::from([10]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(
+				&leader,
+				&other,
+				&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+				season.max_tier() as u8,
+			),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+		let other = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(
+				&leader,
+				&other,
+				&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+				season.max_tier() as u8,
+			),
+			(true, BTreeSet::from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(
+				&leader,
+				&other,
+				&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+				season.max_tier() as u8,
+			),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x03, 0x02, 0x01, 0x00, 0x05]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(
+				&leader,
+				&other,
+				&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+				season.max_tier() as u8,
+			),
+			(true, BTreeSet::from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+		);
+	}
+
+	#[test]
+	fn compare_simple_works() {
+		let leader = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+		let other = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+		let other = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00, 0x05]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(true, BTreeSet::from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10]);
+		let other = Avatar::default()
+			.dna(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00, 0x05]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10]);
+		let other = Avatar::default()
+			.dna(&[0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x15]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(true, BTreeSet::from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x15]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x11, 0x12, 0x13, 0x14, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x15]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(false, BTreeSet::from([]))
+		);
+
+		let leader = Avatar::default()
+			.dna(&[0x00, 0x11, 0x02, 0x13, 0x04, 0x15, 0x04, 0x13, 0x02, 0x11, 0x00]);
+		let other = Avatar::default()
+			.dna(&[0x01, 0x01, 0x12, 0x13, 0x04, 0x04, 0x13, 0x12, 0x01, 0x01, 0x15]);
+
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0,),
+			(true, BTreeSet::from([0, 8]))
 		);
 	}
 
@@ -489,14 +696,13 @@ mod test {
 					ForgerV3::<Test>::upgradable_indexes_for_target(&original_leader).unwrap();
 				for (sacrifice, result) in original_sacrifices
 					.iter()
-					.zip([(true, BTreeSet::from([0, 2, 3])), (true, BTreeSet::from([0, 2, 3, 4]))])
+					.zip([(false, BTreeSet::from([])), (false, BTreeSet::from([]))])
 				{
 					assert_eq!(
 						ForgerV3::<Test>::compare(
 							&original_leader,
 							sacrifice,
 							&upgradable_indexes,
-							season.max_variations,
 							season.max_tier() as u8,
 						),
 						result
@@ -592,10 +798,9 @@ mod test {
 						&original_leader,
 						&original_sacrifice,
 						&upgradable_indexes,
-						season.max_variations,
 						season.max_tier() as u8,
 					),
-					(false, BTreeSet::from([2]))
+					(false, BTreeSet::from([]))
 				);
 				// check all sacrifices are burned
 				assert!(!Avatars::<Test>::contains_key(sacrifice_id));

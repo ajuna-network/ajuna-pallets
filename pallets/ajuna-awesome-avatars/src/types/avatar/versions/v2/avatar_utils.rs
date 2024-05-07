@@ -1050,6 +1050,16 @@ where
 		out
 	}
 
+	pub fn read_progress_starting_at(avatar: &Avatar<BlockNumber>, index: usize) -> [u8; 11] {
+		let mut out = [0; 11];
+		let to_index = if avatar.dna.len() < 11 { avatar.dna.len() } else { 11 };
+
+		for (i, p) in (index..(index + to_index)).enumerate() {
+			out[i] = avatar.dna[p];
+		}
+		out
+	}
+
 	pub fn write_progress(avatar: &mut Avatar<BlockNumber>, value: [u8; 11]) {
 		(avatar.dna[21..32]).copy_from_slice(&value);
 	}
@@ -1104,7 +1114,7 @@ where
 		(mirrors, matches)
 	}
 
-	fn match_progress_byte(byte_1: u8, byte_2: u8) -> bool {
+	pub fn match_progress_byte(byte_1: u8, byte_2: u8) -> bool {
 		let diff = if byte_1 >= byte_2 { byte_1 - byte_2 } else { byte_2 - byte_1 };
 		diff == 1 || diff == (PROGRESS_VARIATIONS - 1)
 	}
