@@ -236,7 +236,7 @@ impl<T: Config> ForgerV3<T> {
 						let rarity_2 = rhs >> 4;
 						let variation_2 = rhs & 0b0000_1111;
 
-						let have_same_rarity = rarity_1 == rarity_2 || rarity_2 == 0x0B;
+						let have_same_rarity = rarity_1 == rarity_2;
 						let is_maxed = rarity_1 > lowest_1;
 						let byte_match = DnaUtils::<BlockNumberFor<T>>::match_progress_byte(
 							variation_1,
