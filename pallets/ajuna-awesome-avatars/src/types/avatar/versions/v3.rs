@@ -213,8 +213,8 @@ impl<T: Config> ForgerV3<T> {
 		indexes: &[usize],
 		max_tier: u8,
 	) -> (bool, BTreeSet<usize>) {
-		let array_1 = DnaUtils::<BlockNumberFor<T>>::read_progress_starting_at(&target, 0);
-		let array_2 = DnaUtils::<BlockNumberFor<T>>::read_progress_starting_at(&other, 0);
+		let array_1 = DnaUtils::<BlockNumberFor<T>>::read_progress_starting_at(target, 0);
+		let array_2 = DnaUtils::<BlockNumberFor<T>>::read_progress_starting_at(other, 0);
 
 		let lowest_1 =
 			DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(&array_1, ByteType::High);
