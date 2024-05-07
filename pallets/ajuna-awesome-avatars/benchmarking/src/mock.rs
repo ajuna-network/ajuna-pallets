@@ -75,6 +75,11 @@ impl frame_system::Config for Runtime {
 	type Nonce = u32;
 	type Block = MockBlock;
 	type RuntimeTask = RuntimeTask;
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 parameter_types! {
