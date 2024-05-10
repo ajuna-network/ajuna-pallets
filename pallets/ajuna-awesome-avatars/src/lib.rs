@@ -675,12 +675,18 @@ pub mod pallet {
 					);
 					Ok(())
 				},
-				FreeMintTransferMode::Open => Ok(()),
-			}?;
+				FreeMintTransferMode::Open => {
+					let (season_id, _) = Self::current_season_with_id()?;
+					let SeasonInfo { minted, forged, .. } = SeasonStats::<T>::get(season_id, &from);
 
-			let (season_id, _) = Self::current_season_with_id()?;
-			let SeasonInfo { minted, forged, .. } = SeasonStats::<T>::get(season_id, &from);
-			ensure!(minted > 0 && forged > 0, Error::<T>::CannotTransferFromInactiveAccount);
+					ensure!(
+						minted > 0 && forged > 0,
+						Error::<T>::CannotTransferFromInactiveAccount
+					);
+
+					Ok(())
+				},
+			}?;
 
 			let GlobalConfig { freemint_transfer, .. } = GlobalConfigs::<T>::get();
 			ensure!(
