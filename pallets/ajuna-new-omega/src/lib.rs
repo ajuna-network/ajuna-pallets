@@ -32,9 +32,7 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use sp_runtime::traits::{Hash, TrailingZeroInput};
 
-use crate::types::*;
-use crate::consts::*;
-use crate::simulator::*;
+use crate::{consts::*, simulator::*, types::*};
 
 pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
