@@ -47,6 +47,7 @@ pallet-ajuna-awesome-avatars              = { path = "pallets/ajuna-awesome-avat
 pallet-ajuna-battle-mogs                  = { path = "pallets/ajuna-battle-mogs", default-features = false }
 pallet-ajuna-board                        = { path = "pallets/ajuna-board", default-features = false }
 pallet-ajuna-matchmaker                   = { path = "pallets/ajuna-matchmaker", default-features = false }
+pallet-ajuna-new-omega                    = { path = "pallets/ajuna-new-omega", default-features = false }
 pallet-ajuna-awesome-avatars-benchmarking = { path = "pallets/ajuna-awesome-avatars/benchmarking", default-features = false }
 pallet-ajuna-nft-transfer                 = { path = "pallets/ajuna-nft-transfer", default-features = false }
 pallet-ajuna-nft-staking                  = { path = "pallets/ajuna-nft-staking", default-features = false }
