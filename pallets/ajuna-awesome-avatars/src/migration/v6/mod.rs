@@ -271,7 +271,7 @@ mod v5 {
 			PlayerSeasonConfig {
 				storage_tier: self.storage_tier,
 				stats: self.stats.migrate_to_v6(),
-				locks: Locks::default(),
+				locks: Locks { avatar_transfer: true, set_price: true, affiliate: false },
 			}
 		}
 	}

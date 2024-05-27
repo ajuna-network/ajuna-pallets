@@ -49,7 +49,15 @@ mod benches {
 		// Check that the new storage is decodable:
 		assert_eq!(
 			crate::PlayerSeasonConfigs::<T>::get(&test_account, season_id),
-			crate::PlayerSeasonConfig::default()
+			crate::PlayerSeasonConfig {
+				storage_tier: Default::default(),
+				stats: Default::default(),
+				locks: crate::types::Locks {
+					avatar_transfer: true,
+					set_price: true,
+					affiliate: false,
+				},
+			}
 		);
 
 		// uses twice the weight once for migration and then for checking if there is another key.
