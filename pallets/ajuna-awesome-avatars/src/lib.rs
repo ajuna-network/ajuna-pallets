@@ -1635,6 +1635,7 @@ pub mod pallet {
 				LogicGeneration::First => MinterV1::<T>::mint(player, &season_id, mint_option),
 				LogicGeneration::Second => MinterV2::<T>::mint(player, &season_id, mint_option),
 				LogicGeneration::Third => MinterV3::<T>::mint(player, &season_id, mint_option),
+				LogicGeneration::Fourth => MinterV4::<T>::mint(player, &season_id, mint_option),
 			}?;
 
 			let is_tournament_active = matches!(
@@ -1766,6 +1767,14 @@ pub mod pallet {
 					input_leader.clone(),
 					input_sacrifices.clone(),
 					false,
+				),
+				LogicGeneration::Fourth => ForgerV4::<T>::forge(
+					player,
+					season_id,
+					&season,
+					input_leader.clone(),
+					input_sacrifices.clone(),
+					restricted_forge,
 				),
 			}?;
 

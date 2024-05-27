@@ -1,10 +1,12 @@
 mod v1;
 mod v2;
 mod v3;
+mod v4;
 
 pub(crate) use v1::{AttributeMapperV1, ForgerV1, MinterV1};
 pub(crate) use v2::{AttributeMapperV2, ForgerV2, MinterV2};
 pub(crate) use v3::{AttributeMapperV3, ForgerV3, MinterV3};
+pub(crate) use v4::{AttributeMapperV4, ForgerV4, MinterV4};
 
 use crate::*;
 use frame_support::pallet_prelude::*;
@@ -31,7 +33,6 @@ pub(crate) type ForgeItem<T> = (AvatarIdOf<T>, AvatarOf<T>);
 /// Number of components upgraded after a forge in a given Avatar.
 pub(crate) type UpgradedComponents = u8;
 
-// TODO: Add a new state -> Unchanged to both Leader and Forge outputs
 /// Enum used to express the possible results of the forge on the leader avatar.
 pub(crate) enum LeaderForgeOutput<T: Config> {
 	/// The leader avatar was forged (mutated) in some way.
