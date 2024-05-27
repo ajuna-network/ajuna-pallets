@@ -267,14 +267,11 @@ mod v5 {
 	}
 
 	impl<BlockNumber> PlayerSeasonConfigV5<BlockNumber> {
-		pub fn migrate_to_v6(
-			self,
-			default_locks: Option<Locks>,
-		) -> PlayerSeasonConfig<BlockNumber> {
+		pub fn migrate_to_v6(self) -> PlayerSeasonConfig<BlockNumber> {
 			PlayerSeasonConfig {
 				storage_tier: self.storage_tier,
 				stats: self.stats.migrate_to_v6(),
-				locks: default_locks.unwrap_or_default(),
+				locks: Locks { avatar_transfer: true, set_price: true, affiliate: false },
 			}
 		}
 	}
@@ -524,16 +521,10 @@ pub mod mbm {
 						(old_config.stats.trade.bought, old_config.stats.trade.sold),
 					);
 
-					let default_locks = match season_id {
-						1 | 2 =>
-							Some(Locks { avatar_transfer: true, set_price: true, affiliate: false }),
-						_ => None,
-					};
-
 					PlayerSeasonConfigs::<T>::insert(
 						&account,
 						season_id,
-						old_config.migrate_to_v6(default_locks),
+						old_config.migrate_to_v6(),
 					);
 
 					migration_count.saturating_inc();
