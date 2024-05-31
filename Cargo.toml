@@ -39,7 +39,7 @@ sp-runtime                                 = { version = "37.0.0", default-featu
 sp-std                                     = { version = "14.0.0", default-features = false }
 
 # orml
-orml-vesting = { git = "https://github.com/ajuna-network/open-runtime-module-library", branch = "cl/polkadot-v1.12.0-Cargo"}
+orml-vesting = { git = "https://github.com/ajuna-network/open-runtime-module-library", branch = "cl/polkadot-v1.12.0-Cargo", default-features = false}
 #orml-vesting = { version = "0.10.0", default-features = false }
 
 # Ajuna
