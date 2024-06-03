@@ -998,7 +998,8 @@ pub mod pallet {
 					DepositValueKind::Fungible(DepositValue::Asset(value)) => Ok(value),
 					_ => Err(Error::<T>::ReservedFungibleWithNonFungibleValue),
 				}?;
-				T::Fungibles::burn_from(asset_id.clone(), who, *amount, Exact, Polite).map(|_| ())
+				T::Fungibles::burn_from(asset_id.clone(), who, *amount, Expendable, Exact, Polite)
+					.map(|_| ())
 			}
 		}
 
