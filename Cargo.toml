@@ -3,7 +3,7 @@ authors    = [ "Ajuna Network <https://github.com/ajuna-network>" ]
 edition    = "2021"
 homepage   = "https://ajuna.io"
 repository = "https://github.com/ajuna-network/ajuna-pallets"
-version    = "0.7.1"
+version    = "0.8.0"
 
 [workspace]
 resolver = "2"
@@ -39,8 +39,7 @@ sp-runtime                                 = { version = "37.0.0", default-featu
 sp-std                                     = { version = "14.0.0", default-features = false }
 
 # orml
-orml-vesting = { git = "https://github.com/ajuna-network/open-runtime-module-library", branch = "cl/polkadot-v1.12.0-Cargo", default-features = false}
-#orml-vesting = { version = "0.10.0", default-features = false }
+orml-vesting = { version = "0.12.0", default-features = false }
 
 # Ajuna
 pallet-ajuna-affiliates                   = { path = "pallets/ajuna-affiliates", default-features = false }
