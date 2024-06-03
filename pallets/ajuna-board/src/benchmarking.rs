@@ -59,7 +59,7 @@ fn create_and_play_until_win<T: Config>(players: Vec<T::AccountId>) {
 	let player_2: T::RuntimeOrigin = RawOrigin::Signed(players.next().unwrap()).into();
 
 	let each_player_drops_bomb = |coord: Coordinates| {
-		let drop_bomb: T::PlayersTurn = Turn::DropBomb(coord).into();
+		let drop_bomb: T::PlayersTurn = Turn::DropBomb(coord, 13).into();
 		let _ = AjunaBoard::<T>::play(player_1.clone(), drop_bomb.clone());
 		let _ = AjunaBoard::<T>::play(player_2.clone(), drop_bomb);
 	};
@@ -96,7 +96,7 @@ benchmarks! {
 		create_new_game::<T>(players.clone());
 
 		let player_1 = players.into_iter().next().unwrap();
-		let turn = Turn::DropBomb(Coordinates::new(1, 2));
+		let turn = Turn::DropBomb(Coordinates::new(1, 2), 35);
 	}: play(RawOrigin::Signed(player_1), turn.into())
 
 	play_turn_until_finished {

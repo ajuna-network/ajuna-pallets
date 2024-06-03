@@ -92,14 +92,14 @@ fn play_works() {
 		assert_ok!(AjunaBoard::queue(RuntimeOrigin::signed(BOB)));
 		assert_ok!(AjunaBoard::queue(RuntimeOrigin::signed(ERIN)));
 		assert_noop!(
-			AjunaBoard::play(RuntimeOrigin::signed(ALICE), Turn::DropBomb(TEST_COORD)),
+			AjunaBoard::play(RuntimeOrigin::signed(ALICE), Turn::DropBomb(TEST_COORD, 13)),
 			Error::<Test>::NotPlaying
 		);
 
 		// Bomb phase
 		let drop_bomb = |coord: Coordinates| {
-			let _ = AjunaBoard::play(RuntimeOrigin::signed(BOB), Turn::DropBomb(coord));
-			let _ = AjunaBoard::play(RuntimeOrigin::signed(ERIN), Turn::DropBomb(coord));
+			let _ = AjunaBoard::play(RuntimeOrigin::signed(BOB), Turn::DropBomb(coord, 13));
+			let _ = AjunaBoard::play(RuntimeOrigin::signed(ERIN), Turn::DropBomb(coord, 13));
 		};
 		drop_bomb(Coordinates::new(9, 9));
 		drop_bomb(Coordinates::new(8, 8));

@@ -22,8 +22,9 @@ use sp_std::borrow::ToOwned;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 pub enum Turn {
-	DropBomb(Coordinates),
+	DropBomb(Coordinates, u64),
 	DropStone((Side, u8)),
+	DetonateBomb(Coordinates, u64),
 }
 
 pub struct Game<Account>(PhantomData<Account>);
@@ -61,8 +62,10 @@ where
 		turn: Self::Turn,
 	) -> Option<Self::State> {
 		match turn {
-			Turn::DropBomb(coords) => Dot4Gravity::drop_bomb(state, coords, player),
+			Turn::DropBomb(coords, secret) => Dot4Gravity::drop_bomb(state, coords, player, secret),
 			Turn::DropStone((side, pos)) => Dot4Gravity::drop_stone(state, player, side, pos),
+			Turn::DetonateBomb(coords, secret) =>
+				Dot4Gravity::detonate_bomb(state, player, coords, secret),
 		}
 		.ok()
 	}
