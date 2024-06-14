@@ -16,7 +16,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg(feature = "runtime-benchmarks")]
+#![cfg(test)]
 
+pub mod benchmarks;
 pub mod mock;
-pub mod utils;
-pub mod vesting;
+pub(crate) mod xcm_config;
+
+pub use benchmarks::*;
+pub use mock::*;

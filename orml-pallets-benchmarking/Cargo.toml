@@ -14,11 +14,19 @@ parity-scale-codec = { workspace = true }
 scale-info         = { workspace = true }
 
 orml-vesting = { workspace = true }
+orml-xcm     = { workspace = true }
+orml-xtokens = { workspace = true }
 
 frame-benchmarking = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+pallet-assets = { workspace = true }
 pallet-balances = { workspace = true }
+pallet-xcm = { workspace = true }
+polkadot-parachain-primitives = { workspace = true }
+staging-xcm = { workspace = true }
+staging-xcm-builder = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
 sp-io = { workspace = true }
 sp-std = { workspace = true }
@@ -30,13 +38,21 @@ std = [
     "parity-scale-codec/std",
     "scale-info/std",
     "orml-vesting/std",
+    "orml-xcm/std",
+    "orml-xtokens/std",
     "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
+    "pallet-assets/std",
     "pallet-balances/std",
+    "pallet-xcm/std",
+    "polkadot-parachain-primitives/std",
     "sp-io/std",
     "sp-std/std",
     "sp-runtime/std",
+    "staging-xcm/std",
+    "staging-xcm-builder/std",
+    "staging-xcm-executor/std",
 ]
 # Note: Either the `benchmarks!` or the `define_benchmarks!` macro demand the
 # existence of this feature flag. Otherwise, the benchmarks can't be found in the
@@ -46,7 +62,13 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "orml-vesting/runtime-benchmarks",
+    "orml-xtokens/runtime-benchmarks",
+    "pallet-assets/runtime-benchmarks",
     "pallet-balances/frame-benchmarking",
     "pallet-balances/runtime-benchmarks",
+    "pallet-xcm/runtime-benchmarks",
+    "polkadot-parachain-primitives/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
+    "staging-xcm-builder/runtime-benchmarks",
+    "staging-xcm-executor/runtime-benchmarks",
 ]

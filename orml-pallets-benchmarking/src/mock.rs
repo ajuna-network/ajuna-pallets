@@ -18,9 +18,9 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64},
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, EnsureSigned};
+use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSigned};
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, BlockNumberProvider, IdentifyAccount, IdentityLookup, Verify},
@@ -32,30 +32,38 @@ pub type MockAccountPublic = <MockSignature as Verify>::Signer;
 pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Runtime>;
 pub type MockBalance = u64;
+pub type MockAssetId = u32;
 
 frame_support::construct_runtime!(
 	pub struct Runtime {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
+		AssetsPallet: pallet_assets = 2,
+		XcmPallet: pallet_xcm = 10,
 		Vesting: orml_vesting = 17,
+		OrmlXcm: orml_xcm = 18,
+		//Xtokens: orml_xtokens = 19,
 	}
 );
 
 impl crate::vesting::Config for Runtime {}
 
 impl frame_system::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
+	type Nonce = u32;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = MockAccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
+	type Block = MockBlock;
 	type BlockHashCount = ConstU64<250>;
+	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<MockBalance>;
@@ -65,9 +73,6 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type Nonce = u32;
-	type Block = MockBlock;
-	type RuntimeTask = RuntimeTask;
 	type SingleBlockMigrations = ();
 	type MultiBlockMigrator = ();
 	type PreInherents = ();
@@ -80,19 +85,61 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Runtime {
-	type Balance = MockBalance;
-	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = MockExistentialDeposit;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type WeightInfo = ();
+	type Balance = MockBalance;
+	type DustRemoval = ();
+	type ExistentialDeposit = MockExistentialDeposit;
+	type AccountStore = System;
+	type ReserveIdentifier = [u8; 8];
+	type FreezeIdentifier = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type MaxFreezes = ();
+}
+
+parameter_types! {
+	pub const AssetDeposit: MockBalance = MockBalance::MAX;
+	pub const MetadataDepositBase: MockBalance = 0;
+	pub const AttributeDepositBase: MockBalance = 0;
+	pub const AssetAccountDeposit: MockBalance = 1_000;
+	pub const ApprovalDeposit: MockBalance = 1_000;
+	pub const MetadataDepositPerByte: MockBalance = 0;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AssetHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl<AssetId: From<u32>> pallet_assets::BenchmarkHelper<AssetId> for AssetHelper {
+	fn create_asset_id_parameter(id: u32) -> AssetId {
+		id.into()
+	}
+}
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = MockBalance;
+	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
+	type AssetId = MockAssetId;
+	type AssetIdParameter = parity_scale_codec::Compact<MockAssetId>;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<MockAccountId>>;
+	type ForceOrigin = EnsureRoot<MockAccountId>;
+	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = frame_support::traits::ConstU32<20>;
+	type Freezer = ();
+	type Extra = ();
+	type CallbackHandle = ();
+	type WeightInfo = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = AssetHelper;
+	}
 }
 
 parameter_types! {
