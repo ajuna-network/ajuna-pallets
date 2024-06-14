@@ -13,6 +13,7 @@ version.workspace = true
 parity-scale-codec = { workspace = true }
 scale-info         = { workspace = true }
 
+orml-traits = { workspace = true }
 orml-vesting = { workspace = true }
 orml-xcm     = { workspace = true }
 orml-xtokens = { workspace = true }
@@ -24,6 +25,7 @@ pallet-assets = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-xcm = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
+staging-parachain-info = { workspace = true }
 staging-xcm = { workspace = true }
 staging-xcm-builder = { workspace = true }
 staging-xcm-executor = { workspace = true }
@@ -37,6 +39,7 @@ default = ["std"]
 std = [
     "parity-scale-codec/std",
     "scale-info/std",
+    "orml-traits/std",
     "orml-vesting/std",
     "orml-xcm/std",
     "orml-xtokens/std",
@@ -50,6 +53,7 @@ std = [
     "sp-io/std",
     "sp-std/std",
     "sp-runtime/std",
+    "staging-parachain-info/std",
     "staging-xcm/std",
     "staging-xcm-builder/std",
     "staging-xcm-executor/std",

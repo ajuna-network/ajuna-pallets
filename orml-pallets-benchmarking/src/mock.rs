@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use frame_support::{
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
@@ -39,10 +37,11 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		AssetsPallet: pallet_assets = 2,
+		ParachainInfo: staging_parachain_info = 3,
 		XcmPallet: pallet_xcm = 10,
 		Vesting: orml_vesting = 17,
 		OrmlXcm: orml_xcm = 18,
-		//Xtokens: orml_xtokens = 19,
+		Xtokens: orml_xtokens = 19,
 	}
 );
 
@@ -99,6 +98,8 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ();
 	type MaxFreezes = ();
 }
+
+impl staging_parachain_info::Config for Runtime {}
 
 parameter_types! {
 	pub const AssetDeposit: MockBalance = MockBalance::MAX;
@@ -163,6 +164,8 @@ impl orml_vesting::Config for Runtime {
 	type MaxVestingSchedules = frame_support::traits::ConstU32<100>;
 	type BlockNumberProvider = MockBlockNumberProvider;
 }
+
+impl crate::benchmarks::xcm::Config for Runtime {}
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();

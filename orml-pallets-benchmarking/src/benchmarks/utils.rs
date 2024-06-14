@@ -21,8 +21,8 @@ pub type BalanceFor<T> =
 	<CurrencyFor<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
-pub fn get_vesting_account<T: frame_system::Config>() -> AccountIdFor<T> {
-	account::<T>("VestingAccount")
+pub fn get_account<T: frame_system::Config>() -> AccountIdFor<T> {
+	account::<T>("BenchAccount")
 }
 
 fn account<T: frame_system::Config>(name: &'static str) -> T::AccountId {

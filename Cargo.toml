@@ -41,11 +41,13 @@ sp-std                                     = { version = "14.0.0", default-featu
 # Polkadot
 pallet-xcm                    = { version = "13.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "12.0.0", default-features = false }
+staging-parachain-info        = { version = "0.13.0", default-features = false }
 staging-xcm                   = { version = "13.0.1", default-features = false }
 staging-xcm-builder           = { version = "13.0.0", default-features = false }
 staging-xcm-executor          = { version = "13.0.0", default-features = false }
 
 # orml
+orml-traits  = { version = "0.12.0", default-features = false }
 orml-vesting = { version = "0.12.0", default-features = false }
 orml-xcm     = { version = "0.12.0", default-features = false }
 orml-xtokens = { version = "0.12.0", default-features = false }
