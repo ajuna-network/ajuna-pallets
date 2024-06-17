@@ -416,6 +416,8 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = TestWeightInfo;
 }
 
+impl crate::benchmarks::xcm::Config for Runtime {}
+
 impl orml_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SovereignOrigin = EnsureRoot<MockAccountId>;
@@ -507,6 +509,8 @@ where
 		})
 	}
 }
+
+impl crate::benchmarks::xtokens::Config for Runtime {}
 
 impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

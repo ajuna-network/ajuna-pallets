@@ -41,7 +41,7 @@ frame_support::construct_runtime!(
 		XcmPallet: pallet_xcm = 10,
 		Vesting: orml_vesting = 17,
 		OrmlXcm: orml_xcm = 18,
-		Xtokens: orml_xtokens = 19,
+		OrmlXtokens: orml_xtokens = 19,
 	}
 );
 
@@ -164,8 +164,6 @@ impl orml_vesting::Config for Runtime {
 	type MaxVestingSchedules = frame_support::traits::ConstU32<100>;
 	type BlockNumberProvider = MockBlockNumberProvider;
 }
-
-impl crate::benchmarks::xcm::Config for Runtime {}
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();

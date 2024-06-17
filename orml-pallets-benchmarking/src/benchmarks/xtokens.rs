@@ -14,14 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use super::utils::{
-	get_vesting_account, lookup_of_account, set_balance, AccountIdFor, BalanceFor, CurrencyFor,
+use crate::{
+	mock::{MockBalance, Runtime},
+	utils::get_account,
+	xcm_config::{CurrencyId, Para3000},
 };
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::traits::{Currency, Get};
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
-use sp_runtime::Saturating;
+
+use frame_benchmarking::benchmarks;
+use frame_system::RawOrigin;
 use sp_std::prelude::*;
+use staging_xcm::prelude::*;
 
 use orml_xtokens::Call;
 
@@ -31,11 +33,23 @@ pub trait Config: orml_xtokens::Config {}
 
 benchmarks! {
 	transfer {
-	}: _(RawOrigin::Signed(from), to_lookup, schedule.clone())
+		let currency_id = CurrencyId::Ajun;
+		let amount: MockBalance = 1000.into();
+		let dest: VersionedLocation = Parachain(Para3000::get()).into();
+		let dest_weight_limit = WeightLimit::Unlimited;
+	}: _(RawOrigin::Root, currency_id, amount, Box::new(dest.clone()), dest_weight_limit)
 	verify {
+		crate::mock::System::assert_last_event(crate::mock::RuntimeEvent::OrmlXtokens(
+			orml_xtokens::Event::TransferredAssets {
+				sender: RawOrigin::Root.into(),
+				assets: (dest.clone(), amount).into(),
+				fee: 0.into(),
+				dest: dest.into(),
+			}
+		));
 	}
 
-	transfer_multiasset {
+	/*transfer_multiasset {
 	}: _(RawOrigin::Signed(from), to_lookup, schedule.clone())
 	verify {
 	}
@@ -58,7 +72,7 @@ benchmarks! {
 	transfer_multiassets {
 	}: _(RawOrigin::Signed(from), to_lookup, schedule.clone())
 	verify {
-	}
+	}*/
 
 	impl_benchmark_test_suite!(
 		Pallet,
