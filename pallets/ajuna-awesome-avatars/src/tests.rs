@@ -4349,10 +4349,12 @@ mod affiliates {
 
 	#[test]
 	fn enable_account_for_affiliation_paying() {
+		let season_1 = Season::default().mint_fee(MintFees { one: 12, three: 34, six: 56 });
 		let initial_balance = 1_000_000;
 		let affiliator_enable_fee = 1_000;
 		ExtBuilder::default()
 			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
 			.build()
 			.execute_with(|| {
 				GlobalConfigs::<Test>::mutate(|config| {
@@ -4394,10 +4396,12 @@ mod affiliates {
 
 	#[test]
 	fn enable_account_for_affiliation_paying_with_beneficiary() {
+		let season_1 = Season::default().mint_fee(MintFees { one: 12, three: 34, six: 56 });
 		let initial_balance = 1_000_000;
 		let affiliator_enable_fee = 1_000;
 		ExtBuilder::default()
 			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
 			.build()
 			.execute_with(|| {
 				GlobalConfigs::<Test>::mutate(|config| {
@@ -4438,6 +4442,31 @@ mod affiliates {
 						affiliate_id: 0,
 					},
 				));
+			});
+	}
+
+	#[test]
+	fn cannot_enable_account_for_affiliation_through_payment_if_prices_is_set_to_zero() {
+		let season_1 = Season::default().mint_fee(MintFees { one: 12, three: 34, six: 56 });
+		let initial_balance = 1_000_000;
+		let affiliator_enable_fee = 0;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.build()
+			.execute_with(|| {
+				GlobalConfigs::<Test>::mutate(|config| {
+					config.affiliate_config.affiliator_enable_fee = affiliator_enable_fee;
+				});
+
+				assert_noop!(
+					AAvatars::enable_affiliator(
+						RuntimeOrigin::signed(ALICE),
+						UnlockTarget::OneselfPaying,
+						SEASON_ID
+					),
+					Error::<Test>::FeatureLockedThroughPayment
+				);
 			});
 	}
 

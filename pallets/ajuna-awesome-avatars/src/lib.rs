@@ -540,7 +540,9 @@ pub mod pallet {
 		/// The feature is locked for the current player
 		FeatureLocked,
 		/// The feature trying to be unlocked is not available for the selected season
-		FeatureUnlockableInSeason,
+		FeatureLockedInSeason,
+		/// The feature trying to be unlocked cannot be unlocked with payment
+		FeatureLockedThroughPayment,
 		/// The feature trying to be unlocked has missing requirements to be fulfilled by
 		/// the account trying to unlock it
 		UnlockCriteriaNotFulfilled,
@@ -1275,6 +1277,7 @@ pub mod pallet {
 			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
+			ensure!(Seasons::<T>::contains_key(season_id), Error::<T>::UnknownSeason);
 
 			match target {
 				UnlockTarget::OneselfFree => {
@@ -1294,7 +1297,7 @@ pub mod pallet {
 							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
-						Err(Error::<T>::FeatureUnlockableInSeason.into())
+						Err(Error::<T>::FeatureLockedInSeason.into())
 					}
 				},
 				UnlockTarget::OneselfPaying => {
@@ -1302,6 +1305,10 @@ pub mod pallet {
 					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
 						if !config.locks.affiliate {
 							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+							ensure!(
+								affiliate_config.affiliator_enable_fee > 0_u32.into(),
+								Error::<T>::FeatureLockedThroughPayment
+							);
 							T::Currency::transfer(
 								&account,
 								&Self::treasury_account_id(),
@@ -1319,6 +1326,10 @@ pub mod pallet {
 					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
 						if !config.locks.affiliate {
 							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+							ensure!(
+								affiliate_config.affiliator_enable_fee > 0_u32.into(),
+								Error::<T>::FeatureLockedThroughPayment
+							);
 							T::Currency::transfer(
 								&account,
 								&Self::treasury_account_id(),
@@ -1371,6 +1382,7 @@ pub mod pallet {
 			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
+			ensure!(Seasons::<T>::contains_key(season_id), Error::<T>::UnknownSeason);
 
 			match target {
 				UnlockTarget::OneselfFree => {
@@ -1389,7 +1401,7 @@ pub mod pallet {
 							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
-						Err(Error::<T>::FeatureUnlockableInSeason.into())
+						Err(Error::<T>::FeatureLockedInSeason.into())
 					}
 				},
 				UnlockTarget::OneselfPaying => {
@@ -1397,6 +1409,10 @@ pub mod pallet {
 					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
 						if !config.locks.set_price {
 							let Season { fee, .. } = Self::seasons(&season_id)?;
+							ensure!(
+								fee.set_price_unlock > 0_u32.into(),
+								Error::<T>::FeatureLockedThroughPayment
+							);
 							T::Currency::transfer(
 								&account,
 								&Self::treasury_account_id(),
@@ -1413,6 +1429,10 @@ pub mod pallet {
 					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
 						if !config.locks.set_price {
 							let Season { fee, .. } = Self::seasons(&season_id)?;
+							ensure!(
+								fee.set_price_unlock > 0_u32.into(),
+								Error::<T>::FeatureLockedThroughPayment
+							);
 							T::Currency::transfer(
 								&account,
 								&Self::treasury_account_id(),
@@ -1435,6 +1455,7 @@ pub mod pallet {
 			season_id: SeasonId,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
+			ensure!(Seasons::<T>::contains_key(season_id), Error::<T>::UnknownSeason);
 
 			match target {
 				UnlockTarget::OneselfFree => {
@@ -1454,7 +1475,7 @@ pub mod pallet {
 							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 						}
 					} else {
-						Err(Error::<T>::FeatureUnlockableInSeason.into())
+						Err(Error::<T>::FeatureLockedInSeason.into())
 					}
 				},
 				UnlockTarget::OneselfPaying => {
@@ -1462,10 +1483,14 @@ pub mod pallet {
 					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
 						if !config.locks.avatar_transfer {
 							let Season { fee, .. } = Self::seasons(&season_id)?;
+							ensure!(
+								fee.avatar_transfer_unlock > 0_u32.into(),
+								Error::<T>::FeatureLockedThroughPayment
+							);
 							T::Currency::transfer(
 								&account,
 								&Self::treasury_account_id(),
-								fee.set_price_unlock,
+								fee.avatar_transfer_unlock,
 								AllowDeath,
 							)?;
 							config.locks.avatar_transfer = true;
@@ -1478,10 +1503,14 @@ pub mod pallet {
 					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
 						if !config.locks.avatar_transfer {
 							let Season { fee, .. } = Self::seasons(&season_id)?;
+							ensure!(
+								fee.avatar_transfer_unlock > 0_u32.into(),
+								Error::<T>::FeatureLockedThroughPayment
+							);
 							T::Currency::transfer(
 								&account,
 								&Self::treasury_account_id(),
-								fee.set_price_unlock,
+								fee.avatar_transfer_unlock,
 								AllowDeath,
 							)?;
 							config.locks.avatar_transfer = true;
