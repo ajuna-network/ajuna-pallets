@@ -181,7 +181,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 					assert_eq!(
 						wrapped.get_spec::<EquippableItemType>(SpecIdx::Byte3),
 						EquippableItemType::ArmorBase
@@ -270,7 +270,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 				} else {
 					panic!("ForgeOutput of blueprint should have been Minted!");
 				}
@@ -344,7 +344,7 @@ mod test {
 
 			if let ForgeOutput::Minted(avatar) = minted_blueprint {
 				let wrapped = WrappedAvatar::new(avatar);
-				assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+				assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 				assert_eq!(wrapped.get_quantity(), 11);
 			} else {
 				panic!("ForgeOutput of blueprint should have been Minted!");
@@ -560,7 +560,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 					assert_eq!(
 						wrapped.get_spec::<EquippableItemType>(SpecIdx::Byte3),
 						EquippableItemType::ArmorComponent3
@@ -670,7 +670,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 					assert_eq!(wrapped.get_souls(), total_soul_points);
 				} else {
 					panic!("ForgeOutput of blueprint should have been Minted!");

@@ -2,14 +2,17 @@ use crate::{
 	mock::{MockAccountId, Test},
 	pallet::AvatarIdOf,
 	types::{
-		avatar::versions::v2::{
-			avatar_utils::{AvatarBuilder, HashProvider, WrappedAvatar},
-			types::{
-				BlueprintItemType, ColorType, EquippableItemType, MaterialItemType, PetType,
-				SlotType,
+		avatar::versions::{
+			utils::{AvatarBuilder, WrappedAvatar},
+			v2::{
+				types::{
+					BlueprintItemType, ColorType, EquippableItemType, MaterialItemType, PetType,
+					SlotType,
+				},
+				utils::*,
 			},
 		},
-		Avatar, DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
+		DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
 	},
 	AvatarOf, Config, Force, Pallet,
 };

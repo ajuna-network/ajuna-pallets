@@ -1,19 +1,15 @@
 #![allow(unused_imports)]
 
-mod avatar_utils;
 mod combinator;
 mod constants;
 mod mutator;
-mod slot_roller;
 #[cfg(test)]
 mod test_utils;
 mod types;
 
-pub use avatar_utils::*;
 pub use combinator::*;
 pub use constants::*;
 pub use mutator::*;
-pub use slot_roller::*;
 #[cfg(test)]
 pub use test_utils::*;
 pub use types::*;
@@ -256,7 +252,8 @@ impl<T: Config> ForgerV2<T> {
 						}) {
 						ForgeType::Mate
 					} else if sacrifices.iter().all(|sacrifice| {
-						sacrifice.same_item_type(leader) && sacrifice.has_subtype(PetItemType::Egg)
+						sacrifice.same_item_type::<ItemType>(leader) &&
+							sacrifice.has_subtype(PetItemType::Egg)
 					}) {
 						ForgeType::Feed
 					} else {

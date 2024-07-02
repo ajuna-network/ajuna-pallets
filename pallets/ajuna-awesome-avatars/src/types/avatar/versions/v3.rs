@@ -1,5 +1,5 @@
 use crate::{
-	types::avatar::versions::v2::{ByteType, DnaUtils},
+	types::avatar::versions::utils::{ByteType, DnaUtils},
 	*,
 };
 use sp_runtime::{traits::Zero, DispatchError, Saturating};

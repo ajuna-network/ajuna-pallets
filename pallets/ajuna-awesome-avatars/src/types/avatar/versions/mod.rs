@@ -1,3 +1,4 @@
+mod utils;
 mod v1;
 mod v2;
 mod v3;
@@ -11,6 +12,7 @@ pub(crate) use v4::{AttributeMapperV4, ForgerV4, MinterV4};
 use crate::*;
 use frame_support::pallet_prelude::*;
 use sp_std::vec::Vec;
+use utils::*;
 
 pub(crate) trait AttributeMapper<BlockNumber> {
 	/// Used to obtain the RarityTier of a given avatar as an u8.

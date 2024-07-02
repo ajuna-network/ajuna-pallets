@@ -11,9 +11,7 @@ mod stack;
 mod statue;
 mod tinker;
 
-use super::*;
-
-pub(super) type WrappedForgeItem<T> = (AvatarIdOf<T>, WrappedAvatar<BlockNumberFor<T>>);
+use super::{utils::*, *};
 
 pub(super) struct AvatarCombinator<T: Config>(pub PhantomData<T>);
 

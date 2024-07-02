@@ -9,7 +9,6 @@ pub(crate) const SCALING_FACTOR_PERC: u32 = 100;
 pub(crate) const STACK_PROB_PERC: u32 = 10;
 pub(crate) const TOOLBOX_PERC: u32 = 15;
 pub(crate) const PROGRESS_PROBABILITY_PERC: u32 = 15;
-pub(crate) const PROGRESS_VARIATIONS: u8 = 6;
 pub(crate) const BASE_PROGRESS_PROB_PERC: u32 = 20;
 pub(crate) const MAX_EQUIPPED_SLOTS: usize = 5;
 pub(crate) const MAX_TOOLBOXES: usize = 2;
@@ -18,8 +17,6 @@ pub(crate) const COLOR_GLOW_SPARK: u32 = 52;
 pub(crate) const SPARK_PROGRESS_PROB_PERC: u32 = 25;
 pub(crate) const MAX_FLASK_PROGRESS: usize = 4;
 pub(crate) const MATCH_ALGO_START_RARITY: RarityTier = RarityTier::Epic;
-
-pub(crate) const MAX_BYTE: u32 = u8::MAX as u32;
 
 pub(crate) const GLIMMER_FORGE_GLIMMER_USE: u8 = 1;
 pub(crate) const GLIMMER_FORGE_MATERIAL_USE: u8 = 4;
