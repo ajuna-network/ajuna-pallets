@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 
+pub mod avatar_builder;
 mod combinator;
 mod constants;
 mod mutator;

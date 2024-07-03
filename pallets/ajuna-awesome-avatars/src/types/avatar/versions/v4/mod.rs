@@ -1,12 +1,16 @@
 use super::*;
-use sp_runtime::{traits::Zero, DispatchError, Saturating};
-use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, vec::Vec};
+use sp_runtime::{DispatchError, Saturating};
+use sp_std::{marker::PhantomData, vec::Vec};
 
+mod avatar_builder;
 mod combinator;
 mod constants;
 mod mutator;
+#[cfg(test)]
+mod test_utils;
 mod types;
 
+pub use avatar_builder::*;
 pub use combinator::*;
 pub use constants::*;
 pub use mutator::*;
@@ -101,7 +105,22 @@ impl<T: Config> ForgerV4<T> {
 		sacrifices: &[&WrappedAvatar<BlockNumberFor<T>>],
 	) -> ForgeType {
 		match leader.get_item_type::<ItemType>() {
-			ItemType::Celestial => todo!(),
+			ItemType::Celestial => match leader.get_item_sub_type::<CelestialItemType>() {
+				CelestialItemType::UnprospectedMoon => {
+					let contains_captain = sacrifices
+						.iter()
+						.any(|s| s.has_full_type(ItemType::Lifeform, LifeformItemType::Captain));
+					let contains_cluster_map = sacrifices
+						.iter()
+						.any(|s| s.has_full_type(ItemType::Lifeform, LifeformItemType::ClusterMap));
+					if sacrifices.len() == 2 && contains_captain && contains_cluster_map {
+						ForgeType::ExtractStardust
+					} else {
+						ForgeType::None
+					}
+				},
+				_ => ForgeType::None,
+			},
 			ItemType::Construction => todo!(),
 			ItemType::Lifeform => todo!(),
 			ItemType::Resource => todo!(),

@@ -1,5 +1,8 @@
 mod extract_stardust;
 
+#[cfg(test)]
+use super::test_utils::*;
+
 use super::{utils::*, *};
 
 pub(super) struct AvatarCombinator<T: Config>(pub PhantomData<T>);
@@ -7,16 +10,30 @@ pub(super) struct AvatarCombinator<T: Config>(pub PhantomData<T>);
 impl<T: Config> AvatarCombinator<T> {
 	pub(super) fn combine_avatars_in(
 		forge_type: ForgeType,
-		season_id: SeasonId,
+		_season_id: SeasonId,
 		_season: &SeasonOf<T>,
-		leader: WrappedForgeItem<T>,
-		sacrifices: Vec<WrappedForgeItem<T>>,
-		hash_provider: &mut HashProvider<T, 32>,
+		main: WrappedForgeItem<T>,
+		mut sub_components: Vec<WrappedForgeItem<T>>,
+		_hash_provider: &mut HashProvider<T, 32>,
 	) -> Result<(LeaderForgeOutput<T>, Vec<ForgeOutput<T>>), DispatchError> {
 		match forge_type {
-			ForgeType::ExtractStardust =>
-				Self::extract_stardust(leader, sacrifices, season_id, hash_provider),
-			ForgeType::None => Self::forge_none(leader, sacrifices),
+			ForgeType::ExtractStardust => {
+				// If we are in ExtractStardust that means all inputs should have already been
+				// validated, so we can split the sub_components without danger
+				let (captain, cluster_map) = {
+					let first = sub_components.pop().expect("Should contain entry");
+					let second = sub_components.pop().expect("Should contain entry");
+
+					if first.1.has_full_type(ItemType::Lifeform, LifeformItemType::Captain) {
+						(first, second)
+					} else {
+						(second, first)
+					}
+				};
+
+				Self::extract_stardust(main, captain, cluster_map)
+			},
+			ForgeType::None => Self::forge_none(main, sub_components),
 		}
 	}
 
