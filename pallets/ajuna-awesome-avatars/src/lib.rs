@@ -2341,8 +2341,8 @@ pub mod pallet {
 			config[0] <= minted &&
 				config[1] <= free_minted &&
 				config[2] <= forged &&
-				config[3] <= bought as u8 &&
-				config[4] <= sold as u8
+				config[3] <= bought &&
+				config[4] <= sold
 		}
 	}
 }
