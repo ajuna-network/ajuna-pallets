@@ -4313,10 +4313,27 @@ mod affiliates {
 	#[test]
 	fn enable_account_for_affiliation_free() {
 		let initial_balance = 1_000_000;
+		let season_1 = Season::default().mint_fee(MintFees { one: 12, three: 34, six: 56 });
 		ExtBuilder::default()
 			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1)])
 			.build()
 			.execute_with(|| {
+				SeasonUnlocks::<Test>::insert(
+					SEASON_ID,
+					UnlockConfigs {
+						set_price_unlock: None,
+						avatar_transfer_unlock: None,
+						affiliate_unlock: Some(bounded_vec![0x00, 0x10, 0x10, 0x00, 0x00]),
+					},
+				);
+
+				SeasonStats::<Test>::insert(
+					SEASON_ID,
+					ALICE,
+					SeasonInfo { minted: 1_125, free_minted: 38, forged: 258, bought: 0, sold: 0 },
+				);
+
 				assert_ok!(AAvatars::enable_affiliator(
 					RuntimeOrigin::signed(ALICE),
 					UnlockTarget::OneselfFree,

@@ -2332,11 +2332,17 @@ pub mod pallet {
 			config: &BoundedVec<u8, ConstU32<5>>,
 			account_stats: &SeasonInfo,
 		) -> bool {
-			config[0] <= account_stats.minted as u8 &&
-				config[1] <= account_stats.free_minted as u8 &&
-				config[2] <= account_stats.forged as u8 &&
-				config[3] <= account_stats.bought as u8 &&
-				config[4] <= account_stats.sold as u8
+			let minted = u8::try_from(account_stats.minted).unwrap_or(u8::MAX);
+			let free_minted = u8::try_from(account_stats.free_minted).unwrap_or(u8::MAX);
+			let forged = u8::try_from(account_stats.forged).unwrap_or(u8::MAX);
+			let bought = u8::try_from(account_stats.bought).unwrap_or(u8::MAX);
+			let sold = u8::try_from(account_stats.sold).unwrap_or(u8::MAX);
+
+			config[0] <= minted &&
+				config[1] <= free_minted &&
+				config[2] <= forged &&
+				config[3] <= bought &&
+				config[4] <= sold
 		}
 	}
 }
