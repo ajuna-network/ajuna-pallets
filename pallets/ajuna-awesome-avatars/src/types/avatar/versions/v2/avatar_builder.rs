@@ -1,13 +1,16 @@
-use crate::types::{
-	avatar::versions::{
-		utils::*,
-		v2::{
-			BlueprintItemType, ColorType, EquippableItemType, EssenceItemType, ItemType,
-			MaterialItemType, PetItemType, PetType, SlotType, SpecialItemType, GLIMMER_SP,
-			PROGRESS_PROBABILITY_PERC, SCALING_FACTOR_PERC,
+use crate::{
+	types::{
+		avatar::versions::{
+			utils::*,
+			v2::{
+				BlueprintItemType, ColorType, EquippableItemType, EssenceItemType, ItemType,
+				MaterialItemType, PetItemType, PetType, SlotType, SpecialItemType, GLIMMER_SP,
+				PROGRESS_PROBABILITY_PERC, SCALING_FACTOR_PERC,
+			},
 		},
+		*,
 	},
-	*,
+	Config,
 };
 
 #[derive(Default)]

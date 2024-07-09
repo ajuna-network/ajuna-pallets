@@ -5,16 +5,18 @@ use sp_std::{marker::PhantomData, vec::Vec};
 mod avatar_builder;
 mod combinator;
 mod constants;
+mod dna_interpreters;
 mod mutator;
 #[cfg(test)]
 mod test_utils;
 mod types;
 
-pub use avatar_builder::*;
-pub use combinator::*;
-pub use constants::*;
-pub use mutator::*;
-pub use types::*;
+use avatar_builder::*;
+use combinator::*;
+use constants::*;
+use dna_interpreters::*;
+use mutator::*;
+use types::*;
 
 pub(crate) struct AttributeMapperV4;
 

@@ -1,9 +1,11 @@
+use super::*;
+
 use crate::{
 	mock::{MockAccountId, Test},
 	pallet::AvatarIdOf,
 	types::{
 		avatar::versions::{
-			utils::{AvatarBuilder, WrappedAvatar},
+			utils::WrappedAvatar,
 			v2::{
 				types::{
 					BlueprintItemType, ColorType, EquippableItemType, MaterialItemType, PetType,

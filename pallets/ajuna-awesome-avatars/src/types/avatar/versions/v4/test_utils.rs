@@ -2,14 +2,13 @@ use crate::{
 	mock::{MockAccountId, Test},
 	pallet::AvatarIdOf,
 	types::{
-		avatar::versions::utils::{AvatarBuilder, WrappedAvatar},
+		avatar::versions::{utils::WrappedAvatar, v4::AvatarBuilder},
 		DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
 	},
 	AvatarOf, Config, Force, Pallet,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_core::bounded::BoundedVec;
-use crate::types::avatar::versions::v4::AvatarBuilder;
 
 pub const HASH_BYTES: [u8; 32] = [
 	1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89,
@@ -49,7 +48,9 @@ pub(crate) fn create_random_unprospected_moon(
 		account,
 		None,
 		Some(|avatar| {
-			AvatarBuilder::with_base_avatar(avatar).into_unprospected_moon(stardust_amt).build_wrapped()
+			AvatarBuilder::with_base_avatar(avatar)
+				.into_unprospected_moon(stardust_amt)
+				.build_wrapped()
 		}),
 	)
 }

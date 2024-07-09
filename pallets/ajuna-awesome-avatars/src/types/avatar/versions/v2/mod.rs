@@ -8,6 +8,7 @@ mod mutator;
 mod test_utils;
 mod types;
 
+pub use avatar_builder::*;
 pub use combinator::*;
 pub use constants::*;
 pub use mutator::*;
