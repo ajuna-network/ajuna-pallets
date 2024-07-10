@@ -301,7 +301,7 @@ where
 			self.same_class_type_2(other)
 	}
 
-	pub fn get_segment_attribute_of_one(&self, idx: usize, start_bit: u8, bits: u8) -> u8 {
+	pub fn get_segmented_attribute_of_one(&self, idx: usize, start_bit: u8, bits: u8) -> u8 {
 		let value = self.inner.dna[idx];
 
 		let total_mov = 8_u8.saturating_sub(start_bit + bits);
@@ -310,7 +310,13 @@ where
 		(value & mask) >> total_mov
 	}
 
-	pub fn set_segment_attribute_of_one(&mut self, idx: usize, start_bit: u8, bits: u8, value: u8) {
+	pub fn set_segmented_attribute_of_one(
+		&mut self,
+		idx: usize,
+		start_bit: u8,
+		bits: u8,
+		value: u8,
+	) {
 		if bits == 8 {
 			self.inner.dna[idx] = value;
 		} else {
@@ -459,15 +465,15 @@ mod test {
 			avatar.inner.dna = BoundedVec::try_from([0_u8; 32].to_vec()).unwrap();
 
 			avatar.inner.dna[1] = 0b0011_0011;
-			let value = avatar.get_segment_attribute_of_one(1, 2, 2);
+			let value = avatar.get_segmented_attribute_of_one(1, 2, 2);
 			assert_eq!(value, 0b0000_0011);
 
 			avatar.inner.dna[4] = 0b1011_0101;
-			let value = avatar.get_segment_attribute_of_one(4, 3, 4);
+			let value = avatar.get_segmented_attribute_of_one(4, 3, 4);
 			assert_eq!(value, 0b0000_1010);
 
 			avatar.inner.dna[11] = 0b1011_0101;
-			let value = avatar.get_segment_attribute_of_one(11, 0, 8);
+			let value = avatar.get_segmented_attribute_of_one(11, 0, 8);
 			assert_eq!(value, 0b1011_0101);
 		});
 	}
@@ -480,22 +486,22 @@ mod test {
 
 			avatar.inner.dna[3] = 0b1000_0101;
 			let value = 0b0110_1011;
-			avatar.set_segment_attribute_of_one(3, 1, 2, value);
+			avatar.set_segmented_attribute_of_one(3, 1, 2, value);
 			assert_eq!(avatar.inner.dna[3], 0b1110_0101);
 
 			avatar.inner.dna[3] = 0b1000_0100;
 			let value = 0b0110_1011;
-			avatar.set_segment_attribute_of_one(3, 0, 7, value);
+			avatar.set_segmented_attribute_of_one(3, 0, 7, value);
 			assert_eq!(avatar.inner.dna[3], 0b1101_0110);
 
 			avatar.inner.dna[3] = 0b1000_0000;
 			let value = 0b0110_1011;
-			avatar.set_segment_attribute_of_one(3, 5, 1, value);
+			avatar.set_segmented_attribute_of_one(3, 5, 1, value);
 			assert_eq!(avatar.inner.dna[3], 0b1000_0100);
 
 			avatar.inner.dna[3] = 0b1000_0000;
 			let value = 0b0110_1011;
-			avatar.set_segment_attribute_of_one(3, 0, 8, value);
+			avatar.set_segmented_attribute_of_one(3, 0, 8, value);
 			assert_eq!(avatar.inner.dna[3], 0b0110_1011);
 		});
 	}

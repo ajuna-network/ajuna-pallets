@@ -52,22 +52,22 @@ where
 {
 	/// visualMoonType --> [(5, 0, 4)]
 	pub fn get_visual_moon_type(&self) -> u8 {
-		self.inner.get_segment_attribute_of_one(5, 0, 4)
+		self.inner.get_segmented_attribute_of_one(5, 0, 4)
 	}
 
 	/// visualMoonType --> [(5, 0, 4)]
 	pub fn set_visual_moon_type(&mut self, value: u8) {
 		// Only 4 bits max for visualMoonType
 		let value = min(value, 0b_1111);
-		self.inner.set_segment_attribute_of_one(5, 0, 4, value);
+		self.inner.set_segmented_attribute_of_one(5, 0, 4, value);
 	}
 
 	/// extractedSdAmount_(1,3,5) --> [(5, 4, 1)], [(5, 5, 1)], [(5, 6, 1)]
 	pub fn get_extracted_stardust_amt(&self, idx: ExtractedStardustAmtIdx) -> u8 {
 		match idx {
-			ExtractedStardustAmtIdx::One => self.inner.get_segment_attribute_of_one(5, 4, 1),
-			ExtractedStardustAmtIdx::Three => self.inner.get_segment_attribute_of_one(5, 5, 1),
-			ExtractedStardustAmtIdx::Five => self.inner.get_segment_attribute_of_one(5, 6, 1),
+			ExtractedStardustAmtIdx::One => self.inner.get_segmented_attribute_of_one(5, 4, 1),
+			ExtractedStardustAmtIdx::Three => self.inner.get_segmented_attribute_of_one(5, 5, 1),
+			ExtractedStardustAmtIdx::Five => self.inner.get_segmented_attribute_of_one(5, 6, 1),
 		}
 	}
 
@@ -76,64 +76,65 @@ where
 		// Only 1 bit max for extractedSdAmount_(1,3,5)
 		let value = min(value, 0b1);
 		match idx {
-			ExtractedStardustAmtIdx::One => self.inner.set_segment_attribute_of_one(5, 4, 1, value),
+			ExtractedStardustAmtIdx::One =>
+				self.inner.set_segmented_attribute_of_one(5, 4, 1, value),
 			ExtractedStardustAmtIdx::Three =>
-				self.inner.set_segment_attribute_of_one(5, 5, 1, value),
+				self.inner.set_segmented_attribute_of_one(5, 5, 1, value),
 			ExtractedStardustAmtIdx::Five =>
-				self.inner.set_segment_attribute_of_one(5, 6, 1, value),
+				self.inner.set_segmented_attribute_of_one(5, 6, 1, value),
 		}
 	}
 
 	/// moonState --> [(7, 0, 4)]
 	pub fn get_moon_state(&self) -> u8 {
-		self.inner.get_segment_attribute_of_one(7, 0, 4)
+		self.inner.get_segmented_attribute_of_one(7, 0, 4)
 	}
 
 	/// moonState --> [(7, 0, 4)]
 	pub fn set_moon_state(&mut self, value: u8) {
 		// Only 4 bits max for moonState
 		let value = min(value, 0b1111);
-		self.inner.set_segment_attribute_of_one(7, 0, 4, value);
+		self.inner.set_segmented_attribute_of_one(7, 0, 4, value);
 	}
 
 	/// isPrimeMoon --> [(7, 4, 1)]
 	pub fn get_is_prime_moon(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(7, 4, 1) != 0
+		self.inner.get_segmented_attribute_of_one(7, 4, 1) != 0
 	}
 
 	/// isPrimeMoon --> [(7, 4, 1)]
 	pub fn set_is_prime_moon(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(7, 4, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(7, 4, 1, value as u8);
 	}
 
 	/// isProspecting --> [(7, 5, 1)]
 	pub fn get_is_prospecting(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(7, 5, 1) != 0
+		self.inner.get_segmented_attribute_of_one(7, 5, 1) != 0
 	}
 
 	/// isProspecting --> [(7, 5, 1)]
 	pub fn set_is_prospecting(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(7, 5, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(7, 5, 1, value as u8);
 	}
 
 	/// isProspected --> [(7, 6, 1)]
 	pub fn get_is_prospected(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(7, 6, 1) != 0
+		self.inner.get_segmented_attribute_of_one(7, 6, 1) != 0
 	}
 
 	/// isProspected --> [(7, 6, 1)]
 	pub fn set_is_prospected(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(7, 6, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(7, 6, 1, value as u8);
 	}
 
 	/// isEventActive --> [(7, 7, 1)]
 	pub fn get_is_event_active(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(7, 7, 1) != 0
+		self.inner.get_segmented_attribute_of_one(7, 7, 1) != 0
 	}
 
 	/// isEventActive --> [(7, 7, 1)]
 	pub fn set_is_event_active(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(7, 7, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(7, 7, 1, value as u8);
 	}
 
 	/// prospectingMinutesLeft --> [(8, 0, 8), (9, 0, 2)]
@@ -162,14 +163,14 @@ where
 
 	/// stardustPerHour --> [(10, 4, 4)]
 	pub fn get_stardust_per_hour(&self) -> u8 {
-		self.inner.get_segment_attribute_of_one(8, 4, 4)
+		self.inner.get_segmented_attribute_of_one(8, 4, 4)
 	}
 
 	/// stardustPerHour --> [(10, 4, 4)]
 	pub fn set_stardust_per_hour(&mut self, value: u8) {
 		// Only 4 bits max for stardustPerHour
 		let value = min(value, 0b1111);
-		self.inner.set_segment_attribute_of_one(8, 4, 4, value)
+		self.inner.set_segmented_attribute_of_one(8, 4, 4, value)
 	}
 
 	/// stardustOnMoon --> [(11, 0, 8)]
@@ -195,8 +196,8 @@ where
 	/// number(God|Bad)Decisions --> [(13, 0, 4)], [(13, 4, 4)]
 	pub fn get_number_of_decisions(&self, decision_type: DecisionType) -> u8 {
 		match decision_type {
-			DecisionType::Good => self.inner.get_segment_attribute_of_one(13, 0, 4),
-			DecisionType::Bad => self.inner.get_segment_attribute_of_one(13, 4, 4),
+			DecisionType::Good => self.inner.get_segmented_attribute_of_one(13, 0, 4),
+			DecisionType::Bad => self.inner.get_segmented_attribute_of_one(13, 4, 4),
 		}
 	}
 
@@ -205,16 +206,16 @@ where
 		// Only 4 bits max for number(Good|Bad)Decisions
 		let value = min(value, 0b1111);
 		match decision_type {
-			DecisionType::Good => self.inner.set_segment_attribute_of_one(13, 0, 4, value),
-			DecisionType::Bad => self.inner.set_segment_attribute_of_one(13, 4, 4, value),
+			DecisionType::Good => self.inner.set_segmented_attribute_of_one(13, 0, 4, value),
+			DecisionType::Bad => self.inner.set_segmented_attribute_of_one(13, 4, 4, value),
 		}
 	}
 
 	/// influenceOf(Good|Bad)Decisions --> [(14, 0, 4)], [(14, 4, 4)]
 	pub fn get_influence_of_decisions(&self, decision_type: DecisionType) -> u8 {
 		match decision_type {
-			DecisionType::Good => self.inner.get_segment_attribute_of_one(14, 0, 4),
-			DecisionType::Bad => self.inner.get_segment_attribute_of_one(14, 4, 4),
+			DecisionType::Good => self.inner.get_segmented_attribute_of_one(14, 0, 4),
+			DecisionType::Bad => self.inner.get_segmented_attribute_of_one(14, 4, 4),
 		}
 	}
 
@@ -223,8 +224,8 @@ where
 		// Only 4 bits max for influenceOf(Good|Bad)Decisions
 		let value = min(value, 0b1111);
 		match decision_type {
-			DecisionType::Good => self.inner.set_segment_attribute_of_one(14, 0, 4, value),
-			DecisionType::Bad => self.inner.set_segment_attribute_of_one(14, 4, 4, value),
+			DecisionType::Good => self.inner.set_segmented_attribute_of_one(14, 0, 4, value),
+			DecisionType::Bad => self.inner.set_segmented_attribute_of_one(14, 4, 4, value),
 		}
 	}
 
@@ -240,14 +241,14 @@ where
 
 	/// eventLength --> [(23, 0, 6)]
 	pub fn get_event_length(&self) -> u8 {
-		self.inner.get_segment_attribute_of_one(23, 0, 6)
+		self.inner.get_segmented_attribute_of_one(23, 0, 6)
 	}
 
 	/// eventLength --> [(23, 0, 6)]
 	pub fn set_event_length(&mut self, value: u8) {
 		// Only 6 bits max for eventLength
 		let value = min(value, 0b0011_1111);
-		self.inner.set_segment_attribute_of_one(23, 0, 6, value)
+		self.inner.set_segmented_attribute_of_one(23, 0, 6, value)
 	}
 
 	/// eventType --> [(23, 6, 2), (24, 0, 4)]

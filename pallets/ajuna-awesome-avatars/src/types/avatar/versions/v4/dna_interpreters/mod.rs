@@ -1,8 +1,12 @@
+mod captain;
 mod moon;
+mod resource;
 mod ship;
 mod unprospected_moon;
 
+pub(super) use captain::*;
 pub(super) use moon::*;
+pub(super) use resource::*;
 pub(super) use ship::*;
 pub(super) use unprospected_moon::*;
 

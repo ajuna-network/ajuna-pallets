@@ -53,7 +53,7 @@ where
 			self.inner
 				.get_segmented_attribute_of_two(byte_idx as usize, &[upper_bits, lower_bits]) as u8
 		} else {
-			self.inner.get_segment_attribute_of_one(byte_idx as usize, bit_idx, 6)
+			self.inner.get_segmented_attribute_of_one(byte_idx as usize, bit_idx, 6)
 		}
 	}
 
@@ -74,7 +74,7 @@ where
 				value as u16,
 			)
 		} else {
-			self.inner.set_segment_attribute_of_one(byte_idx as usize, bit_idx, 6, value)
+			self.inner.set_segmented_attribute_of_one(byte_idx as usize, bit_idx, 6, value)
 		}
 	}
 
@@ -89,7 +89,7 @@ where
 			self.inner
 				.get_segmented_attribute_of_two(byte_idx as usize, &[upper_bits, lower_bits]) as u8
 		} else {
-			self.inner.get_segment_attribute_of_one(byte_idx as usize, bit_idx, 6)
+			self.inner.get_segmented_attribute_of_one(byte_idx as usize, bit_idx, 6)
 		}
 	}
 
@@ -110,28 +110,28 @@ where
 				value as u16,
 			)
 		} else {
-			self.inner.set_segment_attribute_of_one(byte_idx as usize, bit_idx, 6, value)
+			self.inner.set_segmented_attribute_of_one(byte_idx as usize, bit_idx, 6, value)
 		}
 	}
 
 	/// amountOfCargoPlaceholders --> [(18, 0, 4)]
 	pub fn get_amount_of_cargo_placeholders(&self) -> u8 {
-		self.inner.get_segment_attribute_of_one(18, 0, 4)
+		self.inner.get_segmented_attribute_of_one(18, 0, 4)
 	}
 
 	/// amountOfCargoPlaceholders --> [(18, 0, 4)]
 	pub fn set_amount_of_cargo_placeholders(&mut self, value: u8) {
 		// Only 4 bits max for amountOfCargoPlaceholders
 		let value = min(value, 0b1111);
-		self.inner.set_segment_attribute_of_one(18, 0, 4, value);
+		self.inner.set_segmented_attribute_of_one(18, 0, 4, value);
 	}
 
 	/// (scanner|cargo|speed)UpgradeLvl --> [(18, 4, 2)], [(18, 6, 2)], [(19, 0, 2)]
 	pub fn get_upgrade_lvl(&self, upgrade_type: UpgradeType) -> u8 {
 		match upgrade_type {
-			UpgradeType::Scanner => self.inner.get_segment_attribute_of_one(18, 4, 2),
-			UpgradeType::Cargo => self.inner.get_segment_attribute_of_one(18, 6, 2),
-			UpgradeType::Speed => self.inner.get_segment_attribute_of_one(19, 0, 2),
+			UpgradeType::Scanner => self.inner.get_segmented_attribute_of_one(18, 4, 2),
+			UpgradeType::Cargo => self.inner.get_segmented_attribute_of_one(18, 6, 2),
+			UpgradeType::Speed => self.inner.get_segmented_attribute_of_one(19, 0, 2),
 		}
 	}
 
@@ -141,50 +141,50 @@ where
 		let value = min(value, 0b0011);
 
 		match upgrade_type {
-			UpgradeType::Scanner => self.inner.set_segment_attribute_of_one(18, 4, 2, value),
-			UpgradeType::Cargo => self.inner.set_segment_attribute_of_one(18, 6, 2, value),
-			UpgradeType::Speed => self.inner.set_segment_attribute_of_one(19, 0, 2, value),
+			UpgradeType::Scanner => self.inner.set_segmented_attribute_of_one(18, 4, 2, value),
+			UpgradeType::Cargo => self.inner.set_segmented_attribute_of_one(18, 6, 2, value),
+			UpgradeType::Speed => self.inner.set_segmented_attribute_of_one(19, 0, 2, value),
 		}
 	}
 
 	/// isOnRoute --> [(19, 2, 1)]
 	pub fn get_is_on_route(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(19, 2, 1) != 0
+		self.inner.get_segmented_attribute_of_one(19, 2, 1) != 0
 	}
 
 	/// isOnRoute --> [(19, 2, 1)]
 	pub fn set_is_on_route(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(19, 2, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(19, 2, 1, value as u8);
 	}
 
 	/// isHarvesting --> [(19, 3, 1)]
 	pub fn get_is_harvesting(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(19, 3, 1) != 0
+		self.inner.get_segmented_attribute_of_one(19, 3, 1) != 0
 	}
 
 	/// isHarvesting --> [(19, 3, 1)]
 	pub fn set_is_harvesting(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(19, 3, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(19, 3, 1, value as u8);
 	}
 
 	/// isFinishedHarvesting --> [(19, 4, 1)]
 	pub fn get_is_finished_harvesting(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(19, 4, 1) != 0
+		self.inner.get_segmented_attribute_of_one(19, 4, 1) != 0
 	}
 
 	/// isFinishedHarvesting --> [(19, 4, 1)]
 	pub fn set_is_finished_harvesting(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(19, 4, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(19, 4, 1, value as u8);
 	}
 
 	/// isOnTravelPoint --> [(19, 5, 1)]
 	pub fn get_is_on_travel_point(&self) -> bool {
-		self.inner.get_segment_attribute_of_one(19, 5, 1) != 0
+		self.inner.get_segmented_attribute_of_one(19, 5, 1) != 0
 	}
 
 	/// isOnTravelPoint --> [(19, 5, 1)]
 	pub fn set_is_on_travel_point(&mut self, value: bool) {
-		self.inner.set_segment_attribute_of_one(19, 5, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(19, 5, 1, value as u8);
 	}
 
 	/// freeResourceSlots --> [(19, 6, 2), (20, 0, 2)]
@@ -231,12 +231,12 @@ where
 
 	/// timeFlownInBlocks --> [(28, 0, 8)]
 	pub fn get_time_flown_in_blocks(&self) -> u8 {
-		self.inner.get_segment_attribute_of_one(28, 0, 8)
+		self.inner.get_segmented_attribute_of_one(28, 0, 8)
 	}
 
 	/// timeFlownInBlocks --> [(28, 0, 8)]
 	pub fn set_time_flown_in_blocks(&mut self, value: u8) {
-		self.inner.set_segment_attribute_of_one(20, 0, 8, value);
+		self.inner.set_segmented_attribute_of_one(20, 0, 8, value);
 	}
 
 	/// Coord (X/Y) --> [(29, 0, 8), (30, 0, 8), (31, 0, 8)], [(32, 0, 8), (33, 0, 8), (34, 0, 8)]
