@@ -124,17 +124,17 @@ where
 	}
 
 	/// perk_(1...50) --> [(14, 2, 1)], ..., [(20, 3, 1)]
-	pub fn get_perk(&self, resource_idx: u8) -> u8 {
-		let resource_idx = min(resource_idx, 49) + 2;
-		let (byte_idx, bit_idx) = InterpreterUtils::get_indices(resource_idx, 14);
+	pub fn get_perk(&self, perk_idx: u8) -> u8 {
+		let perk_idx = min(perk_idx, 49) + 2;
+		let (byte_idx, bit_idx) = InterpreterUtils::get_indices(perk_idx, 14);
 
 		self.inner.get_segmented_attribute_of_one(byte_idx as usize, bit_idx, 1)
 	}
 
 	/// perk_(1...50) --> [(14, 2, 1)], ..., [(20, 3, 1)]
-	pub fn set_perk(&mut self, resource_idx: u8, value: u8) {
-		let resource_idx = min(resource_idx, 49) + 2;
-		let (byte_idx, bit_idx) = InterpreterUtils::get_indices(resource_idx, 14);
+	pub fn set_perk(&mut self, perk_idx: u8, value: u8) {
+		let perk_idx = min(perk_idx, 49) + 2;
+		let (byte_idx, bit_idx) = InterpreterUtils::get_indices(perk_idx, 14);
 
 		// Only 1 bit max for perk_(1...50)
 		let value = min(value, 0b1);

@@ -1,13 +1,23 @@
 mod captain;
+mod cluster_map;
+mod cyoa;
 mod moon;
+mod nebula;
 mod resource;
 mod ship;
+mod temp_nebula;
+mod travel_point;
 mod unprospected_moon;
 
 pub(super) use captain::*;
+pub(super) use cluster_map::*;
+pub(super) use cyoa::*;
 pub(super) use moon::*;
+pub(super) use nebula::*;
 pub(super) use resource::*;
 pub(super) use ship::*;
+pub(super) use temp_nebula::*;
+pub(super) use travel_point::*;
 pub(super) use unprospected_moon::*;
 
 use super::*;

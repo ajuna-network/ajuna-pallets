@@ -10,7 +10,7 @@ pub(crate) struct CaptainInterpreter<'a, BlockNumber> {
 }
 
 impl<'a, BlockNumber> DnaInterpreter<'a, BlockNumber, CaptainInterpreter<'a, BlockNumber>>
-	for ResourceInterpreter<'a, BlockNumber>
+	for CaptainInterpreter<'a, BlockNumber>
 {
 	fn from_wrapper(
 		wrap: &'a mut WrappedAvatar<BlockNumber>,
