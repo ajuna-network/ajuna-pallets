@@ -74,7 +74,7 @@ where
 	/// extractedSdAmount_(1,3,5) --> [(5, 4, 1)], [(5, 5, 1)], [(5, 6, 1)]
 	pub fn set_extracted_stardust_amt(&mut self, idx: ExtractedStardustAmtIdx, value: u8) {
 		// Only 1 bit max for extractedSdAmount_(1,3,5)
-		let value = min(value, 1);
+		let value = min(value, 0b1);
 		match idx {
 			ExtractedStardustAmtIdx::One => self.inner.set_segment_attribute_of_one(5, 4, 1, value),
 			ExtractedStardustAmtIdx::Three =>
