@@ -229,6 +229,12 @@ impl<T: Config> ForgerV3<T> {
 			target.dna.clone().into_iter().zip(other.dna.clone()).enumerate().fold(
 				(BTreeSet::new(), 0, 0),
 				|(mut matching_indexes, mut match_count, mut mirror_count), (i, (lhs, rhs))| {
+					let lhs_variation = lhs & 0b0000_1111;
+					let rhs_variation = rhs & 0b0000_1111;
+					if lhs_variation == rhs_variation {
+						mirror_count += 1;
+					}
+
 					if indexes.contains(&i) {
 						let rarity_1 = lhs >> 4;
 						let variation_1 = lhs & 0b0000_1111;
@@ -516,6 +522,44 @@ mod test {
 				season.max_tier() as u8,
 			),
 			(true, BTreeSet::from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+		);
+	}
+
+	#[test]
+	fn compare_sample_works() {
+		let leader = Avatar::default()
+			.dna(&[0x34, 0x34, 0x30, 0x30, 0x35, 0x31, 0x31, 0x34, 0x14, 0x35, 0x14]);
+		let upgradable_indexes =
+			ForgerV3::<Test>::upgradable_indexes_for_target(&leader).expect("Should get indexes");
+
+		assert_eq!(upgradable_indexes, vec![8, 10]);
+
+		let other = Avatar::default()
+			.dna(&[0x11, 0x35, 0x30, 0x10, 0x14, 0x31, 0x33, 0x14, 0x32, 0x11, 0x15]);
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &upgradable_indexes, 4,),
+			(true, BTreeSet::from([10]))
+		);
+
+		let other = Avatar::default()
+			.dna(&[0x14, 0x15, 0x13, 0x10, 0x35, 0x15, 0x11, 0x32, 0x10, 0x30, 0x13]);
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &upgradable_indexes, 4,),
+			(true, BTreeSet::from([8, 10]))
+		);
+
+		let other = Avatar::default()
+			.dna(&[0x11, 0x12, 0x13, 0x14, 0x15, 0x15, 0x11, 0x14, 0x13, 0x35, 0x15]);
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &upgradable_indexes, 4,),
+			(true, BTreeSet::from([8, 10]))
+		);
+
+		let other = Avatar::default()
+			.dna(&[0x11, 0x33, 0x12, 0x10, 0x15, 0x13, 0x11, 0x14, 0x15, 0x34, 0x13]);
+		assert_eq!(
+			ForgerV3::<Test>::compare(&leader, &other, &upgradable_indexes, 4,),
+			(true, BTreeSet::from([8, 10]))
 		);
 	}
 
