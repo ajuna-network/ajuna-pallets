@@ -218,8 +218,12 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let avatar =
-				create_random_avatar::<Test, _>(&ALICE, Some(hash_base), Some(unit_closure));
+			let avatar = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base),
+				Some(unit_closure),
+				DnaEncoding::V2,
+			);
 
 			let glow_flask = create_random_glow_flask(
 				&ALICE,
@@ -405,8 +409,18 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let leader = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), Some(unit_fn));
-			let sac_1 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), Some(unit_fn));
+			let leader = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[0]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_1 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[1]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
 
 			let leader_progress_array = leader.1.get_progress();
 			let sacrifice_progress_array = sac_1.1.get_progress();
@@ -465,8 +479,12 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let avatar =
-				create_random_avatar::<Test, _>(&ALICE, Some(hash_base), Some(unit_closure));
+			let avatar = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base),
+				Some(unit_closure),
+				DnaEncoding::V2,
+			);
 
 			let glow_flask = create_random_glow_flask(
 				&ALICE,

@@ -2,7 +2,7 @@ use crate::{
 	mock::{MockAccountId, Test},
 	pallet::AvatarIdOf,
 	types::{
-		avatar::versions::{utils::WrappedAvatar, v4::AvatarBuilder},
+		avatar::versions::{utils::*, v4::AvatarBuilder},
 		DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
 	},
 	AvatarOf, Config, Force, Pallet,
@@ -15,62 +15,54 @@ pub const HASH_BYTES: [u8; 32] = [
 	97, 101, 103, 107, 109, 113, 127,
 ];
 
-pub(crate) fn create_random_avatar<T, F>(
-	creator: &T::AccountId,
-	initial_dna: Option<[u8; 32]>,
-	avatar_build_fn: Option<F>,
-) -> (AvatarIdOf<T>, WrappedAvatar<BlockNumberFor<T>>)
-where
-	F: FnOnce(AvatarOf<T>) -> WrappedAvatar<BlockNumberFor<T>>,
-	T: Config,
-{
-	let base_avatar = AvatarOf::<T> {
-		season_id: 0,
-		encoding: DnaEncoding::V4,
-		dna: BoundedVec::try_from(initial_dna.unwrap_or([0_u8; 32]).to_vec())
-			.expect("Should create DNA!"),
-		souls: 0,
-		minted_at: 0_u32.into(),
-	};
-
-	let avatar = match avatar_build_fn {
-		None => WrappedAvatar::new(base_avatar),
-		Some(f) => f(base_avatar),
-	};
-	(Pallet::<T>::random_hash(b"mock_avatar_v4", creator), avatar)
-}
-
 pub(crate) fn create_random_unprospected_moon(
 	account: &MockAccountId,
-	stardust_amt: u16,
+	stardust_amt: u8,
+	coordinates: (u32, u32),
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	crate::types::avatar::versions::v2::create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 35>(
 		account,
 		None,
 		Some(|avatar| {
 			AvatarBuilder::with_base_avatar(avatar)
-				.into_unprospected_moon(stardust_amt)
+				.structured_into_unprospected_moon(stardust_amt, coordinates.0, coordinates.1)
 				.build_wrapped()
 		}),
+		DnaEncoding::V4,
 	)
 }
 
-pub(crate) fn is_leader_forged<T: Config>(output: &LeaderForgeOutput<T>) -> bool {
-	matches!(output, LeaderForgeOutput::Forged(_, _))
+pub(crate) fn create_random_captain(
+	account: &MockAccountId,
+	captain_type: u8,
+	leaderboard_points: u16,
+) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
+	create_random_avatar::<Test, _, 35>(
+		account,
+		None,
+		Some(|avatar| {
+			AvatarBuilder::with_base_avatar(avatar)
+				.structured_into_captain(captain_type, leaderboard_points)
+				.build_wrapped()
+		}),
+		DnaEncoding::V4,
+	)
 }
 
-pub(crate) fn is_leader_consumed<T: Config>(output: &LeaderForgeOutput<T>) -> bool {
-	matches!(output, LeaderForgeOutput::Consumed(_))
-}
-
-pub(crate) fn is_forged<T: Config>(output: &ForgeOutput<T>) -> bool {
-	matches!(output, ForgeOutput::Forged(_, _))
-}
-
-pub(crate) fn is_minted<T: Config>(output: &ForgeOutput<T>) -> bool {
-	matches!(output, ForgeOutput::Minted(_))
-}
-
-pub(crate) fn is_consumed<T: Config>(output: &ForgeOutput<T>) -> bool {
-	matches!(output, ForgeOutput::Consumed(_))
+pub(crate) fn create_random_cluster_map(
+	account: &MockAccountId,
+	main_cluster: &[(u8, u8)],
+	cluster: &[(u8, u8)],
+	coordinates: (u32, u32),
+) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
+	create_random_avatar::<Test, _, 35>(
+		account,
+		None,
+		Some(|avatar| {
+			AvatarBuilder::with_base_avatar(avatar)
+				.structured_into_cluster_map(main_cluster, cluster, coordinates.0, coordinates.1)
+				.build_wrapped()
+		}),
+		DnaEncoding::V4,
+	)
 }

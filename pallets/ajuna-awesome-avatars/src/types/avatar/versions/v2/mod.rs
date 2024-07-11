@@ -1074,7 +1074,7 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let leader = create_random_avatar::<Test, _>(
+			let leader = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x12, 0x12, 0x12, 0x01, 0x00, 0x6C, 0x78, 0xD8, 0x72, 0x55, 0x78, 0x66, 0x6C,
@@ -1082,8 +1082,9 @@ mod test {
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
-			let sac_1 = create_random_avatar::<Test, _>(
+			let sac_1 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x42, 0x12, 0x01, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1091,6 +1092,7 @@ mod test {
 					0x11, 0x22, 0x10, 0x14, 0x22, 0x11,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
 			assert_eq!(
@@ -1098,7 +1100,7 @@ mod test {
 				ForgeType::None
 			);
 
-			let leader = create_random_avatar::<Test, _>(
+			let leader = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x22, 0x00, 0x11, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1106,8 +1108,9 @@ mod test {
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
-			let sac_1 = create_random_avatar::<Test, _>(
+			let sac_1 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x42, 0x12, 0x01, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1115,6 +1118,7 @@ mod test {
 					0x11, 0x22, 0x10, 0x14, 0x22, 0x11,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
 			assert_eq!(
@@ -1243,10 +1247,11 @@ mod test {
 			forge_type_map.insert(ForgeType::Flask, 0);
 
 			for i in 0..max_iterations {
-				let leader = create_random_avatar::<Test, _>(
+				let leader = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					None,
 					Some(avatar_creation_fn(&leader_possible_item_types, &hash_provider, i)),
+					DnaEncoding::V2,
 				)
 				.1;
 
@@ -1255,7 +1260,7 @@ mod test {
 				let sacrifice_count = (hash_provider.next() % 4) as usize + 1;
 				let mut sacrifice_list = Vec::with_capacity(sacrifice_count);
 				for _ in 0..sacrifice_count {
-					let sacrifice = create_random_avatar::<Test, _>(
+					let sacrifice = create_random_avatar::<Test, _, 32>(
 						&ALICE,
 						None,
 						Some(avatar_creation_fn(
@@ -1263,6 +1268,7 @@ mod test {
 							&hash_provider,
 							i,
 						)),
+						DnaEncoding::V2,
 					);
 					sacrifice_list.push(sacrifice.1);
 				}

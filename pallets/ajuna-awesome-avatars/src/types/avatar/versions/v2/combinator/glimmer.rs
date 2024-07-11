@@ -829,16 +829,36 @@ mod test {
 			let mut probability_array = [0_u32; 8];
 
 			for i in 0..10_000 {
-				let leader =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), Some(unit_fn));
-				let sac_1 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), Some(unit_fn));
-				let sac_2 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[2]), Some(unit_fn));
-				let sac_3 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), Some(unit_fn));
-				let sac_4 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), Some(unit_fn));
+				let leader = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[0]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_1 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[1]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_2 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[2]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_3 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[3]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_4 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[4]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
 				let (_leader_output, sacrifice_output) = AvatarCombinator::<Test>::glimmer_avatars(
 					leader,
