@@ -1,4 +1,5 @@
 mod extract_stardust;
+mod engage_in_event;
 
 #[cfg(test)]
 use super::test_utils::*;

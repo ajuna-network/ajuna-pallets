@@ -1,5 +1,4 @@
 use super::*;
-use crate::types::avatar::versions::v4::types::CelestialItemType::UnprospectedMoon;
 
 impl<T: Config> AvatarCombinator<T> {
 	pub(super) fn extract_stardust(
