@@ -1,57 +1,37 @@
+use super::*;
+
 use crate::{
 	mock::{MockAccountId, Test},
 	pallet::AvatarIdOf,
 	types::{
-		avatar::versions::v2::{
-			avatar_utils::{AvatarBuilder, HashProvider, WrappedAvatar},
-			types::{
-				BlueprintItemType, ColorType, EquippableItemType, MaterialItemType, PetType,
-				SlotType,
+		avatar::versions::{
+			utils::WrappedAvatar,
+			v2::{
+				types::{
+					BlueprintItemType, ColorType, EquippableItemType, MaterialItemType, PetType,
+					SlotType,
+				},
+				utils::*,
 			},
 		},
-		Avatar, DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
+		DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
 	},
 	AvatarOf, Config, Force, Pallet,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_core::bounded::BoundedVec;
 
-pub const HASH_BYTES: [u8; 32] = [
+pub(super) const HASH_BYTES: [u8; 32] = [
 	1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89,
 	97, 101, 103, 107, 109, 113, 127,
 ];
 
-pub(crate) fn create_random_avatar<T, F>(
-	creator: &T::AccountId,
-	initial_dna: Option<[u8; 32]>,
-	avatar_build_fn: Option<F>,
-) -> (AvatarIdOf<T>, WrappedAvatar<BlockNumberFor<T>>)
-where
-	F: FnOnce(AvatarOf<T>) -> WrappedAvatar<BlockNumberFor<T>>,
-	T: Config,
-{
-	let base_avatar = AvatarOf::<T> {
-		season_id: 0,
-		encoding: DnaEncoding::V2,
-		dna: BoundedVec::try_from(initial_dna.unwrap_or([0_u8; 32]).to_vec())
-			.expect("Should create DNA!"),
-		souls: 0,
-		minted_at: 0_u32.into(),
-	};
-
-	let avatar = match avatar_build_fn {
-		None => WrappedAvatar::new(base_avatar),
-		Some(f) => f(base_avatar),
-	};
-	(Pallet::<T>::random_hash(b"mock_avatar", creator), avatar)
-}
-
-pub(crate) fn create_random_material(
+pub(super) fn create_random_material(
 	account: &MockAccountId,
 	material_type: &MaterialItemType,
 	quantity: u8,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
@@ -59,16 +39,17 @@ pub(crate) fn create_random_material(
 				.into_material(material_type, quantity)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_pet_part(
+pub(super) fn create_random_pet_part(
 	account: &MockAccountId,
 	pet_type: &PetType,
 	slot_type: &SlotType,
 	quantity: u8,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
@@ -76,15 +57,16 @@ pub(crate) fn create_random_pet_part(
 				.into_pet_part(pet_type, slot_type, quantity)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_generic_part(
+pub(super) fn create_random_generic_part(
 	account: &MockAccountId,
 	slot_types: &[SlotType],
 	quantity: u8,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
@@ -92,10 +74,11 @@ pub(crate) fn create_random_generic_part(
 				.into_generic_pet_part(slot_types, quantity)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_pet(
+pub(super) fn create_random_pet(
 	account: &MockAccountId,
 	pet_type: &PetType,
 	pet_variation: u8,
@@ -103,7 +86,7 @@ pub(crate) fn create_random_pet(
 	progress_array: [u8; 11],
 	soul_points: SoulCount,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
@@ -111,10 +94,11 @@ pub(crate) fn create_random_pet(
 				.into_pet(pet_type, pet_variation, spec_bytes, progress_array, soul_points)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_blueprint(
+pub(super) fn create_random_blueprint(
 	account: &MockAccountId,
 	pet_type: &PetType,
 	slot_type: &SlotType,
@@ -122,7 +106,7 @@ pub(crate) fn create_random_blueprint(
 	material_pattern: &[MaterialItemType],
 	soul_points: SoulCount,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
@@ -137,10 +121,11 @@ pub(crate) fn create_random_blueprint(
 				)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_armor_component(
+pub(super) fn create_random_armor_component(
 	base_dna: [u8; 32],
 	account: &MockAccountId,
 	pet_type: &PetType,
@@ -152,7 +137,7 @@ pub(crate) fn create_random_armor_component(
 	soul_points: SoulCount,
 	hash_provider: &mut HashProvider<Test, 32>,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		Some(base_dna),
 		Some(|avatar| {
@@ -170,10 +155,11 @@ pub(crate) fn create_random_armor_component(
 				.unwrap()
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_weapon(
+pub(super) fn create_random_weapon(
 	base_dna: [u8; 32],
 	account: &MockAccountId,
 	pet_type: &PetType,
@@ -184,7 +170,7 @@ pub(crate) fn create_random_weapon(
 	soul_points: SoulCount,
 	hash_provider: &mut HashProvider<Test, 32>,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		Some(base_dna),
 		Some(|avatar| {
@@ -201,15 +187,16 @@ pub(crate) fn create_random_weapon(
 				.unwrap()
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_toolbox(
+pub(super) fn create_random_toolbox(
 	base_dna: [u8; 32],
 	account: &MockAccountId,
 	soul_points: SoulCount,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		Some(base_dna),
 		Some(|avatar| {
@@ -217,10 +204,11 @@ pub(crate) fn create_random_toolbox(
 				.into_toolbox(soul_points)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_egg(
+pub(super) fn create_random_egg(
 	base_dna: Option<[u8; 32]>,
 	account: &MockAccountId,
 	rarity: &RarityTier,
@@ -228,7 +216,7 @@ pub(crate) fn create_random_egg(
 	soul_points: SoulCount,
 	progress_array: [u8; 11],
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		base_dna,
 		Some(|avatar| {
@@ -236,17 +224,18 @@ pub(crate) fn create_random_egg(
 				.into_egg(rarity, pet_variation, soul_points, progress_array)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_glow_spark(
+pub(super) fn create_random_glow_spark(
 	base_dna: Option<[u8; 32]>,
 	account: &MockAccountId,
 	force: &Force,
 	soul_points: SoulCount,
 	progress_array: [u8; 11],
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		base_dna,
 		Some(|avatar| {
@@ -254,29 +243,31 @@ pub(crate) fn create_random_glow_spark(
 				.into_glow_spark(force, soul_points, progress_array)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_glimmer(
+pub(super) fn create_random_glimmer(
 	account: &MockAccountId,
 	quantity: u8,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
 			AvatarBuilder::with_base_avatar(avatar).into_glimmer(quantity).build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_paint_flask(
+pub(super) fn create_random_paint_flask(
 	account: &MockAccountId,
 	color_pair: &(ColorType, ColorType),
 	soul_points: SoulCount,
 	progress_array: [u8; 11],
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
@@ -284,16 +275,17 @@ pub(crate) fn create_random_paint_flask(
 				.into_paint_flask(color_pair, soul_points, progress_array)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_glow_flask(
+pub(super) fn create_random_glow_flask(
 	account: &MockAccountId,
 	force_type: &Force,
 	soul_points: SoulCount,
 	progress_array: [u8; 11],
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
@@ -301,30 +293,32 @@ pub(crate) fn create_random_glow_flask(
 				.into_glow_flask(force_type, soul_points, progress_array)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_dust(
+pub(super) fn create_random_dust(
 	account: &MockAccountId,
 	soul_points: SoulCount,
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		None,
 		Some(|avatar| {
 			AvatarBuilder::with_base_avatar(avatar).into_dust(soul_points).build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
 }
 
-pub(crate) fn create_random_color_spark(
+pub(super) fn create_random_color_spark(
 	base_dna: Option<[u8; 32]>,
 	account: &MockAccountId,
 	color_pair: &(ColorType, ColorType),
 	soul_points: SoulCount,
 	progress_array: [u8; 11],
 ) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
-	create_random_avatar::<Test, _>(
+	create_random_avatar::<Test, _, 32>(
 		account,
 		base_dna,
 		Some(|avatar| {
@@ -332,25 +326,6 @@ pub(crate) fn create_random_color_spark(
 				.into_color_spark(color_pair, soul_points, progress_array)
 				.build_wrapped()
 		}),
+		DnaEncoding::V2,
 	)
-}
-
-pub(crate) fn is_leader_forged<T: Config>(output: &LeaderForgeOutput<T>) -> bool {
-	matches!(output, LeaderForgeOutput::Forged(_, _))
-}
-
-pub(crate) fn is_leader_consumed<T: Config>(output: &LeaderForgeOutput<T>) -> bool {
-	matches!(output, LeaderForgeOutput::Consumed(_))
-}
-
-pub(crate) fn is_forged<T: Config>(output: &ForgeOutput<T>) -> bool {
-	matches!(output, ForgeOutput::Forged(_, _))
-}
-
-pub(crate) fn is_minted<T: Config>(output: &ForgeOutput<T>) -> bool {
-	matches!(output, ForgeOutput::Minted(_))
-}
-
-pub(crate) fn is_consumed<T: Config>(output: &ForgeOutput<T>) -> bool {
-	matches!(output, ForgeOutput::Consumed(_))
 }

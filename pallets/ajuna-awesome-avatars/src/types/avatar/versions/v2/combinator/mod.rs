@@ -11,9 +11,7 @@ mod stack;
 mod statue;
 mod tinker;
 
-use super::*;
-
-pub(super) type WrappedForgeItem<T> = (AvatarIdOf<T>, WrappedAvatar<BlockNumberFor<T>>);
+use super::{utils::*, *};
 
 pub(super) struct AvatarCombinator<T: Config>(pub PhantomData<T>);
 
@@ -234,10 +232,18 @@ mod match_test {
 			for (i, (dna_1, dna_2, sac_len, (top_bit_index, top_1_bit), progress_array_1)) in
 				test_set.into_iter().enumerate()
 			{
-				let avatar_1 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_1), Some(unit_closure));
-				let avatar_2 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_2), Some(unit_closure));
+				let avatar_1 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_1),
+					Some(unit_closure),
+					DnaEncoding::V2,
+				);
+				let avatar_2 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_2),
+					Some(unit_closure),
+					DnaEncoding::V2,
+				);
 
 				let ((_, leader), sacrifices) = AvatarCombinator::<Test>::match_avatars(
 					avatar_1,

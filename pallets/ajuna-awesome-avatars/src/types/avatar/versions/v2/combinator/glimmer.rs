@@ -180,7 +180,7 @@ mod test {
 				assert_eq!(output_souls + GLIMMER_SP as u32, total_soul_points);
 
 				assert_eq!(wrapped.get_quantity(), 9);
-				assert_eq!(wrapped.get_item_type(), ItemType::Essence);
+				assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Essence);
 				assert_eq!(
 					wrapped.get_item_sub_type::<EssenceItemType>(),
 					EssenceItemType::Glimmer
@@ -280,7 +280,7 @@ mod test {
 				assert_eq!(output_souls + 4 * GLIMMER_SP as u32, total_soul_points);
 
 				assert_eq!(wrapped.get_quantity(), 96);
-				assert_eq!(wrapped.get_item_type(), ItemType::Essence);
+				assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Essence);
 				assert_eq!(
 					wrapped.get_item_sub_type::<EssenceItemType>(),
 					EssenceItemType::Glimmer
@@ -389,7 +389,7 @@ mod test {
 				assert_eq!(output_souls + 4 * GLIMMER_SP as u32, total_soul_points);
 
 				assert_eq!(wrapped.get_quantity(), 96);
-				assert_eq!(wrapped.get_item_type(), ItemType::Essence);
+				assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Essence);
 				assert_eq!(
 					wrapped.get_item_sub_type::<EssenceItemType>(),
 					EssenceItemType::Glimmer
@@ -537,7 +537,7 @@ mod test {
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {
 					let wrapped = WrappedAvatar::new(avatar);
 					assert_eq!(wrapped.get_quantity(), 1);
-					assert_eq!(wrapped.get_item_type(), ItemType::Essence);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Essence);
 					assert_eq!(
 						wrapped.get_item_sub_type::<EssenceItemType>(),
 						EssenceItemType::GlowSpark
@@ -592,7 +592,7 @@ mod test {
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {
 					let wrapped = WrappedAvatar::new(avatar);
 					assert_eq!(wrapped.get_quantity(), 1);
-					assert_eq!(wrapped.get_item_type(), ItemType::Essence);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Essence);
 					assert_eq!(
 						wrapped.get_item_sub_type::<EssenceItemType>(),
 						EssenceItemType::GlowSpark
@@ -647,7 +647,7 @@ mod test {
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {
 					let wrapped = WrappedAvatar::new(avatar);
 					assert_eq!(wrapped.get_quantity(), 1);
-					assert_eq!(wrapped.get_item_type(), ItemType::Pet);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Pet);
 					assert_eq!(wrapped.get_item_sub_type::<PetItemType>(), PetItemType::Egg);
 				} else {
 					panic!("ForgeOutput should have been Minted!")
@@ -699,7 +699,7 @@ mod test {
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {
 					let wrapped = WrappedAvatar::new(avatar);
 					assert_eq!(wrapped.get_quantity(), 1);
-					assert_eq!(wrapped.get_item_type(), ItemType::Special);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Special);
 					assert_eq!(
 						wrapped.get_item_sub_type::<SpecialItemType>(),
 						SpecialItemType::Unidentified
@@ -829,16 +829,36 @@ mod test {
 			let mut probability_array = [0_u32; 8];
 
 			for i in 0..10_000 {
-				let leader =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), Some(unit_fn));
-				let sac_1 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), Some(unit_fn));
-				let sac_2 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[2]), Some(unit_fn));
-				let sac_3 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), Some(unit_fn));
-				let sac_4 =
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), Some(unit_fn));
+				let leader = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[0]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_1 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[1]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_2 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[2]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_3 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[3]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
+				let sac_4 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(hash_base[4]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
 				let (_leader_output, sacrifice_output) = AvatarCombinator::<Test>::glimmer_avatars(
 					leader,

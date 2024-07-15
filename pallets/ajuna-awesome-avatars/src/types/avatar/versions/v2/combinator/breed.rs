@@ -110,7 +110,12 @@ mod test {
 
 			let mut avatar_set = (0..5)
 				.map(|i| {
-					create_random_avatar::<Test, _>(&ALICE, Some(hash_base[i]), Some(unit_closure))
+					create_random_avatar::<Test, _, 32>(
+						&ALICE,
+						Some(hash_base[i]),
+						Some(unit_closure),
+						DnaEncoding::V2,
+					)
 				})
 				.collect::<Vec<_>>();
 
@@ -252,7 +257,7 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let leader = create_random_avatar::<Test, _>(
+			let leader = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -260,9 +265,10 @@ mod test {
 					0x33, 0x35, 0x31, 0x35, 0x31, 0x34,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_1 = create_random_avatar::<Test, _>(
+			let sac_1 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -270,9 +276,10 @@ mod test {
 					0x34, 0x30, 0x34, 0x32, 0x30, 0x30,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_2 = create_random_avatar::<Test, _>(
+			let sac_2 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -280,9 +287,10 @@ mod test {
 					0x35, 0x32, 0x32, 0x32, 0x42, 0x35,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_3 = create_random_avatar::<Test, _>(
+			let sac_3 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -290,9 +298,10 @@ mod test {
 					0x32, 0x30, 0x43, 0x33, 0x30, 0x30,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_4 = create_random_avatar::<Test, _>(
+			let sac_4 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -300,6 +309,7 @@ mod test {
 					0x30, 0x45, 0x32, 0x32, 0x30, 0x32,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::breed_avatars(
@@ -345,7 +355,7 @@ mod test {
 			};
 
 			for _ in 0..1000 {
-				let leader = create_random_avatar::<Test, _>(
+				let leader = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -353,9 +363,10 @@ mod test {
 						0x34, 0x43, 0x34, 0x31, 0x30, 0x40, 0x45, 0x31,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_1 = create_random_avatar::<Test, _>(
+				let sac_1 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -363,9 +374,10 @@ mod test {
 						0x45, 0x35, 0x34, 0x31, 0x30, 0x35, 0x35, 0x35,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_2 = create_random_avatar::<Test, _>(
+				let sac_2 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -373,9 +385,10 @@ mod test {
 						0x34, 0x32, 0x45, 0x35, 0x34, 0x31, 0x30, 0x35,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_3 = create_random_avatar::<Test, _>(
+				let sac_3 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -383,9 +396,10 @@ mod test {
 						0x32, 0x33, 0x30, 0x35, 0x35, 0x35, 0x35, 0x31,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_4 = create_random_avatar::<Test, _>(
+				let sac_4 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x03, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -393,6 +407,7 @@ mod test {
 						0x34, 0x31, 0x30, 0x35, 0x35, 0x45, 0x33, 0x34,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
 				let leader_progress_array = leader.1.get_progress();
@@ -576,20 +591,40 @@ mod test {
 			for (dna_set, lc, out_lc) in dna_sets {
 				let mut hash_provider = HashProvider::new_with_bytes(forge_hash);
 
-				let leader =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[0]), Some(unit_fn));
+				let leader = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[0]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_1 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[1]), Some(unit_fn));
+				let sac_1 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[1]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_2 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[2]), Some(unit_fn));
+				let sac_2 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[2]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_3 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[3]), Some(unit_fn));
+				let sac_3 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[3]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_4 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[4]), Some(unit_fn));
+				let sac_4 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[4]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
 				let leader_progress_array = leader.1.get_progress();
 				let lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(
@@ -772,20 +807,40 @@ mod test {
 			for (dna_set, lwst_count, out_lwst_count) in dna_sets {
 				let mut hash_provider = HashProvider::new_with_bytes(forge_hash);
 
-				let leader =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[0]), Some(unit_fn));
+				let leader = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[0]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_1 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[1]), Some(unit_fn));
+				let sac_1 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[1]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_2 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[2]), Some(unit_fn));
+				let sac_2 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[2]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_3 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[3]), Some(unit_fn));
+				let sac_3 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[3]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
-				let sac_4 =
-					create_random_avatar::<Test, _>(&ALICE, Some(dna_set[4]), Some(unit_fn));
+				let sac_4 = create_random_avatar::<Test, _, 32>(
+					&ALICE,
+					Some(dna_set[4]),
+					Some(unit_fn),
+					DnaEncoding::V2,
+				);
 
 				let leader_progress_array = leader.1.get_progress();
 				let lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(
@@ -1090,7 +1145,7 @@ mod test {
 			let mut distribution_map = BTreeMap::new();
 
 			for i in 0..1_000 {
-				let leader = create_random_avatar::<Test, _>(
+				let leader = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x04, 0x01, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1098,9 +1153,10 @@ mod test {
 						0x55, 0x51, 0x50, 0x51, 0x53, 0x54, 0x55, 0x51,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_1 = create_random_avatar::<Test, _>(
+				let sac_1 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x04, 0x01, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1108,9 +1164,10 @@ mod test {
 						0x45, 0x41, 0x50, 0x41, 0x43, 0x44, 0x45, 0x41,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_2 = create_random_avatar::<Test, _>(
+				let sac_2 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x04, 0x01, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1118,9 +1175,10 @@ mod test {
 						0x45, 0x41, 0x50, 0x41, 0x43, 0x44, 0x45, 0x41,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_3 = create_random_avatar::<Test, _>(
+				let sac_3 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x04, 0x01, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1128,9 +1186,10 @@ mod test {
 						0x45, 0x41, 0x50, 0x41, 0x43, 0x44, 0x45, 0x41,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
-				let sac_4 = create_random_avatar::<Test, _>(
+				let sac_4 = create_random_avatar::<Test, _, 32>(
 					&ALICE,
 					Some([
 						0x13, 0x00, 0x04, 0x01, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1138,6 +1197,7 @@ mod test {
 						0x45, 0x41, 0x50, 0x41, 0x43, 0x44, 0x45, 0x41,
 					]),
 					Some(unit_fn),
+					DnaEncoding::V2,
 				);
 
 				let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::breed_avatars(

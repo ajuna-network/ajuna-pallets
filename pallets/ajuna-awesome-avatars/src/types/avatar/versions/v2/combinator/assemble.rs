@@ -1082,11 +1082,36 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let leader = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), Some(unit_fn));
-			let sac_1 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), Some(unit_fn));
-			let sac_2 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[2]), Some(unit_fn));
-			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), Some(unit_fn));
-			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), Some(unit_fn));
+			let leader = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[0]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_1 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[1]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_2 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[2]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_3 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[3]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_4 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[4]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
 
 			let leader_progress_array = leader.1.get_progress();
 			let lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(
@@ -1168,11 +1193,36 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let leader = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), Some(unit_fn));
-			let sac_1 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), Some(unit_fn));
-			let sac_2 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[2]), Some(unit_fn));
-			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), Some(unit_fn));
-			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), Some(unit_fn));
+			let leader = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[0]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_1 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[1]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_2 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[2]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_3 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[3]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
+			let sac_4 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[4]),
+				Some(unit_fn),
+				DnaEncoding::V2,
+			);
 
 			let total_souls =
 				leader.1.get_souls() +
@@ -1255,12 +1305,36 @@ mod test {
 				Some(mutate_fn)
 			};
 
-			let leader =
-				create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), avatar_fn(179));
-			let sac_1 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), avatar_fn(150));
-			let sac_2 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[2]), avatar_fn(236));
-			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(31));
-			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(73));
+			let leader = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[0]),
+				avatar_fn(179),
+				DnaEncoding::V2,
+			);
+			let sac_1 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[1]),
+				avatar_fn(150),
+				DnaEncoding::V2,
+			);
+			let sac_2 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[2]),
+				avatar_fn(236),
+				DnaEncoding::V2,
+			);
+			let sac_3 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[3]),
+				avatar_fn(31),
+				DnaEncoding::V2,
+			);
+			let sac_4 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[4]),
+				avatar_fn(73),
+				DnaEncoding::V2,
+			);
 
 			let total_souls =
 				leader.1.get_souls() +

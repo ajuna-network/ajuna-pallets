@@ -1,7 +1,5 @@
-use crate::{
-	types::{avatar::versions::v2::avatar_utils::HashProvider, PackType},
-	Config,
-};
+use super::hashing::HashProvider;
+use crate::{types::PackType, Config};
 use sp_std::marker::PhantomData;
 
 /// Represents a ‰ value, which goes from 1 to 1000
@@ -65,8 +63,29 @@ impl<T: Config> SlotRoller<T> {
 
 #[cfg(test)]
 mod test {
-	use super::{super::types::*, *};
+	use super::*;
 	use crate::{mock::*, types::ByteConvertible, Pallet};
+
+	#[derive(Copy, Clone, Default)]
+	enum Letter {
+		#[default]
+		A = 0,
+		B = 1,
+	}
+
+	impl ByteConvertible for Letter {
+		fn from_byte(byte: u8) -> Self {
+			match byte {
+				0 => Self::A,
+				1 => Self::B,
+				_ => Self::default(),
+			}
+		}
+
+		fn as_byte(&self) -> u8 {
+			*self as u8
+		}
+	}
 
 	#[test]
 	fn statistics_verification_test() {
@@ -74,10 +93,10 @@ mod test {
 			let hash = Pallet::<Test>::random_hash(b"statistics_test", &ALICE);
 			let mut hash_provider: HashProvider<Test, 32> = HashProvider::new(&hash);
 
-			let packs: [ProbabilitySlots<MaterialItemType, 2>; 3] = [
-				[(MaterialItemType::Polymers, 500), (MaterialItemType::Electronics, 500)],
-				[(MaterialItemType::Polymers, 300), (MaterialItemType::Electronics, 700)],
-				[(MaterialItemType::Polymers, 900), (MaterialItemType::Electronics, 100)],
+			let packs: [ProbabilitySlots<Letter, 2>; 3] = [
+				[(Letter::A, 500), (Letter::B, 500)],
+				[(Letter::A, 300), (Letter::B, 700)],
+				[(Letter::A, 900), (Letter::B, 100)],
 			];
 
 			let mut probability_array = [[0_u32; 2]; 3];
@@ -104,7 +123,7 @@ mod test {
 						&packs[2],
 						&mut hash_provider,
 					);
-					let rolled_index = rolled_entry.as_byte() as usize - 1;
+					let rolled_index = rolled_entry.as_byte() as usize;
 
 					probability_array[pack_index][rolled_index] += 1;
 				}

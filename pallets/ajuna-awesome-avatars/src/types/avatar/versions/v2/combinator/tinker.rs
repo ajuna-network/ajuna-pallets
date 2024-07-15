@@ -181,7 +181,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 					assert_eq!(
 						wrapped.get_spec::<EquippableItemType>(SpecIdx::Byte3),
 						EquippableItemType::ArmorBase
@@ -270,7 +270,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 				} else {
 					panic!("ForgeOutput of blueprint should have been Minted!");
 				}
@@ -344,7 +344,7 @@ mod test {
 
 			if let ForgeOutput::Minted(avatar) = minted_blueprint {
 				let wrapped = WrappedAvatar::new(avatar);
-				assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+				assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 				assert_eq!(wrapped.get_quantity(), 11);
 			} else {
 				panic!("ForgeOutput of blueprint should have been Minted!");
@@ -560,7 +560,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 					assert_eq!(
 						wrapped.get_spec::<EquippableItemType>(SpecIdx::Byte3),
 						EquippableItemType::ArmorComponent3
@@ -593,7 +593,7 @@ mod test {
 				WrappedAvatar::new(avatar)
 			};
 
-			let leader = create_random_avatar::<Test, _>(
+			let leader = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x12, 0x42, 0x12, 0x05, 0x00, 0x96, 0x78, 0xd1, 0xc6, 0x59, 0x4e, 0x1e, 0x8d,
@@ -601,9 +601,10 @@ mod test {
 					0x08, 0x86, 0xb9, 0xbb, 0xf7, 0xe0,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_1 = create_random_avatar::<Test, _>(
+			let sac_1 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x23, 0x00, 0x11, 0x24, 0x00, 0x40, 0x3a, 0xdb, 0x6e, 0xf2, 0x37, 0x75, 0xd1,
@@ -611,9 +612,10 @@ mod test {
 					0x5c, 0xbf, 0x33, 0x4a, 0x3e, 0x33,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_2 = create_random_avatar::<Test, _>(
+			let sac_2 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x28, 0x00, 0x11, 0x29, 0x00, 0xcd, 0x8c, 0x45, 0x36, 0x52, 0xc5, 0xd9, 0x2f,
@@ -621,9 +623,10 @@ mod test {
 					0xc1, 0x43, 0x83, 0xe6, 0x87, 0xff,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_3 = create_random_avatar::<Test, _>(
+			let sac_3 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x25, 0x00, 0x11, 0x1f, 0x00, 0x57, 0x2e, 0xf0, 0xa4, 0x02, 0xef, 0x9e, 0x59,
@@ -631,9 +634,10 @@ mod test {
 					0x9e, 0xc9, 0xe9, 0xbf, 0x7c, 0xa0,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
-			let sac_4 = create_random_avatar::<Test, _>(
+			let sac_4 = create_random_avatar::<Test, _, 32>(
 				&ALICE,
 				Some([
 					0x22, 0x00, 0x11, 0x21, 0x00, 0xe8, 0x01, 0x9d, 0xdf, 0xc2, 0x99, 0xe6, 0x5d,
@@ -641,6 +645,7 @@ mod test {
 					0xd2, 0x03, 0x14, 0x35, 0xed, 0xc4,
 				]),
 				Some(unit_fn),
+				DnaEncoding::V2,
 			);
 
 			let total_soul_points =
@@ -670,7 +675,7 @@ mod test {
 
 				if let ForgeOutput::Minted(avatar) = minted_blueprint {
 					let wrapped = WrappedAvatar::new(avatar);
-					assert_eq!(wrapped.get_item_type(), ItemType::Blueprint);
+					assert_eq!(wrapped.get_item_type::<ItemType>(), ItemType::Blueprint);
 					assert_eq!(wrapped.get_souls(), total_soul_points);
 				} else {
 					panic!("ForgeOutput of blueprint should have been Minted!");

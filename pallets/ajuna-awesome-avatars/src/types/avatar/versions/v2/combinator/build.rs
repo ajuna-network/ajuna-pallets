@@ -751,11 +751,36 @@ mod test {
 				Some(mutate_fn)
 			};
 
-			let leader = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), avatar_fn(5));
-			let sac_1 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), avatar_fn(229));
-			let sac_2 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[2]), avatar_fn(230));
-			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(250));
-			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(239));
+			let leader = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[0]),
+				avatar_fn(5),
+				DnaEncoding::V2,
+			);
+			let sac_1 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[1]),
+				avatar_fn(229),
+				DnaEncoding::V2,
+			);
+			let sac_2 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[2]),
+				avatar_fn(230),
+				DnaEncoding::V2,
+			);
+			let sac_3 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[3]),
+				avatar_fn(250),
+				DnaEncoding::V2,
+			);
+			let sac_4 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[4]),
+				avatar_fn(239),
+				DnaEncoding::V2,
+			);
 
 			let total_souls =
 				leader.1.get_souls() +
@@ -858,11 +883,36 @@ mod test {
 				Some(mutate_fn)
 			};
 
-			let leader = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), avatar_fn(12));
-			let sac_1 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), avatar_fn(624));
-			let sac_2 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[2]), avatar_fn(182));
-			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(940));
-			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(717));
+			let leader = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[0]),
+				avatar_fn(12),
+				DnaEncoding::V2,
+			);
+			let sac_1 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[1]),
+				avatar_fn(624),
+				DnaEncoding::V2,
+			);
+			let sac_2 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[2]),
+				avatar_fn(182),
+				DnaEncoding::V2,
+			);
+			let sac_3 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[3]),
+				avatar_fn(940),
+				DnaEncoding::V2,
+			);
+			let sac_4 = create_random_avatar::<Test, _, 32>(
+				&ALICE,
+				Some(hash_base[4]),
+				avatar_fn(717),
+				DnaEncoding::V2,
+			);
 
 			let total_souls =
 				leader.1.get_souls() +
