@@ -1064,6 +1064,10 @@ where
 		(avatar.dna[21..32]).copy_from_slice(&value);
 	}
 
+	/// Checks if the `array_1` can be upgraded using `array_2`
+	///
+	/// The method returns an optional list of the indexes that matched and should be used for
+	/// upgrading `array_1`. If there was no match `None` is returned.
 	pub fn is_progress_match(
 		array_1: [u8; 11],
 		array_2: [u8; 11],
@@ -1076,6 +1080,18 @@ where
 		(match_count > 0 && (((match_count * 2) + mirror_count) >= 6)).then_some(matches)
 	}
 
+	/// Matches two progress arrays, using `array_2` to upgrade `array_1`.
+	///
+	/// This method return the indexes that matched and the indexes that are considered mirrors.
+	///
+	/// * Matches are indexes that can be increased to the next rarity level.
+	/// * Mirrors are indexes that have been maxed and are of the same variation between both
+	///   arrays.
+	///
+	/// `rarity_level` is used to determine the maximum rarity for which a direct byte match is not
+	/// necessary for a matching to occur, the higher the value, the easier it is to generate
+	/// matches between two arrays, while at the minimum level (which is 0) only direct byte matches
+	/// or special variations will generate a match.
 	pub fn match_progress(
 		array_1: [u8; 11],
 		array_2: [u8; 11],
@@ -1114,6 +1130,13 @@ where
 		(mirrors, matches)
 	}
 
+	/// Matches two bytes, matching is in short checking if the two bytes are "neighbours"
+	///
+	/// Neighbouring bytes are either those with a difference in value of either 1 or
+	/// `PROGRESS_VARIATIONS`.
+	///
+	/// If there is a match, that means that the index these bytes are from may be selected for
+	/// upgrading the leader's progress_array.
 	pub fn match_progress_byte(byte_1: u8, byte_2: u8) -> bool {
 		let diff = if byte_1 >= byte_2 { byte_1 - byte_2 } else { byte_2 - byte_1 };
 		diff == 1 || diff == (PROGRESS_VARIATIONS - 1)
