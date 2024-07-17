@@ -231,8 +231,8 @@ impl<T: Config> ForgerV3<T> {
 					if have_same_rarity &&
 						!is_maxed && (rarity_1 < max_tier || variation_2 == 0x0B || byte_match)
 					{
-						// if same rarity and on lowest rarity check if gene is a matching
-						// candidate, imp. matching is not equal mirror
+						// if same rarity and not maxed, check if rarity is below max_tier or
+						// there's a byte match
 						match_count += 1;
 						matching_indexes.insert(i);
 					} else if is_maxed && ((variation_1 == variation_2) || variation_2 == 0x0B) {
