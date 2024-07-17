@@ -157,6 +157,7 @@ mod affiliate_to {
 			));
 
 			assert_eq!(Affiliators::<Test, Instance1>::get(ALICE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), Some(bounded_vec![BOB]));
 			assert_eq!(
 				Affiliatees::<Test, Instance1>::get(CHARLIE),
 				Some(bounded_vec![ALICE, BOB])
@@ -174,6 +175,11 @@ mod affiliate_to {
 			));
 
 			assert_eq!(Affiliators::<Test, Instance1>::get(CHARLIE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), Some(bounded_vec![BOB]));
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(CHARLIE),
+				Some(bounded_vec![ALICE, BOB])
+			);
 			assert_eq!(
 				Affiliatees::<Test, Instance1>::get(DAVE),
 				Some(bounded_vec![CHARLIE, ALICE])
@@ -191,6 +197,15 @@ mod affiliate_to {
 			));
 
 			assert_eq!(Affiliators::<Test, Instance1>::get(DAVE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), Some(bounded_vec![BOB]));
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(CHARLIE),
+				Some(bounded_vec![ALICE, BOB])
+			);
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(DAVE),
+				Some(bounded_vec![CHARLIE, ALICE])
+			);
 			assert_eq!(
 				Affiliatees::<Test, Instance1>::get(EDWARD),
 				Some(bounded_vec![DAVE, CHARLIE])

@@ -125,7 +125,7 @@ pub mod pallet {
 			affiliator: T::AccountId,
 			affiliatee: T::AccountId,
 		) -> DispatchResult {
-			let mut accounts = Affiliatees::<T, I>::take(&affiliator).unwrap_or_default();
+			let mut accounts = Affiliatees::<T, I>::get(&affiliator).unwrap_or_default();
 
 			Self::try_add_account_to(&mut accounts, affiliator.clone())?;
 
