@@ -1595,7 +1595,7 @@ pub mod pallet {
 			account: AccountIdFor<T>,
 			chain: Vec<AccountIdFor<T>>,
 		) -> DispatchResult {
-			let _ = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			T::AffiliateHandler::force_set_affiliatee_chain_for(&account, chain)
 		}
