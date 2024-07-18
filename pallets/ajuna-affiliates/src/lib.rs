@@ -125,7 +125,7 @@ pub mod pallet {
 			affiliator: T::AccountId,
 			affiliatee: T::AccountId,
 		) -> DispatchResult {
-			let mut accounts = Affiliatees::<T, I>::take(&affiliator).unwrap_or_default();
+			let mut accounts = Affiliatees::<T, I>::get(&affiliator).unwrap_or_default();
 
 			Self::try_add_account_to(&mut accounts, affiliator.clone())?;
 
@@ -253,6 +253,17 @@ pub mod pallet {
 						})
 					},
 				)
+		}
+
+		fn force_set_affiliatee_chain_for(
+			account: &AccountIdFor<T>,
+			chain: Vec<AccountIdFor<T>>,
+		) -> DispatchResult {
+			let chain = AffiliatedAccountsOf::<T, I>::try_from(chain)
+				.map_err(|_| Error::<T, I>::CannotAffiliateMoreAccounts)?;
+			Affiliatees::<T, I>::insert(account, chain);
+
+			Ok(())
 		}
 	}
 

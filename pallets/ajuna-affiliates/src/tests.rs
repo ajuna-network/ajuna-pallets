@@ -157,6 +157,7 @@ mod affiliate_to {
 			));
 
 			assert_eq!(Affiliators::<Test, Instance1>::get(ALICE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), Some(bounded_vec![BOB]));
 			assert_eq!(
 				Affiliatees::<Test, Instance1>::get(CHARLIE),
 				Some(bounded_vec![ALICE, BOB])
@@ -174,6 +175,11 @@ mod affiliate_to {
 			));
 
 			assert_eq!(Affiliators::<Test, Instance1>::get(CHARLIE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), Some(bounded_vec![BOB]));
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(CHARLIE),
+				Some(bounded_vec![ALICE, BOB])
+			);
 			assert_eq!(
 				Affiliatees::<Test, Instance1>::get(DAVE),
 				Some(bounded_vec![CHARLIE, ALICE])
@@ -191,6 +197,15 @@ mod affiliate_to {
 			));
 
 			assert_eq!(Affiliators::<Test, Instance1>::get(DAVE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), Some(bounded_vec![BOB]));
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(CHARLIE),
+				Some(bounded_vec![ALICE, BOB])
+			);
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(DAVE),
+				Some(bounded_vec![CHARLIE, ALICE])
+			);
 			assert_eq!(
 				Affiliatees::<Test, Instance1>::get(EDWARD),
 				Some(bounded_vec![DAVE, CHARLIE])
@@ -419,6 +434,31 @@ mod multi_instance_tests {
 			assert_eq!(AffiliateRules::<Test, Instance1>::get(rule_id), Some(rule));
 			// No changes also in Instance2
 			assert_eq!(AffiliateRules::<Test, Instance2>::get(rule_id), None);
+		});
+	}
+}
+
+mod force_affiliatees {
+	use super::*;
+
+	#[test]
+	fn force_set_affiliation_state_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let account = ALICE;
+			let chain = vec![BOB, CHARLIE];
+
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::force_set_affiliatee_chain_for(
+					&account, chain.clone()
+				)
+			);
+
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(account).map(|acc| acc.to_vec()),
+				Some(chain)
+			);
 		});
 	}
 }
