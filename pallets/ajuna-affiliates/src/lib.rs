@@ -254,6 +254,17 @@ pub mod pallet {
 					},
 				)
 		}
+
+		fn force_set_affiliatee_chain_for(
+			account: &AccountIdFor<T>,
+			chain: Vec<AccountIdFor<T>>,
+		) -> DispatchResult {
+			let chain = AffiliatedAccountsOf::<T, I>::try_from(chain)
+				.map_err(|_| Error::<T, I>::CannotAffiliateMoreAccounts)?;
+			Affiliatees::<T, I>::insert(account, chain);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config<I>, I: 'static> RuleInspector<T::RuleIdentifier, T::RuntimeRule> for Pallet<T, I> {

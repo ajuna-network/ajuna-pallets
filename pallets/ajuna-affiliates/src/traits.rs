@@ -31,6 +31,9 @@ pub trait AffiliateMutator<AccountId> {
 
 	/// Attempts to remove the affiliate link from account
 	fn try_clear_affiliation_for(account: &AccountId) -> DispatchResult;
+
+	fn force_set_affiliatee_chain_for(account: &AccountId, chain: Vec<AccountId>)
+		-> DispatchResult;
 }
 
 pub trait RuleInspector<RuleId, Rule> {

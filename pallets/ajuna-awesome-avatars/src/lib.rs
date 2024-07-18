@@ -1587,6 +1587,18 @@ pub mod pallet {
 
 			T::TournamentHandler::try_claim_golden_duck_for(&season_id, &account, &avatar_id)
 		}
+
+		#[pallet::call_index(34)]
+		#[pallet::weight({10_000})]
+		pub fn force_set_affiliatee_state(
+			origin: OriginFor<T>,
+			account: AccountIdFor<T>,
+			chain: Vec<AccountIdFor<T>>,
+		) -> DispatchResult {
+			let _ = ensure_root(origin)?;
+
+			T::AffiliateHandler::force_set_affiliatee_chain_for(&account, chain)
+		}
 	}
 
 	impl<T: Config> Pallet<T> {

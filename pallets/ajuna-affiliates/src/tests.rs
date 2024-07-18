@@ -437,3 +437,28 @@ mod multi_instance_tests {
 		});
 	}
 }
+
+mod force_affiliatees {
+	use super::*;
+
+	#[test]
+	fn force_set_affiliation_state_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let account = ALICE;
+			let chain = vec![BOB, CHARLIE];
+
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::force_set_affiliatee_chain_for(
+					&account, chain.clone()
+				)
+			);
+
+			assert_eq!(
+				Affiliatees::<Test, Instance1>::get(&account).map(|acc| acc.to_vec()),
+				Some(chain)
+			);
+		});
+	}
+}
