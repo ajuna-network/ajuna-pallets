@@ -456,7 +456,7 @@ mod force_affiliatees {
 			);
 
 			assert_eq!(
-				Affiliatees::<Test, Instance1>::get(&account).map(|acc| acc.to_vec()),
+				Affiliatees::<Test, Instance1>::get(account).map(|acc| acc.to_vec()),
 				Some(chain)
 			);
 		});
