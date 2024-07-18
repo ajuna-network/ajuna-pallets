@@ -125,7 +125,7 @@ impl<T: Config> Forger<T> for ForgerV3<T> {
 			input_sacrifices.into_iter().unzip();
 
 		let (mut unique_matched_indexes, matches, soul_count) =
-			Self::compare_all(&leader, sacrifice_avatars.as_slice(), max_tier)?;
+			Self::compare_all(&leader, sacrifice_avatars.as_slice(), 0)?;
 
 		leader.souls += soul_count;
 
@@ -208,16 +208,20 @@ impl<T: Config> ForgerV3<T> {
 		}
 
 		let (matching_indexes, match_count, mirror_count) =
-			target.dna.clone().into_iter().zip(other.dna.clone()).enumerate().fold(
+			array_1.into_iter().zip(array_2).enumerate().fold(
 				(BTreeSet::new(), 0, 0),
 				|(mut matching_indexes, mut match_count, mut mirror_count), (i, (lhs, rhs))| {
+					// Gene for avatar_1
 					let rarity_1 = lhs >> 4;
 					let variation_1 = lhs & 0b0000_1111;
 
+					// Gene for avatar_2
 					let rarity_2 = rhs >> 4;
 					let variation_2 = rhs & 0b0000_1111;
 
 					let have_same_rarity = rarity_1 == rarity_2;
+					// check if current gene is lower than the lowest gen rarity or if gene already
+					// has the highest rarity
 					let is_maxed = rarity_1 > lowest_1;
 					let byte_match = DnaUtils::<BlockNumberFor<T>>::match_progress_byte(
 						variation_1,
@@ -227,9 +231,13 @@ impl<T: Config> ForgerV3<T> {
 					if have_same_rarity &&
 						!is_maxed && (rarity_1 < max_tier || variation_2 == 0x0B || byte_match)
 					{
+						// if same rarity and not maxed, check if rarity is below max_tier or
+						// there's a byte match
 						match_count += 1;
 						matching_indexes.insert(i);
 					} else if is_maxed && ((variation_1 == variation_2) || variation_2 == 0x0B) {
+						// if the genes are same rarity not on lowest rarity and same components,
+						// then they count as mirrored
 						mirror_count += 1;
 					}
 
@@ -470,19 +478,41 @@ mod test {
 
 		let other = Avatar::default()
 			.dna(&[0x11, 0x35, 0x30, 0x10, 0x14, 0x31, 0x33, 0x14, 0x32, 0x11, 0x15]);
-		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 4,), (true, BTreeSet::from([10])));
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (true, BTreeSet::from([10])));
 
 		let other = Avatar::default()
 			.dna(&[0x14, 0x15, 0x13, 0x10, 0x35, 0x15, 0x11, 0x32, 0x10, 0x30, 0x13]);
-		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 4,), (true, BTreeSet::from([8, 10])));
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (true, BTreeSet::from([10])));
 
 		let other = Avatar::default()
 			.dna(&[0x11, 0x12, 0x13, 0x14, 0x15, 0x15, 0x11, 0x14, 0x13, 0x35, 0x15]);
-		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 4,), (true, BTreeSet::from([8, 10])));
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (true, BTreeSet::from([8, 10])));
 
 		let other = Avatar::default()
 			.dna(&[0x11, 0x33, 0x12, 0x10, 0x15, 0x13, 0x11, 0x14, 0x15, 0x34, 0x13]);
-		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 4,), (true, BTreeSet::from([8, 10])));
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (true, BTreeSet::from([8, 10])));
+	}
+
+	#[test]
+	fn compare_sample_2_works() {
+		let leader = Avatar::default()
+			.dna(&[0x12, 0x12, 0x13, 0x14, 0x10, 0x15, 0x15, 0x13, 0x34, 0x30, 0x13]);
+
+		let other = Avatar::default()
+			.dna(&[0x11, 0x10, 0x15, 0x10, 0x15, 0x12, 0x12, 0x10, 0x11, 0x12, 0x13]);
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (false, BTreeSet::from([0, 4])));
+
+		let other = Avatar::default()
+			.dna(&[0x10, 0x12, 0x10, 0x10, 0x13, 0x12, 0x12, 0x14, 0x15, 0x12, 0x13]);
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (false, BTreeSet::from([7])));
+
+		let other = Avatar::default()
+			.dna(&[0x15, 0x12, 0x11, 0x15, 0x30, 0x13, 0x11, 0x13, 0x10, 0x11, 0x13]);
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (false, BTreeSet::from([3])));
+
+		let other = Avatar::default()
+			.dna(&[0x10, 0x10, 0x10, 0x10, 0x35, 0x12, 0x31, 0x15, 0x14, 0x13, 0x11]);
+		assert_eq!(ForgerV3::<Test>::compare(&leader, &other, 0,), (false, BTreeSet::from([])));
 	}
 
 	#[test]
@@ -631,14 +661,7 @@ mod test {
 					.iter()
 					.zip([(false, BTreeSet::from([])), (false, BTreeSet::from([]))])
 				{
-					assert_eq!(
-						ForgerV3::<Test>::compare(
-							&original_leader,
-							sacrifice,
-							season.max_tier() as u8,
-						),
-						result
-					)
+					assert_eq!(ForgerV3::<Test>::compare(&original_leader, sacrifice, 0,), result)
 				}
 
 				// check all sacrifices are burned
@@ -723,11 +746,7 @@ mod test {
 				let forged_leader = Avatars::<Test>::get(leader_id).unwrap().1;
 
 				assert_eq!(
-					ForgerV3::<Test>::compare(
-						&original_leader,
-						&original_sacrifice,
-						season.max_tier() as u8,
-					),
+					ForgerV3::<Test>::compare(&original_leader, &original_sacrifice, 0,),
 					(false, BTreeSet::from([]))
 				);
 				// check all sacrifices are burned

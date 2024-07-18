@@ -1064,39 +1064,56 @@ where
 		(avatar.dna[21..32]).copy_from_slice(&value);
 	}
 
+	/// Checks if the `leader_progress` can be upgraded using `sacrifice_progress`
+	///
+	/// The method returns an optional list of the indexes that matched and should be used for
+	/// upgrading `leader_progress`. If there was no match `None` is returned.
 	pub fn is_progress_match(
-		array_1: [u8; 11],
-		array_2: [u8; 11],
+		leader_progress: [u8; 11],
+		sacrifice_progress: [u8; 11],
 		rarity_level: u8,
 	) -> Option<Vec<u32>> {
-		let (mirror, matches) = Self::match_progress(array_1, array_2, rarity_level);
+		let (mirror, matches) =
+			Self::match_progress(leader_progress, sacrifice_progress, rarity_level);
 		let match_count = matches.len() as u32;
 		let mirror_count = mirror.len() as u32;
 
 		(match_count > 0 && (((match_count * 2) + mirror_count) >= 6)).then_some(matches)
 	}
 
+	/// Matches two progress arrays, using `sacrifice_progress` to upgrade `leader_progress`.
+	///
+	/// This method return the indexes that matched and the indexes that are considered mirrors.
+	///
+	/// * Matches are indexes that can be increased to the next rarity level.
+	/// * Mirrors are indexes of the same variation between both arrays and where rarity is higher
+	///   than the lowest of all rarities in the leader array.
+	///
+	/// `rarity_level` is used to determine the maximum rarity for which a direct byte match is not
+	/// necessary for a matching to occur. The higher the value, the easier it is to generate
+	/// matches between two arrays. At the minimum level (which is 0) only direct byte matches
+	/// or special variations will generate a match.
 	pub fn match_progress(
-		array_1: [u8; 11],
-		array_2: [u8; 11],
+		leader_progress: [u8; 11],
+		sacrifice_progress: [u8; 11],
 		rarity_level: u8,
 	) -> (Vec<u32>, Vec<u32>) {
 		let mut matches = Vec::<u32>::new();
 		let mut mirrors = Vec::<u32>::new();
 
-		let lowest_1 = Self::lowest_progress_byte(&array_1, ByteType::High);
-		let lowest_2 = Self::lowest_progress_byte(&array_2, ByteType::High);
+		let lowest_1 = Self::lowest_progress_byte(&leader_progress, ByteType::High);
+		let lowest_2 = Self::lowest_progress_byte(&sacrifice_progress, ByteType::High);
 
 		if lowest_1 > lowest_2 {
 			return (mirrors, matches)
 		}
 
-		for i in 0..array_1.len() {
-			let rarity_1 = Self::read_at(&array_1, i, ByteType::High);
-			let variation_1 = Self::read_at(&array_1, i, ByteType::Low);
+		for i in 0..leader_progress.len() {
+			let rarity_1 = Self::read_at(&leader_progress, i, ByteType::High);
+			let variation_1 = Self::read_at(&leader_progress, i, ByteType::Low);
 
-			let rarity_2 = Self::read_at(&array_2, i, ByteType::High);
-			let variation_2 = Self::read_at(&array_2, i, ByteType::Low);
+			let rarity_2 = Self::read_at(&sacrifice_progress, i, ByteType::High);
+			let variation_2 = Self::read_at(&sacrifice_progress, i, ByteType::Low);
 
 			let have_same_rarity = rarity_1 == rarity_2 || rarity_2 == 0x0B;
 			let is_maxed = rarity_1 > lowest_1;
@@ -1114,8 +1131,19 @@ where
 		(mirrors, matches)
 	}
 
-	pub fn match_progress_byte(byte_1: u8, byte_2: u8) -> bool {
-		let diff = if byte_1 >= byte_2 { byte_1 - byte_2 } else { byte_2 - byte_1 };
+	/// Matches two bytes, matching is in short checking if the two bytes are "neighbours"
+	///
+	/// Neighbouring bytes are either those with a difference in value of either 1 or
+	/// `PROGRESS_VARIATIONS`. In short, it's similar to a modulo operation.
+	///
+	/// If there is a match, that means that the index these bytes are from may be selected for
+	/// upgrading the leader's progress_array.
+	pub fn match_progress_byte(leader_byte: u8, sacrifice_byte: u8) -> bool {
+		let diff = if leader_byte >= sacrifice_byte {
+			leader_byte - sacrifice_byte
+		} else {
+			sacrifice_byte - leader_byte
+		};
 		diff == 1 || diff == (PROGRESS_VARIATIONS - 1)
 	}
 
