@@ -1,5 +1,9 @@
 mod extract_stardust;
 mod engage_in_event;
+mod start_harvesting_temp_nebula;
+mod start_haversting_moon;
+mod upgrade_ship;
+mod minht_travel_point;
 
 #[cfg(test)]
 use super::test_utils::*;
