@@ -19,7 +19,7 @@ if __name__ == "__main__":
         affiliator = event_accounts['affiliator']
         affiliatee = event_accounts['affiliatee']
 
-        chain = affiliatee_chains.get(affiliator, [])
+        chain = affiliatee_chains.get(affiliator, []).copy()
 
         if len(chain) == affiliate_max_level:
             chain.pop()
@@ -32,6 +32,6 @@ if __name__ == "__main__":
         writer = csv.writer(csvfile, dialect='unix', lineterminator=',\n')
         for account_id in affiliatee_chains:
             writer.writerow([account_id] + affiliatee_chains[account_id])
-    
+
 
 
