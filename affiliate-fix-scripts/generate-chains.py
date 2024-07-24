@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
         for row in reader:
             event_accounts_list.append(row)
-    
+
     for event_accounts in event_accounts_list:
         affiliator = event_accounts['affiliator']
         affiliatee = event_accounts['affiliatee']
@@ -25,7 +25,7 @@ if __name__ == "__main__":
             chain.pop()
 
         affiliatee_chains[affiliatee] = [affiliator] + chain
-    
+
     print('Writing rows to file...')
 
     with open('affiliatee-chains.csv', 'w') as csvfile:
