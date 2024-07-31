@@ -84,7 +84,7 @@ mod tournament_inspector {
 				tournament_config.clone(),
 			));
 
-			run_to_block(15);
+			run_to_block(10);
 
 			assert_eq!(
 				TournamentAlpha::get_active_tournament_config_for(&SEASON_ID_1),
@@ -107,7 +107,7 @@ mod tournament_inspector {
 				tournament_config.clone(),
 			));
 
-			run_to_block(15);
+			run_to_block(10);
 
 			assert_eq!(TournamentBeta::get_active_tournament_config_for(&SEASON_ID_1), None);
 		});
@@ -130,7 +130,7 @@ mod tournament_inspector {
 					golden_duck_tournament.clone(),
 				));
 
-				run_to_block(15);
+				run_to_block(10);
 
 				assert!(TournamentAlpha::is_golden_duck_enabled_for(&SEASON_ID_1));
 			};
@@ -149,7 +149,7 @@ mod tournament_inspector {
 					non_golden_duck_tournament.clone(),
 				));
 
-				run_to_block(30);
+				run_to_block(25);
 
 				assert!(!TournamentAlpha::is_golden_duck_enabled_for(&SEASON_ID_2));
 			};
@@ -513,7 +513,7 @@ mod tournament_ranker {
 				result.unwrap()
 			};
 
-			run_to_block(15);
+			run_to_block(10);
 
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
@@ -642,7 +642,7 @@ mod tournament_ranker {
 				result.unwrap()
 			};
 
-			run_to_block(15);
+			run_to_block(10);
 
 			assert_eq!(
 				TournamentRankings::<Test, Instance1>::get(SEASON_ID_1, tournament_id),
@@ -701,7 +701,7 @@ mod tournament_claimer {
 				let tournament_account =
 					TournamentAlpha::tournament_treasury_account_id(SEASON_ID_1);
 
-				run_to_block(15);
+				run_to_block(10);
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
@@ -733,7 +733,7 @@ mod tournament_claimer {
 				assert_eq!(Balances::free_balance(ALICE), 900);
 				assert_eq!(Balances::free_balance(BOB), 1_000);
 
-				run_to_block(60);
+				run_to_block(50);
 
 				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 					crate::Event::TournamentClaimPeriodStarted {
@@ -831,7 +831,7 @@ mod tournament_claimer {
 					result.unwrap()
 				};
 
-				run_to_block(15);
+				run_to_block(10);
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
@@ -851,7 +851,7 @@ mod tournament_claimer {
 					&H256::from_low_u64_be(10),
 				));
 
-				run_to_block(60);
+				run_to_block(50);
 
 				assert_ok!(TournamentAlpha::try_claim_tournament_reward_for(
 					&SEASON_ID_1,
@@ -930,7 +930,7 @@ mod tournament_claimer {
 			assert_eq!(Balances::free_balance(ALICE), 500);
 			assert_eq!(Balances::free_balance(BOB), 1_000);
 
-			run_to_block(15);
+			run_to_block(10);
 
 			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 				&SEASON_ID_1,
@@ -951,7 +951,7 @@ mod tournament_claimer {
 				&H256::from_low_u64_be(10),
 			));
 
-			run_to_block(60);
+			run_to_block(50);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 				crate::Event::TournamentClaimPeriodStarted {
@@ -1020,7 +1020,7 @@ mod tournament_claimer {
 					result.unwrap()
 				};
 
-				run_to_block(15);
+				run_to_block(10);
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
@@ -1059,7 +1059,7 @@ mod tournament_claimer {
 					Error::<Test, Instance1>::TournamentNotInClaimPeriod
 				);
 
-				run_to_block(60);
+				run_to_block(50);
 
 				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 					crate::Event::TournamentClaimPeriodStarted {
@@ -1068,7 +1068,7 @@ mod tournament_claimer {
 					},
 				));
 
-				run_to_block(100);
+				run_to_block(90);
 
 				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 					crate::Event::TournamentEnded { season_id: SEASON_ID_1, tournament_id },
@@ -1115,7 +1115,7 @@ mod tournament_claimer {
 					result.unwrap()
 				};
 
-				run_to_block(15);
+				run_to_block(20);
 
 				assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
 					&SEASON_ID_1,
@@ -1135,7 +1135,7 @@ mod tournament_claimer {
 					&H256::from_low_u64_be(10),
 				));
 
-				run_to_block(60);
+				run_to_block(50);
 
 				System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 					crate::Event::TournamentClaimPeriodStarted {
@@ -1212,7 +1212,7 @@ fn test_full_tournament_workflow() {
 				crate::Event::TournamentCreated { season_id: SEASON_ID_1, tournament_id },
 			));
 
-			run_to_block(25);
+			run_to_block(20);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 				crate::Event::TournamentActivePeriodStarted {
@@ -1299,7 +1299,7 @@ fn test_full_tournament_workflow() {
 				GoldenDuckStateFor::<Test, Instance1>::Enabled(25, Some(H256::from_low_u64_be(3)))
 			);
 
-			run_to_block(65);
+			run_to_block(50);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 				crate::Event::TournamentClaimPeriodStarted {
@@ -1369,7 +1369,7 @@ fn test_full_tournament_workflow() {
 			assert_eq!(Balances::free_balance(DAVE), 1_012);
 			assert_eq!(Balances::free_balance(EDWARD), 1_030);
 
-			run_to_block(120);
+			run_to_block(100);
 
 			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
 				crate::Event::TournamentEnded { season_id: SEASON_ID_1, tournament_id },
