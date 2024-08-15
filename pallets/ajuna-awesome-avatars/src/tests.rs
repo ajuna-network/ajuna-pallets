@@ -1067,7 +1067,7 @@ mod minting {
 					let mut expected_nonce = 0;
 					let mut owned_avatar_count = 0;
 					let mut season_minted_count = 0;
-					let mut minted_count = 0;
+					let mut season_free_minted_count = 0;
 
 					let season_id = 1;
 
@@ -1110,24 +1110,34 @@ mod minting {
 							initial_balance -= fees.clone().fee_for(&MintPackSize::One);
 							initial_treasury_balance += fees.clone().fee_for(&MintPackSize::One);
 
+							season_minted_count += 1;
+
 							assert_eq!(Balances::total_balance(&ALICE), initial_balance);
 							assert_eq!(Treasury::<Test>::get(1), initial_treasury_balance);
+							assert_eq!(
+								SeasonStats::<Test>::get(1, ALICE).minted,
+								season_minted_count
+							);
 						},
 						MintPayment::Free => {
 							initial_free_mints -= MintPackSize::One.as_mint_count();
+
+							season_free_minted_count += 1;
+
 							assert_eq!(
 								PlayerConfigs::<Test>::get(ALICE).free_mints,
 								initial_free_mints
+							);
+							assert_eq!(
+								SeasonStats::<Test>::get(1, ALICE).free_minted,
+								season_free_minted_count
 							);
 						},
 					}
 					expected_nonce += expected_nonce_increment;
 					owned_avatar_count += 1;
-					minted_count += 1;
-					season_minted_count += 1;
 					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_eq!(Owners::<Test>::get(ALICE, SEASON_ID).len(), owned_avatar_count);
-					assert_eq!(SeasonStats::<Test>::get(1, ALICE).minted, season_minted_count);
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					assert_eq!(
 						PlayerSeasonConfigs::<Test>::get(ALICE, season_id).stats.mint.first,
@@ -1157,24 +1167,34 @@ mod minting {
 							initial_balance -= fees.clone().fee_for(&MintPackSize::Three);
 							initial_treasury_balance += fees.clone().fee_for(&MintPackSize::Three);
 
+							season_minted_count += 3;
+
 							assert_eq!(Balances::total_balance(&ALICE), initial_balance);
 							assert_eq!(Treasury::<Test>::get(1), initial_treasury_balance);
+							assert_eq!(
+								SeasonStats::<Test>::get(1, ALICE).minted,
+								season_minted_count
+							);
 						},
 						MintPayment::Free => {
 							initial_free_mints -= MintPackSize::Three.as_mint_count();
+
+							season_free_minted_count += 3;
+
 							assert_eq!(
 								PlayerConfigs::<Test>::get(ALICE).free_mints,
 								initial_free_mints
+							);
+							assert_eq!(
+								SeasonStats::<Test>::get(1, ALICE).free_minted,
+								season_free_minted_count
 							);
 						},
 					}
 					expected_nonce += expected_nonce_increment * 3;
 					owned_avatar_count += 3;
-					minted_count += 3;
-					season_minted_count += 3;
 					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_eq!(Owners::<Test>::get(ALICE, SEASON_ID).len(), owned_avatar_count);
-					assert_eq!(SeasonStats::<Test>::get(1, ALICE).minted, season_minted_count);
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					System::assert_last_event(mock::RuntimeEvent::AAvatars(
 						crate::Event::AvatarsMinted {
@@ -1198,24 +1218,34 @@ mod minting {
 							initial_balance -= fees.clone().fee_for(&MintPackSize::Six);
 							initial_treasury_balance += fees.clone().fee_for(&MintPackSize::Six);
 
+							season_minted_count += 6;
+
 							assert_eq!(Balances::total_balance(&ALICE), initial_balance);
 							assert_eq!(Treasury::<Test>::get(1), initial_treasury_balance);
+							assert_eq!(
+								SeasonStats::<Test>::get(1, ALICE).minted,
+								season_minted_count
+							);
 						},
 						MintPayment::Free => {
 							initial_free_mints -= MintPackSize::Six.as_mint_count();
+
+							season_free_minted_count += 6;
+
 							assert_eq!(
 								PlayerConfigs::<Test>::get(ALICE).free_mints,
 								initial_free_mints
+							);
+							assert_eq!(
+								SeasonStats::<Test>::get(1, ALICE).free_minted,
+								season_free_minted_count
 							);
 						},
 					}
 					expected_nonce += expected_nonce_increment * 6;
 					owned_avatar_count += 6;
-					minted_count += 6;
-					season_minted_count += 6;
 					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_eq!(Owners::<Test>::get(ALICE, SEASON_ID).len(), owned_avatar_count);
-					assert_eq!(SeasonStats::<Test>::get(1, ALICE).minted, season_minted_count);
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					System::assert_last_event(mock::RuntimeEvent::AAvatars(
 						crate::Event::AvatarsMinted {
@@ -1239,7 +1269,11 @@ mod minting {
 									pack_type: PackType::Material,
 								}
 							));
-							minted_count += 1;
+							season_minted_count += 1;
+							assert_eq!(
+								SeasonStats::<Test>::get(1, ALICE).minted,
+								season_minted_count
+							);
 
 							// account is reaped, nonce and balance are reset to 0
 							assert_eq!(System::account_nonce(ALICE), 0);
@@ -1265,10 +1299,16 @@ mod minting {
 					);
 
 					// total minted count updates
-					assert_eq!(
-						SeasonStats::<Test>::get(season_id, ALICE).minted,
-						minted_count as u32
-					);
+					match payment {
+						MintPayment::Normal => assert_eq!(
+							SeasonStats::<Test>::get(season_id, ALICE).minted,
+							season_minted_count
+						),
+						MintPayment::Free => assert_eq!(
+							SeasonStats::<Test>::get(season_id, ALICE).free_minted,
+							season_free_minted_count
+						),
+					}
 
 					// current season minted count resets
 					assert_eq!(CurrentSeasonStatus::<Test>::get().season_id, 2);
