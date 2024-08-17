@@ -4591,3 +4591,91 @@ mod affiliates {
 			});
 	}
 }
+
+mod tournament {
+	use super::*;
+	use pallet_ajuna_tournament::{GoldenDuckConfig, RewardDistributionTable};
+
+	#[test]
+	fn test_avatar_ranker_works() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MinSoulPoints,
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				run_to_block(40);
+
+				//let sacrifice_ids = create_avatars(SEASON_ID, ALICE, 2);
+
+				let leader_id = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+
+				let leader = AvatarOf::<Test> {
+					season_id: SEASON_ID,
+					encoding: DnaEncoding::V1,
+					dna: Dna::try_from(vec![0x01, 0x02, 0x05]).expect("Create avatar DNA"),
+					souls: 108,
+					minted_at: 30,
+				};
+
+				Avatars::<Test>::insert(leader_id.clone(), (ALICE, leader.clone()));
+
+				/*assert_ok!(
+					AAvatars::forge(RuntimeOrigin::signed(ALICE), leader_id, sacrifice_ids,)
+				);*/
+
+				assert_eq!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID, 0
+					)
+					.len(),
+					0
+				);
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID, &leader_id, &leader, &ranker
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID, 0
+					)
+					.len(),
+					1
+				);
+			});
+	}
+}

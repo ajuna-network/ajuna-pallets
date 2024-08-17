@@ -236,7 +236,7 @@ parameter_types! {
 	pub const MinimumTournamentPhaseDuration: MockBlockNumber = 100;
 }
 
-type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
+pub(crate) type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
 	type RuntimeEvent = RuntimeEvent;
@@ -413,10 +413,12 @@ pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		if System::block_number() > 1 {
 			AAvatars::on_finalize(System::block_number());
+			Tournament::on_finalize(System::block_number());
 			System::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		AAvatars::on_initialize(System::block_number());
+		Tournament::on_initialize(System::block_number());
 	}
 }

@@ -643,10 +643,11 @@ mod test {
 				Some(unit_fn),
 			);
 
-			let total_soul_points =
-				leader.1.get_souls() +
-					sac_1.1.get_souls() + sac_2.1.get_souls() +
-					sac_3.1.get_souls() + sac_4.1.get_souls();
+			let total_soul_points = leader.1.get_souls() +
+				sac_1.1.get_souls() +
+				sac_2.1.get_souls() +
+				sac_3.1.get_souls() +
+				sac_4.1.get_souls();
 			assert_eq!(total_soul_points, 5);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::tinker_avatars(
