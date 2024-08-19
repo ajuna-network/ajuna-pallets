@@ -5627,4 +5627,41 @@ mod tournament {
 				);
 			});
 	}
+
+	#[test]
+	fn test_avatar_ranker_fails_with_no_active_tournament() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MaxSoulPoints,
+					_marker: Default::default(),
+				};
+
+				run_to_block(20);
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x21, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x37, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+
+				let leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
+
+				assert_noop!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				), pallet_ajuna_tournament::Error::<Test, TournamentInstance1>::NoActiveTournamentForSeason);
+			});
+	}
 }
