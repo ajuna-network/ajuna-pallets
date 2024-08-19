@@ -4594,10 +4594,25 @@ mod affiliates {
 
 mod tournament {
 	use super::*;
-	use pallet_ajuna_tournament::{GoldenDuckConfig, RewardDistributionTable};
+	use pallet_ajuna_tournament::{GoldenDuckConfig, RankingTable, RewardDistributionTable};
+	use std::num::NonZeroU32;
+
+	fn create_dummy_legendary_avatar_v3(
+		season_id: SeasonId,
+		souls: SoulCount,
+		minted_at: MockBlockNumber,
+	) -> AvatarOf<Test> {
+		AvatarOf::<Test> {
+			season_id,
+			encoding: DnaEncoding::V3,
+			dna: Dna::try_from(vec![0x51, 0x50, 0x55]).expect("Create avatar DNA"),
+			souls,
+			minted_at,
+		}
+	}
 
 	#[test]
-	fn test_avatar_ranker_works() {
+	fn test_avatar_ranker_works_min_soul_points() {
 		let initial_balance = 1_000_000;
 		let season_1 = Season::default()
 			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
@@ -4633,48 +4648,982 @@ mod tournament {
 					ranker.clone()
 				));
 
-				run_to_block(40);
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
 
-				//let sacrifice_ids = create_avatars(SEASON_ID, ALICE, 2);
+				run_to_block(20);
 
-				let leader_id = AvatarIdOf::<Test>::from_slice(&[
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
 					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
 					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
 					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
 				]);
+				let leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
 
-				let leader = AvatarOf::<Test> {
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					!pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 155, 35);
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_1, leader_1), (leader_id_2, leader_2)])
+						.expect("Create expected ranking table")
+				);
+			});
+	}
+
+	#[test]
+	fn test_avatar_ranker_works_min_soul_points_with_force() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker_force = Force::Empathy;
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MinSoulPointsWithForce(ranker_force.clone()),
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+				assert_eq!(leader_1.force(), ranker_force.as_byte());
+
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
+
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					!pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = {
+					let mut leader_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 155, 35);
+					// Altering the last dna strand so that the force doesn't match the rank filter
+					leader_2.dna[2] = 0x51;
+					leader_2
+				};
+				assert_ne!(leader_2.force(), ranker_force.as_byte());
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				// leader_2 will not get ranked since its force doesn't match the filter
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_1, leader_1)])
+						.expect("Create expected ranking table")
+				);
+			});
+	}
+
+	#[test]
+	fn test_avatar_ranker_works_max_soul_points() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MaxSoulPoints,
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_1 = AvatarOf::<Test> {
 					season_id: SEASON_ID,
 					encoding: DnaEncoding::V1,
 					dna: Dna::try_from(vec![0x01, 0x02, 0x05]).expect("Create avatar DNA"),
 					souls: 108,
 					minted_at: 30,
 				};
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
 
-				Avatars::<Test>::insert(leader_id.clone(), (ALICE, leader.clone()));
-
-				/*assert_ok!(
-					AAvatars::forge(RuntimeOrigin::signed(ALICE), leader_id, sacrifice_ids,)
-				);*/
-
-				assert_eq!(
+				assert!(
 					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
-						SEASON_ID, 0
+						SEASON_ID,
+						tournament_id
 					)
-					.len(),
-					0
+					.is_empty()
 				);
 
 				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
-					&SEASON_ID, &leader_id, &leader, &ranker
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					!pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = AvatarOf::<Test> {
+					season_id: SEASON_ID,
+					encoding: DnaEncoding::V1,
+					dna: Dna::try_from(vec![0x03, 0x01, 0x05]).expect("Create avatar DNA"),
+					souls: 155,
+					minted_at: 35,
+				};
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_2, leader_2), (leader_id_1, leader_1)])
+						.expect("Create expected ranking table")
+				);
+			});
+	}
+
+	#[test]
+	fn test_avatar_ranker_works_max_soul_points_with_force() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker_force = Force::Dream;
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MaxSoulPointsWithForce(ranker_force.clone()),
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
 				));
 
 				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_1 = {
+					let mut leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+					// Altering the last dna strand so that the force doesn't match the rank filter
+					leader_1.dna[2] = 0x53;
+					leader_1
+				};
+				assert_ne!(leader_1.force(), ranker_force.as_byte());
+
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
+
+				assert!(
 					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
-						SEASON_ID, 0
+						SEASON_ID,
+						tournament_id
 					)
-					.len(),
-					1
+					.is_empty()
+				);
+
+				// leader_1 will not get ranked since its force doesn't match the filter
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = {
+					let mut leader_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 155, 35);
+					// Altering the last dna strand so that the force matches the rank filter
+					leader_2.dna[2] = 0x51;
+					leader_2
+				};
+				assert_eq!(leader_2.force(), ranker_force.as_byte());
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				// leader_2 will get ranked since its force matches the filter
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_2, leader_2)])
+						.expect("Create expected ranking table")
+				);
+			});
+	}
+
+	#[test]
+	fn test_avatar_ranker_works_dna_ascending() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::DnaAscending,
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_1 = {
+					let mut leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+					// Altering the dna for ordering
+					leader_1.dna[0] = 0x53;
+					leader_1.dna[1] = 0x51;
+					leader_1.dna[2] = 0x50;
+
+					leader_1
+				};
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
+
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					!pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = {
+					let mut leader_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 232, 33);
+					// Altering the dna for ordering
+					leader_2.dna[0] = 0x50;
+					leader_2.dna[1] = 0x54;
+					leader_2.dna[2] = 0x52;
+					leader_2
+				};
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_1, leader_1), (leader_id_2, leader_2)])
+						.expect("Create expected ranking table")
+				);
+			});
+	}
+
+	#[test]
+	fn test_avatar_ranker_works_dna_descending() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::DnaDescending,
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_1 = {
+					let mut leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+					// Altering the dna for ordering
+					leader_1.dna[0] = 0x53;
+					leader_1.dna[1] = 0x51;
+					leader_1.dna[2] = 0x50;
+
+					leader_1
+				};
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
+
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					!pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = {
+					let mut leader_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 232, 33);
+					// Altering the dna for ordering
+					leader_2.dna[0] = 0x50;
+					leader_2.dna[1] = 0x54;
+					leader_2.dna[2] = 0x52;
+					leader_2
+				};
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_2, leader_2), (leader_id_1, leader_1)])
+						.expect("Create expected ranking table")
+				);
+			});
+	}
+
+	#[test]
+	fn test_avatar_ranker_works_minted_at_modulo() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MintedAtModulo(
+						NonZeroU32::new(2).expect("Create modulo"),
+					),
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+
+				let leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
+
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				// 30 % 2 == 0
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					!pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 232, 33);
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				// 33 % 2 == 1 so this avatar will be ranked higher than leader_1
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_2, leader_2), (leader_id_1, leader_1)])
+						.expect("Create expected ranking table")
+				);
+			});
+	}
+
+	#[test]
+	fn test_avatar_ranker_works_when_ranking_is_full() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Legendary]);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 2,
+				};
+
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MaxSoulPoints,
+					_marker: Default::default(),
+				};
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x21, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x37, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+
+				let leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
+
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_1,
+					&leader_1,
+					&ranker
+				));
+
+				assert!(
+					!pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				let leader_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x11, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x57, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 232, 33);
+				Avatars::<Test>::insert(leader_id_2, (ALICE, leader_2.clone()));
+
+				// 33 % 2 == 1 so this avatar will be ranked higher than leader_1
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_2,
+					&leader_2,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![
+						(leader_id_2, leader_2.clone()),
+						(leader_id_1, leader_1)
+					])
+					.expect("Create expected ranking table")
+				);
+
+				let leader_id_3 = AvatarIdOf::<Test>::from_slice(&[
+					0x61, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x97, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let leader_3 = create_dummy_legendary_avatar_v3(SEASON_ID, 450, 44);
+				Avatars::<Test>::insert(leader_id_3, (ALICE, leader_3.clone()));
+
+				// 33 % 2 == 1 so this avatar will be ranked higher than leader_1
+				assert_ok!(Tournament::try_rank_entity_in_tournament_for(
+					&SEASON_ID,
+					&leader_id_3,
+					&leader_3,
+					&ranker
+				));
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(leader_id_3, leader_3), (leader_id_2, leader_2)])
+						.expect("Create expected ranking table")
 				);
 			});
 	}
