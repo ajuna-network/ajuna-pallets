@@ -757,11 +757,10 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(250));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(239));
 
-			let total_souls = leader.1.get_souls() +
-				sac_1.1.get_souls() +
-				sac_2.1.get_souls() +
-				sac_3.1.get_souls() +
-				sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 			assert_eq!(total_souls, 953);
 
 			assert_eq!(leader.1.get_quantity(), 5);
@@ -865,11 +864,10 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(940));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(717));
 
-			let total_souls = leader.1.get_souls() +
-				sac_1.1.get_souls() +
-				sac_2.1.get_souls() +
-				sac_3.1.get_souls() +
-				sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 			assert_eq!(total_souls, 2475);
 
 			assert_eq!(
