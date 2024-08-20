@@ -1751,12 +1751,11 @@ pub mod pallet {
 					Ok(())
 				},
 			)?;
-			SeasonStats::<T>::mutate(season_id, player, |info| {
-				info.minted.saturating_accrue(generated_avatar_ids.len() as Stat);
-
-				if mint_option.payment == MintPayment::Free {
-					info.free_minted.saturating_accrue(generated_avatar_ids.len() as Stat);
-				}
+			SeasonStats::<T>::mutate(season_id, player, |info| match mint_option.payment {
+				MintPayment::Free =>
+					info.free_minted.saturating_accrue(generated_avatar_ids.len() as Stat),
+				MintPayment::Normal =>
+					info.minted.saturating_accrue(generated_avatar_ids.len() as Stat),
 			});
 
 			if is_tournament_active && T::TournamentHandler::is_golden_duck_enabled_for(&season_id)
