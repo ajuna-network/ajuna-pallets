@@ -5036,7 +5036,14 @@ mod tournament {
 					0x17, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
 					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
 				]);
-				let leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+				let leader_1 = {
+					let mut leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
+					leader_1.dna = Dna::try_from(vec![
+						0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+					])
+					.expect("Create dna");
+					leader_1
+				};
 				assert_eq!(leader_1.force(), ranker_force.as_byte());
 
 				Avatars::<Test>::insert(leader_id_1, (ALICE, leader_1.clone()));
@@ -5289,7 +5296,10 @@ mod tournament {
 				let leader_1 = {
 					let mut leader_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 108, 30);
 					// Altering the last dna strand so that the force doesn't match the rank filter
-					leader_1.dna[2] = 0x53;
+					leader_1.dna = Dna::try_from(vec![
+						0x53, 0x53, 0x55, 0x53, 0x52, 0x54, 0x55, 0x53, 0x53, 0x53, 0x53,
+					])
+					.expect("Create avatar DNA");
 					leader_1
 				};
 				assert_ne!(leader_1.force(), ranker_force.as_byte());
