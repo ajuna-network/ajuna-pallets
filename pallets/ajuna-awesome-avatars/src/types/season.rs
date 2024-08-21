@@ -358,6 +358,10 @@ mod test {
 			self.mint_logic = logic;
 			self
 		}
+		pub fn forge_logic(mut self, logic: LogicGeneration) -> Self {
+			self.forge_logic = logic;
+			self
+		}
 	}
 
 	impl Default for SeasonMeta {

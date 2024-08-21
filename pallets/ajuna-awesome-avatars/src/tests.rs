@@ -4645,10 +4645,220 @@ mod tournament {
 		AvatarOf::<Test> {
 			season_id,
 			encoding: DnaEncoding::V3,
-			dna: Dna::try_from(vec![0x51, 0x50, 0x55]).expect("Create avatar DNA"),
+			dna: Dna::try_from(vec![
+				0x51, 0x50, 0x55, 0x53, 0x52, 0x51, 0x50, 0x53, 0x51, 0x51, 0x51,
+			])
+			.expect("Create avatar DNA"),
 			souls,
 			minted_at,
 		}
+	}
+
+	#[test]
+	fn test_avatar_is_not_ranked_outside_active_tournament_phase() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Epic, RarityTier::Legendary])
+			.forge_logic(LogicGeneration::Third)
+			.max_sacrifices(1);
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 5,
+				};
+
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MinSoulPoints,
+					_marker: Default::default(),
+				};
+
+				run_to_block(13);
+
+				assert_ok!(AAvatars::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+					ranker.clone()
+				));
+
+				assert_eq!(
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID
+					),
+					TournamentState::Inactive,
+				);
+
+				let avatar_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let avatar_1 = {
+					let mut avatar_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 155, 15);
+					// Altering the last dna strand so that the avatar is not legendary
+					avatar_1.dna[3] = 0x41;
+					avatar_1
+				};
+				Avatars::<Test>::insert(avatar_id_1, (ALICE, avatar_1.clone()));
+
+				let sacrifice_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x4F, 0x4F, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0x4F, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let sacrifice_1 = {
+					let mut sacrifice_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 222, 35);
+					// Altering the last dna strand so that the avatar is not legendary
+					sacrifice_1.dna[3] = 0x4B;
+					sacrifice_1
+				};
+				Avatars::<Test>::insert(sacrifice_id_1, (ALICE, sacrifice_1));
+
+				// avatar_id_1 will not get ranked even though it becomes legendary since there is
+				// no active tournament in which to rank it
+				assert_eq!(avatar_1.rarity(), RarityTier::Epic.as_byte());
+				assert_ok!(AAvatars::forge(
+					RuntimeOrigin::signed(ALICE),
+					avatar_id_1,
+					vec![sacrifice_id_1],
+				));
+				let (_, upgraded_avatar_1) =
+					Avatars::<Test>::get(avatar_id_1).expect("Get upgraded avatar");
+				assert_eq!(upgraded_avatar_1.rarity(), RarityTier::Legendary.as_byte());
+
+				run_to_block(20);
+
+				let tournament_id = if let TournamentState::ActivePeriod(tournament_id) =
+					pallet_ajuna_tournament::ActiveTournaments::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+					) {
+					tournament_id
+				} else {
+					panic!("Tournament for SEASON_ID should have benn in ActivePeriod!")
+				};
+
+				let avatar_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0x34, 0x2E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0x3D, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let avatar_2 = {
+					let mut avatar_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 155, 35);
+					// Altering the last dna strand so that the avatar is not legendary
+					avatar_2.dna[2] = 0x41;
+					avatar_2
+				};
+				Avatars::<Test>::insert(avatar_id_2, (ALICE, avatar_2.clone()));
+
+				let sacrifice_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x4F, 0x4F, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x16, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0x4F, 0x68, 0xC6, 0xBD, 0x76, 0x16, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let sacrifice_2 = {
+					let mut sacrifice_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 222, 35);
+					// Altering the last dna strand so that the avatar is not legendary
+					sacrifice_2.dna[2] = 0x4B;
+					sacrifice_2
+				};
+				Avatars::<Test>::insert(sacrifice_id_2, (ALICE, sacrifice_2));
+
+				assert!(
+					pallet_ajuna_tournament::TournamentRankings::<Test, TournamentInstance1>::get(
+						SEASON_ID,
+						tournament_id
+					)
+					.is_empty()
+				);
+
+				// avatar_id_2 will get ranked since we are in an active tournament phase
+				// and the avatar became legendary through this forge
+				assert_eq!(avatar_2.rarity(), RarityTier::Epic.as_byte());
+				assert_ok!(AAvatars::forge(
+					RuntimeOrigin::signed(ALICE),
+					avatar_id_2,
+					vec![sacrifice_id_2],
+				));
+				let (_, upgraded_avatar_2) =
+					Avatars::<Test>::get(avatar_id_2).expect("Get upgraded avatar");
+				assert_eq!(upgraded_avatar_2.rarity(), RarityTier::Legendary.as_byte());
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(avatar_id_2, upgraded_avatar_2.clone())])
+						.expect("Create expected ranking table")
+				);
+
+				run_to_block(350);
+
+				let avatar_id_3 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0x11, 0x0F, 0xBF, 0x5A, 0x7D, 0x34, 0x2E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0xFF, 0x68, 0xC6, 0x3D, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0x11, 0x5F, 0xCF, 0x40,
+				]);
+				let avatar_3 = {
+					let mut avatar_3 = create_dummy_legendary_avatar_v3(SEASON_ID, 32, 44);
+					// Altering the last dna strand so that the avatar is not legendary
+					avatar_3.dna[2] = 0x41;
+					avatar_3
+				};
+				Avatars::<Test>::insert(avatar_id_3, (ALICE, avatar_3.clone()));
+
+				let sacrifice_id_3 = AvatarIdOf::<Test>::from_slice(&[
+					0x01, 0x1B, 0xA9, 0x4F, 0x4F, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x16, 0x7E,
+					0x17, 0x3C, 0x17, 0x2C, 0x4F, 0x11, 0xC6, 0xBD, 0x76, 0x16, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x11,
+				]);
+				let sacrifice_3 = {
+					let mut sacrifice_3 = create_dummy_legendary_avatar_v3(SEASON_ID, 12, 65);
+					// Altering the last dna strand so that the avatar is not legendary
+					sacrifice_3.dna[2] = 0x4B;
+					sacrifice_3
+				};
+				Avatars::<Test>::insert(sacrifice_id_3, (ALICE, sacrifice_3));
+
+				// avatar_id_3 will not be ranked since the tournament is in the claim phase
+				// even though the avatar became legendary through this forge
+				assert_eq!(avatar_3.rarity(), RarityTier::Epic.as_byte());
+				assert_ok!(AAvatars::forge(
+					RuntimeOrigin::signed(ALICE),
+					avatar_id_3,
+					vec![sacrifice_id_3],
+				));
+				let (_, upgraded_avatar_3) =
+					Avatars::<Test>::get(avatar_id_3).expect("Get upgraded avatar");
+				assert_eq!(upgraded_avatar_3.rarity(), RarityTier::Legendary.as_byte());
+
+				let rankings = pallet_ajuna_tournament::TournamentRankings::<
+					Test,
+					TournamentInstance1,
+				>::get(SEASON_ID, tournament_id);
+
+				assert_eq!(
+					rankings,
+					RankingTable::try_from(vec![(avatar_id_2, upgraded_avatar_2)])
+						.expect("Create expected ranking table")
+				);
+			});
 	}
 
 	#[test]
