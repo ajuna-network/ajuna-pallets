@@ -1758,7 +1758,8 @@ pub mod pallet {
 					info.minted.saturating_accrue(generated_avatar_ids.len() as Stat),
 			});
 
-			if is_tournament_in_active_period && T::TournamentHandler::is_golden_duck_enabled_for(&season_id)
+			if is_tournament_in_active_period &&
+				T::TournamentHandler::is_golden_duck_enabled_for(&season_id)
 			{
 				for avatar_id in generated_avatar_ids.iter() {
 					T::TournamentHandler::try_rank_entity_for_golden_duck(&season_id, avatar_id)?;
