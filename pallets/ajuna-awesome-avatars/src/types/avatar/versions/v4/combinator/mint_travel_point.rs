@@ -1,3 +1,4 @@
+use sp_runtime::SaturatedConversion;
 use super::*;
 
 impl<T: Config> AvatarCombinator<T> {
@@ -10,10 +11,11 @@ impl<T: Config> AvatarCombinator<T> {
 	) -> Result<(LeaderForgeOutput<T>, Vec<ForgeOutput<T>>), DispatchError> {
 		let (moon_id, mut moon) = input_moon;
 		let (captain_id, mut captain) = input_captain;
-		let (map_id, map) = input_map;
+		let (map_id, mut map) = input_map;
 
 		let mut moon_interpreter = MoonInterpreter::from_wrapper(&mut moon);
 		let mut captain_interpreter = CaptainInterpreter::from_wrapper(&mut captain);
+		let mut cluster_interpreter = ClusterMapInterpreter::from_wrapper(&mut map);
 
 		// Decrease stardustOnAccount by 3
 		let current_stardust_on_acc = captain_interpreter.get_stardust_on_account();
@@ -21,29 +23,33 @@ impl<T: Config> AvatarCombinator<T> {
 		captain_interpreter.set_stardust_on_account(new_stardust_on_acc);
 
 		// Mint TravelPoint
-		let dna = MinterV4::<T>::generate_empty_dna::<32>()?;
+		let dna = MinterV4::<T>::generate_empty_dna::<35>()?;
 		let coord_x = moon_interpreter.get_coord(Coord::X);
 		let coord_y = moon_interpreter.get_coord(Coord::Y);
 		let minted_travel_point = AvatarBuilder::with_dna(season_id, dna, current_block)
 			.structured_into_travel_point(coord_x, coord_y)
 			.build();
 
-		/// TODO: Decrease blockMintedPeriod
-		let current_block_minted_period = moon_interpreter.get_block_mints_period();
+		// Reset blockMintsCooldown
+		let new_current_block_minted_cooldown = current_block
+			.saturating_sub(moon_interpreter.inner.minted_at)
+			.saturating_add(MINT_TRAVEL_POINT_COOLDOWN.into());
+		moon_interpreter.set_block_mints_cooldown(new_current_block_minted_cooldown.saturated_into());
 
-		// Decrease mintedTravelPoints by 1
+		// Decrease moon mintedTravelPoints by 1
 		let current_minted_travel_points = moon_interpreter.get_minted_travel_points();
 		let new_minted_travel_points =
 			current_minted_travel_points.saturating_sub(MOON_MINTED_TRAVEL_POINTS_DEC);
 		moon_interpreter.set_minted_travel_points(new_minted_travel_points);
 
-		// Increase travelPointsMinted by 1
+		// Increase captain travelPointsMinted by 1
 		let current_travel_points_minted = captain_interpreter.get_travel_points_minted();
 		let new_travel_points_minted =
 			current_travel_points_minted.saturating_add(CAPTAIN_MINTED_TRAVEL_POINTS_INC);
 		captain_interpreter.set_travel_points_minted(new_travel_points_minted);
 
-		// TODO: Something with the cluster
+		// TODO: Do something with the cluster
+		let _cluster = cluster_interpreter.get_cluster(0);
 
 		let output_vec: Vec<ForgeOutput<T>> = [
 			ForgeOutput::Forged((captain_id, captain.unwrap()), 0),
@@ -54,5 +60,54 @@ impl<T: Config> AvatarCombinator<T> {
 		.collect();
 
 		Ok((LeaderForgeOutput::Forged((moon_id, moon.unwrap()), 0), output_vec))
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use crate::mock::*;
+
+	#[test]
+	fn test_mint_travel_point_works() {
+		let starting_block = 10;
+		ExtBuilder::default().build().execute_with(|| {
+			run_to_block(starting_block);
+
+			let mut moon = create_random_moon(&ALICE, (10, 10));
+			let moon_minted_travel_points = {
+				let interpreter = MoonInterpreter::from_wrapper(&mut moon.1);
+				interpreter.get_minted_travel_points()
+			};
+
+			let captain_stardust = 30;
+			let captain = create_random_captain(&ALICE, 2, captain_stardust);
+			let map = create_random_cluster_map(&ALICE, &[], &[], (30, 30));
+
+			let current_block = <frame_system::Pallet<Test>>::block_number();
+
+			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::mint_travel_point(
+				moon,
+				captain,
+				map,
+				SEASON_ID,
+				current_block,
+			)
+			.expect("Should succeed in forging");
+
+			assert_eq!(sacrifice_output.len(), 3);
+			assert_eq!(sacrifice_output.iter().filter(|output| is_forged(output)).count(), 1);
+			assert_eq!(sacrifice_output.iter().filter(|output| is_minted(output)).count(), 1);
+
+			if let LeaderForgeOutput::Forged((_, leader_avatar), _) = leader_output {
+				let mut wrapped_moon = WrappedAvatar::new(leader_avatar);
+				let moon_interpreter = MoonInterpreter::from_wrapper(&mut wrapped_moon);
+
+				assert_eq!(moon_interpreter.get_minted_travel_points(), moon_minted_travel_points - 1);
+				assert_eq!(moon_interpreter.get_block_mints_cooldown(), MINT_TRAVEL_POINT_COOLDOWN + starting_block as u32);
+			} else {
+				panic!("LeaderForgeOutput should have been Forged!")
+			}
+		});
 	}
 }

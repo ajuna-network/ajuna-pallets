@@ -92,7 +92,7 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 		let wrapped_sacrifices = sacrifices.iter().map(|(_, avatar)| avatar).collect::<Vec<_>>();
 
 		let forge_type =
-			Self::determine_forge_type(&mut wrapped_leader, wrapped_sacrifices.as_slice());
+			Self::determine_forge_type(&mut wrapped_leader, wrapped_sacrifices.as_slice(), current_block);
 
 		ensure!(
 			!restricted || !forge_type.is_restricted(),
@@ -133,15 +133,20 @@ impl<T: Config> ForgerV4<T> {
 					}
 				},
 				CelestialItemType::Moon => {
+					let minted_at = leader.inner.minted_at;
+
 					let moon_interpreter = MoonInterpreter::from_wrapper(leader);
 
-					let minted_at = leader.inner.minted_at;
 					let blocks_mint_period = moon_interpreter.get_block_mints_period();
+					let block_mint_cooldown = moon_interpreter.get_block_mints_cooldown();
 					let minted_travel_points = moon_interpreter.get_minted_travel_points();
 
-					if minted_at.saturating_add(blocks_mint_period.into()) >= current_block &&
-						minted_travel_points > 0
-					{
+					let is_mint_period_over =
+						minted_at.saturating_add(blocks_mint_period.into()) <= current_block;
+					let is_mint_cooldown_over =
+						minted_at.saturating_add(block_mint_cooldown.into()) <= current_block;
+
+					if is_mint_period_over && is_mint_cooldown_over && minted_travel_points > 0 {
 						let sacrifice_count = sacrifices.len();
 
 						let contains_captain = sacrifices.iter().any(|s| {

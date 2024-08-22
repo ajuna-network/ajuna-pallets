@@ -64,9 +64,14 @@ where
 		let mut wrapped = WrappedAvatar::new(self.inner);
 		let mut interpreter = MoonInterpreter::from_wrapper(&mut wrapped);
 
+		// Add more logic here in the future
+
+		interpreter.set_minted_travel_points(MINT_TRAVEL_POINT_INIT);
+		interpreter.set_block_mints_period(MINT_TRAVEL_POINT_BLOCK_MINTS_PERIOD);
+		interpreter.set_block_mints_cooldown(0);
+
 		interpreter.set_coord(Coord::X, coord_x);
 		interpreter.set_coord(Coord::Y, coord_y);
-		// Add more logic here in the future
 
 		self.inner = wrapped.unwrap();
 		self

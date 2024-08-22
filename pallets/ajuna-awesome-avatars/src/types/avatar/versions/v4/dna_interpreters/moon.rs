@@ -203,6 +203,18 @@ where
 		self.inner.set_segmented_attribute_of_four(21, &[3, 3], value);
 	}
 
+	/// blockMintsCooldown --> [(25, 0, 8), ..., (27, 0, 6)]
+	pub fn get_block_mints_cooldown(&self) -> u32 {
+		self.inner.get_segmented_attribute_of_three(25, &[8, 6])
+	}
+
+	/// blockMintsCooldown --> [(25, 0, 8), ..., (27, 0, 6)]
+	pub fn set_block_mints_cooldown(&mut self, value: u32) {
+		// Only 22 bits max for blockMintsCooldown
+		let value = min(value, 0b0011_1111_1111_1111_1111_1111);
+		self.inner.set_segmented_attribute_of_three(25, &[8, 6], value);
+	}
+
 	/// Coord (X/Y) --> [(29, 0, 8), (30, 0, 8), (31, 0, 8)], [(32, 0, 8), (33, 0, 8), (34, 0, 8)]
 	pub fn get_coord(&self, coord: Coord) -> u32 {
 		match coord {

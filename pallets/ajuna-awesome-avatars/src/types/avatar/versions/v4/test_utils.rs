@@ -32,6 +32,22 @@ pub(crate) fn create_random_unprospected_moon(
 	)
 }
 
+pub(crate) fn create_random_moon(
+	account: &MockAccountId,
+	coordinates: (u32, u32),
+) -> (AvatarIdOf<Test>, WrappedAvatar<BlockNumberFor<Test>>) {
+	create_random_avatar::<Test, _, 35>(
+		account,
+		None,
+		Some(|avatar| {
+			AvatarBuilder::with_base_avatar(avatar)
+				.structured_into_moon(coordinates.0, coordinates.1)
+				.build_wrapped()
+		}),
+		DnaEncoding::V4,
+	)
+}
+
 pub(crate) fn create_random_captain(
 	account: &MockAccountId,
 	captain_type: u8,
