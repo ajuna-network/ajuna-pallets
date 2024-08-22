@@ -46,6 +46,7 @@ impl<T: Config> Minter<T> for MinterV4<T> {
 pub(crate) enum ForgeType {
 	None,
 	ExtractStardust,
+	MintTravelPoint,
 }
 
 impl ForgeType {
@@ -120,6 +121,10 @@ impl<T: Config> ForgerV4<T> {
 					} else {
 						ForgeType::None
 					}
+				},
+				CelestialItemType::Moon => {
+					/// TODO: Add logic here
+					ForgeType::None
 				},
 				_ => ForgeType::None,
 			},

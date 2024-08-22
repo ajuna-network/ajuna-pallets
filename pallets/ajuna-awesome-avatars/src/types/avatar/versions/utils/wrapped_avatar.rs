@@ -411,6 +411,43 @@ where
 		self.set_upper_segment(start_idx + 2, segment_bits[1], upper_value);
 	}
 
+	pub fn get_segmented_attribute_of_four(
+		&self,
+		start_idx: usize,
+		segment_bits: &[u8; 2],
+	) -> u32 {
+		let mut bytes = [0; 4];
+
+		bytes[0] = self.get_lower_segment(start_idx, segment_bits[0]);
+		bytes[1] = self.inner.dna[start_idx + 1];
+		bytes[2] = self.inner.dna[start_idx + 2];
+		bytes[3] = self.get_upper_segment(start_idx + 3, segment_bits[1]);
+
+		u32::from_be_bytes(bytes) >> 8_u8.saturating_sub(segment_bits[1])
+	}
+
+	pub fn set_segmented_attribute_of_four(
+		&mut self,
+		start_idx: usize,
+		segment_bits: &[u8; 2],
+		value: u32,
+	) {
+		let total_bits = (segment_bits[0] + segment_bits[1] + 16) as u32;
+		let masked_value = (u32::MAX >> 32_u32.saturating_sub(total_bits)) & value;
+
+		let lower_value = (masked_value >> (segment_bits[1] + 16)) as u8;
+		self.set_lower_segment(start_idx, segment_bits[0], lower_value);
+
+		let middle_value_1 = (masked_value >> segment_bits[1] + 8) as u8;
+		self.inner.dna[start_idx + 1] = middle_value_1;
+
+		let middle_value_2 = (masked_value >> segment_bits[1]) as u8;
+		self.inner.dna[start_idx + 2] = middle_value_2;
+
+		let upper_value = (masked_value << 8_u32.saturating_sub(segment_bits[1] as u32)) as u8;
+		self.set_upper_segment(start_idx + 3, segment_bits[1], upper_value);
+	}
+
 	pub fn get_segmented_attribute_of_eight(
 		&self,
 		start_idx: usize,
@@ -615,6 +652,57 @@ mod test {
 			assert_eq!(avatar.inner.dna[11], 0b0111_0101);
 			assert_eq!(avatar.inner.dna[12], 0b0101_0101);
 			assert_eq!(avatar.inner.dna[13], 0b1000_0000);
+		});
+	}
+
+	#[test]
+	fn test_get_segmented_attribute_of_four() {
+		ExtBuilder::default().build().execute_with(|| {
+			let mut avatar = WrappedAvatar::new(Avatar::<BlockNumberFor<Test>>::default());
+			avatar.inner.dna = BoundedVec::try_from([0_u8; 32].to_vec()).unwrap();
+
+			avatar.inner.dna[3] = 0b0011_0011;
+			avatar.inner.dna[4] = 0b1110_1010;
+			avatar.inner.dna[5] = 0b1010_1010;
+			avatar.inner.dna[6] = 0b1010_1010;
+			let bits = [5, 2];
+			let value = avatar.get_segmented_attribute_of_four(3, &bits);
+			assert_eq!(value, 0b0000_0000_0100_1111_1010_1010_1010_1010);
+
+			avatar.inner.dna[11] = 0b1010_1010;
+			avatar.inner.dna[12] = 0b0000_1101;
+			avatar.inner.dna[13] = 0b1111_1111;
+			avatar.inner.dna[14] = 0b1000_0011;
+			let bits = [6, 7];
+			let value = avatar.get_segmented_attribute_of_four(11, &bits);
+			assert_eq!(value, 0b0001_0101_0000_0110_1111_1111_1100_0001);
+		});
+	}
+
+	#[test]
+	fn test_set_segmented_attribute_of_four() {
+		ExtBuilder::default().build().execute_with(|| {
+			let mut avatar = WrappedAvatar::new(Avatar::<BlockNumberFor<Test>>::default());
+			avatar.inner.dna = BoundedVec::try_from([0_u8; 32].to_vec()).unwrap();
+
+			avatar.inner.dna[3] = 0b1010_0101;
+			let bits = [5, 8];
+			let value = 0b0001_1000_0001_0101_0000_0110_1111_1111;
+			avatar.set_segmented_attribute_of_four(3, &bits, value);
+			assert_eq!(avatar.inner.dna[3], 0b1011_1000);
+			assert_eq!(avatar.inner.dna[4], 0b0001_0101);
+			assert_eq!(avatar.inner.dna[5], 0b0000_0110);
+			assert_eq!(avatar.inner.dna[6], 0b1111_1111);
+
+			avatar.inner.dna[7] = 0b1100_1000;
+			avatar.inner.dna[8] = 0b1111_0011;
+			let bits = [2, 3];
+			let value = 0b0000_0000_0001_0101_0000_0110_1111_1111;
+			avatar.set_segmented_attribute_of_four(7, &bits, value);
+			assert_eq!(avatar.inner.dna[7], 0b1100_1010);
+			assert_eq!(avatar.inner.dna[8], 0b1010_0000);
+			assert_eq!(avatar.inner.dna[9], 0b1101_1111);
+			assert_eq!(avatar.inner.dna[10], 0b1110_0000);
 		});
 	}
 

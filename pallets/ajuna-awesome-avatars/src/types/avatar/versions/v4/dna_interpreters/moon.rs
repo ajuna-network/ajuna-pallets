@@ -171,26 +171,36 @@ where
 		self.inner.set_segmented_attribute_of_one(20, 7, 1, value as u8);
 	}
 
-	/// isTravelPointMintable --> [(21, 1, 1)]
+	/// isTravelPointMintable --> [(21, 0, 1)]
 	pub fn get_is_travel_point_mintable(&self) -> bool {
-		self.inner.get_segmented_attribute_of_one(21, 1, 1) != 0
+		self.inner.get_segmented_attribute_of_one(21, 0, 1) != 0
 	}
 
-	/// isTravelPointMintable --> [(21, 1, 1)]
+	/// isTravelPointMintable --> [(21, 0, 1)]
 	pub fn set_is_travel_point_mintable(&mut self, value: bool) {
-		self.inner.set_segmented_attribute_of_one(21, 1, 1, value as u8);
+		self.inner.set_segmented_attribute_of_one(21, 0, 1, value as u8);
 	}
 
-	/// travelpointMintMinLeft --> [(21, 2, 6), (22, 0, 6)]
-	pub fn get_prospecting_minutes_left(&self) -> u16 {
-		self.inner.get_segmented_attribute_of_two(21, &[6, 6])
+	/// mintedTravelPoints --> [(21, 1, 4)]
+	pub fn get_minted_travel_points(&self) -> u8 {
+		self.inner.get_segmented_attribute_of_one(21, 1, 4)
 	}
 
-	/// travelpointMintMinLeft --> [(21, 2, 6), (22, 0, 6)]
-	pub fn set_prospecting_minutes_left(&mut self, value: u16) {
-		// Only 12 bits max for travelpointMintMinLeft
-		let value = min(value, 0b1111_1111_1111);
-		self.inner.set_segmented_attribute_of_two(21, &[6, 6], value);
+	/// mintedTravelPoints --> [(21, 1, 4)]
+	pub fn set_minted_travel_points(&mut self, value: u8) {
+		self.inner.set_segmented_attribute_of_one(21, 1, 4, value);
+	}
+
+	/// blockMintsPeriod --> [(21, 5, 3), ..., (24, 0, 3)]
+	pub fn get_block_mints_period(&self) -> u32 {
+		self.inner.get_segmented_attribute_of_four(21, &[3, 3])
+	}
+
+	/// blockMintsPeriod --> [(21, 5, 3), ..., (24, 0, 3)]
+	pub fn set_block_mints_period(&mut self, value: u32) {
+		// Only 22 bits max for blockMintsPeriod
+		let value = min(value, 0b0011_1111_1111_1111_1111_1111);
+		self.inner.set_segmented_attribute_of_four(21, &[3, 3], value);
 	}
 
 	/// Coord (X/Y) --> [(29, 0, 8), (30, 0, 8), (31, 0, 8)], [(32, 0, 8), (33, 0, 8), (34, 0, 8)]

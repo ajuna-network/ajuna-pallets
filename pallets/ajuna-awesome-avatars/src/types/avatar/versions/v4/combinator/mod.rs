@@ -1,9 +1,9 @@
 mod extract_stardust;
 mod engage_in_event;
-mod start_harvesting_temp_nebula;
-mod start_haversting_moon;
+//mod start_harvesting_temp_nebula;
+//mod start_haversting_moon;
 mod upgrade_ship;
-mod minht_travel_point;
+mod mint_travel_point;
 
 #[cfg(test)]
 use super::test_utils::*;
@@ -37,6 +37,22 @@ impl<T: Config> AvatarCombinator<T> {
 				};
 
 				Self::extract_stardust(main, captain, cluster_map)
+			},
+			ForgeType::MintTravelPoint => {
+				// If we are in MintTravelPoint that means all inputs should have already been
+				// validated, so we can split the sub_components without danger
+				let (captain, cluster_map) = {
+					let first = sub_components.pop().expect("Should contain entry");
+					let second = sub_components.pop().expect("Should contain entry");
+
+					if first.1.has_full_type(ItemType::Lifeform, LifeformItemType::Captain) {
+						(first, second)
+					} else {
+						(second, first)
+					}
+				};
+
+				Self::mint_travel_point(main, captain, cluster_map)
 			},
 			ForgeType::None => Self::forge_none(main, sub_components),
 		}
