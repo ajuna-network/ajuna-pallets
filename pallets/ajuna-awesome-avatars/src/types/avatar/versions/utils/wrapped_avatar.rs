@@ -4,7 +4,7 @@ pub(crate) type WrappedForgeItem<T> = (AvatarIdOf<T>, WrappedAvatar<BlockNumberF
 
 #[derive(Clone)]
 pub(crate) struct WrappedAvatar<BlockNumber> {
-	inner: Avatar<BlockNumber>,
+	pub(crate) inner: Avatar<BlockNumber>,
 }
 
 #[allow(dead_code)]
@@ -411,11 +411,7 @@ where
 		self.set_upper_segment(start_idx + 2, segment_bits[1], upper_value);
 	}
 
-	pub fn get_segmented_attribute_of_four(
-		&self,
-		start_idx: usize,
-		segment_bits: &[u8; 2],
-	) -> u32 {
+	pub fn get_segmented_attribute_of_four(&self, start_idx: usize, segment_bits: &[u8; 2]) -> u32 {
 		let mut bytes = [0; 4];
 
 		bytes[0] = self.get_lower_segment(start_idx, segment_bits[0]);

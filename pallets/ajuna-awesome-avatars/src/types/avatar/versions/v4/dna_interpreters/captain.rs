@@ -156,14 +156,14 @@ where
 		self.inner.set_segmented_attribute_of_one(14, 1, 6, value)
 	}
 
-	/// radioLastUse --> [(15, 0, 8), ..., (22, 0, 8)]
-	pub fn get_radio_last_use(&self) -> u64 {
-		self.inner.get_segmented_attribute_of_eight(15, &[8, 8])
+	/// travelPointsMinted --> [(14, 7, 1), ..., (16, 0, 1)]
+	pub fn get_travel_points_minted(&self) -> u32 {
+		self.inner.get_segmented_attribute_of_three(14, &[1, 1])
 	}
 
-	/// radioLastUse --> [(15, 0, 8), ..., (22, 0, 8)]
-	pub fn set_radio_last_use(&mut self, value: u64) {
-		self.inner.set_segmented_attribute_of_eight(15, &[8, 8], value)
+	/// travelPointsMinted --> [(14, 7, 1), ..., (16, 0, 1)]
+	pub fn set_travel_points_minted(&mut self, value: u32) {
+		self.inner.set_segmented_attribute_of_three(14, &[1, 1], value)
 	}
 
 	/// (captain_attribute) --> [(23, 0, 3)], ..., [(26, 0, 3)]

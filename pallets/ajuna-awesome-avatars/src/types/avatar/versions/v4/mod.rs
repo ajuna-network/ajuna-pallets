@@ -42,6 +42,12 @@ impl<T: Config> Minter<T> for MinterV4<T> {
 	}
 }
 
+impl<T: Config> MinterV4<T> {
+	pub(super) fn generate_empty_dna<const N: usize>() -> Result<Dna, DispatchError> {
+		Dna::try_from([0_u8; N].to_vec()).map_err(|_| Error::<T>::IncorrectDna.into())
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Ord, PartialOrd, Eq)]
 pub(crate) enum ForgeType {
 	None,
@@ -69,6 +75,7 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 	) -> Result<(LeaderForgeOutput<T>, Vec<ForgeOutput<T>>), DispatchError> {
 		let mut hash_provider =
 			HashProvider::<T, 32>::new(&Pallet::<T>::random_hash(b"avatar_forger_v2", player));
+		let current_block = <frame_system::Pallet<T>>::block_number();
 
 		ensure!(
 			input_sacrifices.len() >= MIN_SACRIFICE && input_sacrifices.len() <= MAX_SACRIFICE,
@@ -76,7 +83,7 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 		);
 
 		let (leader_id, leader) = input_leader;
-		let wrapped_leader = WrappedAvatar::new(leader);
+		let mut wrapped_leader = WrappedAvatar::new(leader);
 
 		let sacrifices = input_sacrifices
 			.into_iter()
@@ -84,7 +91,8 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 			.collect::<Vec<_>>();
 		let wrapped_sacrifices = sacrifices.iter().map(|(_, avatar)| avatar).collect::<Vec<_>>();
 
-		let forge_type = Self::determine_forge_type(&wrapped_leader, wrapped_sacrifices.as_slice());
+		let forge_type =
+			Self::determine_forge_type(&mut wrapped_leader, wrapped_sacrifices.as_slice());
 
 		ensure!(
 			!restricted || !forge_type.is_restricted(),
@@ -95,6 +103,7 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 			forge_type,
 			season_id,
 			season,
+			current_block,
 			(leader_id, wrapped_leader),
 			sacrifices,
 			&mut hash_provider,
@@ -104,8 +113,9 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 
 impl<T: Config> ForgerV4<T> {
 	fn determine_forge_type(
-		leader: &WrappedAvatar<BlockNumberFor<T>>,
+		leader: &mut WrappedAvatar<BlockNumberFor<T>>,
 		sacrifices: &[&WrappedAvatar<BlockNumberFor<T>>],
+		current_block: BlockNumberFor<T>,
 	) -> ForgeType {
 		match leader.get_item_type::<ItemType>() {
 			ItemType::Celestial => match leader.get_item_sub_type::<CelestialItemType>() {
@@ -123,8 +133,32 @@ impl<T: Config> ForgerV4<T> {
 					}
 				},
 				CelestialItemType::Moon => {
-					/// TODO: Add logic here
-					ForgeType::None
+					let moon_interpreter = MoonInterpreter::from_wrapper(leader);
+
+					let minted_at = leader.inner.minted_at;
+					let blocks_mint_period = moon_interpreter.get_block_mints_period();
+					let minted_travel_points = moon_interpreter.get_minted_travel_points();
+
+					if minted_at.saturating_add(blocks_mint_period.into()) >= current_block &&
+						minted_travel_points > 0
+					{
+						let sacrifice_count = sacrifices.len();
+
+						let contains_captain = sacrifices.iter().any(|s| {
+							s.has_full_type(ItemType::Lifeform, LifeformItemType::Captain)
+						});
+						let contains_cluster_map = sacrifices.iter().any(|s| {
+							s.has_full_type(ItemType::Lifeform, LifeformItemType::ClusterMap)
+						});
+
+						if sacrifice_count == 2 && contains_captain && contains_cluster_map {
+							ForgeType::MintTravelPoint
+						} else {
+							ForgeType::None
+						}
+					} else {
+						ForgeType::None
+					}
 				},
 				_ => ForgeType::None,
 			},

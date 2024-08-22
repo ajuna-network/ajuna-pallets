@@ -1,9 +1,9 @@
-mod extract_stardust;
 mod engage_in_event;
+mod extract_stardust;
 //mod start_harvesting_temp_nebula;
 //mod start_haversting_moon;
-mod upgrade_ship;
 mod mint_travel_point;
+mod upgrade_ship;
 
 #[cfg(test)]
 use super::test_utils::*;
@@ -15,8 +15,9 @@ pub(super) struct AvatarCombinator<T: Config>(pub PhantomData<T>);
 impl<T: Config> AvatarCombinator<T> {
 	pub(super) fn combine_avatars_in(
 		forge_type: ForgeType,
-		_season_id: SeasonId,
+		season_id: SeasonId,
 		_season: &SeasonOf<T>,
+		current_block: BlockNumberFor<T>,
 		main: WrappedForgeItem<T>,
 		mut sub_components: Vec<WrappedForgeItem<T>>,
 		_hash_provider: &mut HashProvider<T, 32>,
@@ -52,7 +53,7 @@ impl<T: Config> AvatarCombinator<T> {
 					}
 				};
 
-				Self::mint_travel_point(main, captain, cluster_map)
+				Self::mint_travel_point(main, captain, cluster_map, season_id, current_block)
 			},
 			ForgeType::None => Self::forge_none(main, sub_components),
 		}

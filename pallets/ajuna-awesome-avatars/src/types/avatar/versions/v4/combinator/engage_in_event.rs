@@ -33,8 +33,8 @@ impl<T: Config> AvatarCombinator<T> {
 			ForgeOutput::Unchanged((captain_id, captain.unwrap())),
 			ForgeOutput::Unchanged((map_id, map.unwrap())),
 		]
-			.into_iter()
-			.collect();
+		.into_iter()
+		.collect();
 
 		Ok((LeaderForgeOutput::Forged((moon_id, moon.unwrap()), 0), output_vec))
 	}
