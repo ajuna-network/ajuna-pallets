@@ -1685,7 +1685,7 @@ pub mod pallet {
 				LogicGeneration::Fourth => MinterV4::<T>::mint(player, &season_id, mint_option),
 			}?;
 
-			let is_tournament_active = matches!(
+			let is_tournament_in_active_period = matches!(
 				T::TournamentHandler::get_active_tournament_state_for(&season_id),
 				TournamentState::ActivePeriod(_)
 			);
@@ -1704,7 +1704,7 @@ pub mod pallet {
 									TournamentConfig {
 										take_fee_percentage: Some(fee_perc), ..
 									},
-								)) if is_tournament_active => Self::try_propagate_tournament_fee(
+								)) if is_tournament_in_active_period => Self::try_propagate_tournament_fee(
 									&season_id, player, fee_perc, base_fee,
 								)?,
 								_ => base_fee,
@@ -1758,7 +1758,8 @@ pub mod pallet {
 					info.minted.saturating_accrue(generated_avatar_ids.len() as Stat),
 			});
 
-			if is_tournament_active && T::TournamentHandler::is_golden_duck_enabled_for(&season_id)
+			if is_tournament_in_active_period &&
+				T::TournamentHandler::is_golden_duck_enabled_for(&season_id)
 			{
 				for avatar_id in generated_avatar_ids.iter() {
 					T::TournamentHandler::try_rank_entity_for_golden_duck(&season_id, avatar_id)?;
@@ -2033,27 +2034,35 @@ pub mod pallet {
 							}
 						});
 
-						// If the leader avatar has turned into a Legendary avatar then we try to
-						// rank it for the active tournament
-						if let Some((tournament_id, config)) =
-							T::TournamentHandler::get_active_tournament_config_for(season_id)
-						{
-							let sacrifices_are_in_bounds =
-								input_sacrifices.into_iter().all(|(_, sacrifice)| {
-									sacrifice.minted_at >= config.start &&
-										sacrifice.minted_at <= config.active_end
-								});
+						let is_tournament_in_active_period = matches!(
+							T::TournamentHandler::get_active_tournament_state_for(season_id),
+							TournamentState::ActivePeriod(_)
+						);
 
-							let leader_in_bounds = input_leader.1.minted_at >= config.start &&
-								input_leader.1.minted_at <= config.active_end;
+						// If the leader avatar has turned into a Legendary avatar and
+						// the tournament is in its active phase then we try to rank it
+						if is_tournament_in_active_period {
+							if let Some((tournament_id, config)) =
+								T::TournamentHandler::get_active_tournament_config_for(season_id)
+							{
+								let sacrifices_are_in_bounds =
+									input_sacrifices.into_iter().all(|(_, sacrifice)| {
+										sacrifice.minted_at >= config.start &&
+											sacrifice.minted_at <= config.active_end
+									});
 
-							if sacrifices_are_in_bounds && leader_in_bounds {
-								let ranker = TournamentRankers::<T>::get(season_id, tournament_id)
-									.ok_or(Error::<T>::TournamentRankerNotFound)?;
+								let leader_in_bounds = input_leader.1.minted_at >= config.start &&
+									input_leader.1.minted_at <= config.active_end;
 
-								T::TournamentHandler::try_rank_entity_in_tournament_for(
-									season_id, &leader_id, &leader, &ranker,
-								)?;
+								if sacrifices_are_in_bounds && leader_in_bounds {
+									let ranker =
+										TournamentRankers::<T>::get(season_id, tournament_id)
+											.ok_or(Error::<T>::TournamentRankerNotFound)?;
+
+									T::TournamentHandler::try_rank_entity_in_tournament_for(
+										season_id, &leader_id, &leader, &ranker,
+									)?;
+								}
 							}
 						}
 					}
