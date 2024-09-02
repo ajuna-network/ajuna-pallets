@@ -1,6 +1,4 @@
 use super::*;
-use parity_scale_codec::MaxEncodedLen;
-use sp_runtime::DispatchError;
 
 /// Represent an individual asset going into the mutation process
 pub type MutatorInput<AssetId, AssetData, BlockNumber> =
@@ -16,21 +14,23 @@ where
 	/// The has been created through the mutation process
 	Created(asset::Asset<AssetData, BlockNumber>),
 	/// The asset has been consumed, indicating that it no longer exists
-	Consumed(asset::Asset<AssetData, BlockNumber>),
+	Consumed(AssetId),
 	/// The asset has remained unchanged through the mutation process
-	Unchanged(MutatorInput<AssetId, AssetData, BlockNumber>),
+	Unchanged(AssetId),
 }
 
-pub trait StateMutator<BlockNumber> {
-	type AccountId;
+pub trait StateMutator<Hash, BlockNumber> {
+	type AccountId: Parameter + Member;
+	/// Source or randomness for gameplay logic
+	type Randomness: Randomness<Hash, BlockNumber>;
 	type MutationId: Parameter;
 	type AssetId: Parameter + Member + MaxEncodedLen;
 	type AssetData: Parameter + Member + MaxEncodedLen;
 	type MutationError: Into<DispatchError>;
 
 	fn try_mutate_state(
-		account: Self::AccountId,
-		mutation_id: Self::MutationId,
-		asset_ids: &[MutatorInput<Self::AssetId, Self::AssetData, BlockNumber>],
+		account: &Self::AccountId,
+		mutation_id: &Self::MutationId,
+		input_assets: Vec<MutatorInput<Self::AssetId, Self::AssetData, BlockNumber>>,
 	) -> Result<Vec<MutatorOutput<Self::AssetId, Self::AssetData, BlockNumber>>, Self::MutationError>;
 }

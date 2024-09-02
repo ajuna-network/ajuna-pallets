@@ -1,6 +1,7 @@
 use crate::asset;
-use frame_support::Parameter;
-use sp_runtime::traits::Member;
+use frame_support::{traits::Randomness, Parameter};
+use parity_scale_codec::MaxEncodedLen;
+use sp_runtime::{traits::Member, DispatchError};
 
 pub mod mutator;
 

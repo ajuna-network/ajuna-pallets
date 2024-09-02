@@ -16,16 +16,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use asset::*;
 pub use pallet::*;
 pub use traits::*;
 
-/*#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;*/
-
 mod asset;
+#[cfg(test)]
+mod tests;
 mod traits;
 pub mod weights;
 /*#[cfg(feature = "runtime-benchmarks")]
@@ -38,23 +35,32 @@ pub mod pallet {
 		dispatch::{DispatchResultWithPostInfo, PostDispatchInfo},
 		pallet_prelude::*,
 		traits::{Currency, Randomness},
-		DefaultNoBound,
 	};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{CheckedAdd, One};
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-	pub(crate) type AssetIdFor<T> =
-		<<T as Config>::StateMutationHandler as StateMutator<BlockNumberFor<T>>>::AssetId;
-	pub(crate) type AssetDataFor<T> =
-		<<T as Config>::StateMutationHandler as StateMutator<BlockNumberFor<T>>>::AssetData;
-	pub(crate) type AssetFor<T> = Asset<AssetDataFor<T>, BlockNumberFor<T>>;
-	pub(crate) type MutationIdFor<T> =
-		<<T as Config>::StateMutationHandler as StateMutator<BlockNumberFor<T>>>::MutationId;
+	pub(crate) type HashFor<T> = <T as frame_system::Config>::Hash;
+	pub(crate) type AssetIdFor<T, I> = <<T as Config<I>>::StateMutationHandler as StateMutator<
+		HashFor<T>,
+		BlockNumberFor<T>,
+	>>::AssetId;
+	pub(crate) type AssetDataFor<T, I> = <<T as Config<I>>::StateMutationHandler as StateMutator<
+		HashFor<T>,
+		BlockNumberFor<T>,
+	>>::AssetData;
+	pub(crate) type AssetFor<T, I> = Asset<AssetDataFor<T, I>, BlockNumberFor<T>>;
+	pub(crate) type MutationIdFor<T, I> = <<T as Config<I>>::StateMutationHandler as StateMutator<
+		HashFor<T>,
+		BlockNumberFor<T>,
+	>>::MutationId;
+
+	/// The current storage version.
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+	pub trait Config<I: 'static = ()>: frame_system::Config {
+		type RuntimeEvent: From<Event<Self, I>>
+			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Currency: Currency<Self::AccountId>;
 
@@ -62,6 +68,7 @@ pub mod pallet {
 
 		/// Handler for all state change transition logic
 		type StateMutationHandler: StateMutator<
+			HashFor<Self>,
 			BlockNumberFor<Self>,
 			AccountId = AccountIdFor<Self>,
 		>;
@@ -70,59 +77,71 @@ pub mod pallet {
 	}
 
 	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+	#[pallet::storage_version(STORAGE_VERSION)]
+	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
 	#[pallet::storage]
-	pub type Something<T: Config> = StorageValue<_, u8>;
+	pub type Assets<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, AssetIdFor<T, I>, AssetFor<T, I>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		SomethingStored { block_number: BlockNumberFor<T>, who: T::AccountId },
+	pub enum Event<T: Config<I>, I: 'static = ()> {
+		MutationExecuted { by: AccountIdFor<T>, mutation_id: MutationIdFor<T, I> },
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
+	pub enum Error<T, I = ()> {
+		/// The request asset could not be found in storage.
+		AssetNotFound,
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
+		_phantom: sp_std::marker::PhantomData<(T, I)>,
+	}
+
+	impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
+		fn default() -> Self {
+			GenesisConfig { _phantom: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config<I>, I: 'static> BuildGenesisConfig for GenesisConfig<T, I> {
+		fn build(&self) {}
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
-
-	#[pallet::storage]
-	pub type Assets<T: Config> = StorageMap<_, Identity, AssetIdFor<T>, AssetFor<T>>;
+	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		#[pallet::call_index(0)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn mutate_state(
 			origin: OriginFor<T>,
-			mutation_id: MutationIdFor<T>,
-			input_ids: Vec<AssetIdFor<T>>,
+			mutation_id: MutationIdFor<T, I>,
+			input_ids: Vec<AssetIdFor<T, I>>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 
 			let input_assets = input_ids
 				.into_iter()
 				.map(|asset_id| {
-					if let Some(asset) = Assets::<T>::get(&asset_id) {
+					if let Some(asset) = Assets::<T, I>::get(&asset_id) {
 						Ok((asset_id.clone(), asset))
 					} else {
-						Err(())
+						Err(Error::<T, I>::AssetNotFound)
 					}
 				})
-				.collect::<Result<Vec<_>, _>>()
-				.expect("All assets found");
+				.collect::<Result<Vec<_>, _>>()?;
 
-			let _result = T::StateMutationHandler::try_mutate_state(
-				account,
-				mutation_id,
-				input_assets.as_slice(),
-			).map_err(|e| e.into())?;
+			let _result =
+				T::StateMutationHandler::try_mutate_state(&account, &mutation_id, input_assets)
+					.map_err(|e| e.into())?;
+
+			Self::deposit_event(Event::<T, I>::MutationExecuted { by: account, mutation_id });
 
 			Ok(PostDispatchInfo::from(()))
 		}
