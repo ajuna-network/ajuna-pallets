@@ -54,6 +54,7 @@ frame_support::construct_runtime!(
 		NftTransfer: pallet_ajuna_nft_transfer = 5,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
 		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
+		BattleRoyale: pallet_ajuna_battle_royale::<Instance1> = 8,
 	}
 );
 
@@ -201,6 +202,7 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
+	type BattleHandler = BattleRoyale;
 	type WeightInfo = ();
 }
 
@@ -245,6 +247,11 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type EntityId = crate::AvatarIdOf<Runtime>;
 	type RankedEntity = Avatar<BlockNumberFor<Runtime>>;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+}
+
+type BattleInstance1 = pallet_ajuna_battle_royale::Instance1;
+impl pallet_ajuna_battle_royale::Config<BattleInstance1> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

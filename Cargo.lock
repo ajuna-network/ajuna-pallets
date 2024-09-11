@@ -1780,6 +1780,7 @@ dependencies = [
  "hex",
  "log",
  "pallet-ajuna-affiliates",
+ "pallet-ajuna-battle-royale",
  "pallet-ajuna-nft-transfer",
  "pallet-ajuna-tournament",
  "pallet-balances",
@@ -1804,6 +1805,7 @@ dependencies = [
  "log",
  "pallet-ajuna-affiliates",
  "pallet-ajuna-awesome-avatars",
+ "pallet-ajuna-battle-royale",
  "pallet-ajuna-nft-transfer",
  "pallet-ajuna-tournament",
  "pallet-balances",
@@ -1829,6 +1831,24 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ajuna-battle-royale"
+version = "0.13.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-crypto-hashing",
  "sp-io",
  "sp-runtime",
  "sp-std",

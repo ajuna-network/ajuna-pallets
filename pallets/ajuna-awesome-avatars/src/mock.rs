@@ -54,6 +54,7 @@ frame_support::construct_runtime!(
 		NftTransfer: pallet_ajuna_nft_transfer = 5,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
 		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
+		BattleRoyale: pallet_ajuna_battle_royale::<Instance1> = 8,
 	}
 );
 
@@ -201,6 +202,7 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
+	type BattleHandler = BattleRoyale;
 	type WeightInfo = ();
 }
 
@@ -245,6 +247,11 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type EntityId = AvatarIdOf<Test>;
 	type RankedEntity = AvatarOf<Test>;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+}
+
+type BattleInstance1 = pallet_ajuna_battle_royale::Instance1;
+impl pallet_ajuna_battle_royale::Config<BattleInstance1> for Test {
+	type RuntimeEvent = RuntimeEvent;
 }
 
 pub struct ExtBuilder {
@@ -414,11 +421,13 @@ pub fn run_to_block(n: u64) {
 		if System::block_number() > 1 {
 			AAvatars::on_finalize(System::block_number());
 			Tournament::on_finalize(System::block_number());
+			BattleRoyale::on_finalize(System::block_number());
 			System::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		AAvatars::on_initialize(System::block_number());
+		BattleRoyale::on_initialize(System::block_number());
 		Tournament::on_initialize(System::block_number());
 	}
 }
