@@ -122,7 +122,8 @@ impl<BlockNumber> BattleState<BlockNumber> {
 	}
 }
 
-pub type PlayerSecretAction = [u8; 8];
+pub type PlayerSecretAction = [u8; 32];
+pub type PlayerSecret = u32;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
 pub enum PlayerWeapon {
@@ -134,9 +135,9 @@ pub enum PlayerWeapon {
 impl PlayerWeapon {
 	pub(crate) fn as_byte(&self) -> u8 {
 		match self {
-			PlayerWeapon::Rock => 0b0001,
-			PlayerWeapon::Paper => 0b0010,
-			PlayerWeapon::Scissors => 0b0100,
+			PlayerWeapon::Rock => 0x00,
+			PlayerWeapon::Paper => 0x01,
+			PlayerWeapon::Scissors => 0x02,
 		}
 	}
 
@@ -151,33 +152,112 @@ impl PlayerWeapon {
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
 pub enum PlayerAction {
+	Input(PlayerSecretAction, PlayerSecret),
+	Reveal(ActionReveal),
+}
+
+#[cfg(test)]
+impl PlayerAction {
+	pub(crate) fn get_input_details(&self) -> (PlayerSecretAction, PlayerSecret) {
+		match self {
+			PlayerAction::Input(action, secret) => (*action, *secret),
+			PlayerAction::Reveal(_) => panic!("PlayerAction not in Input state!"),
+		}
+	}
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
+pub enum ActionReveal {
 	Move(Coordinates),
 	SwapWeapon(PlayerWeapon),
 	MoveAndSwap(Coordinates, PlayerWeapon),
 }
 
-impl PlayerAction {
-	pub fn generate_secret_with(&self, seed: u32) -> PlayerSecretAction {
+impl ActionReveal {
+	#[inline]
+	pub fn generate_hash_for(&self) -> Vec<u8> {
 		let mut bytes = Vec::new();
 
 		match self {
-			PlayerAction::Move(coordinates) => {
-				bytes.extend(&[coordinates.x, coordinates.y]);
+			ActionReveal::Move(coordinates) => {
+				bytes.extend(&[0x00, coordinates.x, coordinates.y]);
 			},
-			PlayerAction::SwapWeapon(weapon) => {
-				bytes.extend(&[weapon.as_byte()]);
+			ActionReveal::SwapWeapon(weapon) => {
+				bytes.extend(&[0x01, weapon.as_byte()]);
 			},
-			PlayerAction::MoveAndSwap(coordinates, weapon) => {
-				bytes.extend(&[coordinates.x, coordinates.y, weapon.as_byte()]);
+			ActionReveal::MoveAndSwap(coordinates, weapon) => {
+				bytes.extend(&[0x02, coordinates.x, coordinates.y, weapon.as_byte()]);
 			},
 		}
 
-		bytes.extend(seed.to_ne_bytes());
-		sp_crypto_hashing::twox_64(&bytes)
+		bytes
 	}
 
-	pub fn compare_with(&self, seed: u32, other_secret: &PlayerSecretAction) -> bool {
-		self.generate_secret_with(seed) == *other_secret
+	#[inline]
+	pub fn generate_secret_with(&self, secret: PlayerSecret) -> PlayerSecretAction {
+		let mut bytes = secret.to_le_bytes().to_vec();
+		bytes.extend(self.generate_hash_for());
+		sp_crypto_hashing::blake2_256(&bytes)
+	}
+
+	#[inline]
+	pub fn compare_with(&self, secret: PlayerSecret, other_secret: &PlayerSecretAction) -> bool {
+		self.generate_secret_with(secret) == *other_secret
+	}
+}
+
+#[cfg(test)]
+mod hash_tests {
+	use super::*;
+
+	#[test]
+	fn test_hash_consistency() {
+		let test_move = ActionReveal::Move(Coordinates::new(5, 7));
+		assert_eq!(test_move.generate_hash_for(), vec![0x00, 0x05, 0x07]);
+
+		let test_weapon_swap = ActionReveal::SwapWeapon(PlayerWeapon::Scissors);
+		assert_eq!(test_weapon_swap.generate_hash_for(), vec![0x01, 0x02]);
+
+		let test_move_and_swap =
+			ActionReveal::MoveAndSwap(Coordinates::new(17, 9), PlayerWeapon::Paper);
+		assert_eq!(test_move_and_swap.generate_hash_for(), vec![0x02, 0x11, 0x09, 0x01]);
+	}
+
+	#[test]
+	fn test_secret_consistency() {
+		let test_move = ActionReveal::Move(Coordinates::new(11, 3));
+		let secret = 73;
+		assert_eq!(
+			test_move.generate_secret_with(secret),
+			[
+				0x3B, 0xE4, 0x64, 0x76, 0x37, 0xA4, 0x3F, 0x91, 0xCC, 0x21, 0x52, 0x9A, 0xC9, 0x02,
+				0xC1, 0x72, 0xF6, 0x28, 0xD7, 0x7B, 0x5D, 0xD9, 0x63, 0x91, 0x3A, 0x4C, 0xB8, 0x2C,
+				0x44, 0xB3, 0x0B, 0x0E
+			]
+		);
+
+		let test_weapon_swap = ActionReveal::SwapWeapon(PlayerWeapon::Rock);
+		let secret = 583;
+		assert_eq!(
+			test_weapon_swap.generate_secret_with(secret),
+			[
+				0xB6, 0x34, 0xEC, 0x2B, 0xC3, 0x25, 0x45, 0xE3, 0x48, 0x95, 0xBB, 0x95, 0x06, 0x48,
+				0x16, 0x2A, 0x2D, 0xAE, 0x1D, 0x1D, 0xF3, 0x2F, 0xA2, 0x12, 0x62, 0xB0, 0xFF, 0xCC,
+				0x23, 0xE1, 0x04, 0x74
+			]
+		);
+
+		let test_move_and_swap =
+			ActionReveal::MoveAndSwap(Coordinates::new(1, 22), PlayerWeapon::Paper);
+		let secret = 1;
+		assert_eq!(
+			test_move_and_swap.generate_secret_with(secret),
+			[
+				0x29, 0x13, 0xAD, 0x42, 0x3D, 0x5A, 0x33, 0xDA, 0xD2, 0x78, 0xD0, 0xFE, 0x5B, 0xB1,
+				0xC1, 0x03, 0x43, 0x14, 0x1E, 0x1A, 0x5D, 0xE7, 0x9D, 0x8D, 0x98, 0xD1, 0x7E, 0x34,
+				0x37, 0xBA, 0x73, 0x76
+			]
+		);
 	}
 }
 
@@ -192,7 +272,7 @@ pub struct PlayerData {
 pub enum PlayerState {
 	#[default]
 	Inactive,
-	PerformedAction(PlayerSecretAction),
+	PerformedAction(PlayerSecretAction, PlayerSecret),
 	RevealedAction,
 	Defeated,
 }
@@ -212,9 +292,5 @@ pub trait BattleProvider<AccountId> {
 		initial_weapon: PlayerWeapon,
 	) -> DispatchResult;
 
-	fn try_perform_player_action(
-		account: &AccountId,
-		action: PlayerAction,
-		player_seed: u32,
-	) -> DispatchResult;
+	fn try_perform_player_action(account: &AccountId, action: PlayerAction) -> DispatchResult;
 }

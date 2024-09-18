@@ -1683,11 +1683,10 @@ pub mod pallet {
 		pub fn perform_player_action_in_active_battle_royale(
 			origin: OriginFor<T>,
 			action: PlayerAction,
-			player_seed: u32,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
-			T::BattleHandler::try_perform_player_action(&account, action, player_seed)
+			T::BattleHandler::try_perform_player_action(&account, action)
 		}
 	}
 

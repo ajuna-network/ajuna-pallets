@@ -346,10 +346,10 @@ pub mod pallet {
 		fn update_player_data_using_action(
 			account: &AccountIdFor<T>,
 			player_data: &mut PlayerData,
-			action: PlayerAction,
+			action: ActionReveal,
 		) {
 			match action {
-				PlayerAction::Move(new_position) => {
+				ActionReveal::Move(new_position) => {
 					Self::update_player_positions_storage(
 						account,
 						player_data.position,
@@ -357,10 +357,10 @@ pub mod pallet {
 					);
 					player_data.position = new_position;
 				},
-				PlayerAction::SwapWeapon(new_weapon) => {
+				ActionReveal::SwapWeapon(new_weapon) => {
 					player_data.weapon = new_weapon;
 				},
-				PlayerAction::MoveAndSwap(new_position, new_weapon) => {
+				ActionReveal::MoveAndSwap(new_position, new_weapon) => {
 					Self::update_player_positions_storage(
 						account,
 						player_data.position,
@@ -517,7 +517,6 @@ pub mod pallet {
 		fn try_perform_player_action(
 			account: &AccountIdFor<T>,
 			action: PlayerAction,
-			player_seed: u32,
 		) -> DispatchResult {
 			match BattleStateStore::<T, I>::get() {
 				BattleStateFor::<T>::Inactive => Err(Error::<T, I>::BattleIsInactive.into()),
@@ -526,17 +525,20 @@ pub mod pallet {
 						if let Some(player_data) = details {
 							if matches!(
 								player_data.state,
-								PlayerState::Inactive | PlayerState::PerformedAction(_)
+								PlayerState::Inactive | PlayerState::PerformedAction(_, _)
 							) {
-								player_data.state = PlayerState::PerformedAction(
-									action.generate_secret_with(player_seed),
-								);
+								if let PlayerAction::Input(secret_action, secret) = action {
+									player_data.state =
+										PlayerState::PerformedAction(secret_action, secret);
 
-								Self::deposit_event(Event::<T, I>::PlayerPerformedAction {
-									player: account.clone(),
-								});
+									Self::deposit_event(Event::<T, I>::PlayerPerformedAction {
+										player: account.clone(),
+									});
 
-								Ok(())
+									Ok(())
+								} else {
+									Err(Error::<T, I>::PlayerCannotPerformAction.into())
+								}
 							} else {
 								Err(Error::<T, I>::PlayerCannotPerformAction.into())
 							}
@@ -546,23 +548,32 @@ pub mod pallet {
 					}),
 					BattlePhase::Reveal => PlayerDetails::<T, I>::try_mutate(account, |details| {
 						if let Some(player_data) = details {
-							if let PlayerState::PerformedAction(performed_action) =
-								&player_data.state
+							if let PlayerState::PerformedAction(
+								performed_secret_action,
+								player_secret,
+							) = &player_data.state
 							{
-								if action.compare_with(player_seed, performed_action) {
-									Self::update_player_data_using_action(
-										account,
-										player_data,
-										action,
-									);
+								if let PlayerAction::Reveal(action_reveal) = action {
+									if action_reveal
+										.compare_with(*player_secret, performed_secret_action)
+									{
+										Self::update_player_data_using_action(
+											account,
+											player_data,
+											action_reveal,
+										);
 
-									Self::deposit_event(Event::<T, I>::PlayerRevealedAction {
-										player: account.clone(),
-									});
+										Self::deposit_event(Event::<T, I>::PlayerRevealedAction {
+											player: account.clone(),
+										});
 
-									Ok(())
+										Ok(())
+									} else {
+										Err(Error::<T, I>::PlayerRevealDoesntMatchOriginalAction
+											.into())
+									}
 								} else {
-									Err(Error::<T, I>::PlayerRevealDoesntMatchOriginalAction.into())
+									Err(Error::<T, I>::PlayerCannotPerformAction.into())
 								}
 							} else {
 								Err(Error::<T, I>::PlayerDoesntHaveOriginalActionToReveal.into())
