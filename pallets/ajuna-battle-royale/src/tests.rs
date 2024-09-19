@@ -2,10 +2,19 @@ use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 
 fn generate_action_secret_action_pair_for(
-	reveal: ActionReveal,
-	secret: PlayerSecret,
-) -> (PlayerAction, PlayerAction) {
-	(PlayerAction::Input(reveal.generate_secret_with(secret), secret), PlayerAction::Reveal(reveal))
+	action: PlayerAction,
+	hash_fill: [u8; 28],
+) -> (PlayerActionHash, PlayerActionHash) {
+	let action_hash = {
+		let mut hash = [0_u8; 32];
+
+		hash[0..=27].copy_from_slice(&hash_fill);
+		hash[28..].copy_from_slice(&action.generate_payload_for());
+
+		hash
+	};
+
+	(sp_crypto_hashing::blake2_256(&action_hash), action_hash)
 }
 
 fn assert_all_storage_empty() {
@@ -555,13 +564,12 @@ mod try_perform_player_action {
 
 			// ALICE - Performs action
 			let alice_moved_to_position = Coordinates::new(3, 4);
-			let alice_seed = 3587;
-			let (alice_secret_action, alice_reveal_action) = generate_action_secret_action_pair_for(
-				ActionReveal::Move(alice_moved_to_position),
-				alice_seed,
+			let alice_payload_fill = [2_u8; 28];
+			let (alice_input_hash, alice_reveal_hash) = generate_action_secret_action_pair_for(
+				PlayerAction::Move(alice_moved_to_position),
+				alice_payload_fill,
 			);
-			let alice_secret = alice_secret_action.get_input_details().0;
-			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_secret_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_input_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerPerformedAction { player: ALICE },
@@ -572,19 +580,18 @@ mod try_perform_player_action {
 				Some(PlayerData {
 					position: alice_initial_position,
 					weapon: alice_weapon,
-					state: PlayerState::PerformedAction(alice_secret, alice_seed),
+					state: PlayerState::PerformedAction(alice_input_hash),
 				})
 			);
 
 			// BOB - Performs action
 			let bob_weapon_change = PlayerWeapon::Scissors;
-			let bob_seed = 92_985;
-			let (bob_secret_action, bob_reveal_action) = generate_action_secret_action_pair_for(
-				ActionReveal::SwapWeapon(bob_weapon_change),
-				bob_seed,
+			let bob_payload_fill = [6_u8; 28];
+			let (bob_input_hash, bob_reveal_hash) = generate_action_secret_action_pair_for(
+				PlayerAction::SwapWeapon(bob_weapon_change),
+				bob_payload_fill,
 			);
-			let bob_secret = bob_secret_action.get_input_details().0;
-			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_secret_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_input_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerPerformedAction { player: BOB },
@@ -595,7 +602,7 @@ mod try_perform_player_action {
 				Some(PlayerData {
 					position: bob_initial_position,
 					weapon: bob_weapon,
-					state: PlayerState::PerformedAction(bob_secret, bob_seed),
+					state: PlayerState::PerformedAction(bob_input_hash),
 				})
 			);
 
@@ -612,14 +619,12 @@ mod try_perform_player_action {
 			let charlie_moved_to_position = Coordinates::new(5, 5);
 			let charlie_weapon_change = PlayerWeapon::Paper;
 
-			let charlie_seed = 13;
-			let (charlie_secret_action, charlie_reveal_action) =
-				generate_action_secret_action_pair_for(
-					ActionReveal::MoveAndSwap(charlie_moved_to_position, charlie_weapon_change),
-					charlie_seed,
-				);
-			let charlie_secret = charlie_secret_action.get_input_details().0;
-			assert_ok!(BattleRoyale::try_perform_player_action(&CHARLIE, charlie_secret_action));
+			let charlie_payload_fill = [46_u8; 28];
+			let (charlie_input_hash, charlie_reveal_hash) = generate_action_secret_action_pair_for(
+				PlayerAction::MoveAndSwap(charlie_moved_to_position, charlie_weapon_change),
+				charlie_payload_fill,
+			);
+			assert_ok!(BattleRoyale::try_perform_player_action(&CHARLIE, charlie_input_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerPerformedAction { player: CHARLIE },
@@ -630,7 +635,7 @@ mod try_perform_player_action {
 				Some(PlayerData {
 					position: charlie_initial_position,
 					weapon: charlie_weapon,
-					state: PlayerState::PerformedAction(charlie_secret, charlie_seed),
+					state: PlayerState::PerformedAction(charlie_input_hash),
 				})
 			);
 
@@ -644,7 +649,7 @@ mod try_perform_player_action {
 			);
 
 			// ALICE - Reveals action
-			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_reveal_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_reveal_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerRevealedAction { player: ALICE },
@@ -669,7 +674,7 @@ mod try_perform_player_action {
 			);
 
 			// CHARLIE - Reveals action
-			assert_ok!(BattleRoyale::try_perform_player_action(&CHARLIE, charlie_reveal_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&CHARLIE, charlie_reveal_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerRevealedAction { player: CHARLIE },
@@ -694,7 +699,7 @@ mod try_perform_player_action {
 			);
 
 			// BOB - Reveals action
-			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_reveal_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_reveal_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerRevealedAction { player: BOB },
@@ -776,14 +781,14 @@ mod try_perform_player_action {
 			);
 
 			let move_to_position = Coordinates::new(3, 4);
-			let action = ActionReveal::Move(move_to_position);
+			let action = PlayerAction::Move(move_to_position);
 
 			// ALICE - Performs moves first
-			let alice_seed = 3587;
-			let (alice_secret_action, alice_reveal_action) =
-				generate_action_secret_action_pair_for(action, alice_seed);
+			let alice_payload_fill = [0_u8; 28];
+			let (alice_input_hash, alice_reveal_hash) =
+				generate_action_secret_action_pair_for(action, alice_payload_fill);
 
-			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_secret_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_input_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerPerformedAction { player: ALICE },
@@ -794,18 +799,15 @@ mod try_perform_player_action {
 				Some(PlayerData {
 					position: alice_initial_position,
 					weapon: alice_weapon,
-					state: PlayerState::PerformedAction(
-						alice_secret_action.get_input_details().0,
-						alice_seed
-					),
+					state: PlayerState::PerformedAction(alice_input_hash),
 				})
 			);
 
 			// BOB - Performs move to the same position as ALICE
-			let bob_seed = 92_985;
-			let (bob_secret_action, bob_reveal_action) =
-				generate_action_secret_action_pair_for(action, bob_seed);
-			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_secret_action));
+			let bob_payload_fill = [182_u8; 28];
+			let (bob_input_hash, bob_reveal_hash) =
+				generate_action_secret_action_pair_for(action, bob_payload_fill);
+			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_input_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerPerformedAction { player: BOB },
@@ -816,10 +818,7 @@ mod try_perform_player_action {
 				Some(PlayerData {
 					position: bob_initial_position,
 					weapon: bob_weapon,
-					state: PlayerState::PerformedAction(
-						bob_secret_action.get_input_details().0,
-						bob_seed
-					),
+					state: PlayerState::PerformedAction(bob_input_hash),
 				})
 			);
 
@@ -833,7 +832,7 @@ mod try_perform_player_action {
 			);
 
 			// BOB - Reveals its move first
-			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_reveal_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&BOB, bob_reveal_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerRevealedAction { player: BOB },
@@ -858,7 +857,7 @@ mod try_perform_player_action {
 			);
 
 			// ALICE - Reveals its move next
-			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_reveal_action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, alice_reveal_hash));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerRevealedAction { player: ALICE },
@@ -967,12 +966,12 @@ mod try_perform_player_action {
 			);
 
 			let move_to_coordinates = Coordinates::new(4, 4);
-			let action = ActionReveal::Move(move_to_coordinates);
+			let action = PlayerAction::Move(move_to_coordinates);
 
 			for (i, account) in account_vec.iter().enumerate() {
-				let seed = i as u32;
-				let (secret_action, _) = generate_action_secret_action_pair_for(action, seed);
-				assert_ok!(BattleRoyale::try_perform_player_action(account, secret_action));
+				let payload_fill = [i as u8; 28];
+				let (input_hash, _) = generate_action_secret_action_pair_for(action, payload_fill);
+				assert_ok!(BattleRoyale::try_perform_player_action(account, input_hash));
 
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 					crate::Event::PlayerPerformedAction { player: account.clone() },
@@ -983,10 +982,7 @@ mod try_perform_player_action {
 					Some(PlayerData {
 						position: initial_position_vec[i],
 						weapon: PlayerWeapon::Scissors,
-						state: PlayerState::PerformedAction(
-							secret_action.get_input_details().0,
-							seed
-						),
+						state: PlayerState::PerformedAction(input_hash),
 					})
 				);
 			}
@@ -1001,9 +997,9 @@ mod try_perform_player_action {
 			);
 
 			for (i, account) in account_vec.iter().enumerate() {
-				let seed = i as u32;
-				let (_, reveal_action) = generate_action_secret_action_pair_for(action, seed);
-				assert_ok!(BattleRoyale::try_perform_player_action(account, reveal_action));
+				let payload_fill = [i as u8; 28];
+				let (_, reveal_hash) = generate_action_secret_action_pair_for(action, payload_fill);
+				assert_ok!(BattleRoyale::try_perform_player_action(account, reveal_hash));
 
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 					crate::Event::PlayerRevealedAction { player: account.clone() },
@@ -1144,9 +1140,9 @@ mod try_perform_player_action {
 
 			run_to_block(20);
 
-			let seed = 2;
-			let action_base = ActionReveal::Move(Coordinates::new(3, 3));
-			let action = PlayerAction::Input(action_base.generate_secret_with(seed), seed);
+			let payload_fill = [88; 28];
+			let action_base = PlayerAction::Move(Coordinates::new(3, 3));
+			let input_hash = action_base.generate_hash_for(payload_fill);
 
 			// Cannot perform action while battle is in Queueing state
 			assert_battle_state_is_active_with(
@@ -1156,7 +1152,7 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(&ALICE, action),
+				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
 				Error::<Test, Instance1>::BattleNotInPlayablePhases
 			);
 
@@ -1170,7 +1166,7 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(&ALICE, action),
+				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
 				Error::<Test, Instance1>::BattleNotInPlayablePhases
 			);
 
@@ -1184,7 +1180,7 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(&ALICE, action),
+				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
 				Error::<Test, Instance1>::BattleNotInPlayablePhases
 			);
 
@@ -1200,7 +1196,7 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(&ALICE, action),
+				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
 				Error::<Test, Instance1>::BattleNotInPlayablePhases
 			);
 
@@ -1214,7 +1210,7 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(&ALICE, action),
+				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
 				Error::<Test, Instance1>::BattleNotInPlayablePhases
 			);
 		});
@@ -1242,13 +1238,13 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 
-			let seed = 23;
-			let action_base = ActionReveal::SwapWeapon(PlayerWeapon::Paper);
-			let action = PlayerAction::Input(action_base.generate_secret_with(seed), seed);
+			let payload_fill = [23; 28];
+			let action_base = PlayerAction::SwapWeapon(PlayerWeapon::Paper);
+			let input_hash = action_base.generate_hash_for(payload_fill);
 
 			// We fail to play a move since the player was not queued
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(&BOB, action),
+				BattleRoyale::try_perform_player_action(&BOB, input_hash),
 				Error::<Test, Instance1>::PlayerNotFound
 			);
 
@@ -1284,13 +1280,13 @@ mod try_perform_player_action {
 
 			let _ = BattleRoyale::mark_account_as_defeated(&ALICE);
 
-			let seed = 834;
-			let action_base = ActionReveal::SwapWeapon(PlayerWeapon::Paper);
-			let action = PlayerAction::Input(action_base.generate_secret_with(seed), seed);
+			let payload_fill = [241; 28];
+			let action_base = PlayerAction::SwapWeapon(PlayerWeapon::Rock);
+			let input_hash = action_base.generate_hash_for(payload_fill);
 
 			// We fail to play a move since the player was not queued
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(&ALICE, action),
+				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
 				Error::<Test, Instance1>::PlayerCannotPerformAction
 			);
 		});
@@ -1318,11 +1314,11 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 
-			let seed = 355;
-			let action_base = ActionReveal::SwapWeapon(PlayerWeapon::Paper);
-			let action = PlayerAction::Input(action_base.generate_secret_with(seed), seed);
+			let payload_fill = [177; 28];
+			let action_base = PlayerAction::SwapWeapon(PlayerWeapon::Rock);
+			let input_hash = action_base.generate_hash_for(payload_fill);
 
-			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, action));
+			assert_ok!(BattleRoyale::try_perform_player_action(&ALICE, input_hash));
 
 			// We advance 3 more blocks, this should put us in the Reveal phase.
 			run_to_block(System::block_number() + 3);
@@ -1334,7 +1330,15 @@ mod try_perform_player_action {
 			);
 
 			// We fail to reveal action since the action is not the same as in the Input phase
-			let incorrect_reveal = PlayerAction::Reveal(ActionReveal::Move(Coordinates::new(8, 5)));
+			let incorrect_reveal = {
+				let incorrect_action = PlayerAction::Move(Coordinates::new(8, 5));
+				let mut reveal_hash = [0_u8; 32];
+
+				reveal_hash[0..=27].copy_from_slice(&payload_fill);
+				reveal_hash[28..].copy_from_slice(&incorrect_action.generate_payload_for());
+
+				reveal_hash
+			};
 			assert_noop!(
 				BattleRoyale::try_perform_player_action(&ALICE, incorrect_reveal),
 				Error::<Test, Instance1>::PlayerRevealDoesntMatchOriginalAction
@@ -1366,10 +1370,7 @@ mod try_perform_player_action {
 
 			// We fail to reveal action since we didn't send any action during the Input phase
 			assert_noop!(
-				BattleRoyale::try_perform_player_action(
-					&ALICE,
-					PlayerAction::Reveal(ActionReveal::SwapWeapon(PlayerWeapon::Scissors))
-				),
+				BattleRoyale::try_perform_player_action(&ALICE, [0; 32]),
 				Error::<Test, Instance1>::PlayerDoesntHaveOriginalActionToReveal
 			);
 		});

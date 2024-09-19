@@ -78,7 +78,7 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
 	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
 };
-use pallet_ajuna_battle_royale::{BattleProvider, Coordinates, PlayerAction, PlayerWeapon};
+use pallet_ajuna_battle_royale::{BattleProvider, Coordinates, PlayerActionHash, PlayerWeapon};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
@@ -1682,7 +1682,7 @@ pub mod pallet {
 		#[pallet::weight({10_000})]
 		pub fn perform_player_action_in_active_battle_royale(
 			origin: OriginFor<T>,
-			action: PlayerAction,
+			action: PlayerActionHash,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 

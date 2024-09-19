@@ -5926,7 +5926,7 @@ mod tournament {
 
 mod battle_royale {
 	use super::*;
-	use pallet_ajuna_battle_royale::ActionReveal;
+	use pallet_ajuna_battle_royale::PlayerAction;
 
 	#[test]
 	fn test_battle_royale_workflow_integrity() {
@@ -6005,15 +6005,14 @@ mod battle_royale {
 
 				run_to_block(60);
 
-				let alice_seed = 242;
+				let alice_payload_fill = [242; 28];
 				let alice_action =
-					ActionReveal::MoveAndSwap(Coordinates::new(2, 2), PlayerWeapon::Rock);
-				let alice_secret_action = alice_action.generate_secret_with(alice_seed);
-				let alice_input = PlayerAction::Input(alice_secret_action, alice_seed);
-				let alice_reveal = PlayerAction::Reveal(alice_action);
+					PlayerAction::MoveAndSwap(Coordinates::new(2, 2), PlayerWeapon::Rock);
+				let alice_input_hash = alice_action.generate_hash_for(alice_payload_fill);
+				let alice_reveal_hash = alice_action.generate_full_payload_for(alice_payload_fill);
 				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
 					RuntimeOrigin::signed(ALICE),
-					alice_input
+					alice_input_hash
 				));
 
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
@@ -6022,15 +6021,14 @@ mod battle_royale {
 
 				run_to_block(62);
 
-				let bob_seed = 14;
+				let bob_payload_fill = [14; 28];
 				let bob_action =
-					ActionReveal::MoveAndSwap(Coordinates::new(2, 2), PlayerWeapon::Paper);
-				let bob_secret_action = bob_action.generate_secret_with(bob_seed);
-				let bob_input = PlayerAction::Input(bob_secret_action, bob_seed);
-				let bob_reveal = PlayerAction::Reveal(bob_action);
+					PlayerAction::MoveAndSwap(Coordinates::new(2, 2), PlayerWeapon::Paper);
+				let bob_input_hash = bob_action.generate_hash_for(bob_payload_fill);
+				let bob_reveal_hash = bob_action.generate_full_payload_for(bob_payload_fill);
 				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
 					RuntimeOrigin::signed(BOB),
-					bob_input,
+					bob_input_hash,
 				));
 
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
@@ -6040,7 +6038,7 @@ mod battle_royale {
 				run_to_block(64);
 				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
 					RuntimeOrigin::signed(BOB),
-					bob_reveal,
+					bob_reveal_hash,
 				));
 
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
@@ -6050,7 +6048,7 @@ mod battle_royale {
 				run_to_block(65);
 				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
 					RuntimeOrigin::signed(ALICE),
-					alice_reveal,
+					alice_reveal_hash,
 				));
 
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
