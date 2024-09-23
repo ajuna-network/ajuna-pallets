@@ -387,7 +387,7 @@ pub mod pallet {
 			let _ = PlayerDetails::<T, I>::clear(MAX_PLAYER_PER_BATTLE as u32, None);
 
 			// TODO: Check if we can split this between blocks (maybe using cursor during idle time)
-			let _ = GridOccupancy::<T, I>::clear((MAX_GRID_SIZE * MAX_GRID_SIZE) as u32, None);
+			let _ = GridOccupancy::<T, I>::clear(MAX_GRID_SIZE as u32 * MAX_GRID_SIZE as u32, None);
 		}
 
 		fn update_player_data_using_action(
