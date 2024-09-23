@@ -13,8 +13,9 @@ pub(crate) const MAX_GRID_SIZE: u8 = 50;
 /// Amount if blocks in which a game remains open for players to queue in
 pub(crate) const QUEUE_DURATION: u32 = 50;
 /// Minimum amount of blocks a battle may last
+/// without including QUEUE_DURATION.
 /// Each block is approximately **6s** in time
-pub(crate) const MIN_BATTLE_DURATION: u32 = 300;
+pub(crate) const MIN_BATTLE_DURATION: u32 = 50;
 
 /// Input phase duration in blocks
 pub(crate) const INPUT_PHASE_DURATION: u8 = 3;
