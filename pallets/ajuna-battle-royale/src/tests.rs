@@ -1,5 +1,5 @@
 use crate::{mock::*, *};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, BoundedBTreeSet};
 
 fn generate_action_secret_action_pair_for(
 	action: PlayerAction,
@@ -21,7 +21,6 @@ fn assert_all_storage_empty() {
 	assert_eq!(BattleSchedules::<Test, Instance1>::iter().count(), 0);
 	assert_eq!(BattleStateStore::<Test, Instance1>::get(), BattleStateFor::<Test>::Inactive);
 	assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 0);
-	assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 0);
 	assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 0);
 }
 
@@ -85,8 +84,17 @@ fn queue_player(
 			state: PlayerState::Inactive,
 		})
 	);
-	assert!(PlayerPositions::<Test, Instance1>::contains_key(initial_position, account));
-	assert_eq!(GridOccupancy::<Test, Instance1>::get(initial_position), 1);
+
+	let expected_set = {
+		let mut set = BoundedBTreeSet::new();
+		set.try_insert(account.clone()).expect("Account inserted into account set");
+		set
+	};
+
+	assert_eq!(
+		GridOccupancy::<Test, Instance1>::get(initial_position),
+		OccupancyState::Open(expected_set)
+	);
 }
 
 mod try_start_battle {
@@ -124,7 +132,6 @@ mod try_start_battle {
 				battle_grid_size,
 			);
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 0);
-			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 0);
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 0);
 		});
 	}
@@ -374,10 +381,16 @@ mod try_queue_player {
 				})
 			);
 
-			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 1);
-			assert!(PlayerPositions::<Test, Instance1>::contains_key(alice_position, ALICE));
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 1);
-			assert_eq!(GridOccupancy::<Test, Instance1>::get(alice_position), 1);
+			let expected_set = {
+				let mut set = BoundedBTreeSet::new();
+				set.try_insert(ALICE).expect("Account inserted into account set");
+				set
+			};
+			assert_eq!(
+				GridOccupancy::<Test, Instance1>::get(alice_position),
+				OccupancyState::Open(expected_set)
+			);
 
 			run_to_block(25);
 
@@ -399,10 +412,16 @@ mod try_queue_player {
 					state: PlayerState::Inactive,
 				})
 			);
-			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 2);
-			assert!(PlayerPositions::<Test, Instance1>::contains_key(bob_position, BOB));
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 2);
-			assert_eq!(GridOccupancy::<Test, Instance1>::get(bob_position), 1);
+			let expected_set = {
+				let mut set = BoundedBTreeSet::new();
+				set.try_insert(BOB).expect("Account inserted into account set");
+				set
+			};
+			assert_eq!(
+				GridOccupancy::<Test, Instance1>::get(bob_position),
+				OccupancyState::Open(expected_set)
+			);
 
 			run_to_block((10 + QUEUE_DURATION) as u64);
 
@@ -414,7 +433,6 @@ mod try_queue_player {
 				battle_grid_size,
 			);
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
-			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 2);
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 2);
 		});
 	}
@@ -510,7 +528,6 @@ mod try_queue_player {
 			queue_player(&DAVE, Coordinates::new(1, 1), PlayerWeapon::Paper);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 4);
-			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 4);
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 4);
 
 			assert_noop!(
@@ -725,7 +742,6 @@ mod try_perform_player_action {
 
 			// No one should have been defeated since all players are in different positions
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 3);
-			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 3);
 			// Since two players have moved the total amount of cells stored in the map
 			// should have gone up by 2 from the original 3
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 5);
@@ -872,6 +888,18 @@ mod try_perform_player_action {
 				})
 			);
 
+			// We verify that the GridOccupancy contains the accounts in the expected position
+			let expect_accounts = {
+				let mut set = BoundedBTreeSet::new();
+				set.try_insert(BOB).expect("BOB inserted into account set");
+				set.try_insert(ALICE).expect("ALICE inserted into account set");
+				set
+			};
+			assert_eq!(
+				GridOccupancy::<Test, Instance1>::get(move_to_position),
+				OccupancyState::Open(expect_accounts)
+			);
+
 			// We advance 2 more blocks, this should put us in the Execution phase
 			run_to_block(System::block_number() + 2);
 			assert_battle_state_is_active_with(
@@ -906,7 +934,6 @@ mod try_perform_player_action {
 			);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
-			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 1);
 			// Since both players have moved and one player has been defeated
 			// the total amount of cells in the map should be 2 + 2 - 1
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 3);
@@ -996,6 +1023,8 @@ mod try_perform_player_action {
 				battle_grid_size,
 			);
 
+			let mut account_set = BoundedBTreeSet::new();
+
 			for (i, account) in account_vec.iter().enumerate() {
 				let payload_fill = [i as u8; 28];
 				let (_, reveal_hash) = generate_action_secret_action_pair_for(action, payload_fill);
@@ -1013,7 +1042,16 @@ mod try_perform_player_action {
 						state: PlayerState::RevealedAction,
 					})
 				);
+
+				account_set
+					.try_insert(account.clone())
+					.expect("Inserted account in account_set");
 			}
+
+			assert_eq!(
+				GridOccupancy::<Test, Instance1>::get(move_to_coordinates),
+				OccupancyState::Open(account_set)
+			);
 
 			// We advance 1 block, this will put us in the Execution phase
 			run_to_block(System::block_number() + 3);

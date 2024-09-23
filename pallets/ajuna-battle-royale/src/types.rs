@@ -1,4 +1,7 @@
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use frame_support::{
+	pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, TypeInfo},
+	BoundedBTreeSet,
+};
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::prelude::*;
 
@@ -96,6 +99,21 @@ impl GridBoundaries {
 			coordinates.x <= self.down_right.x &&
 			coordinates.y >= self.top_left.y &&
 			coordinates.y <= self.down_right.y
+	}
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+pub enum OccupancyState<AccountId> {
+	Blocked,
+	Open(BoundedBTreeSet<AccountId, ConstU32<{ MAX_PLAYER_PER_BATTLE as u32 }>>),
+}
+
+impl<AccountId> Default for OccupancyState<AccountId>
+where
+	AccountId: Ord,
+{
+	fn default() -> Self {
+		Self::Open(BoundedBTreeSet::new())
 	}
 }
 

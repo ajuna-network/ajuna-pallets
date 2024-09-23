@@ -1662,8 +1662,8 @@ pub mod pallet {
 			let player = ensure_signed(origin)?;
 
 			let avatar = Self::ensure_ownership(&player, &avatar_id)?;
-			let season = Self::seasons(&avatar.season_id)?;
-			/*ensure!(
+			/*let season = Self::seasons(&avatar.season_id)?;
+			ensure!(
 				avatar.rarity() == season.max_tier().as_byte(),
 				Error::<T>::AvatarIsNotEligibleForBattle
 			);*/

@@ -38,6 +38,8 @@ pub mod pallet {
 	pub(crate) type BattleConfigFor<T> = BattleConfig<BlockNumberFor<T>>;
 	pub(crate) type BattleStateFor<T> = BattleState<BlockNumberFor<T>>;
 
+	pub(crate) type OccupancyStateFor<T> = OccupancyState<AccountIdFor<T>>;
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// The overarching event type.
@@ -65,12 +67,8 @@ pub mod pallet {
 		StorageMap<_, Identity, AccountIdFor<T>, PlayerData, OptionQuery>;
 
 	#[pallet::storage]
-	pub type PlayerPositions<T: Config<I>, I: 'static = ()> =
-		StorageDoubleMap<_, Identity, Coordinates, Identity, AccountIdFor<T>, (), OptionQuery>;
-
-	#[pallet::storage]
 	pub type GridOccupancy<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Identity, Coordinates, u8, ValueQuery>;
+		StorageMap<_, Identity, Coordinates, OccupancyStateFor<T>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -190,13 +188,16 @@ pub mod pallet {
 					if !matches!(details.state, PlayerState::Defeated) {
 						details.state = PlayerState::Defeated;
 
-						GridOccupancy::<T, I>::mutate(details.position, |player_count| {
-							*player_count = player_count.saturating_sub(1);
+						GridOccupancy::<T, I>::mutate(details.position, |occupancy_state| {
+							if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+								account_set.remove(account);
+							} else {
+								panic!("Tried to remove account from Blocked position!")
+							}
 						});
-						PlayerPositions::<T, I>::remove(details.position, account);
 
 						r = 2;
-						w = 3;
+						w = 2;
 
 						Self::deposit_event(Event::<T, I>::PlayerDefeated {
 							player: account.clone(),
@@ -238,13 +239,15 @@ pub mod pallet {
 			let mut w: u64 = 0;
 
 			let occupancy_vec = GridOccupancy::<T, I>::iter()
-				.filter(|(_, count)| *count > 1)
+				.filter_map(|(_, occupancy_state)| match occupancy_state {
+					OccupancyStateFor::<T>::Open(account_set) if account_set.len() > 1 =>
+						Some(account_set.iter().cloned().collect::<Vec<_>>()),
+					_ => None,
+				})
 				.collect::<Vec<_>>();
 			r = r.saturating_add(occupancy_vec.len() as u64);
 
-			for (position, _) in occupancy_vec.iter() {
-				let mut accounts =
-					PlayerPositions::<T, I>::iter_key_prefix(position).collect::<Vec<_>>();
+			for mut accounts in occupancy_vec.into_iter() {
 				r = r.saturating_add(accounts.len() as u64);
 
 				while accounts.len() > 1 {
@@ -300,10 +303,17 @@ pub mod pallet {
 				if let BattleStateFor::<T>::Active { boundaries, .. } = state {
 					boundaries.shrink();
 
-					for account in PlayerPositions::<T, I>::iter()
-						.filter(|(coordinates, _, _)| !boundaries.is_in_boundaries(coordinates))
-						.map(|(_, account, _)| account)
-					{
+					for account in GridOccupancy::<T, I>::iter()
+						.filter_map(|(ref coordinates, state)| match state {
+							OccupancyStateFor::<T>::Open(account_set)
+								if !boundaries.is_in_boundaries(coordinates) =>
+								Some(account_set.iter().cloned().collect::<Vec<_>>()),
+							_ => None,
+						})
+						.fold(Vec::new(), |mut acc, account_list| {
+							acc.extend(account_list);
+							acc
+						}) {
 						let (r1, w1) = Self::mark_account_as_defeated(&account);
 						r = r.saturating_add(r1 + 1);
 						w = w.saturating_add(w1);
@@ -334,7 +344,17 @@ pub mod pallet {
 
 						Self::deposit_event(Event::<T, I>::BattleFinished);
 					} else {
-						let player_count = PlayerPositions::<T, I>::iter_values().count();
+						let player_count = GridOccupancy::<T, I>::iter_values().fold(
+							0_usize,
+							|acc, occupancy_state| {
+								let count = match occupancy_state {
+									OccupancyStateFor::<T>::Blocked => 0,
+									OccupancyStateFor::<T>::Open(account_set) => account_set.len(),
+								};
+
+								acc.saturating_add(count)
+							},
+						);
 
 						r = r.saturating_add(player_count as u64);
 
@@ -364,9 +384,10 @@ pub mod pallet {
 		fn reset_state_for_new_battle() {
 			let _ = BattleSchedules::<T, I>::clear(20, None);
 			BattleStateStore::<T, I>::kill();
-			let _ = PlayerPositions::<T, I>::clear(MAX_PLAYER_PER_BATTLE as u32, None);
 			let _ = PlayerDetails::<T, I>::clear(MAX_PLAYER_PER_BATTLE as u32, None);
-			let _ = GridOccupancy::<T, I>::clear(MAX_PLAYER_PER_BATTLE as u32, None);
+
+			// TODO: Check if we can split this between blocks (maybe using cursor during idle time)
+			let _ = GridOccupancy::<T, I>::clear((MAX_GRID_SIZE * MAX_GRID_SIZE) as u32, None);
 		}
 
 		fn update_player_data_using_action(
@@ -405,14 +426,20 @@ pub mod pallet {
 			prev_position: Coordinates,
 			new_position: Coordinates,
 		) {
-			PlayerPositions::<T, I>::remove(prev_position, account);
-			GridOccupancy::<T, I>::mutate(prev_position, |value| {
-				*value = value.saturating_sub(1);
+			GridOccupancy::<T, I>::mutate(prev_position, |occupancy_state| {
+				if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+					account_set.remove(account);
+				} else {
+					panic!("Tried to remove account from Blocked position!")
+				}
 			});
 
-			PlayerPositions::<T, I>::insert(new_position, account, ());
-			GridOccupancy::<T, I>::mutate(new_position, |value| {
-				*value = value.saturating_add(1);
+			GridOccupancy::<T, I>::mutate(new_position, |occupancy_state| {
+				if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+					account_set.try_insert(account.clone()).expect("Inserted account into set");
+				} else {
+					panic!("Tried to remove account from Blocked position!")
+				}
 			});
 		}
 	}
@@ -526,9 +553,12 @@ pub mod pallet {
 				};
 
 				// Setting player initial position
-				PlayerPositions::<T, I>::insert(initial_position, account, ());
-				GridOccupancy::<T, I>::mutate(initial_position, |value| {
-					*value = value.saturating_add(1);
+				GridOccupancy::<T, I>::mutate(initial_position, |occupancy_state| {
+					if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+						account_set.try_insert(account.clone()).expect("Inserted account into set");
+					} else {
+						panic!("Tried to remove account from Blocked position!")
+					}
 				});
 
 				PlayerDetails::<T, I>::insert(account, player_data);
