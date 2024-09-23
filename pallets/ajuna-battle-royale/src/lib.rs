@@ -205,11 +205,32 @@ pub mod pallet {
 						r = 1;
 					}
 				} else {
-					panic!("Expected account to mark as defeated to exists!")
+					panic!("Expected account to mark as defeated to exist!")
 				}
 			});
 
 			(r, w)
+		}
+
+		fn reset_player_states() -> (u64, u64) {
+			let non_defeated_accounts = PlayerDetails::<T, I>::iter()
+				.filter(|(_, details)| details.state != PlayerState::Defeated)
+				.map(|(account_id, _)| account_id)
+				.collect::<Vec<_>>();
+
+			for account_id in non_defeated_accounts.iter() {
+				PlayerDetails::<T, I>::mutate(account_id, |maybe_details| {
+					if let Some(details) = maybe_details {
+						details.state = PlayerState::Inactive;
+					} else {
+						panic!("Expected account to reset state to exist!")
+					}
+				});
+			}
+
+			let affected_accounts = non_defeated_accounts.len() as u64;
+
+			(affected_accounts, affected_accounts)
 		}
 
 		fn resolve_battles() -> Weight {
@@ -332,6 +353,10 @@ pub mod pallet {
 					panic!("Expected Active battle state for wall shrinkage phase!");
 				}
 			});
+
+			let (r1, w1) = Self::reset_player_states();
+			r = r.saturating_add(r1);
+			w = w.saturating_add(w1);
 
 			T::DbWeight::get().reads_writes(r, w)
 		}
@@ -500,11 +525,12 @@ pub mod pallet {
 					state: PlayerState::Inactive,
 				};
 
-				Self::update_player_positions_storage(
-					account,
-					Coordinates::new(0, 0),
-					initial_position,
-				);
+				// Setting player initial position
+				PlayerPositions::<T, I>::insert(initial_position, account, ());
+				GridOccupancy::<T, I>::mutate(initial_position, |value| {
+					*value = value.saturating_add(1);
+				});
+
 				PlayerDetails::<T, I>::insert(account, player_data);
 
 				Self::deposit_event(Event::<T, I>::PlayerQueued { player: account.clone() });

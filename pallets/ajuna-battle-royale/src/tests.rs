@@ -376,7 +376,7 @@ mod try_queue_player {
 
 			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 1);
 			assert!(PlayerPositions::<Test, Instance1>::contains_key(alice_position, ALICE));
-			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 2);
+			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 1);
 			assert_eq!(GridOccupancy::<Test, Instance1>::get(alice_position), 1);
 
 			run_to_block(25);
@@ -401,7 +401,7 @@ mod try_queue_player {
 			);
 			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 2);
 			assert!(PlayerPositions::<Test, Instance1>::contains_key(bob_position, BOB));
-			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 3);
+			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 2);
 			assert_eq!(GridOccupancy::<Test, Instance1>::get(bob_position), 1);
 
 			run_to_block((10 + QUEUE_DURATION) as u64);
@@ -415,7 +415,7 @@ mod try_queue_player {
 			);
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
 			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 2);
-			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 3);
+			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 2);
 		});
 	}
 
@@ -511,7 +511,7 @@ mod try_queue_player {
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 4);
 			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 4);
-			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 5);
+			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 4);
 
 			assert_noop!(
 				BattleRoyale::try_queue_player(
@@ -727,8 +727,8 @@ mod try_perform_player_action {
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 3);
 			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 3);
 			// Since two players have moved the total amount of cells stored in the map
-			// should have gone up by 2 from the original 4
-			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 6);
+			// should have gone up by 2 from the original 3
+			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 5);
 
 			// We advance 1 more block, this should put us in the Verification phase
 			run_to_block(System::block_number() + 1);
@@ -908,8 +908,8 @@ mod try_perform_player_action {
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
 			assert_eq!(PlayerPositions::<Test, Instance1>::iter().count(), 1);
 			// Since both players have moved and one player has been defeated
-			// the total amount of cells in the map should be 3 + 2 - 1
-			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 4);
+			// the total amount of cells in the map should be 2 + 2 - 1
+			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 3);
 
 			// We advance 1 more block, this should put us in the Finished phase,
 			// since only 1 player is left which means during Verification we will switch in
