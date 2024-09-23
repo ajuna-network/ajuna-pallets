@@ -1663,10 +1663,10 @@ pub mod pallet {
 
 			let avatar = Self::ensure_ownership(&player, &avatar_id)?;
 			let season = Self::seasons(&avatar.season_id)?;
-			ensure!(
+			/*ensure!(
 				avatar.rarity() == season.max_tier().as_byte(),
 				Error::<T>::AvatarIsNotEligibleForBattle
-			);
+			);*/
 			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
 			Self::ensure_unlocked(&avatar_id)?;
 
