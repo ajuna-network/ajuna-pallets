@@ -1618,10 +1618,16 @@ pub mod pallet {
 			battle_duration: u32,
 			max_players: u8,
 			grid_size: Coordinates,
+			blocked_cells: Vec<Coordinates>,
 		) -> DispatchResult {
 			let _ = Self::ensure_organizer(origin)?;
 
-			T::BattleHandler::try_start_battle(battle_duration, max_players, grid_size)
+			T::BattleHandler::try_start_battle(
+				battle_duration,
+				max_players,
+				grid_size,
+				blocked_cells,
+			)
 		}
 
 		#[pallet::call_index(36)]

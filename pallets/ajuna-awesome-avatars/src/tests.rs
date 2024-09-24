@@ -5964,7 +5964,8 @@ mod battle_royale {
 					RuntimeOrigin::signed(CHARLIE),
 					1_000,
 					5,
-					Coordinates::new(12, 12)
+					Coordinates::new(12, 12),
+					vec![],
 				));
 
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(

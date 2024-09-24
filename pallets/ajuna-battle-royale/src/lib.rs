@@ -430,19 +430,16 @@ pub mod pallet {
 			prev_position: Coordinates,
 			new_position: Coordinates,
 		) {
-			GridOccupancy::<T, I>::mutate(prev_position, |occupancy_state| {
-				if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
-					account_set.remove(account);
-				} else {
-					panic!("Tried to remove account from Blocked position!")
-				}
-			});
-
 			GridOccupancy::<T, I>::mutate(new_position, |occupancy_state| {
 				if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+					GridOccupancy::<T, I>::mutate(prev_position, |occupancy_state| {
+						if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+							account_set.remove(account);
+						} else {
+							panic!("Tried to remove account from Blocked position!")
+						}
+					});
 					account_set.try_insert(account.clone()).expect("Inserted account into set");
-				} else {
-					panic!("Tried to remove account from Blocked position!")
 				}
 			});
 		}
@@ -453,6 +450,7 @@ pub mod pallet {
 			game_duration: u32,
 			max_players: u8,
 			grid_size: Coordinates,
+			blocked_cells: Vec<Coordinates>,
 		) -> DispatchResult {
 			BattleStateStore::<T, I>::try_mutate(|state| {
 				ensure!(
@@ -483,10 +481,20 @@ pub mod pallet {
 				let total_duration = QUEUE_DURATION + game_duration;
 				let run_until = current_block.saturating_add(total_duration.into());
 
+				let boundaries = GridBoundaries::new(grid_size);
+
+				for blocked_cell in
+					blocked_cells.into_iter().filter(|cell| boundaries.is_in_boundaries(cell))
+				{
+					GridOccupancy::<T, I>::mutate(blocked_cell, |state| {
+						*state = OccupancyState::Blocked;
+					});
+				}
+
 				*state = BattleStateFor::<T>::Active {
 					phase: BattlePhase::Queueing,
 					config: BattleConfigFor::<T> { max_players, run_until },
-					boundaries: GridBoundaries::new(grid_size),
+					boundaries,
 				};
 
 				let switch_at = current_block.saturating_add(QUEUE_DURATION.into());

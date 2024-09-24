@@ -50,7 +50,8 @@ fn start_battle_with_config(
 	assert_ok!(BattleRoyale::try_start_battle(
 		battle_duration,
 		battle_max_players,
-		battle_grid_size
+		battle_grid_size,
+		vec![]
 	));
 
 	System::assert_last_event(mock::RuntimeEvent::BattleRoyale(crate::Event::BattleStarted));
@@ -114,7 +115,8 @@ mod try_start_battle {
 			assert_ok!(BattleRoyale::try_start_battle(
 				battle_duration,
 				battle_max_players,
-				battle_grid_size
+				battle_grid_size,
+				vec![]
 			));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
@@ -148,6 +150,7 @@ mod try_start_battle {
 					MIN_BATTLE_DURATION - 1,
 					20,
 					Coordinates::new(15, 15),
+					vec![]
 				),
 				Error::<Test, Instance1>::BattleConfigDurationTooLow
 			);
@@ -155,40 +158,70 @@ mod try_start_battle {
 			assert_all_storage_empty();
 
 			assert_noop!(
-				BattleRoyale::try_start_battle(MIN_BATTLE_DURATION, 2, Coordinates::new(15, 15),),
+				BattleRoyale::try_start_battle(
+					MIN_BATTLE_DURATION,
+					2,
+					Coordinates::new(15, 15),
+					vec![]
+				),
 				Error::<Test, Instance1>::BattleConfigTooFewPlayers
 			);
 
 			assert_noop!(
-				BattleRoyale::try_start_battle(MIN_BATTLE_DURATION, 124, Coordinates::new(15, 15),),
+				BattleRoyale::try_start_battle(
+					MIN_BATTLE_DURATION,
+					124,
+					Coordinates::new(15, 15),
+					vec![]
+				),
 				Error::<Test, Instance1>::BattleConfigTooManyPlayers
 			);
 
 			assert_all_storage_empty();
 
 			assert_noop!(
-				BattleRoyale::try_start_battle(MIN_BATTLE_DURATION, 20, Coordinates::new(5, 15),),
+				BattleRoyale::try_start_battle(
+					MIN_BATTLE_DURATION,
+					20,
+					Coordinates::new(5, 15),
+					vec![]
+				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
 			);
 
 			assert_all_storage_empty();
 
 			assert_noop!(
-				BattleRoyale::try_start_battle(MIN_BATTLE_DURATION, 20, Coordinates::new(15, 5),),
+				BattleRoyale::try_start_battle(
+					MIN_BATTLE_DURATION,
+					20,
+					Coordinates::new(15, 5),
+					vec![]
+				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
 			);
 
 			assert_all_storage_empty();
 
 			assert_noop!(
-				BattleRoyale::try_start_battle(MIN_BATTLE_DURATION, 20, Coordinates::new(200, 15),),
+				BattleRoyale::try_start_battle(
+					MIN_BATTLE_DURATION,
+					20,
+					Coordinates::new(200, 15),
+					vec![]
+				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
 			);
 
 			assert_all_storage_empty();
 
 			assert_noop!(
-				BattleRoyale::try_start_battle(MIN_BATTLE_DURATION, 20, Coordinates::new(15, 200),),
+				BattleRoyale::try_start_battle(
+					MIN_BATTLE_DURATION,
+					20,
+					Coordinates::new(15, 200),
+					vec![]
+				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
 			);
 
@@ -206,11 +239,17 @@ mod try_start_battle {
 			assert_ok!(BattleRoyale::try_start_battle(
 				MIN_BATTLE_DURATION,
 				20,
-				Coordinates::new(20, 20)
+				Coordinates::new(20, 20),
+				vec![]
 			));
 
 			assert_noop!(
-				BattleRoyale::try_start_battle(MIN_BATTLE_DURATION, 20, Coordinates::new(15, 200),),
+				BattleRoyale::try_start_battle(
+					MIN_BATTLE_DURATION,
+					20,
+					Coordinates::new(15, 200),
+					vec![]
+				),
 				Error::<Test, Instance1>::BattleAlreadyStarted
 			);
 		});

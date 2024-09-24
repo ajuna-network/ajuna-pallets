@@ -268,6 +268,7 @@ pub trait BattleProvider<AccountId> {
 		game_duration: u32,
 		max_players: u8,
 		grid_size: Coordinates,
+		blocked_cells: Vec<Coordinates>,
 	) -> DispatchResult;
 
 	fn try_finish_battle() -> Result<Vec<AccountId>, DispatchError>;
