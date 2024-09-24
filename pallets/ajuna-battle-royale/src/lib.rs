@@ -394,26 +394,30 @@ pub mod pallet {
 			account: &AccountIdFor<T>,
 			player_data: &mut PlayerData,
 			action: PlayerAction,
+			boundaries: GridBoundaries,
 		) {
 			match action {
-				PlayerAction::Move(new_position) => {
-					Self::update_player_positions_storage(
-						account,
-						player_data.position,
-						new_position,
-					);
-					player_data.position = new_position;
-				},
+				PlayerAction::Move(new_position) =>
+					if boundaries.is_in_boundaries(&new_position) {
+						Self::update_player_positions_storage(
+							account,
+							player_data.position,
+							new_position,
+						);
+						player_data.position = new_position;
+					},
 				PlayerAction::SwapWeapon(new_weapon) => {
 					player_data.weapon = new_weapon;
 				},
 				PlayerAction::MoveAndSwap(new_position, new_weapon) => {
-					Self::update_player_positions_storage(
-						account,
-						player_data.position,
-						new_position,
-					);
-					player_data.position = new_position;
+					if boundaries.is_in_boundaries(&new_position) {
+						Self::update_player_positions_storage(
+							account,
+							player_data.position,
+							new_position,
+						);
+						player_data.position = new_position;
+					}
 					player_data.weapon = new_weapon;
 				},
 			}
@@ -577,7 +581,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			match BattleStateStore::<T, I>::get() {
 				BattleStateFor::<T>::Inactive => Err(Error::<T, I>::BattleIsInactive.into()),
-				BattleStateFor::<T>::Active { phase, .. } => match phase {
+				BattleStateFor::<T>::Active { phase, boundaries, .. } => match phase {
 					BattlePhase::Input => PlayerDetails::<T, I>::try_mutate(account, |details| {
 						if let Some(player_data) = details {
 							if matches!(
@@ -618,6 +622,7 @@ pub mod pallet {
 										account,
 										player_data,
 										revealed_action,
+										boundaries,
 									);
 
 									Self::deposit_event(Event::<T, I>::PlayerRevealedAction {
