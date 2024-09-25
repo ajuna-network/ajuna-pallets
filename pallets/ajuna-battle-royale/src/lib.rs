@@ -243,7 +243,15 @@ pub mod pallet {
 					_ => None,
 				})
 				.collect::<Vec<_>>();
-			r = r.saturating_add(occupancy_vec.len() as u64);
+
+			let boundaries = match BattleStateStore::<T, I>::get() {
+				BattleStateFor::<T>::Inactive =>
+					panic!("Resolve battle called with Inactive BattleState"),
+				BattleStateFor::<T>::Active { boundaries, .. } => boundaries,
+			};
+			let current_block = <frame_system::Pallet<T>>::block_number();
+
+			r = r.saturating_add(occupancy_vec.len() as u64 + 1);
 
 			for mut accounts in occupancy_vec.into_iter() {
 				r = r.saturating_add(accounts.len() as u64);
@@ -273,16 +281,45 @@ pub mod pallet {
 						let acc1_weapon = acc1_data.weapon;
 						let acc2_weapon = acc2_data.weapon;
 
-						if acc1_weapon.battle_against(acc2_weapon) {
-							let (r1, w1) = Self::mark_account_as_defeated(&acc2);
-							r = r.saturating_add(r1);
-							w = w.saturating_add(w1);
-							accounts.push(acc1);
-						} else {
-							let (r1, w1) = Self::mark_account_as_defeated(&acc1);
-							r = r.saturating_add(r1);
-							w = w.saturating_add(w1);
-							accounts.push(acc2);
+						match acc1_weapon.battle_against(acc2_weapon) {
+							BattleResult::Win => {
+								let (r1, w1) = Self::mark_account_as_defeated(&acc2);
+								r = r.saturating_add(r1);
+								w = w.saturating_add(w1);
+								accounts.push(acc1);
+							},
+							BattleResult::Loss => {
+								let (r1, w1) = Self::mark_account_as_defeated(&acc1);
+								r = r.saturating_add(r1);
+								w = w.saturating_add(w1);
+								accounts.push(acc2);
+							},
+							BattleResult::Draw => {
+								let cell_1 = Self::get_random_unoccupied_cell_for(
+									&acc1,
+									&boundaries,
+									current_block,
+								);
+								Self::update_player_positions_storage(
+									&acc1,
+									acc1_data.position,
+									cell_1,
+								);
+
+								let cell_2 = Self::get_random_unoccupied_cell_for(
+									&acc2,
+									&boundaries,
+									current_block,
+								);
+								Self::update_player_positions_storage(
+									&acc2,
+									acc2_data.position,
+									cell_2,
+								);
+
+								r = r.saturating_add(2);
+								w = w.saturating_add(2);
+							},
 						}
 					};
 				}

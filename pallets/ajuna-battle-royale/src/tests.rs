@@ -956,11 +956,16 @@ mod try_perform_player_action {
 			let account_vec = (0..MAX_PLAYER_PER_BATTLE)
 				.map(|player_seed| MockAccountId::new([player_seed; 32]))
 				.collect::<Vec<_>>();
+			let account_count = account_vec.len();
 
 			let mut initial_position_vec = Vec::with_capacity(account_vec.len());
 
-			for account in account_vec.iter() {
-				let initial_position = queue_player(account, PlayerWeapon::Scissors);
+			for (i, account) in account_vec.iter().enumerate() {
+				let initial_position = if i == (account_count - 1) {
+					queue_player(account, PlayerWeapon::Rock)
+				} else {
+					queue_player(account, PlayerWeapon::Scissors)
+				};
 				initial_position_vec.push(initial_position);
 			}
 
@@ -992,7 +997,11 @@ mod try_perform_player_action {
 					PlayerDetails::<Test, Instance1>::get(account),
 					Some(PlayerData {
 						position: initial_position_vec[i],
-						weapon: PlayerWeapon::Scissors,
+						weapon: if i == (account_count - 1) {
+							PlayerWeapon::Rock
+						} else {
+							PlayerWeapon::Scissors
+						},
 						state: PlayerState::PerformedAction(input_hash),
 					})
 				);
@@ -1022,7 +1031,11 @@ mod try_perform_player_action {
 					PlayerDetails::<Test, Instance1>::get(account),
 					Some(PlayerData {
 						position: move_to_coordinates,
-						weapon: PlayerWeapon::Scissors,
+						weapon: if i == (account_count - 1) {
+							PlayerWeapon::Rock
+						} else {
+							PlayerWeapon::Scissors
+						},
 						state: PlayerState::RevealedAction,
 					})
 				);

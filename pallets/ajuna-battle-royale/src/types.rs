@@ -179,6 +179,13 @@ impl<BlockNumber> BattleState<BlockNumber> {
 pub type PlayerActionHash = [u8; 32];
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
+pub(crate) enum BattleResult {
+	Win,
+	Loss,
+	Draw,
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
 pub enum PlayerWeapon {
 	Rock,
 	Paper,
@@ -207,11 +214,23 @@ impl PlayerWeapon {
 		}
 	}
 
-	pub(crate) fn battle_against(&self, other: PlayerWeapon) -> bool {
+	pub(crate) fn battle_against(&self, other: PlayerWeapon) -> BattleResult {
 		match self {
-			PlayerWeapon::Rock => other != PlayerWeapon::Paper,
-			PlayerWeapon::Paper => other != PlayerWeapon::Scissors,
-			PlayerWeapon::Scissors => other != PlayerWeapon::Rock,
+			PlayerWeapon::Rock => match other {
+				PlayerWeapon::Rock => BattleResult::Draw,
+				PlayerWeapon::Paper => BattleResult::Loss,
+				PlayerWeapon::Scissors => BattleResult::Win,
+			},
+			PlayerWeapon::Paper => match other {
+				PlayerWeapon::Rock => BattleResult::Win,
+				PlayerWeapon::Paper => BattleResult::Draw,
+				PlayerWeapon::Scissors => BattleResult::Loss,
+			},
+			PlayerWeapon::Scissors => match other {
+				PlayerWeapon::Rock => BattleResult::Loss,
+				PlayerWeapon::Paper => BattleResult::Win,
+				PlayerWeapon::Scissors => BattleResult::Draw,
+			},
 		}
 	}
 }
