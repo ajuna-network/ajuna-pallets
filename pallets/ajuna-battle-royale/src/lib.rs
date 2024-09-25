@@ -28,9 +28,9 @@ mod types;
 #[frame_support::pallet]
 pub mod pallet {
 	use crate::types::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, Hashable};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::Saturating;
+	use sp_runtime::{SaturatedConversion, Saturating};
 	use sp_std::prelude::*;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -91,8 +91,6 @@ pub mod pallet {
 		BattleConfigGridSizeInvalid,
 		PlayerAlreadyQueued,
 		PlayerQueueFull,
-		InitialPositionOutsideBoundaries,
-		InitialPositionAlreadyOccupied,
 		BattleNotInQueueingPhase,
 		BattleNotInInputPhase,
 		BattleNotInPlayablePhases,
@@ -425,7 +423,7 @@ pub mod pallet {
 			player_data.state = PlayerState::RevealedAction;
 		}
 
-		fn update_player_positions_storage(
+		pub(crate) fn update_player_positions_storage(
 			account: &AccountIdFor<T>,
 			prev_position: Coordinates,
 			new_position: Coordinates,
@@ -442,6 +440,29 @@ pub mod pallet {
 					account_set.try_insert(account.clone()).expect("Inserted account into set");
 				}
 			});
+		}
+
+		#[inline]
+		fn is_cell_unoccupied(coordinates: &Coordinates) -> bool {
+			matches!(GridOccupancy::<T, I>::get(coordinates), OccupancyStateFor::<T>::Open(account_set) if account_set.is_empty())
+		}
+
+		fn get_random_unoccupied_cell_for(
+			account: &AccountIdFor<T>,
+			in_bounds: &GridBoundaries,
+			for_block: BlockNumberFor<T>,
+		) -> Coordinates {
+			let hash = account.blake2_256();
+
+			let mut block_seed: usize = for_block.saturated_into();
+			let mut coordinate = in_bounds.random_coordinates_in(&hash, block_seed);
+
+			while !Self::is_cell_unoccupied(&coordinate) {
+				block_seed = block_seed.saturating_add(1);
+				coordinate = in_bounds.random_coordinates_in(&hash, block_seed);
+			}
+
+			coordinate
 		}
 	}
 
@@ -532,7 +553,6 @@ pub mod pallet {
 
 		fn try_queue_player(
 			account: &AccountIdFor<T>,
-			initial_position: Coordinates,
 			initial_weapon: PlayerWeapon,
 		) -> sp_runtime::DispatchResult {
 			if let BattleStateFor::<T>::Active {
@@ -549,14 +569,10 @@ pub mod pallet {
 					PlayerDetails::<T, I>::iter().count() < max_players as usize,
 					Error::<T, I>::PlayerQueueFull
 				);
-				ensure!(
-					boundaries.is_in_boundaries(&initial_position),
-					Error::<T, I>::InitialPositionOutsideBoundaries
-				);
-				ensure!(
-					!GridOccupancy::<T, I>::contains_key(initial_position),
-					Error::<T, I>::InitialPositionAlreadyOccupied
-				);
+
+				let current_block = <frame_system::Pallet<T>>::block_number();
+				let initial_position =
+					Self::get_random_unoccupied_cell_for(account, &boundaries, current_block);
 
 				let player_data = PlayerData {
 					position: initial_position,

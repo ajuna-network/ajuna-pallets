@@ -100,6 +100,41 @@ impl GridBoundaries {
 			coordinates.y >= self.top_left.y &&
 			coordinates.y <= self.down_right.y
 	}
+
+	pub(crate) fn random_coordinates_in(&self, bytes: &[u8], seed: usize) -> Coordinates {
+		let bytes_len = bytes.len();
+
+		let x_idx = (seed + 1) % bytes_len;
+		let y_idx = (seed + 3) % bytes_len;
+		let seed_diff = (seed % 13) as u8;
+
+		let x = (bytes[x_idx].saturating_add(seed_diff) % self.down_right.x) + self.top_left.x;
+		let y = (bytes[y_idx].saturating_add(seed_diff) % self.down_right.y) + self.top_left.y;
+
+		Coordinates::new(x, y)
+	}
+}
+
+#[cfg(test)]
+mod random_coordinates_test {
+	use super::*;
+
+	#[test]
+	fn test_random_coordinate_consistency() {
+		let boundaries = GridBoundaries::new(Coordinates::new(45, 35));
+
+		let hash = [
+			0x2E, 0x11, 0x3D, 0x0B, 0xFF, 0x33, 0x7A, 0x00, 0x5C, 0xAE, 0x86, 0x25, 0x09, 0x9E,
+			0xA0, 0xBB,
+		];
+
+		for i in 0..20 {
+			let seed = (i as usize) * 31;
+			let coordinates = boundaries.random_coordinates_in(&hash, seed);
+
+			assert!(boundaries.is_in_boundaries(&coordinates));
+		}
+	}
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
@@ -273,11 +308,7 @@ pub trait BattleProvider<AccountId> {
 
 	fn try_finish_battle() -> Result<Vec<AccountId>, DispatchError>;
 
-	fn try_queue_player(
-		account: &AccountId,
-		initial_position: Coordinates,
-		initial_weapon: PlayerWeapon,
-	) -> DispatchResult;
+	fn try_queue_player(account: &AccountId, initial_weapon: PlayerWeapon) -> DispatchResult;
 
 	fn try_perform_player_action(account: &AccountId, action: PlayerActionHash) -> DispatchResult;
 }

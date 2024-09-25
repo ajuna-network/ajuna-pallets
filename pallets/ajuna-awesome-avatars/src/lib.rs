@@ -1662,7 +1662,6 @@ pub mod pallet {
 		pub fn queue_player_in_active_battle_royale(
 			origin: OriginFor<T>,
 			avatar_id: AvatarIdOf<T>,
-			initial_position: Coordinates,
 			initial_weapon: PlayerWeapon,
 		) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -1676,7 +1675,7 @@ pub mod pallet {
 			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
 			Self::ensure_unlocked(&avatar_id)?;
 
-			T::BattleHandler::try_queue_player(&player, initial_position, initial_weapon)?;
+			T::BattleHandler::try_queue_player(&player, initial_weapon)?;
 
 			LockedAvatars::<T>::insert(avatar_id, ());
 			BattlingAvatars::<T>::insert(&player, (avatar.season_id, avatar_id));

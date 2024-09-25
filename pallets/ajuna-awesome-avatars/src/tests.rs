@@ -5977,7 +5977,6 @@ mod battle_royale {
 				assert_ok!(AAvatars::queue_player_in_active_battle_royale(
 					RuntimeOrigin::signed(ALICE),
 					avatar_id_1,
-					Coordinates::new(3, 5),
 					PlayerWeapon::Scissors
 				));
 
@@ -5993,7 +5992,6 @@ mod battle_royale {
 				assert_ok!(AAvatars::queue_player_in_active_battle_royale(
 					RuntimeOrigin::signed(BOB),
 					avatar_id_2,
-					Coordinates::new(7, 2),
 					PlayerWeapon::Rock
 				));
 
