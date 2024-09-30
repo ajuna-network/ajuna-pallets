@@ -5977,7 +5977,8 @@ mod battle_royale {
 				assert_ok!(AAvatars::queue_player_in_active_battle_royale(
 					RuntimeOrigin::signed(ALICE),
 					avatar_id_1,
-					PlayerWeapon::Scissors
+					PlayerWeapon::Scissors,
+					None
 				));
 
 				assert!(LockedAvatars::<Test>::contains_key(avatar_id_1));
@@ -5992,7 +5993,8 @@ mod battle_royale {
 				assert_ok!(AAvatars::queue_player_in_active_battle_royale(
 					RuntimeOrigin::signed(BOB),
 					avatar_id_2,
-					PlayerWeapon::Rock
+					PlayerWeapon::Rock,
+					None
 				));
 
 				assert!(LockedAvatars::<Test>::contains_key(avatar_id_2));

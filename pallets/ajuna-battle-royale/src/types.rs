@@ -327,7 +327,11 @@ pub trait BattleProvider<AccountId> {
 
 	fn try_finish_battle() -> Result<Vec<AccountId>, DispatchError>;
 
-	fn try_queue_player(account: &AccountId, initial_weapon: PlayerWeapon) -> DispatchResult;
+	fn try_queue_player(
+		account: &AccountId,
+		initial_weapon: PlayerWeapon,
+		initial_position: Option<Coordinates>,
+	) -> DispatchResult;
 
 	fn try_perform_player_action(account: &AccountId, action: PlayerActionHash) -> DispatchResult;
 }

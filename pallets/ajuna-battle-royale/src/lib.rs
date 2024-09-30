@@ -91,6 +91,7 @@ pub mod pallet {
 		BattleConfigGridSizeInvalid,
 		PlayerAlreadyQueued,
 		PlayerQueueFull,
+		CouldNotQueuePlayer,
 		BattleNotInQueueingPhase,
 		BattleNotInInputPhase,
 		BattleNotInPlayablePhases,
@@ -295,29 +296,31 @@ pub mod pallet {
 								accounts.push(acc2);
 							},
 							BattleResult::Draw => {
-								let cell_1 = Self::get_random_unoccupied_cell_for(
+								if let Some(cell) = Self::try_get_random_unoccupied_cell_for(
 									&acc1,
 									&boundaries,
 									current_block,
-								);
-								Self::update_player_positions_storage(
-									&acc1,
-									acc1_data.position,
-									cell_1,
-								);
+								) {
+									Self::update_player_positions_storage(
+										&acc1,
+										acc1_data.position,
+										cell,
+									);
+								}
 
-								let cell_2 = Self::get_random_unoccupied_cell_for(
+								if let Some(cell) = Self::try_get_random_unoccupied_cell_for(
 									&acc2,
 									&boundaries,
 									current_block,
-								);
-								Self::update_player_positions_storage(
-									&acc2,
-									acc2_data.position,
-									cell_2,
-								);
+								) {
+									Self::update_player_positions_storage(
+										&acc2,
+										acc2_data.position,
+										cell,
+									);
+								}
 
-								r = r.saturating_add(2);
+								r = r.saturating_add(4);
 								w = w.saturating_add(2);
 							},
 						}
@@ -484,22 +487,28 @@ pub mod pallet {
 			matches!(GridOccupancy::<T, I>::get(coordinates), OccupancyStateFor::<T>::Open(account_set) if account_set.is_empty())
 		}
 
-		fn get_random_unoccupied_cell_for(
+		fn try_get_random_unoccupied_cell_for(
 			account: &AccountIdFor<T>,
 			in_bounds: &GridBoundaries,
 			for_block: BlockNumberFor<T>,
-		) -> Coordinates {
+		) -> Option<Coordinates> {
 			let hash = account.blake2_256();
 
 			let mut block_seed: usize = for_block.saturated_into();
 			let mut coordinate = in_bounds.random_coordinates_in(&hash, block_seed);
 
-			while !Self::is_cell_unoccupied(&coordinate) {
+			if !Self::is_cell_unoccupied(&coordinate) {
 				block_seed = block_seed.saturating_add(1);
 				coordinate = in_bounds.random_coordinates_in(&hash, block_seed);
-			}
 
-			coordinate
+				if !Self::is_cell_unoccupied(&coordinate) {
+					None
+				} else {
+					Some(coordinate)
+				}
+			} else {
+				Some(coordinate)
+			}
 		}
 	}
 
@@ -591,6 +600,7 @@ pub mod pallet {
 		fn try_queue_player(
 			account: &AccountIdFor<T>,
 			initial_weapon: PlayerWeapon,
+			initial_position: Option<Coordinates>,
 		) -> sp_runtime::DispatchResult {
 			if let BattleStateFor::<T>::Active {
 				phase: BattlePhase::Queueing,
@@ -608,8 +618,19 @@ pub mod pallet {
 				);
 
 				let current_block = <frame_system::Pallet<T>>::block_number();
-				let initial_position =
-					Self::get_random_unoccupied_cell_for(account, &boundaries, current_block);
+				let initial_position = {
+					if let Some(position) = initial_position {
+						position
+					} else if let Some(position) = Self::try_get_random_unoccupied_cell_for(
+						account,
+						&boundaries,
+						current_block,
+					) {
+						position
+					} else {
+						return Err(Error::<T, I>::CouldNotQueuePlayer.into())
+					}
+				};
 
 				let player_data = PlayerData {
 					position: initial_position,
@@ -620,11 +641,13 @@ pub mod pallet {
 				// Setting player initial position
 				GridOccupancy::<T, I>::mutate(initial_position, |occupancy_state| {
 					if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
-						account_set.try_insert(account.clone()).expect("Inserted account into set");
+						account_set
+							.try_insert(account.clone())
+							.map_err(|_| Error::<T, I>::CouldNotQueuePlayer)
 					} else {
-						panic!("Tried to remove account from Blocked position!")
+						Err(Error::<T, I>::CouldNotQueuePlayer)
 					}
-				});
+				})?;
 
 				PlayerDetails::<T, I>::insert(account, player_data);
 

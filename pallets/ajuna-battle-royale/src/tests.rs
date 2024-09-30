@@ -67,7 +67,7 @@ fn start_battle_with_config(
 }
 
 fn queue_player(account: &MockAccountId, initial_weapon: PlayerWeapon) -> Coordinates {
-	assert_ok!(BattleRoyale::try_queue_player(account, initial_weapon));
+	assert_ok!(BattleRoyale::try_queue_player(account, initial_weapon, None));
 
 	System::assert_last_event(mock::RuntimeEvent::BattleRoyale(crate::Event::PlayerQueued {
 		player: account.clone(),
@@ -403,7 +403,7 @@ mod try_queue_player {
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
 			let alice_weapon = PlayerWeapon::Paper;
-			assert_ok!(BattleRoyale::try_queue_player(&ALICE, alice_weapon));
+			assert_ok!(BattleRoyale::try_queue_player(&ALICE, alice_weapon, None));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerQueued { player: ALICE },
@@ -436,7 +436,7 @@ mod try_queue_player {
 			run_to_block(25);
 
 			let bob_weapon = PlayerWeapon::Rock;
-			assert_ok!(BattleRoyale::try_queue_player(&BOB, bob_weapon));
+			assert_ok!(BattleRoyale::try_queue_player(&BOB, bob_weapon, None));
 
 			System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 				crate::Event::PlayerQueued { player: BOB },
@@ -487,7 +487,7 @@ mod try_queue_player {
 			assert_all_storage_empty();
 
 			assert_noop!(
-				BattleRoyale::try_queue_player(&ALICE, PlayerWeapon::Paper),
+				BattleRoyale::try_queue_player(&ALICE, PlayerWeapon::Paper, None),
 				Error::<Test, Instance1>::BattleNotInQueueingPhase
 			);
 		});
@@ -506,7 +506,7 @@ mod try_queue_player {
 			let _ = queue_player(&ALICE, PlayerWeapon::Rock);
 
 			assert_noop!(
-				BattleRoyale::try_queue_player(&ALICE, PlayerWeapon::Paper),
+				BattleRoyale::try_queue_player(&ALICE, PlayerWeapon::Paper, None),
 				Error::<Test, Instance1>::PlayerAlreadyQueued
 			);
 		});
@@ -531,7 +531,7 @@ mod try_queue_player {
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 4);
 
 			assert_noop!(
-				BattleRoyale::try_queue_player(&EDWARD, PlayerWeapon::Scissors),
+				BattleRoyale::try_queue_player(&EDWARD, PlayerWeapon::Scissors, None),
 				Error::<Test, Instance1>::PlayerQueueFull
 			);
 		});
@@ -1308,7 +1308,7 @@ mod try_perform_player_action {
 
 			// Attempting to queue fails since we are outside the Queuing phase
 			assert_noop!(
-				BattleRoyale::try_queue_player(&BOB, PlayerWeapon::Paper),
+				BattleRoyale::try_queue_player(&BOB, PlayerWeapon::Paper, None),
 				Error::<Test, Instance1>::BattleNotInQueueingPhase
 			);
 		});
