@@ -16,11 +16,17 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod example_transitions;
 pub mod handle_fees;
 pub mod primitives;
 pub mod weights;
 
-use crate::primitives::{Asset, SageApi};
+use crate::{
+	example_transitions::{
+		rule_asset_length_1, transition, transition_one, verify_transition_rule,
+	},
+	primitives::{Asset, SageApi},
+};
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use sp_std::prelude::*;
@@ -126,33 +132,4 @@ pub mod pallet {
 			Ok(())
 		}
 	}
-}
-
-pub fn verify_transition_rule<Sage: SageApi>(
-	transition_id: u32,
-	assets: &[Asset],
-) -> Result<(), primitives::Error> {
-	match transition_id {
-		1 => rule_asset_length_1(assets),
-		_ => Err(primitives::Error::InvalidTransitionId),
-	}
-}
-
-pub fn transition<Sage: SageApi>(
-	transition_id: u32,
-	assets: Vec<Asset>,
-) -> Result<(), primitives::Error> {
-	match transition_id {
-		1 => transition_one::<Sage>(assets),
-		_ => Err(primitives::Error::InvalidTransitionId),
-	}
-}
-
-pub fn transition_one<Sage: SageApi>(_assets: Vec<Asset>) -> Result<(), primitives::Error> {
-	todo!()
-}
-
-fn rule_asset_length_1(assets: &[Asset]) -> Result<(), primitives::Error> {
-	ensure!(assets.len() == 1, primitives::Error::InvalidAssetLength);
-	Ok(())
 }
