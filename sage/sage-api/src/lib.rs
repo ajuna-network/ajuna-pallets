@@ -26,13 +26,11 @@ use crate::{
 	example_transitions::{
 		rule_asset_length_1, transition, transition_one, verify_transition_rule,
 	},
-	primitives::AssetT,
+	primitives::Asset,
 	sage::SageApi,
 };
-use core::fmt::Debug;
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
-use sp_core::{Decode, Encode};
 use sp_std::prelude::*;
 use weights::WeightInfo;
 
@@ -47,18 +45,16 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// The Asset type of the game.
-		///
-		/// Note: This is actually tricky, we might not want to have the asset generic here, but
-		/// hardcode it to a concrete type given by the game studio. In fact, I believe that this is
-		/// what we need to do, otherwise the game studio can't use the concrete type in the
-		/// logic they supply to the pallet here. Only, our generic helper functions and the SageApi
-		/// may be generic over `AssetT`, probably. TBD.
-		type Asset: AssetT + Member + Debug + Decode + Encode + TypeInfo;
+		// The Asset type of the game.
+		// See explanation below. We can't be generic over asset type here unfortunately.
+		// type Asset: AssetT + Member + Debug + Decode + Encode + TypeInfo;
 
-		/// The fundamental Api that we can use to access all features of our
-		/// game engine.
-		type SageApi: SageApi<Asset = Self::Asset>;
+		/// The fundamental Api that we can use to access all features of our game engine.
+		/// Note: This is actually tricky, we can't be generic over the asset here unfortunately
+		/// because this would require the game logic to be generic of the asset type too. However,
+		/// the game logic wants to use the concrete asset type, and hand we have to constraint the
+		/// associated type of the `SageApi` to the concrete type too.
+		type SageApi: SageApi<Asset = Asset>;
 
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -105,7 +101,7 @@ pub mod pallet {
 		pub fn state_transition(
 			origin: OriginFor<T>,
 			transition_id: u32,
-			assets: Vec<<T as Config>::Asset>,
+			assets: Vec<Asset>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -126,10 +122,7 @@ pub mod pallet {
 		/// Instead of matching the transition id on the inside we can expose it as a call directly.
 		#[pallet::weight(T::WeightInfo::transition_one())]
 		#[pallet::call_index(1)]
-		pub fn transition_one(
-			origin: OriginFor<T>,
-			assets: Vec<<T as Config>::Asset>,
-		) -> DispatchResult {
+		pub fn transition_one(origin: OriginFor<T>, assets: Vec<Asset>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			// Note: we can add some more elaborated error transforming here by implementing
