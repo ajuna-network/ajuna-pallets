@@ -106,10 +106,13 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 	) -> Result<(LeaderForgeOutput<T>, Vec<ForgeOutput<T>>), DispatchError> {
 		let (leader_id, mut leader) = input_leader;
 
-		let max_tier = season.max_tier() as u8;
+		let leader_rarity = leader.rarity();
+		let any_sacrifice_higher_rarity =
+			input_sacrifices.iter().any(|(_, sacrifice)| sacrifice.rarity() > leader_rarity);
 
-		// If the leader is of max rarity we don't allow any forging
-		if leader.rarity() == max_tier {
+		// If any sacrifice has a higher rarity than the leader we forbid forging
+		// All sacrifices should have the same or lower rarity than the leader
+		if any_sacrifice_higher_rarity {
 			return Ok((
 				LeaderForgeOutput::Unchanged((leader_id, leader)),
 				input_sacrifices
@@ -127,7 +130,9 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 		let (mut unique_matched_indexes, matches, soul_count) =
 			Self::compare_all(&leader, sacrifice_avatars.as_slice(), 0)?;
 
-		leader.souls += soul_count;
+		if matches > 0 {
+			leader.souls += soul_count;
+		}
 
 		let mut upgraded_components = 0;
 		let prob = Self::forge_probability(&leader, season, &current_block, matches);
