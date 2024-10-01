@@ -1,3 +1,11 @@
+//! Example handle fees implementation.
+//!
+//! The real one is going to be more complex it should handle:
+//! * Payment into treasury
+//! * Quote USDT price to drive AJUN fee
+//! * Handle tournament fees (if configured)
+//! * Handle affiliation fees (if configured)
+
 use crate::primitives::Error;
 use std::marker::PhantomData;
 

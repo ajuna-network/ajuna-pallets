@@ -1,7 +1,8 @@
-use crate::{
-	primitives,
-	primitives::{Asset, SageApi},
-};
+//! Some example transitions.
+//!
+//! These should be expanded to really showcase the power of the SageApi design.
+
+use crate::{primitives, primitives::Asset, sage::SageApi};
 use frame_support::ensure;
 
 pub fn verify_transition_rule<Sage: SageApi>(
