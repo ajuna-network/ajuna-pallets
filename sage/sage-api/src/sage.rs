@@ -1,6 +1,6 @@
 use crate::{
 	handle_fees::HandleFees,
-	primitives::{Asset, Error},
+	primitives::{AssetT, Error},
 };
 use std::marker::PhantomData;
 
@@ -12,11 +12,13 @@ pub struct SageEngine<SageCore, FeeHandler> {
 }
 
 impl<Core: SageCore, FeeHandler: HandleFees> SageApi for SageEngine<Core, FeeHandler> {
+	type Asset = Core::Asset;
+
 	type Balance = FeeHandler::Balance;
 
 	type AccountId = Core::AccountId;
 
-	fn transfer_ownership(asset: Asset, to: Self::AccountId) -> Result<(), Error> {
+	fn transfer_ownership(asset: Self::Asset, to: Self::AccountId) -> Result<(), Error> {
 		Core::transfer_ownership(asset, to)
 	}
 
@@ -30,11 +32,12 @@ impl<Core: SageCore, FeeHandler: HandleFees> SageApi for SageEngine<Core, FeeHan
 ///
 /// This will be much more elaborate in th actual implementation.
 pub trait SageApi {
+	type Asset: AssetT;
 	type Balance;
 
 	type AccountId;
 
-	fn transfer_ownership(asset: Asset, to: Self::AccountId) -> Result<(), Error>;
+	fn transfer_ownership(asset: Self::Asset, to: Self::AccountId) -> Result<(), Error>;
 	fn handle_fees(balance: Self::Balance) -> Result<(), Error>;
 }
 
@@ -56,5 +59,7 @@ pub trait SageApi {
 pub trait SageCore {
 	type AccountId;
 
-	fn transfer_ownership(asset: Asset, to: Self::AccountId) -> Result<(), Error>;
+	type Asset: AssetT;
+
+	fn transfer_ownership(asset: Self::Asset, to: Self::AccountId) -> Result<(), Error>;
 }
