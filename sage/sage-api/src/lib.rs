@@ -50,9 +50,10 @@ pub mod pallet {
 		// type Asset: AssetT + Member + Debug + Decode + Encode + TypeInfo;
 
 		/// The fundamental Api that we can use to access all features of our game engine.
+		///
 		/// Note: This is actually tricky, we can't be generic over the asset here unfortunately
 		/// because this would require the game logic to be generic of the asset type too. However,
-		/// the game logic wants to use the concrete asset type, and hand we have to constraint the
+		/// the game logic wants to use the concrete asset type, and hence we have to constrain the
 		/// associated type of the `SageApi` to the concrete type too.
 		type SageApi: SageApi<Asset = Asset>;
 
