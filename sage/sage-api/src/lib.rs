@@ -52,25 +52,27 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// An creator has been set.
-		CreatorSet { creator: T::AccountId },
+		/// A transition has been executed.
+		TransitionExecuted {
+			/// Account who initiated execution.
+			account: T::AccountId,
+			/// Transition Id that was executed.
+			id: u32,
+		},
 	}
 
 	/// Error for the treasury pallet.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// The given creator doesn't exist.
+		/// The rule for a given transition was not satisfied.
 		RuleNotSatisfied,
-		/// The given creator doesn't exist.
+		/// There was an error executing the given state transition.
 		TransitionError,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set a creator account.
-		///
-		/// This call allows setting an account to act as a contract creator. It must be called with
-		/// root privilege.
+		/// Entry point for the custom state transition.
 		#[pallet::weight(T::WeightInfo::state_transition())]
 		#[pallet::call_index(0)]
 		pub fn state_transition(
@@ -78,13 +80,17 @@ pub mod pallet {
 			transition_id: u32,
 			assets: Vec<Asset>,
 		) -> DispatchResult {
-			let _sender = ensure_signed(origin)?;
+			let sender = ensure_signed(origin)?;
 
 			verify_transition_rule::<<T as Config>::SageApi>(transition_id, &assets)
 				.map_err(|_e| Error::<T>::RuleNotSatisfied)?;
 
 			transition::<<T as Config>::SageApi>(transition_id, assets)
-				.map_err(|_e| Error::<T>::TransitionError.into())
+				.map_err(|_e| Error::<T>::TransitionError)?;
+
+			Self::deposit_event(Event::TransitionExecuted { account: sender, id: transition_id });
+
+			Ok(())
 		}
 	}
 }
