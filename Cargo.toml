@@ -12,6 +12,7 @@ members = [
     "pallets/*",
     "pallets/ajuna-awesome-avatars/benchmarking",
     "pallets/ajuna-nft-staking/benchmarking",
+    "sage/sage-api"
 ]
 
 [workspace.dependencies]
