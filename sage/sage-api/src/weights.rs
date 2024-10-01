@@ -52,14 +52,12 @@ pub trait WeightInfo {
 /// Weights for pallet_ajuna_nft_staking using the Substrate node and recommended hardware.
 pub struct AjunaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
-    // Storage: NftStake Creator (r:0 w:1)
     fn state_transition() -> Weight {
         // Minimum execution time: 26_582 nanoseconds.
         Weight::from_parts(0, 0)
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 
-    // Storage: NftStake Creator (r:0 w:1)
     fn transition_one() -> Weight {
         // Minimum execution time: 26_582 nanoseconds.
         Weight::from_parts(0, 0)
