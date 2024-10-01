@@ -58,6 +58,12 @@ pub mod pallet {
 			/// Transition Id that was executed.
 			id: u32,
 		},
+
+		/// A transition has been executed.
+		TransitionOneExecuted {
+			/// Account who initiated execution.
+			account: T::AccountId,
+		},
 	}
 
 	/// Error for the treasury pallet.
@@ -97,6 +103,28 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		/// Instead of matching the transition id on the inside we can expose it as a call directly.
+		#[pallet::weight(T::WeightInfo::transition_one())]
+		#[pallet::call_index(1)]
+		pub fn transition_one(
+			origin: OriginFor<T>,
+			assets: Vec<crate::primitives::Asset>,
+		) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			// Note: we can add some more elaborated error transforming here by implementing
+			// From <primitives::Error> for Error<T>, this will give the possibility to return
+			// granular errors to a UI.
+			rule_asset_length_1(&assets).map_err(|_e| Error::<T>::RuleNotSatisfied)?;
+
+			transition_one::<<T as Config>::SageApi>(assets)
+				.map_err(|_e| Error::<T>::TransitionError)?;
+
+			Self::deposit_event(Event::TransitionOneExecuted { account: sender });
+
+			Ok(())
+		}
 	}
 }
 
@@ -105,16 +133,23 @@ pub fn verify_transition_rule<Sage: SageApi>(
 	assets: &[Asset],
 ) -> Result<(), primitives::Error> {
 	match transition_id {
-		0 => rule_asset_length_1(assets),
+		1 => rule_asset_length_1(assets),
 		_ => Err(primitives::Error::InvalidTransitionId),
 	}
 }
 
 pub fn transition<Sage: SageApi>(
-	_transition_id: u32,
-	_assets: Vec<Asset>,
+	transition_id: u32,
+	assets: Vec<Asset>,
 ) -> Result<(), primitives::Error> {
-	Ok(())
+	match transition_id {
+		1 => transition_one::<Sage>(assets),
+		_ => Err(primitives::Error::InvalidTransitionId),
+	}
+}
+
+pub fn transition_one<Sage: SageApi>(_assets: Vec<Asset>) -> Result<(), primitives::Error> {
+	todo!()
 }
 
 fn rule_asset_length_1(assets: &[Asset]) -> Result<(), primitives::Error> {
