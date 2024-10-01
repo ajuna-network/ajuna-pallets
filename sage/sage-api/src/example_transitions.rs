@@ -5,6 +5,7 @@
 use crate::{primitives, primitives::Asset, sage::SageApi};
 use frame_support::ensure;
 
+/// Verifies a transition rule with a given transition id.
 pub fn verify_transition_rule<Sage: SageApi>(
 	transition_id: u32,
 	assets: &[Asset],
@@ -15,6 +16,7 @@ pub fn verify_transition_rule<Sage: SageApi>(
 	}
 }
 
+/// Executes a transition with a given transition id.
 pub fn transition<Sage: SageApi>(
 	transition_id: u32,
 	assets: Vec<Asset>,
@@ -25,10 +27,12 @@ pub fn transition<Sage: SageApi>(
 	}
 }
 
+/// One specific transition that a game wants to execute.
 pub fn transition_one<Sage: SageApi>(_assets: Vec<Asset>) -> Result<(), primitives::Error> {
 	todo!()
 }
 
+/// A rule that maybe many different transitions want to fulfill.
 pub fn rule_asset_length_1(assets: &[Asset]) -> Result<(), primitives::Error> {
 	ensure!(assets.len() == 1, primitives::Error::InvalidAssetLength);
 	Ok(())
