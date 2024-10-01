@@ -37,6 +37,8 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
+		/// The fundamental Api that we can use to access all features of our
+		/// game engine.
 		type SageApi: SageApi;
 
 		/// The overarching event type.
@@ -45,9 +47,6 @@ pub mod pallet {
 		/// The weight calculations
 		type WeightInfo: WeightInfo;
 	}
-
-	#[pallet::storage]
-	pub type Creator<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -73,6 +72,9 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Entry point for the custom state transition.
+		///
+		/// Note:
+		/// 	Is the overhead really so much bigger to add a custom call for each transition?
 		#[pallet::weight(T::WeightInfo::state_transition())]
 		#[pallet::call_index(0)]
 		pub fn state_transition(
@@ -82,6 +84,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
+			// Note: we can add some more elaborated error transforming here by implementing
+			// From <primitives::Error> for Error<T>, this will give the possibility to return
+			// granular errors to a UI.
 			verify_transition_rule::<<T as Config>::SageApi>(transition_id, &assets)
 				.map_err(|_e| Error::<T>::RuleNotSatisfied)?;
 
