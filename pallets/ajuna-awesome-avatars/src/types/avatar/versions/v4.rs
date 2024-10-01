@@ -2,7 +2,10 @@ use crate::{
 	types::avatar::versions::v2::{ByteType, DnaUtils},
 	*,
 };
-use sp_runtime::{traits::Zero, DispatchError, Saturating};
+use sp_runtime::{
+	traits::{Bounded, Zero},
+	DispatchError, Saturating,
+};
 use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, vec::Vec};
 
 pub(crate) struct AttributeMapperV4;
@@ -155,6 +158,15 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 					}
 				}
 			}
+		}
+
+		// Upgrade leader minted_at
+		let min_sacrifice_minted_at = sacrifice_avatars
+			.iter()
+			.map(|sacrifice| sacrifice.minted_at)
+			.fold(BlockNumberFor::<T>::max_value(), |acc, i| if acc > i { i } else { acc });
+		if min_sacrifice_minted_at < leader.minted_at {
+			leader.minted_at = min_sacrifice_minted_at;
 		}
 
 		Ok((
