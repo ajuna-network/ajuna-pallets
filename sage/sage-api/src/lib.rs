@@ -19,13 +19,15 @@
 pub mod example_transitions;
 pub mod handle_fees;
 pub mod primitives;
+pub mod sage;
 pub mod weights;
 
 use crate::{
 	example_transitions::{
 		rule_asset_length_1, transition, transition_one, verify_transition_rule,
 	},
-	primitives::{Asset, SageApi},
+	primitives::Asset,
+	sage::SageApi,
 };
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
