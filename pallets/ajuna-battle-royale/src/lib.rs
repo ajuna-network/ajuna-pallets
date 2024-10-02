@@ -139,17 +139,16 @@ pub mod pallet {
 			let computed_weight = if let Some(scheduled_action) = BattleSchedules::<T, I>::take(now)
 			{
 				match scheduled_action {
-					SchedulerAction::Input(count) =>
-						Self::switch_to_phase(BattlePhase::Input) +
-							Self::insert_next_schedule(now, count),
+					SchedulerAction::Input => Self::switch_to_phase(BattlePhase::Input),
 					SchedulerAction::Reveal => Self::switch_to_phase(BattlePhase::Reveal),
 					SchedulerAction::Execution =>
 						Self::switch_to_phase(BattlePhase::Execution) + Self::resolve_battles(),
 					SchedulerAction::Shrink =>
 						Self::switch_to_phase(BattlePhase::Shrink) + Self::resolve_wall_shrinkage(),
-					SchedulerAction::Verify =>
+					SchedulerAction::Verify(count) =>
 						Self::switch_to_phase(BattlePhase::Verification) +
-							Self::resolve_game_state(now),
+							Self::resolve_game_state(now) +
+							Self::insert_next_schedule(now, count),
 					SchedulerAction::Idle => Self::switch_to_phase(BattlePhase::Idle),
 				}
 			} else {
@@ -171,10 +170,14 @@ pub mod pallet {
 			T::DbWeight::get().reads_writes(1, 1)
 		}
 
-		pub(crate) fn insert_next_schedule(
-			now: BlockNumberFor<T>,
-			input_phase_count: u8,
-		) -> Weight {
+		pub(crate) fn insert_next_schedule(now: BlockNumberFor<T>, phase_count: u8) -> Weight {
+			if matches!(
+				BattleStateStore::<T, I>::get(),
+				BattleStateFor::<T>::Active { phase: BattlePhase::Finished, .. }
+			) {
+				return T::DbWeight::get().reads(1)
+			}
+
 			let shrink_frequency = if let BattleStateFor::<T>::Active {
 				config: BattleConfigFor::<T> { shrink_frequency, .. },
 				..
@@ -185,8 +188,16 @@ pub mod pallet {
 				DEFAULT_SHRINK_PHASE_FREQUENCY
 			};
 
+			let verification_phase_duration = u32::from(T::VerificationPhaseDuration::get());
+			let mut time = now.saturating_add(verification_phase_duration.into());
+			BattleSchedules::<T, I>::insert(time, SchedulerAction::Idle);
+
+			let idle_phase_duration = u32::from(T::IdlePhaseDuration::get());
+			time = time.saturating_add(idle_phase_duration.into());
+			BattleSchedules::<T, I>::insert(time, SchedulerAction::Input);
+
 			let input_phase_duration = u32::from(T::InputPhaseDuration::get());
-			let mut time = now.saturating_add(input_phase_duration.into());
+			time = time.saturating_add(input_phase_duration.into());
 			BattleSchedules::<T, I>::insert(time, SchedulerAction::Reveal);
 
 			let reveal_phase_duration = u32::from(T::RevealPhaseDuration::get());
@@ -194,40 +205,33 @@ pub mod pallet {
 			BattleSchedules::<T, I>::insert(time, SchedulerAction::Execution);
 
 			let execution_phase_duration = u32::from(T::ExecutionPhaseDuration::get());
-			let should_shrink = input_phase_count == shrink_frequency;
+			let new_phase_count = {
+				let new_phase_count = phase_count.saturating_add(1);
+
+				if new_phase_count > shrink_frequency {
+					0
+				} else {
+					new_phase_count
+				}
+			};
+			let should_shrink = phase_count == shrink_frequency;
+
 			if should_shrink {
 				time = time.saturating_add(execution_phase_duration.into());
 				BattleSchedules::<T, I>::insert(time, SchedulerAction::Shrink);
 
 				let shrink_phase_duration = u32::from(T::ShrinkPhaseDuration::get());
 				time = time.saturating_add(shrink_phase_duration.into());
-				BattleSchedules::<T, I>::insert(time, SchedulerAction::Verify);
+				BattleSchedules::<T, I>::insert(time, SchedulerAction::Verify(new_phase_count));
 			} else {
 				time = time.saturating_add(execution_phase_duration.into());
-				BattleSchedules::<T, I>::insert(time, SchedulerAction::Verify);
+				BattleSchedules::<T, I>::insert(time, SchedulerAction::Verify(new_phase_count));
 			}
 
-			let verification_phase_duration = u32::from(T::VerificationPhaseDuration::get());
-			time = time.saturating_add(verification_phase_duration.into());
-			BattleSchedules::<T, I>::insert(time, SchedulerAction::Idle);
-
-			let new_count = {
-				let new_count = input_phase_count.saturating_add(1);
-
-				if new_count > shrink_frequency {
-					0
-				} else {
-					new_count
-				}
-			};
-			let idle_phase_duration = u32::from(T::IdlePhaseDuration::get());
-			time = time.saturating_add(idle_phase_duration.into());
-			BattleSchedules::<T, I>::insert(time, SchedulerAction::Input(new_count));
-
 			if should_shrink {
-				T::DbWeight::get().writes(5)
+				T::DbWeight::get().reads_writes(1, 5)
 			} else {
-				T::DbWeight::get().writes(4)
+				T::DbWeight::get().reads_writes(1, 4)
 			}
 		}
 
@@ -618,9 +622,14 @@ pub mod pallet {
 					boundaries,
 				};
 
-				let switch_at = current_block.saturating_add(QUEUE_DURATION.into());
-
-				BattleSchedules::<T, I>::insert(switch_at, SchedulerAction::Input(0));
+				let verification_phase_duration = u32::from(T::VerificationPhaseDuration::get());
+				// We add the current block to the QUEUE_DURATION as baseline, then we decrease that
+				// time so that the moment the Queueing phase is over we switch to Idle phase
+				// immediately independently of how long is the phase configured
+				let switch_at = current_block
+					.saturating_add(QUEUE_DURATION.into())
+					.saturating_sub(verification_phase_duration.into());
+				let _ = Self::insert_next_schedule(switch_at, 0);
 
 				Self::deposit_event(Event::<T, I>::BattleStarted);
 

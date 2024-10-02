@@ -26,11 +26,11 @@ pub(crate) const DEFAULT_SHRINK_PHASE_FREQUENCY: u8 = 3;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Copy, Debug, PartialEq)]
 pub enum SchedulerAction {
-	Input(u8),
+	Input,
 	Reveal,
 	Execution,
 	Shrink,
-	Verify,
+	Verify(u8),
 	Idle,
 }
 

@@ -130,7 +130,7 @@ mod try_start_battle {
 				crate::Event::BattleStarted,
 			));
 
-			assert_eq!(BattleSchedules::<Test, Instance1>::iter().count(), 1);
+			assert_eq!(BattleSchedules::<Test, Instance1>::iter().count(), 5);
 			let current_block = System::block_number();
 			let battle_runs_until =
 				current_block + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
@@ -292,7 +292,7 @@ mod try_finish_battle {
 			let bob_weapon = PlayerWeapon::Scissors;
 			let _ = queue_player(&BOB, bob_weapon);
 
-			run_to_block((10 + QUEUE_DURATION) as u64);
+			run_to_block((12 + QUEUE_DURATION) as u64);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
 
@@ -339,7 +339,7 @@ mod try_finish_battle {
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
-			run_to_block((10 + QUEUE_DURATION) as u64);
+			run_to_block((12 + QUEUE_DURATION) as u64);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 0);
 
@@ -387,7 +387,7 @@ mod try_finish_battle {
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
-			run_to_block((10 + QUEUE_DURATION) as u64);
+			run_to_block((12 + QUEUE_DURATION) as u64);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 0);
 
@@ -486,9 +486,9 @@ mod try_queue_player {
 
 			run_to_block((10 + QUEUE_DURATION) as u64);
 
-			assert_eq!(BattleSchedules::<Test, Instance1>::iter().count(), 5);
+			assert_eq!(BattleSchedules::<Test, Instance1>::iter().count(), 4);
 			assert_battle_state_is_active_with(
-				BattlePhase::Input,
+				BattlePhase::Idle,
 				battle_max_players,
 				battle_runs_until,
 				battle_grid_size,
@@ -585,6 +585,15 @@ mod try_perform_player_action {
 			run_to_block((10 + QUEUE_DURATION) as u64);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 3);
+			assert_battle_state_is_active_with(
+				BattlePhase::Idle,
+				battle_max_players,
+				battle_runs_until,
+				battle_grid_size,
+				DEFAULT_SHRINK_PHASE_FREQUENCY,
+			);
+
+			run_to_block(System::block_number() + 2);
 			assert_battle_state_is_active_with(
 				BattlePhase::Input,
 				battle_max_players,
@@ -819,6 +828,16 @@ mod try_perform_player_action {
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
 
 			assert_battle_state_is_active_with(
+				BattlePhase::Idle,
+				battle_max_players,
+				battle_runs_until,
+				battle_grid_size,
+				DEFAULT_SHRINK_PHASE_FREQUENCY,
+			);
+
+			// We advance 2 more blocks, this should put is in the Input phase
+			run_to_block(System::block_number() + 2);
+			assert_battle_state_is_active_with(
 				BattlePhase::Input,
 				battle_max_players,
 				battle_runs_until,
@@ -1012,11 +1031,21 @@ mod try_perform_player_action {
 				initial_position_vec.push(initial_position);
 			}
 
-			// We start the Input phase
+			// We start the Idle phase
 			run_to_block((10 + QUEUE_DURATION) as u64);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 64);
 
+			assert_battle_state_is_active_with(
+				BattlePhase::Idle,
+				battle_max_players,
+				battle_runs_until,
+				battle_grid_size,
+				DEFAULT_SHRINK_PHASE_FREQUENCY,
+			);
+
+			// We advance 2 more blocks, this should put is in the Input phase
+			run_to_block(System::block_number() + 2);
 			assert_battle_state_is_active_with(
 				BattlePhase::Input,
 				battle_max_players,
@@ -1162,6 +1191,16 @@ mod try_perform_player_action {
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
 
 			assert_battle_state_is_active_with(
+				BattlePhase::Idle,
+				battle_max_players,
+				battle_runs_until,
+				battle_grid_size,
+				DEFAULT_SHRINK_PHASE_FREQUENCY,
+			);
+
+			// We advance 2 more blocks, this should put is in the Input phase
+			run_to_block(System::block_number() + 2);
+			assert_battle_state_is_active_with(
 				BattlePhase::Input,
 				battle_max_players,
 				battle_runs_until,
@@ -1265,9 +1304,9 @@ mod try_perform_player_action {
 				Error::<Test, Instance1>::BattleNotInPlayablePhases
 			);
 
-			// We advance 46 more blocks, this should put us in the Execution phase.
+			// We advance 48 more blocks, this should put us in the Execution phase.
 			// Trying to perform an action here is not allowed
-			run_to_block(System::block_number() + 46);
+			run_to_block(System::block_number() + 48);
 			assert_battle_state_is_active_with(
 				BattlePhase::Execution,
 				battle_max_players,
@@ -1357,8 +1396,8 @@ mod try_perform_player_action {
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 			queue_player(&ALICE, PlayerWeapon::Rock);
 
-			// We advance 50 more blocks, this should put us in the Input phase.
-			run_to_block(System::block_number() + 50);
+			// We advance 52 more blocks, this should put us in the Input phase.
+			run_to_block(System::block_number() + 52);
 			assert_battle_state_is_active_with(
 				BattlePhase::Input,
 				battle_max_players,
@@ -1398,8 +1437,8 @@ mod try_perform_player_action {
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 			queue_player(&ALICE, PlayerWeapon::Rock);
 
-			// We advance 50 more blocks, this should put us in the Input phase.
-			run_to_block(System::block_number() + 50);
+			// We advance 52 more blocks, this should put us in the Input phase.
+			run_to_block(System::block_number() + 52);
 			assert_battle_state_is_active_with(
 				BattlePhase::Input,
 				battle_max_players,
@@ -1435,8 +1474,8 @@ mod try_perform_player_action {
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 			queue_player(&ALICE, PlayerWeapon::Rock);
 
-			// We advance 50 more blocks, this should put us in the Input phase.
-			run_to_block(System::block_number() + 50);
+			// We advance 52 more blocks, this should put us in the Input phase.
+			run_to_block(System::block_number() + 52);
 			assert_battle_state_is_active_with(
 				BattlePhase::Input,
 				battle_max_players,
@@ -1491,8 +1530,8 @@ mod try_perform_player_action {
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 			queue_player(&ALICE, PlayerWeapon::Rock);
 
-			// We advance 53 more blocks, this should put us in the Reveal phase.
-			run_to_block(System::block_number() + 53);
+			// We advance 55 more blocks, this should put us in the Reveal phase.
+			run_to_block(System::block_number() + 55);
 			assert_battle_state_is_active_with(
 				BattlePhase::Reveal,
 				battle_max_players,

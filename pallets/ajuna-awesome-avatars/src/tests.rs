@@ -6006,7 +6006,7 @@ mod battle_royale {
 					pallet_ajuna_battle_royale::Event::PlayerQueued { player: BOB },
 				));
 
-				run_to_block(60);
+				run_to_block(62);
 
 				let alice_payload_fill = [242; 28];
 				let alice_action =
@@ -6022,7 +6022,7 @@ mod battle_royale {
 					pallet_ajuna_battle_royale::Event::PlayerPerformedAction { player: ALICE },
 				));
 
-				run_to_block(62);
+				run_to_block(64);
 
 				let bob_payload_fill = [14; 28];
 				let bob_action =
@@ -6038,7 +6038,7 @@ mod battle_royale {
 					pallet_ajuna_battle_royale::Event::PlayerPerformedAction { player: BOB },
 				));
 
-				run_to_block(64);
+				run_to_block(65);
 				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
 					RuntimeOrigin::signed(BOB),
 					bob_reveal_hash,
@@ -6048,7 +6048,7 @@ mod battle_royale {
 					pallet_ajuna_battle_royale::Event::PlayerRevealedAction { player: BOB },
 				));
 
-				run_to_block(65);
+				run_to_block(66);
 				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
 					RuntimeOrigin::signed(ALICE),
 					alice_reveal_hash,
@@ -6058,12 +6058,12 @@ mod battle_royale {
 					pallet_ajuna_battle_royale::Event::PlayerRevealedAction { player: ALICE },
 				));
 
-				run_to_block(66);
+				run_to_block(68);
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 					pallet_ajuna_battle_royale::Event::PlayerDefeated { player: ALICE },
 				));
 
-				run_to_block(67);
+				run_to_block(69);
 				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
 					pallet_ajuna_battle_royale::Event::BattleFinished,
 				));
