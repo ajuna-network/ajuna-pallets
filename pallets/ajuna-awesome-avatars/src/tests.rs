@@ -5936,6 +5936,7 @@ mod battle_royale {
 			.tiers(&[RarityTier::Common, RarityTier::Epic, RarityTier::Legendary])
 			.forge_logic(LogicGeneration::Third)
 			.max_sacrifices(1);
+		let shrink_frequency = 3;
 		ExtBuilder::default()
 			.balances(&[(ALICE, initial_balance)])
 			.seasons(&[(SEASON_ID, season_1.clone())])
@@ -5965,6 +5966,7 @@ mod battle_royale {
 					1_000,
 					5,
 					Coordinates::new(12, 12),
+					shrink_frequency,
 					vec![],
 				));
 

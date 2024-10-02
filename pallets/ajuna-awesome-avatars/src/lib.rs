@@ -1618,6 +1618,7 @@ pub mod pallet {
 			battle_duration: u32,
 			max_players: u8,
 			grid_size: Coordinates,
+			shrink_frequency: u8,
 			blocked_cells: Vec<Coordinates>,
 		) -> DispatchResult {
 			let _ = Self::ensure_organizer(origin)?;
@@ -1626,6 +1627,7 @@ pub mod pallet {
 				battle_duration,
 				max_players,
 				grid_size,
+				shrink_frequency,
 				blocked_cells,
 			)
 		}

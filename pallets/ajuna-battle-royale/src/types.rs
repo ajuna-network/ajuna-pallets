@@ -20,20 +20,9 @@ pub(crate) const QUEUE_DURATION: u32 = 50;
 /// Each block is approximately **6s** in time
 pub(crate) const MIN_BATTLE_DURATION: u32 = 50;
 
-/// Input phase duration in blocks
-pub(crate) const INPUT_PHASE_DURATION: u8 = 3;
-/// Reveal phase duration in blocks
-pub(crate) const REVEAL_PHASE_DURATION: u8 = 3;
-/// Execution phase duration in blocks
-pub(crate) const EXECUTION_PHASE_DURATION: u8 = 1;
-/// Shrink phase duration in blocks
-pub(crate) const SHRINK_PHASE_DURATION: u8 = 1;
-/// Verification phase duration in blocks
-pub(crate) const VERIFICATION_PHASE_DURATION: u8 = 1;
-
-/// Amount of input phases to go through before
+/// Default amount of verification phases to go through before
 /// allowing a shrink phase
-pub(crate) const SHRINK_PHASE_FREQUENCY: u8 = 3;
+pub(crate) const DEFAULT_SHRINK_PHASE_FREQUENCY: u8 = 3;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Copy, Debug, PartialEq)]
 pub enum SchedulerAction {
@@ -42,6 +31,7 @@ pub enum SchedulerAction {
 	Execution,
 	Shrink,
 	Verify,
+	Idle,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Copy, Debug, PartialEq)]
@@ -52,12 +42,16 @@ pub enum BattlePhase {
 	Execution,
 	Shrink,
 	Verification,
+	Idle,
 	Finished,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct BattleConfig<BlockNumber> {
 	pub(crate) max_players: u8,
+	/// How many verification phases to go through before a
+	/// Shrink phase is inserted into the next phase schedule
+	pub(crate) shrink_frequency: u8,
 	pub(crate) run_until: BlockNumber,
 }
 
@@ -322,6 +316,7 @@ pub trait BattleProvider<AccountId> {
 		game_duration: u32,
 		max_players: u8,
 		grid_size: Coordinates,
+		shrink_frequency: u8,
 		blocked_cells: Vec<Coordinates>,
 	) -> DispatchResult;
 

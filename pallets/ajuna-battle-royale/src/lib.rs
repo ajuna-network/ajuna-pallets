@@ -27,7 +27,9 @@ mod types;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::types::*;
+	use super::*;
+
+	use core::num::NonZeroU32;
 	use frame_support::{pallet_prelude::*, Hashable};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::{SaturatedConversion, Saturating};
@@ -45,6 +47,30 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self, I>>
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// The duration of the Input phase
+		#[pallet::constant]
+		type InputPhaseDuration: Get<NonZeroU32>;
+
+		/// The duration of the Reveal phase
+		#[pallet::constant]
+		type RevealPhaseDuration: Get<NonZeroU32>;
+
+		/// The duration of the Execution phase
+		#[pallet::constant]
+		type ExecutionPhaseDuration: Get<NonZeroU32>;
+
+		/// The duration of the Shrink phase
+		#[pallet::constant]
+		type ShrinkPhaseDuration: Get<NonZeroU32>;
+
+		/// The duration of the Verification phase
+		#[pallet::constant]
+		type VerificationPhaseDuration: Get<NonZeroU32>;
+
+		/// The duration of the Idle phase
+		#[pallet::constant]
+		type IdlePhaseDuration: Get<NonZeroU32>;
 	}
 
 	/// The current storage version.
@@ -124,6 +150,7 @@ pub mod pallet {
 					SchedulerAction::Verify =>
 						Self::switch_to_phase(BattlePhase::Verification) +
 							Self::resolve_game_state(now),
+					SchedulerAction::Idle => Self::switch_to_phase(BattlePhase::Idle),
 				}
 			} else {
 				Weight::from_parts(0, 0)
@@ -148,27 +175,53 @@ pub mod pallet {
 			now: BlockNumberFor<T>,
 			input_phase_count: u8,
 		) -> Weight {
-			let mut time = now.saturating_add(INPUT_PHASE_DURATION.into());
+			let shrink_frequency = if let BattleStateFor::<T>::Active {
+				config: BattleConfigFor::<T> { shrink_frequency, .. },
+				..
+			} = BattleStateStore::<T, I>::get()
+			{
+				shrink_frequency
+			} else {
+				DEFAULT_SHRINK_PHASE_FREQUENCY
+			};
+
+			let input_phase_duration = u32::from(T::InputPhaseDuration::get());
+			let mut time = now.saturating_add(input_phase_duration.into());
 			BattleSchedules::<T, I>::insert(time, SchedulerAction::Reveal);
 
-			time = time.saturating_add(REVEAL_PHASE_DURATION.into());
+			let reveal_phase_duration = u32::from(T::RevealPhaseDuration::get());
+			time = time.saturating_add(reveal_phase_duration.into());
 			BattleSchedules::<T, I>::insert(time, SchedulerAction::Execution);
 
-			let should_shrink = input_phase_count % SHRINK_PHASE_FREQUENCY == 0;
+			let execution_phase_duration = u32::from(T::ExecutionPhaseDuration::get());
+			let should_shrink = input_phase_count == shrink_frequency;
 			if should_shrink {
-				time = time.saturating_add(EXECUTION_PHASE_DURATION.into());
+				time = time.saturating_add(execution_phase_duration.into());
 				BattleSchedules::<T, I>::insert(time, SchedulerAction::Shrink);
 
-				time = time.saturating_add(SHRINK_PHASE_DURATION.into());
+				let shrink_phase_duration = u32::from(T::ShrinkPhaseDuration::get());
+				time = time.saturating_add(shrink_phase_duration.into());
 				BattleSchedules::<T, I>::insert(time, SchedulerAction::Verify);
 			} else {
-				time = time.saturating_add(EXECUTION_PHASE_DURATION.into());
+				time = time.saturating_add(execution_phase_duration.into());
 				BattleSchedules::<T, I>::insert(time, SchedulerAction::Verify);
 			}
 
-			time = time.saturating_add(VERIFICATION_PHASE_DURATION.into());
+			let verification_phase_duration = u32::from(T::VerificationPhaseDuration::get());
+			time = time.saturating_add(verification_phase_duration.into());
+			BattleSchedules::<T, I>::insert(time, SchedulerAction::Idle);
 
-			let new_count = core::cmp::max(1, (input_phase_count % SHRINK_PHASE_FREQUENCY) + 1);
+			let new_count = {
+				let new_count = input_phase_count.saturating_add(1);
+
+				if new_count > shrink_frequency {
+					0
+				} else {
+					new_count
+				}
+			};
+			let idle_phase_duration = u32::from(T::IdlePhaseDuration::get());
+			time = time.saturating_add(idle_phase_duration.into());
 			BattleSchedules::<T, I>::insert(time, SchedulerAction::Input(new_count));
 
 			if should_shrink {
@@ -517,6 +570,7 @@ pub mod pallet {
 			game_duration: u32,
 			max_players: u8,
 			grid_size: Coordinates,
+			shrink_frequency: u8,
 			blocked_cells: Vec<Coordinates>,
 		) -> DispatchResult {
 			BattleStateStore::<T, I>::try_mutate(|state| {
@@ -560,13 +614,13 @@ pub mod pallet {
 
 				*state = BattleStateFor::<T>::Active {
 					phase: BattlePhase::Queueing,
-					config: BattleConfigFor::<T> { max_players, run_until },
+					config: BattleConfigFor::<T> { max_players, shrink_frequency, run_until },
 					boundaries,
 				};
 
 				let switch_at = current_block.saturating_add(QUEUE_DURATION.into());
 
-				BattleSchedules::<T, I>::insert(switch_at, SchedulerAction::Input(1));
+				BattleSchedules::<T, I>::insert(switch_at, SchedulerAction::Input(0));
 
 				Self::deposit_event(Event::<T, I>::BattleStarted);
 

@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_battle_royale};
+
+use core::num::NonZeroU32;
 use frame_support::{
 	pallet_prelude::Hooks,
 	parameter_types,
@@ -101,9 +103,30 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 }
 
+parameter_types! {
+	// Input lasts 3 blocks
+	pub const InputPhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(2);
+	// Reveal lasts 3 blocks
+	pub const RevealPhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(2);
+	// Execution lasts 1 block
+	pub const ExecutionPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Shrink lasts 1 block
+	pub const ShrinkPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Verification lasts 1 block
+	pub const VerificationPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Idle lasts 2 blocks
+	pub const IdlePhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(1);
+}
+
 type BattleInstance1 = pallet_ajuna_battle_royale::Instance1;
 impl pallet_ajuna_battle_royale::Config<BattleInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type InputPhaseDuration = InputPhaseDuration;
+	type RevealPhaseDuration = RevealPhaseDuration;
+	type ExecutionPhaseDuration = ExecutionPhaseDuration;
+	type ShrinkPhaseDuration = ShrinkPhaseDuration;
+	type VerificationPhaseDuration = VerificationPhaseDuration;
+	type IdlePhaseDuration = IdlePhaseDuration;
 }
 
 pub struct ExtBuilder {
