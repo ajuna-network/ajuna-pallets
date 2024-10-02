@@ -16,6 +16,7 @@
 
 #![cfg(test)]
 
+use core::num::NonZeroU32;
 use frame_support::{
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
@@ -249,9 +250,30 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 
+parameter_types! {
+	// Input lasts 3 blocks
+	pub const InputPhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(2);
+	// Reveal lasts 3 blocks
+	pub const RevealPhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(2);
+	// Execution lasts 1 block
+	pub const ExecutionPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Shrink lasts 1 block
+	pub const ShrinkPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Verification lasts 1 block
+	pub const VerificationPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Idle lasts 2 blocks
+	pub const IdlePhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(1);
+}
+
 type BattleInstance1 = pallet_ajuna_battle_royale::Instance1;
 impl pallet_ajuna_battle_royale::Config<BattleInstance1> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type InputPhaseDuration = InputPhaseDuration;
+	type RevealPhaseDuration = RevealPhaseDuration;
+	type ExecutionPhaseDuration = ExecutionPhaseDuration;
+	type ShrinkPhaseDuration = ShrinkPhaseDuration;
+	type VerificationPhaseDuration = VerificationPhaseDuration;
+	type IdlePhaseDuration = IdlePhaseDuration;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
