@@ -21,7 +21,7 @@ impl<T: Config> AvatarCombinator<T> {
 	pub(super) fn combine_avatars_in(
 		forge_type: ForgeType,
 		season_id: SeasonId,
-		_season: &SeasonOf<T>,
+		season: &SeasonOf<T>,
 		leader: WrappedForgeItem<T>,
 		sacrifices: Vec<WrappedForgeItem<T>>,
 		hash_provider: &mut HashProvider<T, 32>,
@@ -30,7 +30,8 @@ impl<T: Config> AvatarCombinator<T> {
 			ForgeType::Stack => Self::stack_avatars(leader, sacrifices, season_id, hash_provider),
 			ForgeType::Tinker => Self::tinker_avatars(leader, sacrifices, season_id),
 			ForgeType::Build => Self::build_avatars(leader, sacrifices, season_id, hash_provider),
-			ForgeType::Assemble => Self::assemble_avatars(leader, sacrifices, hash_provider),
+			ForgeType::Assemble =>
+				Self::assemble_avatars(leader, sacrifices, season, hash_provider),
 			ForgeType::Breed => Self::breed_avatars(
 				leader,
 				sacrifices,
@@ -117,7 +118,10 @@ impl<T: Config> AvatarCombinator<T> {
 				if (random_hash as u32 * SCALING_FACTOR_PERC) <= (probability_match * MAX_BYTE) {
 					let pos = matching_score[hash_index % matching_score.len()];
 
-					leader_progress_array[pos as usize] += 0x10; // 16
+					// We limit the progress rarity to legendary
+					if (leader_progress_array[pos as usize] >> 4) < RarityTier::Legendary.as_byte() {
+						leader_progress_array[pos as usize] += 0x10; // 16
+					}
 
 					matching_score.retain(|item| *item != pos);
 					if matching_score.is_empty() {
