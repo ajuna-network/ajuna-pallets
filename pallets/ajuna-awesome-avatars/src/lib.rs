@@ -78,7 +78,9 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
 	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
 };
-use pallet_ajuna_battle_royale::{BattleProvider, Coordinates, PlayerActionHash, PlayerWeapon};
+use pallet_ajuna_battle_royale::{
+	BattleProvider, Coordinates, PlayerActionHash, PlayerWeapon, ShrinkBoundaries,
+};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
@@ -1619,6 +1621,7 @@ pub mod pallet {
 			max_players: u8,
 			grid_size: Coordinates,
 			shrink_frequency: u8,
+			shrink_boundaries: ShrinkBoundaries,
 			blocked_cells: Vec<Coordinates>,
 		) -> DispatchResult {
 			let _ = Self::ensure_organizer(origin)?;
@@ -1628,6 +1631,7 @@ pub mod pallet {
 				max_players,
 				grid_size,
 				shrink_frequency,
+				shrink_boundaries,
 				blocked_cells,
 			)
 		}

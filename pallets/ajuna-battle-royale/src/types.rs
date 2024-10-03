@@ -10,7 +10,7 @@ const LOG_TARGET: &str = "runtime::ajuna-battle-royale";
 pub(crate) const MIN_PLAYER_PER_BATTLE: u8 = 4;
 pub(crate) const MAX_PLAYER_PER_BATTLE: u8 = 64;
 
-pub(crate) const MIN_GRID_SIZE: u8 = 10;
+pub(crate) const MIN_GRID_SIZE: u8 = 2;
 pub(crate) const MAX_GRID_SIZE: u8 = 50;
 
 /// Amount if blocks in which a game remains open for players to queue in
@@ -67,24 +67,78 @@ impl Coordinates {
 	}
 }
 
+// Indicates from which sides can the grid shrink from
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug)]
+pub struct ShrinkBoundaries {
+	boundaries: [bool; 4],
+	shrink_index: u8,
+}
+
+impl ShrinkBoundaries {
+	pub fn new(top: bool, bottom: bool, left: bool, right: bool) -> Self {
+		let idx = if top {
+			0
+		} else if bottom {
+			1
+		} else if left {
+			2
+		} else if right {
+			3
+		} else {
+			// Specific value doesn't matter, it just needs to be bigger than 3
+			5
+		};
+
+		Self { boundaries: [top, bottom, left, right], shrink_index: idx }
+	}
+}
+
+impl PartialEq for ShrinkBoundaries {
+	fn eq(&self, other: &Self) -> bool {
+		self.boundaries.eq(&other.boundaries)
+	}
+}
+
+impl Default for ShrinkBoundaries {
+	fn default() -> Self {
+		Self::new(false, true, false, true)
+	}
+}
+
 // Coordinates in GridBoundaries are 1-indexed not 0-indexed
 // This is so we can use the 0,0 as the final coordinates when the wall shrinks.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct GridBoundaries {
 	pub(crate) top_left: Coordinates,
 	pub(crate) down_right: Coordinates,
+	pub(crate) shrink_boundaries: ShrinkBoundaries,
 }
 
 impl GridBoundaries {
-	pub(crate) fn new(coordinates: Coordinates) -> Self {
-		Self { top_left: Coordinates::new(1, 1), down_right: coordinates }
+	pub(crate) fn new(coordinates: Coordinates, shrink_boundaries: ShrinkBoundaries) -> Self {
+		Self { top_left: Coordinates::new(1, 1), down_right: coordinates, shrink_boundaries }
 	}
 
 	pub(crate) fn shrink(&mut self) {
-		if self.down_right.x > self.down_right.y {
-			self.down_right.x = self.down_right.x.saturating_sub(1);
-		} else {
-			self.down_right.y = self.down_right.y.saturating_sub(1);
+		let maybe_wall = match self.shrink_boundaries.shrink_index {
+			0 => Some(&mut self.top_left.x),
+			1 => Some(&mut self.down_right.x),
+			2 => Some(&mut self.top_left.y),
+			3 => Some(&mut self.down_right.y),
+			_ => None,
+		};
+
+		if let Some(wall) = maybe_wall {
+			*wall = wall.saturating_sub(1);
+
+			let mut new_index = ((self.shrink_boundaries.shrink_index + 1) % 4) as usize;
+			let shrink_boundaries = &self.shrink_boundaries;
+
+			while !shrink_boundaries.boundaries[new_index] {
+				new_index = (new_index + 1) % 4;
+			}
+
+			self.shrink_boundaries.shrink_index = new_index as u8;
 		}
 	}
 
@@ -115,7 +169,8 @@ mod random_coordinates_test {
 
 	#[test]
 	fn test_random_coordinate_consistency() {
-		let boundaries = GridBoundaries::new(Coordinates::new(45, 35));
+		let shrink_boundaries = ShrinkBoundaries::default();
+		let boundaries = GridBoundaries::new(Coordinates::new(45, 35), shrink_boundaries);
 
 		let hash = [
 			0x2E, 0x11, 0x3D, 0x0B, 0xFF, 0x33, 0x7A, 0x00, 0x5C, 0xAE, 0x86, 0x25, 0x09, 0x9E,
@@ -317,6 +372,7 @@ pub trait BattleProvider<AccountId> {
 		max_players: u8,
 		grid_size: Coordinates,
 		shrink_frequency: u8,
+		shrink_boundaries: ShrinkBoundaries,
 		blocked_cells: Vec<Coordinates>,
 	) -> DispatchResult;
 

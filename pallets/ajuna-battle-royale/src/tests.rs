@@ -30,13 +30,18 @@ fn assert_battle_state_is_active_with(
 	runs_until: MockBlockNumber,
 	grid_size: Coordinates,
 	shrink_frequency: u8,
+	shrink_boundaries: ShrinkBoundaries,
 ) {
 	assert_eq!(
 		BattleStateStore::<Test, Instance1>::get(),
 		BattleStateFor::<Test>::Active {
 			phase: battle_phase,
 			config: BattleConfig { max_players, run_until: runs_until, shrink_frequency },
-			boundaries: GridBoundaries { top_left: Coordinates::new(1, 1), down_right: grid_size },
+			boundaries: GridBoundaries {
+				top_left: Coordinates::new(1, 1),
+				down_right: grid_size,
+				shrink_boundaries
+			},
 		}
 	);
 }
@@ -53,6 +58,7 @@ fn start_battle_with_config(
 		battle_max_players,
 		battle_grid_size,
 		DEFAULT_SHRINK_PHASE_FREQUENCY,
+		ShrinkBoundaries::default(),
 		vec![],
 	));
 
@@ -66,6 +72,7 @@ fn start_battle_with_config(
 		battle_runs_until,
 		battle_grid_size,
 		DEFAULT_SHRINK_PHASE_FREQUENCY,
+		ShrinkBoundaries::default(),
 	);
 }
 
@@ -123,6 +130,7 @@ mod try_start_battle {
 				battle_max_players,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 				vec![]
 			));
 
@@ -140,6 +148,7 @@ mod try_start_battle {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 0);
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 0);
@@ -159,6 +168,7 @@ mod try_start_battle {
 					20,
 					Coordinates::new(15, 15),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![],
 				),
 				Error::<Test, Instance1>::BattleConfigDurationTooLow
@@ -172,6 +182,7 @@ mod try_start_battle {
 					2,
 					Coordinates::new(15, 15),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![]
 				),
 				Error::<Test, Instance1>::BattleConfigTooFewPlayers
@@ -183,6 +194,7 @@ mod try_start_battle {
 					124,
 					Coordinates::new(15, 15),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![]
 				),
 				Error::<Test, Instance1>::BattleConfigTooManyPlayers
@@ -194,8 +206,9 @@ mod try_start_battle {
 				BattleRoyale::try_start_battle(
 					MIN_BATTLE_DURATION,
 					20,
-					Coordinates::new(5, 15),
+					Coordinates::new(1, 15),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![]
 				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
@@ -207,8 +220,9 @@ mod try_start_battle {
 				BattleRoyale::try_start_battle(
 					MIN_BATTLE_DURATION,
 					20,
-					Coordinates::new(15, 5),
+					Coordinates::new(15, 1),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![]
 				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
@@ -222,6 +236,7 @@ mod try_start_battle {
 					20,
 					Coordinates::new(200, 15),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![]
 				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
@@ -235,6 +250,7 @@ mod try_start_battle {
 					20,
 					Coordinates::new(15, 200),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![]
 				),
 				Error::<Test, Instance1>::BattleConfigGridSizeInvalid
@@ -256,6 +272,7 @@ mod try_start_battle {
 				20,
 				Coordinates::new(20, 20),
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 				vec![]
 			));
 
@@ -265,6 +282,7 @@ mod try_start_battle {
 					20,
 					Coordinates::new(15, 200),
 					DEFAULT_SHRINK_PHASE_FREQUENCY,
+					ShrinkBoundaries::default(),
 					vec![]
 				),
 				Error::<Test, Instance1>::BattleAlreadyStarted
@@ -302,6 +320,7 @@ mod try_finish_battle {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			run_to_block(battle_runs_until);
@@ -310,13 +329,14 @@ mod try_finish_battle {
 				crate::Event::BattleFinished,
 			));
 
-			let shrunk_coordinates = Coordinates::new(16, 15);
+			let shrunk_coordinates = Coordinates::new(15, 15);
 			assert_battle_state_is_active_with(
 				BattlePhase::Finished,
 				battle_max_players,
 				battle_runs_until,
 				shrunk_coordinates,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let results = BattleRoyale::try_finish_battle();
@@ -349,6 +369,7 @@ mod try_finish_battle {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We move 8 blocks to reach the Verification phase.
@@ -366,6 +387,7 @@ mod try_finish_battle {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let results = BattleRoyale::try_finish_battle();
@@ -397,6 +419,7 @@ mod try_finish_battle {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			assert_noop!(
@@ -493,6 +516,7 @@ mod try_queue_player {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 2);
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 2);
@@ -591,6 +615,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			run_to_block(System::block_number() + 2);
@@ -600,6 +625,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// ALICE - Performs action
@@ -654,6 +680,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// CHARLIE - Performs action
@@ -688,6 +715,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// ALICE - Reveals action
@@ -714,6 +742,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// CHARLIE - Reveals action
@@ -740,6 +769,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// BOB - Reveals action
@@ -766,6 +796,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// No one should have been defeated since all players are in different positions
@@ -782,6 +813,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We advance 1 more block, this should put us in the Idle phase
@@ -792,6 +824,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We advance 2 more block, this should put us in the Input phase again
@@ -803,6 +836,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 		});
 	}
@@ -833,6 +867,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We advance 2 more blocks, this should put is in the Input phase
@@ -843,6 +878,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let move_to_position = Coordinates::new(3, 4);
@@ -895,6 +931,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// BOB - Reveals its move first
@@ -921,6 +958,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// ALICE - Reveals its move next
@@ -959,6 +997,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// During the start of the Execution phase block a battle between ALICE and BOB
@@ -1000,6 +1039,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 		});
 	}
@@ -1042,6 +1082,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We advance 2 more blocks, this should put is in the Input phase
@@ -1052,6 +1093,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let move_to_coordinates = Coordinates::new(4, 4);
@@ -1088,6 +1130,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let mut account_set = BoundedBTreeSet::new();
@@ -1132,6 +1175,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// A battle will have occurred at the start of the block and all players
@@ -1153,6 +1197,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 		});
 	}
@@ -1196,6 +1241,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We advance 2 more blocks, this should put is in the Input phase
@@ -1206,18 +1252,20 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We advance 37 blocks, which will put us in the Shrink phase
 			run_to_block(System::block_number() + 37);
 			// The grid bound has shrunk
-			let battle_grid_size = Coordinates::new(20, 19);
+			let battle_grid_size = Coordinates::new(19, 20);
 			assert_battle_state_is_active_with(
 				BattlePhase::Shrink,
 				battle_max_players,
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// ALICE was caught in the shrinking
@@ -1248,13 +1296,14 @@ mod try_perform_player_action {
 			// the same block to Finished phase
 			run_to_block(System::block_number() + 1);
 			// The grid bound has shrunk
-			let battle_grid_size = Coordinates::new(20, 19);
+			let battle_grid_size = Coordinates::new(19, 20);
 			assert_battle_state_is_active_with(
 				BattlePhase::Finished,
 				battle_max_players,
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 		});
 	}
@@ -1298,6 +1347,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_noop!(
 				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
@@ -1313,6 +1363,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_noop!(
 				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
@@ -1328,6 +1379,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_noop!(
 				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
@@ -1343,6 +1395,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_noop!(
 				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
@@ -1353,13 +1406,14 @@ mod try_perform_player_action {
 			// Trying to perform an action here is also not allowed
 			run_to_block(System::block_number() + 29);
 			// The grid bound has shrunk
-			let battle_grid_size = Coordinates::new(20, 19);
+			let battle_grid_size = Coordinates::new(19, 20);
 			assert_battle_state_is_active_with(
 				BattlePhase::Shrink,
 				battle_max_players,
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_noop!(
 				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
@@ -1375,6 +1429,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 			assert_noop!(
 				BattleRoyale::try_perform_player_action(&ALICE, input_hash),
@@ -1404,6 +1459,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let payload_fill = [23; 28];
@@ -1445,6 +1501,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let _ = BattleRoyale::mark_account_as_defeated(&ALICE);
@@ -1482,6 +1539,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			let payload_fill = [177; 28];
@@ -1498,6 +1556,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We fail to reveal action since the action is not the same as in the Input phase
@@ -1538,6 +1597,7 @@ mod try_perform_player_action {
 				battle_runs_until,
 				battle_grid_size,
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
+				ShrinkBoundaries::default(),
 			);
 
 			// We fail to reveal action since we didn't send any action during the Input phase
