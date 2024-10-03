@@ -119,7 +119,8 @@ impl<T: Config> AvatarCombinator<T> {
 					let pos = matching_score[hash_index % matching_score.len()];
 
 					// We limit the progress rarity to legendary
-					if (leader_progress_array[pos as usize] >> 4) < RarityTier::Legendary.as_byte() {
+					if (leader_progress_array[pos as usize] >> 4) < RarityTier::Legendary.as_byte()
+					{
 						leader_progress_array[pos as usize] += 0x10; // 16
 					}
 
