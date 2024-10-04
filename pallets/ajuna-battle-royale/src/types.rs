@@ -1,3 +1,4 @@
+use bitvec::{order::Msb0, slice::BitSlice};
 use frame_support::{
 	pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, TypeInfo},
 	BoundedBTreeSet,
@@ -23,6 +24,74 @@ pub(crate) const MIN_BATTLE_DURATION: u32 = 50;
 /// Default amount of verification phases to go through before
 /// allowing a shrink phase
 pub(crate) const DEFAULT_SHRINK_PHASE_FREQUENCY: u8 = 3;
+
+/// WARNING: All coordinates in parameters are expected to be **1-indexed**, meaning that the first
+/// valid Coordinate value is (1,1) not (0,0)
+/// In short any coordinates (x, y) where x == 0 or y == 0 will cause undefined behaviour.
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Copy, Default, Debug, PartialEq)]
+pub(crate) struct GridBits {
+	blocked_bitmask: [u32; 8],
+	player_bitmask: [u32; 8],
+}
+
+type GridBitSlice = BitSlice<u32, Msb0>;
+
+impl GridBits {
+	#[inline]
+	pub(crate) fn get_grid_coordinate_for(bit_idx: u8) -> Coordinates {
+		let x = (bit_idx / 16) + 1;
+		let y = (bit_idx % 16) + 1;
+
+		Coordinates::new(x, y)
+	}
+
+	#[inline]
+	pub(crate) fn get_idx_from_grid_coordinate(coordinate: &Coordinates) -> u8 {
+		coordinate.x.saturating_sub(1).saturating_mul(16) + coordinate.y.saturating_sub(1)
+	}
+
+	pub(crate) fn get_blocked_cells(&self) -> Vec<Coordinates> {
+		GridBitSlice::from_slice(&self.blocked_bitmask)
+			.iter_ones()
+			.map(|idx| Self::get_grid_coordinate_for(idx as u8))
+			.collect::<Vec<_>>()
+	}
+
+	pub(crate) fn get_occupied_cells(&self) -> Vec<Coordinates> {
+		GridBitSlice::from_slice(&self.player_bitmask)
+			.iter_ones()
+			.map(|idx| Self::get_grid_coordinate_for(idx as u8))
+			.collect::<Vec<_>>()
+	}
+
+	#[inline]
+	pub(crate) fn mark_blocked_cell_as(&mut self, cell: &Coordinates, blocked: bool) {
+		let cell_idx = Self::get_idx_from_grid_coordinate(cell);
+		GridBitSlice::from_slice_mut(&mut self.blocked_bitmask).set(cell_idx as usize, blocked);
+	}
+
+	pub(crate) fn mark_blocked_cells_as(&mut self, cells: &[Coordinates], blocked: bool) {
+		let blocked_bit_slice = GridBitSlice::from_slice_mut(&mut self.blocked_bitmask);
+
+		for cell_idx in cells.iter().map(Self::get_idx_from_grid_coordinate) {
+			blocked_bit_slice.set(cell_idx as usize, blocked);
+		}
+	}
+
+	#[inline]
+	pub(crate) fn mark_player_cell_as(&mut self, cell: &Coordinates, occupied: bool) {
+		let cell_idx = Self::get_idx_from_grid_coordinate(cell);
+		GridBitSlice::from_slice_mut(&mut self.player_bitmask).set(cell_idx as usize, occupied);
+	}
+
+	pub(crate) fn mark_player_cells_as(&mut self, cells: &[Coordinates], occupied: bool) {
+		let blocked_bit_slice = GridBitSlice::from_slice_mut(&mut self.player_bitmask);
+
+		for cell_idx in cells.iter().map(Self::get_idx_from_grid_coordinate) {
+			blocked_bit_slice.set(cell_idx as usize, occupied);
+		}
+	}
+}
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Copy, Debug, PartialEq)]
 pub enum SchedulerAction {
@@ -55,7 +124,7 @@ pub struct BattleConfig<BlockNumber> {
 	pub(crate) run_until: BlockNumber,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Coordinates {
 	pub x: u8,
 	pub y: u8,

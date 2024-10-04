@@ -1840,6 +1840,7 @@ dependencies = [
 name = "pallet-ajuna-battle-royale"
 version = "0.13.0"
 dependencies = [
+ "bitvec",
  "frame-support",
  "frame-system",
  "hex",
