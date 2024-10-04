@@ -69,27 +69,28 @@ impl Coordinates {
 
 // Indicates from which sides can the grid shrink from
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug)]
-pub struct ShrinkBoundaries {
+pub(crate) struct ShrinkBoundaries {
 	boundaries: [bool; 4],
 	shrink_index: u8,
 }
 
 impl ShrinkBoundaries {
-	pub fn new(top: bool, bottom: bool, left: bool, right: bool) -> Self {
-		let idx = if top {
+	pub fn new(sides: [bool; 4]) -> Self {
+		let idx = if sides[0] {
 			0
-		} else if bottom {
+		} else if sides[1] {
 			1
-		} else if left {
+		} else if sides[2] {
 			2
-		} else if right {
+		} else if sides[3] {
 			3
 		} else {
 			// Specific value doesn't matter, it just needs to be bigger than 3
+			// This will never be constructed through the 'try_start_battle' method
 			5
 		};
 
-		Self { boundaries: [top, bottom, left, right], shrink_index: idx }
+		Self { boundaries: sides, shrink_index: idx }
 	}
 }
 
@@ -99,46 +100,44 @@ impl PartialEq for ShrinkBoundaries {
 	}
 }
 
-impl Default for ShrinkBoundaries {
-	fn default() -> Self {
-		Self::new(false, true, false, true)
-	}
-}
-
 // Coordinates in GridBoundaries are 1-indexed not 0-indexed
 // This is so we can use the 0,0 as the final coordinates when the wall shrinks.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct GridBoundaries {
 	pub(crate) top_left: Coordinates,
 	pub(crate) down_right: Coordinates,
-	pub(crate) shrink_boundaries: ShrinkBoundaries,
+	pub(crate) maybe_shrink_boundaries: Option<ShrinkBoundaries>,
 }
 
 impl GridBoundaries {
-	pub(crate) fn new(coordinates: Coordinates, shrink_boundaries: ShrinkBoundaries) -> Self {
-		Self { top_left: Coordinates::new(1, 1), down_right: coordinates, shrink_boundaries }
+	pub(crate) fn new(
+		coordinates: Coordinates,
+		maybe_shrink_boundaries: Option<ShrinkBoundaries>,
+	) -> Self {
+		Self { top_left: Coordinates::new(1, 1), down_right: coordinates, maybe_shrink_boundaries }
 	}
 
 	pub(crate) fn shrink(&mut self) {
-		let maybe_wall = match self.shrink_boundaries.shrink_index {
-			0 => Some(&mut self.top_left.x),
-			1 => Some(&mut self.down_right.x),
-			2 => Some(&mut self.top_left.y),
-			3 => Some(&mut self.down_right.y),
-			_ => None,
-		};
+		if let Some(ref mut shrink_boundaries) = self.maybe_shrink_boundaries {
+			let maybe_wall = match shrink_boundaries.shrink_index {
+				0 => Some(&mut self.top_left.x),
+				1 => Some(&mut self.down_right.x),
+				2 => Some(&mut self.top_left.y),
+				3 => Some(&mut self.down_right.y),
+				_ => None,
+			};
 
-		if let Some(wall) = maybe_wall {
-			*wall = wall.saturating_sub(1);
+			if let Some(wall) = maybe_wall {
+				*wall = wall.saturating_sub(1);
 
-			let mut new_index = ((self.shrink_boundaries.shrink_index + 1) % 4) as usize;
-			let shrink_boundaries = &self.shrink_boundaries;
+				let mut new_index = ((shrink_boundaries.shrink_index + 1) % 4) as usize;
 
-			while !shrink_boundaries.boundaries[new_index] {
-				new_index = (new_index + 1) % 4;
+				while !shrink_boundaries.boundaries[new_index] {
+					new_index = (new_index + 1) % 4;
+				}
+
+				shrink_boundaries.shrink_index = new_index as u8;
 			}
-
-			self.shrink_boundaries.shrink_index = new_index as u8;
 		}
 	}
 
@@ -169,8 +168,7 @@ mod random_coordinates_test {
 
 	#[test]
 	fn test_random_coordinate_consistency() {
-		let shrink_boundaries = ShrinkBoundaries::default();
-		let boundaries = GridBoundaries::new(Coordinates::new(45, 35), shrink_boundaries);
+		let boundaries = GridBoundaries::new(Coordinates::new(45, 35), None);
 
 		let hash = [
 			0x2E, 0x11, 0x3D, 0x0B, 0xFF, 0x33, 0x7A, 0x00, 0x5C, 0xAE, 0x86, 0x25, 0x09, 0x9E,
@@ -372,7 +370,7 @@ pub trait BattleProvider<AccountId> {
 		max_players: u8,
 		grid_size: Coordinates,
 		shrink_frequency: u8,
-		shrink_boundaries: ShrinkBoundaries,
+		shrink_sides: [bool; 4],
 		blocked_cells: Vec<Coordinates>,
 	) -> DispatchResult;
 

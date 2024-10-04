@@ -5926,7 +5926,7 @@ mod tournament {
 
 mod battle_royale {
 	use super::*;
-	use pallet_ajuna_battle_royale::{PlayerAction, ShrinkBoundaries};
+	use pallet_ajuna_battle_royale::PlayerAction;
 
 	#[test]
 	fn test_battle_royale_workflow_integrity() {
@@ -5967,7 +5967,7 @@ mod battle_royale {
 					5,
 					Coordinates::new(12, 12),
 					shrink_frequency,
-					ShrinkBoundaries::default(),
+					[false, true, false, true],
 					vec![],
 				));
 

@@ -575,7 +575,7 @@ pub mod pallet {
 			max_players: u8,
 			grid_size: Coordinates,
 			shrink_frequency: u8,
-			shrink_boundaries: ShrinkBoundaries,
+			shrink_sides: [bool; 4],
 			blocked_cells: Vec<Coordinates>,
 		) -> DispatchResult {
 			BattleStateStore::<T, I>::try_mutate(|state| {
@@ -607,7 +607,11 @@ pub mod pallet {
 				let total_duration = QUEUE_DURATION + game_duration;
 				let run_until = current_block.saturating_add(total_duration.into());
 
-				let boundaries = GridBoundaries::new(grid_size, shrink_boundaries);
+				let maybe_shrink_boundaries = shrink_sides
+					.iter()
+					.any(|boundary| *boundary)
+					.then(|| ShrinkBoundaries::new(shrink_sides));
+				let boundaries = GridBoundaries::new(grid_size, maybe_shrink_boundaries);
 
 				for blocked_cell in
 					blocked_cells.into_iter().filter(|cell| boundaries.is_in_boundaries(cell))
