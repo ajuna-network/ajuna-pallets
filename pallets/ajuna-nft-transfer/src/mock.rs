@@ -208,8 +208,14 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub struct MockItem {
 	pub field_1: Vec<u8>,
-	pub field_2: u16,
+	pub field_2: u32,
 	pub field_3: bool,
+}
+
+impl MockItem {
+	pub fn new_with_field2(number: u32) -> Self {
+		Self { field_2: number, ..Self::default() }
+	}
 }
 
 impl Default for MockItem {
@@ -247,6 +253,17 @@ thread_local! {
 pub struct MockAssetManager;
 
 impl MockAssetManager {
+	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<ItemId> {
+		let mut ids = Vec::with_capacity(count as usize);
+		for i in 0..count {
+			let id = ItemId::from([i; 32]);
+			ids.push(id);
+			Self::add_asset(owner, id, MockItem::new_with_field2(i))
+		}
+
+		ids
+	}
+
 	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
 		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id.clone()));
 		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));

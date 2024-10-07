@@ -70,7 +70,7 @@ mod ipfs {
 			.balances(&[(ALICE, initial_balance)])
 			.build()
 			.execute_with(|| {
-				let avatar_id = create_avatars(1, ALICE, 1)[0];
+				let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_eq!(Balances::free_balance(ALICE), initial_balance);
 				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
@@ -84,34 +84,26 @@ mod ipfs {
 
 	#[test]
 	fn prepare_avatar_rejects_forging_trading_and_transferring() {
-		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default())])
-			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
-			.build()
-			.execute_with(|| {
-				let avatar_ids = create_avatars(SEASON_ID, ALICE, 5);
-				let avatar_id = avatar_ids[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_ids = MockAssetManager::create_assets(ALICE, 5);
+			let avatar_id = avatar_ids[0];
+			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
 
-				for extrinsic in [
-					AAvatars::set_price(RuntimeOrigin::signed(ALICE), avatar_id, 1_000),
-					AAvatars::transfer_avatar(RuntimeOrigin::signed(ALICE), BOB, avatar_id),
-					AAvatars::forge(
-						RuntimeOrigin::signed(ALICE),
-						avatar_id,
-						avatar_ids[1..3].to_vec(),
-					),
-				] {
-					assert_noop!(extrinsic, Error::<Test>::AlreadyPrepared);
-				}
-			});
+			for extrinsic in [
+				AAvatars::set_price(RuntimeOrigin::signed(ALICE), avatar_id, 1_000),
+				AAvatars::transfer_avatar(RuntimeOrigin::signed(ALICE), BOB, avatar_id),
+				AAvatars::forge(RuntimeOrigin::signed(ALICE), avatar_id, avatar_ids[1..3].to_vec()),
+			] {
+				assert_noop!(extrinsic, Error::<Test>::AlreadyPrepared);
+			}
+		});
 	}
 
 	#[test]
 	fn prepare_avatar_rejects_unsigned_calls() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				AAvatars::prepare_avatar(RuntimeOrigin::none(), avatar_id),
 				DispatchError::BadOrigin
@@ -121,27 +113,23 @@ mod ipfs {
 
 	#[test]
 	fn prepare_avatar_rejects_unowned_avatars() {
-		ExtBuilder::default()
-			.locks(&[(BOB, SEASON_ID, Locks::all_unlocked())])
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_noop!(
-					AAvatars::prepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
-					Error::<Test>::Ownership
-				);
-			});
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_noop!(
+				AAvatars::prepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
+				Error::<Test>::Ownership
+			);
+		});
 	}
 
 	#[test]
 	fn prepare_avatar_rejects_avatars_in_trade() {
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default())])
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+				let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(AAvatars::set_price(RuntimeOrigin::signed(ALICE), avatar_id, 1));
 				assert_noop!(
 					AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
@@ -153,7 +141,7 @@ mod ipfs {
 	#[test]
 	fn prepare_avatar_rejects_when_closed() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			GlobalConfigs::<Test>::mutate(|config| config.nft_transfer.open = false);
 			assert_noop!(
 				AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
@@ -165,7 +153,7 @@ mod ipfs {
 	#[test]
 	fn prepare_avatar_rejects_locked_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			LockedAvatars::<Test>::insert(avatar_id, ());
 			assert_noop!(
 				AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
@@ -177,7 +165,7 @@ mod ipfs {
 	#[test]
 	fn prepare_avatar_rejects_already_prepared_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			let ipfs_url = IpfsUrl::try_from(Vec::new()).unwrap();
 			Preparation::<Test>::insert(avatar_id, ipfs_url);
 			assert_noop!(
@@ -190,11 +178,10 @@ mod ipfs {
 	#[test]
 	fn prepare_avatar_rejects_insufficient_balance() {
 		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default().prepare_avatar_fee(333))])
 			.balances(&[(ALICE, MockExistentialDeposit::get()), (BOB, 999_999)])
 			.build()
 			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+				let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_noop!(
 					AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
@@ -205,19 +192,16 @@ mod ipfs {
 
 	#[test]
 	fn unprepare_avatar_works() {
-		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default())])
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert_ok!(AAvatars::unprepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert!(!Preparation::<Test>::contains_key(avatar_id));
-				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::UnpreparedAvatar { avatar_id },
-				));
-			});
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+			assert_ok!(AAvatars::unprepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+			assert!(!Preparation::<Test>::contains_key(avatar_id));
+			System::assert_last_event(mock::RuntimeEvent::AAvatars(
+				crate::Event::UnpreparedAvatar { avatar_id },
+			));
+		});
 	}
 
 	#[test]
@@ -233,7 +217,7 @@ mod ipfs {
 	#[test]
 	fn unprepare_avatar_rejects_unowned_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				AAvatars::unprepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
 				Error::<Test>::Ownership
@@ -244,7 +228,7 @@ mod ipfs {
 	#[test]
 	fn unprepare_avatar_rejects_when_closed() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			GlobalConfigs::<Test>::mutate(|config| config.nft_transfer.open = false);
 			assert_noop!(
 				AAvatars::unprepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
@@ -256,7 +240,7 @@ mod ipfs {
 	#[test]
 	fn unprepare_avatar_rejects_unprepared_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				AAvatars::unprepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
 				Error::<Test>::NotPrepared
@@ -266,61 +250,51 @@ mod ipfs {
 
 	#[test]
 	fn prepare_ipfs_works() {
-		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default())])
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				ServiceAccount::<Test>::put(BOB);
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+			ServiceAccount::<Test>::put(BOB);
 
-				let ipfs_url = b"ipfs://{CID}/{optional path to resource}".to_vec();
-				let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(BOB),
-					avatar_id,
-					ipfs_url.clone()
-				));
-				assert_eq!(Preparation::<Test>::get(avatar_id).unwrap(), ipfs_url);
-				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::PreparedIpfsUrl { url: ipfs_url },
-				));
+			let ipfs_url = b"ipfs://{CID}/{optional path to resource}".to_vec();
+			let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
+			assert_ok!(AAvatars::prepare_ipfs(
+				RuntimeOrigin::signed(BOB),
+				avatar_id,
+				ipfs_url.clone()
+			));
+			assert_eq!(Preparation::<Test>::get(avatar_id).unwrap(), ipfs_url);
+			System::assert_last_event(mock::RuntimeEvent::AAvatars(
+				crate::Event::PreparedIpfsUrl { url: ipfs_url },
+			));
 
-				let ipfs_url = b"ipfs://123".to_vec();
-				let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(BOB),
-					avatar_id,
-					ipfs_url.clone()
-				));
-				assert_eq!(Preparation::<Test>::get(avatar_id).unwrap(), ipfs_url);
-				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::PreparedIpfsUrl { url: ipfs_url },
-				));
-			});
+			let ipfs_url = b"ipfs://123".to_vec();
+			let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
+			assert_ok!(AAvatars::prepare_ipfs(
+				RuntimeOrigin::signed(BOB),
+				avatar_id,
+				ipfs_url.clone()
+			));
+			assert_eq!(Preparation::<Test>::get(avatar_id).unwrap(), ipfs_url);
+			System::assert_last_event(mock::RuntimeEvent::AAvatars(
+				crate::Event::PreparedIpfsUrl { url: ipfs_url },
+			));
+		});
 	}
 
 	#[test]
 	fn prepare_ipfs_rejects_empty_url() {
-		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default())])
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				ServiceAccount::<Test>::put(BOB);
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+			ServiceAccount::<Test>::put(BOB);
 
-				assert_noop!(
-					AAvatars::prepare_ipfs(
-						RuntimeOrigin::signed(BOB),
-						avatar_id,
-						IpfsUrl::default()
-					),
-					Error::<Test>::EmptyIpfsUrl
-				);
-			});
+			assert_noop!(
+				AAvatars::prepare_ipfs(RuntimeOrigin::signed(BOB), avatar_id, IpfsUrl::default()),
+				Error::<Test>::EmptyIpfsUrl
+			);
+		});
 	}
 }
 
