@@ -354,7 +354,7 @@ impl AssetManager for MockAssetManager {
 	) -> Result<(), DispatchError> {
 		PREPARE_FEE.with(|fee| {
 			let f = *fee.borrow();
-			<Test as Currency<MockAccountId>>::transfer(
+			<Balances as Currency<MockAccountId>>::transfer(
 				from,
 				fees_recipient,
 				f,
