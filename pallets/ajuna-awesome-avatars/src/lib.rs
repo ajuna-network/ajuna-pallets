@@ -1021,7 +1021,7 @@ pub mod pallet {
 		pub fn lock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			Self::lock_asset(player.clone(), avatar_id)?;
+			Self::lock_asset(player, avatar_id)?;
 
 			Ok(())
 		}
@@ -1040,7 +1040,7 @@ pub mod pallet {
 		pub fn unlock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			Self::unlock_asset(player.clone(), avatar_id)?;
+			Self::unlock_asset(player, avatar_id)?;
 			Ok(())
 		}
 
