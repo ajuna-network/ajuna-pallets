@@ -278,6 +278,11 @@ impl MockAssetManager {
 	}
 }
 
+pub const NOT_OWNER_ERR: &str = "NOT_OWNER";
+pub const NOT_ORGANIZER_ERR: &str = "NOT_ORGANIZER";
+pub const ALREADY_LOCKED_ERR: &str = "ALREADY_LOCKED";
+pub const NOT_LOCKED_ERR: &str = "NOT_LOCKED";
+
 impl AssetManager for MockAssetManager {
 	type AccountId = MockAccountId;
 	type AssetId = ItemId;
@@ -288,7 +293,7 @@ impl AssetManager for MockAssetManager {
 			if &*locked.borrow() == account {
 				Ok(())
 			} else {
-				DispatchError::Other("Not Organizer").into()
+				DispatchError::Other(NOT_ORGANIZER_ERR).into()
 			}
 		})
 	}
@@ -299,10 +304,10 @@ impl AssetManager for MockAssetManager {
 	) -> Result<Self::Asset, DispatchError> {
 		let id = OWNERS
 			.with(|owners| owners.borrow().get(&owner).cloned())
-			.ok_or_else(|| DispatchError::Other("Not Owner"))?;
+			.ok_or_else(|| DispatchError::Other(NOT_OWNER_ERR))?;
 		ASSETS
 			.with(|assets| assets.borrow().get(&id).cloned())
-			.ok_or_else(|| DispatchError::Other("Not Owner"))
+			.ok_or_else(|| DispatchError::Other(NOT_OWNER_ERR))
 	}
 
 	fn lock_asset(
@@ -315,7 +320,7 @@ impl AssetManager for MockAssetManager {
 			let mut borrowed = locked.borrow_mut();
 
 			if borrowed.contains_key(&asset_id) {
-				return DispatchError::Other("already locked").into();
+				return DispatchError::Other(ALREADY_LOCKED_ERR).into();
 			} else {
 				borrowed.insert(asset_id, asset.clone());
 				Ok(())
@@ -335,7 +340,7 @@ impl AssetManager for MockAssetManager {
 			locked
 				.borrow_mut()
 				.remove(&asset_id)
-				.ok_or_else(|| DispatchError::Other("not locked"))
+				.ok_or_else(|| DispatchError::Other(NOT_LOCKED_ERR))
 		})
 	}
 
