@@ -89,6 +89,8 @@ pub mod pallet {
 		RuleNotSatisfied,
 		/// There was an error executing the given state transition.
 		TransitionError,
+		/// other error
+		Error { err: u8 },
 	}
 
 	#[pallet::call]
