@@ -65,10 +65,15 @@ mod mock;
 mod tests;
 
 pub mod migration;
+pub mod traits;
 pub mod types;
 pub mod weights;
 
-use crate::{types::*, weights::WeightInfo};
+use crate::{
+	traits::asset_manager::{AssetManager, Error as AssetManagerError},
+	types::*,
+	weights::WeightInfo,
+};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness, WithdrawReasons},
@@ -550,6 +555,22 @@ pub mod pallet {
 		TournamentRankerNotFound,
 		/// Only whitelisted accounts can affiliate for others
 		AffiliateOthersOnlyWhiteListed,
+	}
+
+	impl<T> From<AssetManagerError> for Error<T> {
+		fn from(e: AssetManagerError) -> Self {
+			use AssetManagerError::*;
+			match e {
+				Ownership => Error::<T>::Ownership,
+				AssetInTrade => Error::<T>::AvatarInTrade,
+				NftTransferClosed => Error::<T>::NftTransferClosed,
+				MaxOwnershipReached => Error::<T>::MaxOwnershipReached,
+				UnknownAsset => Error::<T>::UnknownAvatar,
+				AssetIsUnprepared => Error::<T>::NotPrepared,
+				AssetIsLocked => Error::<T>::AvatarLocked,
+				AssetIsUnlocked => Error::<T>::AvatarUnlocked,
+			}
+		}
 	}
 
 	#[pallet::hooks]
@@ -2363,6 +2384,61 @@ pub mod pallet {
 				config[2] <= forged &&
 				config[3] <= bought &&
 				config[4] <= sold
+		}
+	}
+
+	impl<T: Config> AssetManager for Pallet<T> {
+		type AccountId = AccountIdFor<T>;
+		type AssetId = AvatarIdOf<T>;
+		type Asset = AvatarOf<T>;
+
+		fn lock_asset(
+			owner: Self::AccountId,
+			asset_id: Self::AssetId,
+		) -> Result<(), AssetManagerError> {
+			let avatar = Self::ensure_ownership(&owner, &asset_id)
+				.map_err(|_e| AssetManagerError::Ownership)?;
+			ensure!(Self::ensure_for_trade(&asset_id).is_err(), AssetManagerError::AssetInTrade);
+			ensure!(
+				GlobalConfigs::<T>::get().nft_transfer.open,
+				AssetManagerError::NftTransferClosed
+			);
+			ensure!(!Self::is_locked(&asset_id), AssetManagerError::AssetIsLocked);
+			ensure!(Preparation::<T>::contains_key(asset_id), AssetManagerError::AssetIsUnprepared);
+
+			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)
+				.map_err(|_e| AssetManagerError::UnknownAsset)?;
+
+			LockedAvatars::<T>::insert(asset_id, ());
+			Self::deposit_event(Event::AvatarLocked { avatar_id: asset_id });
+
+			Ok(())
+		}
+
+		fn unlock_asset(
+			owner: Self::AccountId,
+			asset_id: Self::AssetId,
+		) -> Result<(), AssetManagerError> {
+			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)
+				.map_err(|_e| AssetManagerError::Ownership)?;
+			ensure!(Self::ensure_for_trade(&asset_id).is_err(), AssetManagerError::AssetInTrade);
+			ensure!(
+				GlobalConfigs::<T>::get().nft_transfer.open,
+				AssetManagerError::NftTransferClosed
+			);
+			ensure!(Self::is_locked(&asset_id), AssetManagerError::AssetIsUnlocked);
+
+			Self::try_restore_avatar_ownership_to(&owner, &avatar.season_id, &asset_id)
+				.map_err(|_e| AssetManagerError::MaxOwnershipReached)?;
+
+			LockedAvatars::<T>::remove(asset_id);
+			Self::deposit_event(Event::AvatarUnlocked { avatar_id: asset_id });
+
+			Ok(())
+		}
+
+		fn is_locked(asset_id: &Self::AssetId) -> bool {
+			LockedAvatars::<T>::contains_key(asset_id)
 		}
 	}
 }
