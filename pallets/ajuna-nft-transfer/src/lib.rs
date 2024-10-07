@@ -264,6 +264,7 @@ pub mod pallet {
 		pub fn prepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 			Self::ensure_unprepared(&asset_id)?;
+			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
 
 			let asset = T::AssetManager::lock_asset(player.clone(), asset_id)?;
 
