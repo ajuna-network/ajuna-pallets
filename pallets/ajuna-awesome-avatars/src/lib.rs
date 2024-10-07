@@ -1121,17 +1121,11 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::unlock_avatar(MaxAvatarsPerPlayer::get()))]
 		pub fn unlock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
-			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &avatar_id)?;
-			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
-			ensure!(GlobalConfigs::<T>::get().nft_transfer.open, Error::<T>::NftTransferClosed);
-			ensure!(LockedAvatars::<T>::contains_key(avatar_id), Error::<T>::AvatarUnlocked);
 
-			Self::try_restore_avatar_ownership_to(&player, &avatar.season_id, &avatar_id)?;
+			Self::unlock_asset(player.clone(), avatar_id).map_err(|e| Error::<T>::from(e))?;
+
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
 			let _ = T::NftHandler::recover_from_nft(player, collection_id, avatar_id)?;
-
-			LockedAvatars::<T>::remove(avatar_id);
-			Self::deposit_event(Event::AvatarUnlocked { avatar_id });
 			Ok(())
 		}
 
