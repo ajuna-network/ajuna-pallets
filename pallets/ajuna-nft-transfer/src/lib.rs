@@ -168,7 +168,7 @@ pub mod pallet {
 		/// to serve as a lookup for locking and unlocking assets as NFTs.
 		///
 		/// Weight: `O(1)`
-		#[pallet::call_index(14)]
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_collection_id())]
 		pub fn set_collection_id(
 			origin: OriginFor<T>,
@@ -178,6 +178,24 @@ pub mod pallet {
 			T::AssetManager::ensure_organizer(&signer)?;
 			CollectionId::<T>::put(&collection_id);
 			Self::deposit_event(Event::CollectionIdSet { collection_id });
+			Ok(())
+		}
+
+		/// Set a service account.
+		///
+		/// The origin of this call must be root. A service account has sufficient privilege to call
+		/// the `prepare_ipfs` extrinsic.
+		///
+		/// Weight: `O(1)`
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::set_service_account())]
+		pub fn set_service_account(
+			origin: OriginFor<T>,
+			service_account: T::AccountId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			ServiceAccount::<T>::put(&service_account);
+			Self::deposit_event(Event::ServiceAccountSet { service_account });
 			Ok(())
 		}
 
@@ -192,7 +210,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(n)` where:
 		/// - `n = max assets per player`
-		#[pallet::call_index(15)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::lock_asset())]
 		pub fn store_prepared_as_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -216,37 +234,21 @@ pub mod pallet {
 		///
 		/// Weight: `O(n)` where:
 		/// - `n = max assets per player`
-		#[pallet::call_index(16)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::unlock_asset())]
-		pub fn unlock_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
+		pub fn recover_from_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			let _ = T::AssetManager::unlock_asset(player.clone(), asset_id)?;
+			let _asset = T::AssetManager::unlock_asset(player.clone(), asset_id)?;
 
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
+
+			// need to specify explicit Item type.
 			let _ = <Self as NftHandler<_, _, _, _, <T as Config>::Item>>::recover_from_nft(
 				player,
 				collection_id,
 				asset_id,
 			)?;
-			Ok(())
-		}
-
-		/// Set a service account.
-		///
-		/// The origin of this call must be root. A service account has sufficient privilege to call
-		/// the `prepare_ipfs` extrinsic.
-		///
-		/// Weight: `O(1)`
-		#[pallet::call_index(17)]
-		#[pallet::weight(T::WeightInfo::set_service_account())]
-		pub fn set_service_account(
-			origin: OriginFor<T>,
-			service_account: T::AccountId,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-			ServiceAccount::<T>::put(&service_account);
-			Self::deposit_event(Event::ServiceAccountSet { service_account });
 			Ok(())
 		}
 
@@ -257,7 +259,7 @@ pub mod pallet {
 		/// event is emitted to be picked up by our external service that interacts with the IPFS.
 		///
 		/// Weight: `O(1)`
-		#[pallet::call_index(18)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::prepare_asset())]
 		pub fn prepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -279,7 +281,7 @@ pub mod pallet {
 		/// the IPFS upload process.
 		///
 		/// Weight: `O(1)`
-		#[pallet::call_index(19)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::unprepare_asset())]
 		pub fn unprepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -300,7 +302,7 @@ pub mod pallet {
 		/// storing their CIDs.
 		//
 		/// Weight: `O(1)`
-		#[pallet::call_index(20)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::prepare_ipfs())]
 		pub fn prepare_ipfs(
 			origin: OriginFor<T>,
