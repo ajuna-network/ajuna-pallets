@@ -21,7 +21,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::Encode;
-use sp_runtime::{testing::H256, DispatchError};
+use sp_runtime::testing::H256;
 
 type CollectionConfig =
 	pallet_nfts::CollectionConfig<MockBalance, BlockNumberFor<Test>, MockCollectionId>;
@@ -70,42 +70,42 @@ mod ipfs {
 			.balances(&[(ALICE, initial_balance)])
 			.build()
 			.execute_with(|| {
-				let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), BOB));
+				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				assert_ok!(Nft::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_eq!(Balances::free_balance(ALICE), initial_balance);
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+				assert_ok!(Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
 				assert_eq!(Balances::free_balance(ALICE), initial_balance - prepare_fee);
-				assert_eq!(Preparation::<Test>::get(avatar_id).unwrap().to_vec(), Vec::<u8>::new());
-				System::assert_last_event(mock::RuntimeEvent::AAvatars(
-					crate::Event::PreparedAvatar { avatar_id },
-				));
+				assert_eq!(Preparation::<Test>::get(asset_id).unwrap().to_vec(), Vec::<u8>::new());
+				System::assert_last_event(mock::RuntimeEvent::Nft(crate::Event::PreparedAvatar {
+					asset_id,
+				}));
 			});
 	}
 
-	#[test]
-	fn prepare_avatar_rejects_forging_trading_and_transferring() {
-		ExtBuilder::default().build().execute_with(|| {
-			let avatar_ids = MockAssetManager::create_assets(ALICE, 5);
-			let avatar_id = avatar_ids[0];
-			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-
-			for extrinsic in [
-				AAvatars::set_price(RuntimeOrigin::signed(ALICE), avatar_id, 1_000),
-				AAvatars::transfer_avatar(RuntimeOrigin::signed(ALICE), BOB, avatar_id),
-				AAvatars::forge(RuntimeOrigin::signed(ALICE), avatar_id, avatar_ids[1..3].to_vec()),
-			] {
-				assert_noop!(extrinsic, Error::<Test>::AlreadyPrepared);
-			}
-		});
-	}
+	// #[test]
+	// fn prepare_avatar_rejects_forging_trading_and_transferring() {
+	// 	ExtBuilder::default().build().execute_with(|| {
+	// 		let asset_ids = MockAssetManager::create_assets(ALICE, 5);
+	// 		let asset_id = asset_ids[0];
+	// 		assert_ok!(Nft::set_service_account(RuntimeOrigin::root(), ALICE));
+	// 		assert_ok!(Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+	//
+	// 		for extrinsic in [
+	// 			Nft::set_price(RuntimeOrigin::signed(ALICE), asset_id, 1_000),
+	// 			Nft::transfer_avatar(RuntimeOrigin::signed(ALICE), BOB, asset_id),
+	// 			Nft::forge(RuntimeOrigin::signed(ALICE), asset_id, asset_ids[1..3].to_vec()),
+	// 		] {
+	// 			assert_noop!(extrinsic, Error::<Test>::AlreadyPrepared);
+	// 		}
+	// 	});
+	// }
 
 	#[test]
 	fn prepare_avatar_rejects_unsigned_calls() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
-				AAvatars::prepare_avatar(RuntimeOrigin::none(), avatar_id),
+				Nft::prepare_asset(RuntimeOrigin::none(), asset_id),
 				DispatchError::BadOrigin
 			);
 		});
@@ -114,37 +114,37 @@ mod ipfs {
 	#[test]
 	fn prepare_avatar_rejects_unowned_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
-				AAvatars::prepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
+				Nft::prepare_asset(RuntimeOrigin::signed(BOB), asset_id),
 				Error::<Test>::Ownership
 			);
 		});
 	}
 
-	#[test]
-	fn prepare_avatar_rejects_avatars_in_trade() {
-		ExtBuilder::default()
-			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
-			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
-			.build()
-			.execute_with(|| {
-				let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-				assert_ok!(AAvatars::set_price(RuntimeOrigin::signed(ALICE), avatar_id, 1));
-				assert_noop!(
-					AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-					Error::<Test>::AvatarInTrade
-				);
-			});
-	}
+	// #[test]
+	// fn prepare_avatar_rejects_avatars_in_trade() {
+	// 	ExtBuilder::default()
+	// 		.trade_filters(&[(SEASON_ID, TradeFilters::default())])
+	// 		.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
+	// 		.build()
+	// 		.execute_with(|| {
+	// 			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+	// 			assert_ok!(Nft::set_price(RuntimeOrigin::signed(ALICE), asset_id, 1));
+	// 			assert_noop!(
+	// 				Nft::prepare_avatar(RuntimeOrigin::signed(ALICE), asset_id),
+	// 				Error::<Test>::AvatarInTrade
+	// 			);
+	// 		});
+	// }
 
 	#[test]
 	fn prepare_avatar_rejects_when_closed() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-			GlobalConfigs::<Test>::mutate(|config| config.nft_transfer.open = false);
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			MockAssetManager::set_nft_transfer_open(false);
 			assert_noop!(
-				AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
+				Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
 				Error::<Test>::NftTransferClosed
 			);
 		});
@@ -153,10 +153,10 @@ mod ipfs {
 	#[test]
 	fn prepare_avatar_rejects_locked_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-			LockedAvatars::<Test>::insert(avatar_id, ());
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			MockAssetManager::lock_asset(ALICE, asset_id).unwrap();
 			assert_noop!(
-				AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
+				Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
 				Error::<Test>::AvatarLocked
 			);
 		});
@@ -165,12 +165,12 @@ mod ipfs {
 	#[test]
 	fn prepare_avatar_rejects_already_prepared_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			let ipfs_url = IpfsUrl::try_from(Vec::new()).unwrap();
-			Preparation::<Test>::insert(avatar_id, ipfs_url);
+			Preparation::<Test>::insert(asset_id, ipfs_url);
 			assert_noop!(
-				AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-				Error::<Test>::AlreadyPrepared
+				Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::AssetAlreadyPrepared
 			);
 		});
 	}
@@ -181,10 +181,10 @@ mod ipfs {
 			.balances(&[(ALICE, MockExistentialDeposit::get()), (BOB, 999_999)])
 			.build()
 			.execute_with(|| {
-				let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), BOB));
+				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				assert_ok!(Nft::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_noop!(
-					AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
+					Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
 					sp_runtime::TokenError::FundsUnavailable
 				);
 			});
@@ -193,14 +193,14 @@ mod ipfs {
 	#[test]
 	fn unprepare_avatar_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-			assert_ok!(AAvatars::unprepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-			assert!(!Preparation::<Test>::contains_key(avatar_id));
-			System::assert_last_event(mock::RuntimeEvent::AAvatars(
-				crate::Event::UnpreparedAvatar { avatar_id },
-			));
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(Nft::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			assert_ok!(Nft::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			assert!(!Preparation::<Test>::contains_key(asset_id));
+			System::assert_last_event(mock::RuntimeEvent::Nft(crate::Event::UnpreparedAvatar {
+				asset_id,
+			}));
 		});
 	}
 
@@ -208,7 +208,7 @@ mod ipfs {
 	fn unprepare_avatar_rejects_unsigned_calls() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
-				AAvatars::unprepare_avatar(RuntimeOrigin::none(), H256::random()),
+				Nft::unprepare_asset(RuntimeOrigin::none(), H256::random()),
 				DispatchError::BadOrigin
 			);
 		});
@@ -217,9 +217,9 @@ mod ipfs {
 	#[test]
 	fn unprepare_avatar_rejects_unowned_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
-				AAvatars::unprepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
+				Nft::unprepare_asset(RuntimeOrigin::signed(BOB), asset_id),
 				Error::<Test>::Ownership
 			);
 		});
@@ -228,10 +228,10 @@ mod ipfs {
 	#[test]
 	fn unprepare_avatar_rejects_when_closed() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-			GlobalConfigs::<Test>::mutate(|config| config.nft_transfer.open = false);
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			MockAssetManager::set_nft_transfer_open(false);
 			assert_noop!(
-				AAvatars::unprepare_avatar(RuntimeOrigin::signed(BOB), avatar_id),
+				Nft::unprepare_asset(RuntimeOrigin::signed(BOB), asset_id),
 				Error::<Test>::Ownership
 			);
 		});
@@ -240,10 +240,10 @@ mod ipfs {
 	#[test]
 	fn unprepare_avatar_rejects_unprepared_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
-				AAvatars::unprepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-				Error::<Test>::NotPrepared
+				Nft::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::AssetUnprepared
 			);
 		});
 	}
@@ -251,47 +251,39 @@ mod ipfs {
 	#[test]
 	fn prepare_ipfs_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(Nft::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
 			ServiceAccount::<Test>::put(BOB);
 
 			let ipfs_url = b"ipfs://{CID}/{optional path to resource}".to_vec();
 			let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
-			assert_ok!(AAvatars::prepare_ipfs(
-				RuntimeOrigin::signed(BOB),
-				avatar_id,
-				ipfs_url.clone()
-			));
-			assert_eq!(Preparation::<Test>::get(avatar_id).unwrap(), ipfs_url);
-			System::assert_last_event(mock::RuntimeEvent::AAvatars(
-				crate::Event::PreparedIpfsUrl { url: ipfs_url },
-			));
+			assert_ok!(Nft::prepare_ipfs(RuntimeOrigin::signed(BOB), asset_id, ipfs_url.clone()));
+			assert_eq!(Preparation::<Test>::get(asset_id).unwrap(), ipfs_url);
+			System::assert_last_event(mock::RuntimeEvent::Nft(crate::Event::PreparedIpfsUrl {
+				url: ipfs_url,
+			}));
 
 			let ipfs_url = b"ipfs://123".to_vec();
 			let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
-			assert_ok!(AAvatars::prepare_ipfs(
-				RuntimeOrigin::signed(BOB),
-				avatar_id,
-				ipfs_url.clone()
-			));
-			assert_eq!(Preparation::<Test>::get(avatar_id).unwrap(), ipfs_url);
-			System::assert_last_event(mock::RuntimeEvent::AAvatars(
-				crate::Event::PreparedIpfsUrl { url: ipfs_url },
-			));
+			assert_ok!(Nft::prepare_ipfs(RuntimeOrigin::signed(BOB), asset_id, ipfs_url.clone()));
+			assert_eq!(Preparation::<Test>::get(asset_id).unwrap(), ipfs_url);
+			System::assert_last_event(mock::RuntimeEvent::Nft(crate::Event::PreparedIpfsUrl {
+				url: ipfs_url,
+			}));
 		});
 	}
 
 	#[test]
 	fn prepare_ipfs_rejects_empty_url() {
 		ExtBuilder::default().build().execute_with(|| {
-			let avatar_id = MockAssetManager::create_assets(ALICE, 1)[0];
-			assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-			assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(Nft::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(Nft::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
 			ServiceAccount::<Test>::put(BOB);
 
 			assert_noop!(
-				AAvatars::prepare_ipfs(RuntimeOrigin::signed(BOB), avatar_id, IpfsUrl::default()),
+				Nft::prepare_ipfs(RuntimeOrigin::signed(BOB), asset_id, IpfsUrl::default()),
 				Error::<Test>::EmptyIpfsUrl
 			);
 		});

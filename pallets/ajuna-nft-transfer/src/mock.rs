@@ -256,7 +256,7 @@ impl MockAssetManager {
 	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<ItemId> {
 		let mut ids = Vec::with_capacity(count as usize);
 		for i in 0..count {
-			let id = ItemId::from([i; 32]);
+			let id = ItemId::repeat_byte(i as u8);
 			ids.push(id);
 			Self::add_asset(owner, id, MockItem::new_with_field2(i))
 		}
