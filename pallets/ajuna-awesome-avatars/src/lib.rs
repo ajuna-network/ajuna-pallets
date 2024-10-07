@@ -79,7 +79,6 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
 	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
 };
-use pallet_ajuna_nft_transfer::traits::NftHandler;
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
 	traits::{TournamentClaimer, TournamentInspector, TournamentMutator, TournamentRanker},
@@ -135,22 +134,6 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 
 		type Randomness: Randomness<Self::Hash, BlockNumberFor<Self>>;
-
-		/// The maximum length of an attribute key.
-		#[pallet::constant]
-		type KeyLimit: Get<u32>;
-
-		/// The maximum length of an attribute value.
-		#[pallet::constant]
-		type ValueLimit: Get<u32>;
-
-		type NftHandler: NftHandler<
-			Self::AccountId,
-			Self::Hash,
-			Self::KeyLimit,
-			Self::ValueLimit,
-			AvatarOf<Self>,
-		>;
 
 		/// The maximum depth of the propagation fee chain,
 		#[pallet::constant]
