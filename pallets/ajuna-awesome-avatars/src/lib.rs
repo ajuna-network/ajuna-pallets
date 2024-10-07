@@ -1096,20 +1096,15 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::lock_avatar(MaxAvatarsPerPlayer::get()))]
 		pub fn lock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
-			let avatar = Self::ensure_ownership(&player, &avatar_id)?;
-			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
-			ensure!(GlobalConfigs::<T>::get().nft_transfer.open, Error::<T>::NftTransferClosed);
-			Self::ensure_unlocked(&avatar_id)?;
+
+			let avatar =
+				Self::lock_asset(player.clone(), avatar_id).map_err(|e| Error::<T>::from(e))?;
+
 			ensure!(Preparation::<T>::contains_key(avatar_id), Error::<T>::NotPrepared);
-
-			Self::try_remove_avatar_ownership_from(&player, &avatar.season_id, &avatar_id)?;
-
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
 			let url = Preparation::<T>::take(avatar_id).ok_or(Error::<T>::UnknownPreparation)?;
 			T::NftHandler::store_as_nft(player, collection_id, avatar_id, avatar, url.to_vec())?;
 
-			LockedAvatars::<T>::insert(avatar_id, ());
-			Self::deposit_event(Event::AvatarLocked { avatar_id });
 			Ok(())
 		}
 
@@ -2395,7 +2390,7 @@ pub mod pallet {
 		fn lock_asset(
 			owner: Self::AccountId,
 			asset_id: Self::AssetId,
-		) -> Result<(), AssetManagerError> {
+		) -> Result<Self::Asset, AssetManagerError> {
 			let avatar = Self::ensure_ownership(&owner, &asset_id)
 				.map_err(|_e| AssetManagerError::Ownership)?;
 			ensure!(Self::ensure_for_trade(&asset_id).is_err(), AssetManagerError::AssetInTrade);
@@ -2404,7 +2399,8 @@ pub mod pallet {
 				AssetManagerError::NftTransferClosed
 			);
 			ensure!(!Self::is_locked(&asset_id), AssetManagerError::AssetIsLocked);
-			ensure!(Preparation::<T>::contains_key(asset_id), AssetManagerError::AssetIsUnprepared);
+			// ensure!(Preparation::<T>::contains_key(asset_id),
+			// AssetManagerError::AssetIsUnprepared);
 
 			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)
 				.map_err(|_e| AssetManagerError::UnknownAsset)?;
@@ -2412,7 +2408,7 @@ pub mod pallet {
 			LockedAvatars::<T>::insert(asset_id, ());
 			Self::deposit_event(Event::AvatarLocked { avatar_id: asset_id });
 
-			Ok(())
+			Ok(avatar)
 		}
 
 		fn unlock_asset(

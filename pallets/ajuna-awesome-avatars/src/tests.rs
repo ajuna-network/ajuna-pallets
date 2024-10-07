@@ -3622,7 +3622,7 @@ mod nft_transfer {
 				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
 				assert!(!Preparation::<Test>::contains_key(avatar_id));
 				assert!(LockedAvatars::<Test>::contains_key(avatar_id));
-				System::assert_last_event(mock::RuntimeEvent::AAvatars(
+				System::assert_has_event(mock::RuntimeEvent::AAvatars(
 					crate::Event::AvatarLocked { avatar_id },
 				));
 

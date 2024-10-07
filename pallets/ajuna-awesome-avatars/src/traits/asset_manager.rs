@@ -8,7 +8,7 @@ pub trait AssetManager {
 
 	type Asset;
 
-	fn lock_asset(owner: Self::AccountId, asset_id: Self::AssetId) -> Result<(), Error>;
+	fn lock_asset(owner: Self::AccountId, asset_id: Self::AssetId) -> Result<Self::Asset, Error>;
 
 	fn unlock_asset(owner: Self::AccountId, asset_id: Self::AssetId) -> Result<(), Error>;
 
