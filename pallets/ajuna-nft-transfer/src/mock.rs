@@ -21,7 +21,7 @@ use crate::{
 use ajuna_primitives::asset_manager::AssetManager;
 use frame_support::{
 	parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, Currency, ExistenceRequirement},
 	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
@@ -236,12 +236,30 @@ impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
 }
 
 thread_local! {
-	pub static ASSETS: RefCell<BTreeMap<MockAccountId, MockItem>> = RefCell::new(BTreeMap::new());
+	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = RefCell::new(BTreeMap::new());
+	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
 	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
 	pub static ORGANIZER: RefCell<MockAccountId> = RefCell::new(ALICE);
+	pub static NFT_TRANSFER_OPEN: RefCell<bool> = RefCell::new(true);
+	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
 }
 
 pub struct MockAssetManager;
+
+impl MockAssetManager {
+	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
+		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id.clone()));
+		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));
+	}
+
+	pub fn set_nft_transfer_open(open: bool) {
+		NFT_TRANSFER_OPEN.with(|is_open| *is_open.borrow_mut() = open)
+	}
+
+	pub fn set_prepare_fee(fee: MockBalance) {
+		PREPARE_FEE.with(|current| *current.borrow_mut() = fee)
+	}
+}
 
 impl AssetManager for MockAssetManager {
 	type AccountId = MockAccountId;
@@ -249,44 +267,85 @@ impl AssetManager for MockAssetManager {
 	type Asset = MockItem;
 
 	fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
-		todo!()
+		ORGANIZER.with(|locked| {
+			if &*locked.borrow() == account {
+				Ok(())
+			} else {
+				DispatchError::Other("Not Organizer").into()
+			}
+		})
 	}
 
 	fn ensure_ownership(
 		owner: &Self::AccountId,
-		asset_id: &Self::AssetId,
+		_asset_id: &Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		todo!()
+		let id = OWNERS
+			.with(|owners| owners.borrow().get(&owner).cloned())
+			.ok_or_else(|| DispatchError::Other("Not Owner"))?;
+		ASSETS
+			.with(|assets| assets.borrow().get(&id).cloned())
+			.ok_or_else(|| DispatchError::Other("Not Owner"))
 	}
 
 	fn lock_asset(
 		owner: Self::AccountId,
 		asset_id: Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		todo!()
+		let asset = Self::ensure_ownership(&owner, &asset_id)?;
+
+		LOCKED_ASSETS.with(|locked| {
+			let mut borrowed = locked.borrow_mut();
+
+			if borrowed.contains_key(&asset_id) {
+				return DispatchError::Other("already locked").into();
+			} else {
+				borrowed.insert(asset_id, asset.clone());
+				Ok(())
+			}
+		})?;
+
+		Ok(asset)
 	}
 
 	fn unlock_asset(
 		owner: Self::AccountId,
 		asset_id: Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		todo!()
+		let _asset = Self::ensure_ownership(&owner, &asset_id)?;
+
+		LOCKED_ASSETS.with(|locked| {
+			locked
+				.borrow_mut()
+				.remove(&asset_id)
+				.ok_or_else(|| DispatchError::Other("not locked"))
+		})
 	}
 
 	fn is_locked(asset: &Self::AssetId) -> bool {
-		todo!()
+		LOCKED_ASSETS.with(|locked| locked.borrow().contains_key(asset))
 	}
 
 	fn nft_transfer_open() -> bool {
-		todo!()
+		NFT_TRANSFER_OPEN.with(|locked| locked.borrow().clone())
 	}
 
 	fn handle_asset_fees(
-		asset: &Self::Asset,
+		_asset: &Self::Asset,
 		from: &Self::AccountId,
 		fees_recipient: &Self::AccountId,
 	) -> Result<(), DispatchError> {
-		todo!()
+		PREPARE_FEE.with(|fee| {
+			let f = *fee.borrow();
+			<Test as Currency<MockAccountId>>::transfer(
+				from,
+				fees_recipient,
+				f,
+				ExistenceRequirement::AllowDeath,
+			)
+		})?;
+
+		Ok(())
 	}
 }
 
