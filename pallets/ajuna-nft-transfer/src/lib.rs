@@ -25,10 +25,15 @@ mod mock;
 mod tests;
 
 pub mod traits;
+pub mod weights;
+
+use crate::weights::WeightInfo;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use super::*;
 	use crate::traits::*;
+	use ajuna_primitives::asset_manager::AssetManager;
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{
@@ -37,7 +42,10 @@ pub mod pallet {
 		},
 		PalletId,
 	};
+	use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 	use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned};
+
+	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
 	pub enum NftStatus {
@@ -62,11 +70,19 @@ pub mod pallet {
 		/// Identifier for the collection of item.
 		type CollectionId: Member + Parameter + MaxEncodedLen + Copy + AtLeast32BitUnsigned;
 
+		type Item: NftConvertible<Self::KeyLimit, Self::ValueLimit>;
+
 		/// The type used to identify a unique item within a collection.
 		type ItemId: Member + Parameter + MaxEncodedLen + Copy;
 
 		/// Type that holds the specific configurations for an item.
 		type ItemConfig: Default + MaxEncodedLen + TypeInfo;
+
+		type AssetManager: AssetManager<
+			AccountId = AccountIdFor<Self>,
+			AssetId = Self::ItemId,
+			Asset = Self::Item,
+		>;
 
 		/// The maximum length of an attribute key.
 		#[pallet::constant]
@@ -79,7 +95,18 @@ pub mod pallet {
 		/// An NFT helper for the management of collections and items.
 		type NftHelper: Inspect<Self::AccountId, CollectionId = Self::CollectionId, ItemId = Self::ItemId>
 			+ Mutate<Self::AccountId, Self::ItemConfig>;
+
+		type WeightInfo: WeightInfo;
 	}
+
+	#[pallet::storage]
+	pub type CollectionId<T: Config> = StorageValue<_, T::CollectionId, OptionQuery>;
+
+	#[pallet::storage]
+	pub type ServiceAccount<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+	#[pallet::storage]
+	pub type Preparation<T: Config> = StorageMap<_, Identity, T::ItemId, IpfsUrl, OptionQuery>;
 
 	#[pallet::storage]
 	pub type NftStatuses<T: Config> =
@@ -88,6 +115,16 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// A collection ID has been set.
+		CollectionIdSet { collection_id: T::CollectionId },
+		/// A service account has been set.
+		ServiceAccountSet { service_account: T::AccountId },
+		/// Avatar prepared.
+		PreparedAvatar { asset_id: T::ItemId },
+		/// Avatar unprepared.
+		UnpreparedAvatar { asset_id: T::ItemId },
+		/// IPFS URL prepared.
+		PreparedIpfsUrl { url: IpfsUrl },
 		/// Item has been stored as an NFT [collection_id, item_id, owner]
 		ItemStored { collection_id: T::CollectionId, item_id: T::ItemId, owner: T::AccountId },
 		/// Item has been restored back from its NFT representation [collection_id, item_id, owner]
@@ -96,6 +133,12 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// There is no collection ID set for NFT handler.
+		CollectionIdNotSet,
+		/// Tried to prepare an already prepared asset.
+		IpfsUrlAlreadyPrepared,
+		/// IPFS URL is not prepared yet.
+		IpfsUrlUnprepared,
 		/// IPFS URL must not be an empty string.
 		EmptyIpfsUrl,
 		/// Item code must be different to attribute codes.
@@ -104,19 +147,195 @@ pub mod pallet {
 		UnknownItem,
 		/// The given claim doesn't exist.
 		UnknownClaim,
+		/// No service account has been set.
+		NoServiceAccount,
 		/// The given NFT is not owned by the requester.
 		NftNotOwned,
 		/// The given NFT is currently outside of the chain, transfer it back before attempting a
 		/// restore.
 		NftOutsideOfChain,
+		/// NFT transfer is not available at the moment.
+		NftTransferClosed,
 		/// The process of restoring an NFT into an item has failed.
 		ItemRestoreFailure,
+	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// Set the collection ID to associate assets with.
+		///
+		/// Externally created collection ID for assets must be set in the `CollectionId` storage
+		/// to serve as a lookup for locking and unlocking assets as NFTs.
+		///
+		/// Weight: `O(1)`
+		#[pallet::call_index(14)]
+		#[pallet::weight(T::WeightInfo::set_collection_id())]
+		pub fn set_collection_id(
+			origin: OriginFor<T>,
+			collection_id: T::CollectionId,
+		) -> DispatchResult {
+			let signer = ensure_signed(origin)?;
+			T::AssetManager::ensure_organizer(&signer)?;
+			CollectionId::<T>::put(&collection_id);
+			Self::deposit_event(Event::CollectionIdSet { collection_id });
+			Ok(())
+		}
+
+		/// Locks an asset to be tokenized as an NFT.
+		///
+		/// The origin of this call must specify an asset, owned by the origin, to prevent it from
+		/// forging, trading and transferring it to other players. When successful, the ownership of
+		/// the asset is removed from the player.
+		///
+		/// Locking an asset allows for new
+		/// ways of interacting with it currently under development.
+		///
+		/// Weight: `O(n)` where:
+		/// - `n = max assets per player`
+		#[pallet::call_index(15)]
+		#[pallet::weight(T::WeightInfo::lock_asset())]
+		pub fn store_prepared_as_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
+			let player = ensure_signed(origin)?;
+
+			let asset = T::AssetManager::ensure_ownership(&player, &asset_id)?;
+
+			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
+			let url = Preparation::<T>::take(&asset_id).ok_or(Error::<T>::IpfsUrlUnprepared)?;
+
+			Self::store_as_nft(player, collection_id, asset_id, asset, url)?;
+
+			Ok(())
+		}
+
+		/// Unlocks an asset removing its NFT representation.
+		///
+		/// The origin of this call must specify an asset, owned and locked by the origin, to allow
+		/// forging, trading and transferring it to other players. When successful, the ownership of
+		/// the asset is transferred from the pallet's technical account back to the player and its
+		/// existing NFT representation is destroyed.
+		///
+		/// Weight: `O(n)` where:
+		/// - `n = max assets per player`
+		#[pallet::call_index(16)]
+		#[pallet::weight(T::WeightInfo::unlock_asset())]
+		pub fn unlock_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
+			let player = ensure_signed(origin)?;
+
+			let _ = T::AssetManager::unlock_asset(player.clone(), asset_id)?;
+
+			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
+			let _ = <Self as NftHandler<_, _, _, _, <T as Config>::Item>>::recover_from_nft(
+				player,
+				collection_id,
+				asset_id,
+			)?;
+			Ok(())
+		}
+
+		/// Set a service account.
+		///
+		/// The origin of this call must be root. A service account has sufficient privilege to call
+		/// the `prepare_ipfs` extrinsic.
+		///
+		/// Weight: `O(1)`
+		#[pallet::call_index(17)]
+		#[pallet::weight(T::WeightInfo::set_service_account())]
+		pub fn set_service_account(
+			origin: OriginFor<T>,
+			service_account: T::AccountId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			ServiceAccount::<T>::put(&service_account);
+			Self::deposit_event(Event::ServiceAccountSet { service_account });
+			Ok(())
+		}
+
+		/// Prepare an asset to be uploaded to IPFS.
+		///
+		/// The origin of this call must specify an asset, owned by the origin, to display the
+		/// intention of uploading it to an IPFS storage. When successful, the `PreparedAvatar`
+		/// event is emitted to be picked up by our external service that interacts with the IPFS.
+		///
+		/// Weight: `O(1)`
+		#[pallet::call_index(18)]
+		#[pallet::weight(T::WeightInfo::prepare_asset())]
+		pub fn prepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
+			let player = ensure_signed(origin)?;
+			Self::ensure_unprepared(&asset_id)?;
+
+			let asset = T::AssetManager::lock_asset(player.clone(), asset_id)?;
+
+			let service_account = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
+			T::AssetManager::handle_asset_fees(&asset, &player, &service_account)?;
+
+			Preparation::<T>::insert(asset_id, IpfsUrl::default());
+			Self::deposit_event(Event::PreparedAvatar { asset_id });
+			Ok(())
+		}
+
+		/// Unprepare an asset to be detached from IPFS.
+		///
+		/// The origin of this call must specify an asset, owned by the origin, that is undergoing
+		/// the IPFS upload process.
+		///
+		/// Weight: `O(1)`
+		#[pallet::call_index(19)]
+		#[pallet::weight(T::WeightInfo::unprepare_asset())]
+		pub fn unprepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
+			let player = ensure_signed(origin)?;
+			let _ = T::AssetManager::ensure_ownership(&player, &asset_id)?;
+			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
+			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::IpfsUrlUnprepared);
+
+			Preparation::<T>::remove(asset_id);
+			Self::deposit_event(Event::UnpreparedAvatar { asset_id });
+			Ok(())
+		}
+
+		/// Prepare IPFS for an asset.
+		///
+		/// The origin of this call must be signed by the service account to upload the given asset
+		/// to an IPFS storage and stores its CID. A third-party service subscribes for the
+		/// `PreparedAvatar` events which triggers preparing assets, their upload to IPFS and
+		/// storing their CIDs.
+		//
+		/// Weight: `O(1)`
+		#[pallet::call_index(20)]
+		#[pallet::weight(T::WeightInfo::prepare_ipfs())]
+		pub fn prepare_ipfs(
+			origin: OriginFor<T>,
+			asset_id: T::ItemId,
+			url: IpfsUrl,
+		) -> DispatchResult {
+			let _ = Self::ensure_service_account(origin)?;
+
+			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
+			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::IpfsUrlUnprepared);
+			ensure!(!url.is_empty(), Error::<T>::EmptyIpfsUrl);
+			Preparation::<T>::insert(asset_id, &url);
+			Self::deposit_event(Event::PreparedIpfsUrl { url });
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
 		/// The account identifier to delegate NFT transfer operations.
 		pub fn account_id() -> T::AccountId {
 			T::PalletId::get().into_account_truncating()
+		}
+
+		pub(crate) fn ensure_service_account(
+			origin: OriginFor<T>,
+		) -> Result<T::AccountId, DispatchError> {
+			let maybe_sa = ensure_signed(origin)?;
+			let existing_sa = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
+			ensure!(maybe_sa == existing_sa, DispatchError::BadOrigin);
+			Ok(maybe_sa)
+		}
+
+		fn ensure_unprepared(asset_id: &T::ItemId) -> DispatchResult {
+			ensure!(!Preparation::<T>::contains_key(asset_id), Error::<T>::IpfsUrlAlreadyPrepared);
+			Ok(())
 		}
 	}
 

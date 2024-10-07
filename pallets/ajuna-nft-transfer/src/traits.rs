@@ -1,4 +1,4 @@
-use frame_support::Parameter;
+use frame_support::{pallet_prelude::ConstU32, Parameter};
 use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_runtime::{traits::AtLeast32BitUnsigned, BoundedVec, DispatchError, DispatchResult};
 use sp_std::vec::Vec;
@@ -7,7 +7,7 @@ use sp_std::vec::Vec;
 pub type NFTAttribute<N> = BoundedVec<u8, N>;
 
 /// Type to denote an IPFS URL.
-pub type IpfsUrl = Vec<u8>;
+pub type IpfsUrl = BoundedVec<u8, ConstU32<100>>;
 
 /// Marker trait for items that can be converted back and forth into an NFT representation.
 pub trait NftConvertible<KL, VL>: Codec {

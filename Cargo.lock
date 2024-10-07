@@ -63,6 +63,7 @@ dependencies = [
 name = "ajuna-primitives"
 version = "0.13.0"
 dependencies = [
+ "frame-support",
  "parity-scale-codec",
  "scale-info",
 ]
@@ -1913,6 +1914,7 @@ dependencies = [
 name = "pallet-ajuna-nft-transfer"
 version = "0.13.0"
 dependencies = [
+ "ajuna-primitives",
  "frame-support",
  "frame-system",
  "pallet-balances",

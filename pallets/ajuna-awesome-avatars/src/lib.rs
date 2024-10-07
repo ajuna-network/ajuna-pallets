@@ -69,7 +69,7 @@ pub mod types;
 pub mod weights;
 
 use crate::{types::*, weights::WeightInfo};
-use ajuna_primitives::asset_manager::{AssetManager, Error as AssetManagerError};
+use ajuna_primitives::asset_manager::AssetManager;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness, WithdrawReasons},
@@ -108,15 +108,6 @@ pub mod pallet {
 	pub type AvatarOf<T> = Avatar<BlockNumberFor<T>>;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
 	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>, BalanceOf<T>>;
-	pub(crate) type KeyLimitOf<T> = <T as Config>::KeyLimit;
-	pub(crate) type ValueLimitOf<T> = <T as Config>::ValueLimit;
-	pub(crate) type CollectionIdOf<T> = <<T as Config>::NftHandler as NftHandler<
-		AccountIdFor<T>,
-		AvatarIdOf<T>,
-		KeyLimitOf<T>,
-		ValueLimitOf<T>,
-		AvatarOf<T>,
-	>>::CollectionId;
 	pub type FeePropagationOf<T> = FeePropagation<<T as Config>::FeeChainMaxLength>;
 	pub type AvatarRankerFor<T> = AvatarRanker<AvatarIdOf<T>, BlockNumberFor<T>>;
 	pub type TournamentConfigFor<T> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T>>;
@@ -243,9 +234,6 @@ pub mod pallet {
 	pub type LockedAvatars<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, ()>;
 
 	#[pallet::storage]
-	pub type CollectionId<T: Config> = StorageValue<_, CollectionIdOf<T>, OptionQuery>;
-
-	#[pallet::storage]
 	pub type PlayerConfigs<T: Config> =
 		StorageMap<_, Identity, T::AccountId, PlayerConfig, ValueQuery>;
 
@@ -273,12 +261,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Trade<T: Config> =
 		StorageDoubleMap<_, Identity, SeasonId, Identity, AvatarIdOf<T>, BalanceOf<T>, OptionQuery>;
-
-	#[pallet::storage]
-	pub type ServiceAccount<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
-	#[pallet::storage]
-	pub type Preparation<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, IpfsUrl, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn rankers)]
@@ -334,10 +316,6 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// An organizer has been set.
 		OrganizerSet { organizer: T::AccountId },
-		/// A service account has been set.
-		ServiceAccountSet { service_account: T::AccountId },
-		/// A collection ID has been set.
-		CollectionIdSet { collection_id: CollectionIdOf<T> },
 		/// A treasurer has been set for a season.
 		TreasurerSet { season_id: SeasonId, treasurer: T::AccountId },
 		/// A season's treasury has been claimed by a treasurer.
@@ -383,12 +361,6 @@ pub mod pallet {
 		AvatarUnlocked { avatar_id: AvatarIdOf<T> },
 		/// Storage tier has been upgraded.
 		StorageTierUpgraded { account: T::AccountId, season_id: SeasonId },
-		/// Avatar prepared.
-		PreparedAvatar { avatar_id: AvatarIdOf<T> },
-		/// Avatar unprepared.
-		UnpreparedAvatar { avatar_id: AvatarIdOf<T> },
-		/// IPFS URL prepared.
-		PreparedIpfsUrl { url: IpfsUrl },
 		/// Unlock configurations updated.
 		UpdatedUnlockConfigs { season_id: SeasonId, unlock_configs: UnlockConfigs },
 	}
@@ -397,8 +369,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// There is no account set as the organizer
 		OrganizerNotSet,
-		/// There is no collection ID set for NFT handler.
-		CollectionIdNotSet,
 		/// The season starts before the previous season has ended.
 		EarlyStartTooEarly,
 		/// The season season start later than its early access
@@ -524,12 +494,6 @@ pub mod pallet {
 		InsufficientSacrifices,
 		/// The amount of sacrifices is too much for forging.
 		ExcessiveSacrifices,
-		/// Tried to prepare an already prepared avatar.
-		AlreadyPrepared,
-		/// Tried to prepare an IPFS URL for an avatar, that is not yet prepared.
-		NotPrepared,
-		/// No service account has been set.
-		NoServiceAccount,
 		/// Tried to prepare an IPFS URL for an avatar with an empty URL.
 		EmptyIpfsUrl,
 		/// The account trying to be whitelisted is already in the whitelist
@@ -551,22 +515,6 @@ pub mod pallet {
 		TournamentRankerNotFound,
 		/// Only whitelisted accounts can affiliate for others
 		AffiliateOthersOnlyWhiteListed,
-	}
-
-	impl<T> From<AssetManagerError> for Error<T> {
-		fn from(e: AssetManagerError) -> Self {
-			use AssetManagerError::*;
-			match e {
-				Ownership => Error::<T>::Ownership,
-				AssetInTrade => Error::<T>::AvatarInTrade,
-				NftTransferClosed => Error::<T>::NftTransferClosed,
-				MaxOwnershipReached => Error::<T>::MaxOwnershipReached,
-				UnknownAsset => Error::<T>::UnknownAvatar,
-				AssetIsUnprepared => Error::<T>::NotPrepared,
-				AssetIsLocked => Error::<T>::AvatarLocked,
-				AssetIsUnlocked => Error::<T>::AvatarUnlocked,
-			}
-		}
 	}
 
 	#[pallet::hooks]
@@ -650,7 +598,6 @@ pub mod pallet {
 			ensure!(from != to, Error::<T>::CannotTransferToSelf);
 			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
 			Self::ensure_unlocked(&avatar_id)?;
-			Self::ensure_unprepared(&avatar_id)?;
 
 			let avatar = Self::ensure_ownership(&from, &avatar_id)?;
 			ensure!(
@@ -754,7 +701,6 @@ pub mod pallet {
 				Error::<T>::FeatureLocked
 			);
 			Self::ensure_unlocked(&avatar_id)?;
-			Self::ensure_unprepared(&avatar_id)?;
 			Self::ensure_tradable(&avatar)?;
 			Trade::<T>::insert(avatar.season_id, avatar_id, price);
 			Self::deposit_event(Event::AvatarPriceSet { avatar_id, price });
@@ -1059,24 +1005,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Set the collection ID to associate avatars with.
-		///
-		/// Externally created collection ID for avatars must be set in the `CollectionId` storage
-		/// to serve as a lookup for locking and unlocking avatars as NFTs.
-		///
-		/// Weight: `O(1)`
-		#[pallet::call_index(14)]
-		#[pallet::weight(T::WeightInfo::set_collection_id())]
-		pub fn set_collection_id(
-			origin: OriginFor<T>,
-			collection_id: CollectionIdOf<T>,
-		) -> DispatchResult {
-			Self::ensure_organizer(origin)?;
-			CollectionId::<T>::put(&collection_id);
-			Self::deposit_event(Event::CollectionIdSet { collection_id });
-			Ok(())
-		}
-
 		/// Locks an avatar to be tokenized as an NFT.
 		///
 		/// The origin of this call must specify an avatar, owned by the origin, to prevent it from
@@ -1093,13 +1021,7 @@ pub mod pallet {
 		pub fn lock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			let avatar =
-				Self::lock_asset(player.clone(), avatar_id).map_err(|e| Error::<T>::from(e))?;
-
-			ensure!(Preparation::<T>::contains_key(avatar_id), Error::<T>::NotPrepared);
-			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
-			let url = Preparation::<T>::take(avatar_id).ok_or(Error::<T>::UnknownPreparation)?;
-			T::NftHandler::store_as_nft(player, collection_id, avatar_id, avatar, url.to_vec())?;
+			Self::lock_asset(player.clone(), avatar_id)?;
 
 			Ok(())
 		}
@@ -1118,97 +1040,7 @@ pub mod pallet {
 		pub fn unlock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			Self::unlock_asset(player.clone(), avatar_id).map_err(|e| Error::<T>::from(e))?;
-
-			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
-			let _ = T::NftHandler::recover_from_nft(player, collection_id, avatar_id)?;
-			Ok(())
-		}
-
-		/// Set a service account.
-		///
-		/// The origin of this call must be root. A service account has sufficient privilege to call
-		/// the `prepare_ipfs` extrinsic.
-		///
-		/// Weight: `O(1)`
-		#[pallet::call_index(17)]
-		#[pallet::weight(T::WeightInfo::set_service_account())]
-		pub fn set_service_account(
-			origin: OriginFor<T>,
-			service_account: T::AccountId,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-			ServiceAccount::<T>::put(&service_account);
-			Self::deposit_event(Event::ServiceAccountSet { service_account });
-			Ok(())
-		}
-
-		/// Prepare an avatar to be uploaded to IPFS.
-		///
-		/// The origin of this call must specify an avatar, owned by the origin, to display the
-		/// intention of uploading it to an IPFS storage. When successful, the `PreparedAvatar`
-		/// event is emitted to be picked up by our external service that interacts with the IPFS.
-		///
-		/// Weight: `O(1)`
-		#[pallet::call_index(18)]
-		#[pallet::weight(T::WeightInfo::prepare_avatar())]
-		pub fn prepare_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
-			let player = ensure_signed(origin)?;
-			let avatar = Self::ensure_ownership(&player, &avatar_id)?;
-			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
-			ensure!(GlobalConfigs::<T>::get().nft_transfer.open, Error::<T>::NftTransferClosed);
-			Self::ensure_unlocked(&avatar_id)?;
-			Self::ensure_unprepared(&avatar_id)?;
-
-			let service_account = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
-			let Season { fee, .. } = Self::seasons(&avatar.season_id)?;
-			T::Currency::transfer(&player, &service_account, fee.prepare_avatar, AllowDeath)?;
-
-			Preparation::<T>::insert(avatar_id, IpfsUrl::default());
-			Self::deposit_event(Event::PreparedAvatar { avatar_id });
-			Ok(())
-		}
-
-		/// Unprepare an avatar to be detached from IPFS.
-		///
-		/// The origin of this call must specify an avatar, owned by the origin, that is undergoing
-		/// the IPFS upload process.
-		///
-		/// Weight: `O(1)`
-		#[pallet::call_index(19)]
-		#[pallet::weight(T::WeightInfo::unprepare_avatar())]
-		pub fn unprepare_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
-			let player = ensure_signed(origin)?;
-			let _ = Self::ensure_ownership(&player, &avatar_id)?;
-			ensure!(GlobalConfigs::<T>::get().nft_transfer.open, Error::<T>::NftTransferClosed);
-			ensure!(Preparation::<T>::contains_key(avatar_id), Error::<T>::NotPrepared);
-
-			Preparation::<T>::remove(avatar_id);
-			Self::deposit_event(Event::UnpreparedAvatar { avatar_id });
-			Ok(())
-		}
-
-		/// Prepare IPFS for an avatar.
-		///
-		/// The origin of this call must be signed by the service account to upload the given avatar
-		/// to an IPFS storage and stores its CID. A third-party service subscribes for the
-		/// `PreparedAvatar` events which triggers preparing assets, their upload to IPFS and
-		/// storing their CIDs.
-		//
-		/// Weight: `O(1)`
-		#[pallet::call_index(20)]
-		#[pallet::weight(T::WeightInfo::prepare_ipfs())]
-		pub fn prepare_ipfs(
-			origin: OriginFor<T>,
-			avatar_id: AvatarIdOf<T>,
-			url: IpfsUrl,
-		) -> DispatchResult {
-			let _ = Self::ensure_service_account(origin)?;
-			ensure!(GlobalConfigs::<T>::get().nft_transfer.open, Error::<T>::NftTransferClosed);
-			ensure!(Preparation::<T>::contains_key(avatar_id), Error::<T>::NotPrepared);
-			ensure!(!url.is_empty(), Error::<T>::EmptyIpfsUrl);
-			Preparation::<T>::insert(avatar_id, &url);
-			Self::deposit_event(Event::PreparedIpfsUrl { url });
+			Self::unlock_asset(player.clone(), avatar_id)?;
 			Ok(())
 		}
 
@@ -1633,15 +1465,6 @@ pub mod pallet {
 			Ok(maybe_organizer)
 		}
 
-		pub(crate) fn ensure_service_account(
-			origin: OriginFor<T>,
-		) -> Result<T::AccountId, DispatchError> {
-			let maybe_sa = ensure_signed(origin)?;
-			let existing_sa = ServiceAccount::<T>::get().ok_or(Error::<T>::OrganizerNotSet)?;
-			ensure!(maybe_sa == existing_sa, DispatchError::BadOrigin);
-			Ok(maybe_sa)
-		}
-
 		pub(crate) fn ensure_season_schedule(
 			season_id: SeasonId,
 			season_schedule: &SeasonScheduleOf<T>,
@@ -1985,7 +1808,6 @@ pub mod pallet {
 			);
 			ensure!(Self::ensure_for_trade(leader_id).is_err(), Error::<T>::AvatarInTrade);
 			Self::ensure_unlocked(leader_id)?;
-			Self::ensure_unprepared(leader_id)?;
 
 			let deduplicated_sacrifice_ids = {
 				let mut id_queue = sacrifice_ids.into_iter().collect::<VecDeque<_>>();
@@ -2010,7 +1832,6 @@ pub mod pallet {
 						Error::<T>::IncompatibleAvatarVersions
 					);
 					Self::ensure_unlocked(id)?;
-					Self::ensure_unprepared(id)?;
 					Ok(avatar)
 				})
 				.collect::<Result<Vec<AvatarOf<T>>, DispatchError>>()?;
@@ -2227,11 +2048,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn ensure_unprepared(avatar_id: &AvatarIdOf<T>) -> DispatchResult {
-			ensure!(!Preparation::<T>::contains_key(avatar_id), Error::<T>::AlreadyPrepared);
-			Ok(())
-		}
-
 		fn ensure_tradable(avatar: &AvatarOf<T>) -> DispatchResult {
 			let trade_filters = SeasonTradeFilters::<T>::get(avatar.season_id)
 				.ok_or::<DispatchError>(Error::<T>::UnknownSeason.into())?;
@@ -2377,23 +2193,31 @@ pub mod pallet {
 		type AssetId = AvatarIdOf<T>;
 		type Asset = AvatarOf<T>;
 
+		fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+			let existing_organizer = Organizer::<T>::get().ok_or(Error::<T>::OrganizerNotSet)?;
+			ensure!(account == &existing_organizer, DispatchError::BadOrigin);
+			Ok(())
+		}
+
+		fn ensure_ownership(
+			account: &Self::AccountId,
+			asset_id: &Self::AssetId,
+		) -> Result<Self::Asset, DispatchError> {
+			let (owner, avatar) = Self::avatars(asset_id)?;
+			ensure!(account == &owner, Error::<T>::Ownership);
+			Ok(avatar)
+		}
+
 		fn lock_asset(
 			owner: Self::AccountId,
 			asset_id: Self::AssetId,
-		) -> Result<Self::Asset, AssetManagerError> {
-			let avatar = Self::ensure_ownership(&owner, &asset_id)
-				.map_err(|_e| AssetManagerError::Ownership)?;
-			ensure!(Self::ensure_for_trade(&asset_id).is_err(), AssetManagerError::AssetInTrade);
-			ensure!(
-				GlobalConfigs::<T>::get().nft_transfer.open,
-				AssetManagerError::NftTransferClosed
-			);
-			ensure!(!Self::is_locked(&asset_id), AssetManagerError::AssetIsLocked);
-			// ensure!(Preparation::<T>::contains_key(asset_id),
-			// AssetManagerError::AssetIsUnprepared);
+		) -> Result<Self::Asset, DispatchError> {
+			let avatar = Self::ensure_ownership(&owner, &asset_id)?;
+			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
+			ensure!(Self::nft_transfer_open(), Error::<T>::NftTransferClosed);
+			ensure!(!Self::is_locked(&asset_id), Error::<T>::AvatarLocked);
 
-			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)
-				.map_err(|_e| AssetManagerError::UnknownAsset)?;
+			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)?;
 
 			LockedAvatars::<T>::insert(asset_id, ());
 			Self::deposit_event(Event::AvatarLocked { avatar_id: asset_id });
@@ -2404,27 +2228,35 @@ pub mod pallet {
 		fn unlock_asset(
 			owner: Self::AccountId,
 			asset_id: Self::AssetId,
-		) -> Result<(), AssetManagerError> {
-			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)
-				.map_err(|_e| AssetManagerError::Ownership)?;
-			ensure!(Self::ensure_for_trade(&asset_id).is_err(), AssetManagerError::AssetInTrade);
-			ensure!(
-				GlobalConfigs::<T>::get().nft_transfer.open,
-				AssetManagerError::NftTransferClosed
-			);
-			ensure!(Self::is_locked(&asset_id), AssetManagerError::AssetIsUnlocked);
+		) -> Result<Self::Asset, DispatchError> {
+			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
+			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
+			ensure!(Self::nft_transfer_open(), Error::<T>::NftTransferClosed);
+			ensure!(Self::is_locked(&asset_id), Error::<T>::AvatarLocked);
 
-			Self::try_restore_avatar_ownership_to(&owner, &avatar.season_id, &asset_id)
-				.map_err(|_e| AssetManagerError::MaxOwnershipReached)?;
+			Self::try_restore_avatar_ownership_to(&owner, &avatar.season_id, &asset_id)?;
 
 			LockedAvatars::<T>::remove(asset_id);
 			Self::deposit_event(Event::AvatarUnlocked { avatar_id: asset_id });
 
-			Ok(())
+			Ok(avatar)
 		}
 
 		fn is_locked(asset_id: &Self::AssetId) -> bool {
 			LockedAvatars::<T>::contains_key(asset_id)
+		}
+
+		fn nft_transfer_open() -> bool {
+			GlobalConfigs::<T>::get().nft_transfer.open
+		}
+
+		fn handle_asset_fees(
+			asset: &Self::Asset,
+			player: &Self::AccountId,
+			fee_recipient: &Self::AccountId,
+		) -> Result<(), DispatchError> {
+			let Season { fee, .. } = Self::seasons(&asset.season_id)?;
+			T::Currency::transfer(&player, &fee_recipient, fee.prepare_avatar, AllowDeath)
 		}
 	}
 }
