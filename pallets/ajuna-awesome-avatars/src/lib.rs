@@ -65,15 +65,11 @@ mod mock;
 mod tests;
 
 pub mod migration;
-pub mod traits;
 pub mod types;
 pub mod weights;
 
-use crate::{
-	traits::asset_manager::{AssetManager, Error as AssetManagerError},
-	types::*,
-	weights::WeightInfo,
-};
+use crate::{types::*, weights::WeightInfo};
+use ajuna_primitives::asset_manager::{AssetManager, Error as AssetManagerError};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness, WithdrawReasons},

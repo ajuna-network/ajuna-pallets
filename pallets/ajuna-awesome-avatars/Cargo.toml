@@ -33,6 +33,7 @@ sp-std             = { workspace = true }
 pallet-ajuna-affiliates   = { workspace = true }
 pallet-ajuna-nft-transfer = { workspace = true }
 pallet-ajuna-tournament   = { workspace = true }
+ajuna-primitives = { workspace = true }
 
 [dev-dependencies]
 # Substrate - FRAME
@@ -51,6 +52,7 @@ std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "ajuna-primitives/std",
     "pallet-ajuna-affiliates/std",
     "pallet-ajuna-nft-transfer/std",
     "pallet-ajuna-tournament/std",
