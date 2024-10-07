@@ -136,9 +136,9 @@ pub mod pallet {
 		/// There is no collection ID set for NFT handler.
 		CollectionIdNotSet,
 		/// Tried to prepare an already prepared asset.
-		IpfsUrlAlreadyPrepared,
+		AssetAlreadyPrepared,
 		/// IPFS URL is not prepared yet.
-		IpfsUrlUnprepared,
+		AssetUnprepared,
 		/// IPFS URL must not be an empty string.
 		EmptyIpfsUrl,
 		/// Item code must be different to attribute codes.
@@ -218,7 +218,7 @@ pub mod pallet {
 			let asset = T::AssetManager::ensure_ownership(&player, &asset_id)?;
 
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
-			let url = Preparation::<T>::take(&asset_id).ok_or(Error::<T>::IpfsUrlUnprepared)?;
+			let url = Preparation::<T>::take(&asset_id).ok_or(Error::<T>::AssetUnprepared)?;
 
 			Self::store_as_nft(player, collection_id, asset_id, asset, url)?;
 
@@ -287,7 +287,7 @@ pub mod pallet {
 			let player = ensure_signed(origin)?;
 			let _ = T::AssetManager::ensure_ownership(&player, &asset_id)?;
 			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
-			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::IpfsUrlUnprepared);
+			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::AssetUnprepared);
 
 			Preparation::<T>::remove(asset_id);
 			Self::deposit_event(Event::UnpreparedAvatar { asset_id });
@@ -312,7 +312,7 @@ pub mod pallet {
 			let _ = Self::ensure_service_account(origin)?;
 
 			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
-			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::IpfsUrlUnprepared);
+			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::AssetUnprepared);
 			ensure!(!url.is_empty(), Error::<T>::EmptyIpfsUrl);
 			Preparation::<T>::insert(asset_id, &url);
 			Self::deposit_event(Event::PreparedIpfsUrl { url });
@@ -336,7 +336,7 @@ pub mod pallet {
 		}
 
 		fn ensure_unprepared(asset_id: &T::ItemId) -> DispatchResult {
-			ensure!(!Preparation::<T>::contains_key(asset_id), Error::<T>::IpfsUrlAlreadyPrepared);
+			ensure!(!Preparation::<T>::contains_key(asset_id), Error::<T>::AssetAlreadyPrepared);
 			Ok(())
 		}
 	}
