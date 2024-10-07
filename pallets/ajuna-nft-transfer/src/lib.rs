@@ -236,7 +236,7 @@ pub mod pallet {
 		/// - `n = max assets per player`
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::unlock_asset())]
-		pub fn recover_from_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
+		pub fn recover_asset_from_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
 			let _asset = T::AssetManager::unlock_asset(player.clone(), asset_id)?;

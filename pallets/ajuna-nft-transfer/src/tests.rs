@@ -20,38 +20,8 @@ use frame_support::{
 	traits::tokens::nonfungibles_v2::{Create, Inspect},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use parity_scale_codec::{Decode, Encode};
-use sp_runtime::{bounded_vec, testing::H256, BoundedVec};
-
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-struct MockItem {
-	field_1: Vec<u8>,
-	field_2: u16,
-	field_3: bool,
-}
-
-impl Default for MockItem {
-	fn default() -> Self {
-		Self { field_1: vec![1, 2, 3], field_2: 333, field_3: true }
-	}
-}
-
-impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
-	const ITEM_CODE: &'static [u8] = &[11];
-	const IPFS_URL_CODE: &'static [u8] = &[21];
-
-	fn get_attribute_codes() -> Vec<NFTAttribute<KeyLimit>> {
-		vec![bounded_vec![111], bounded_vec![222], bounded_vec![240]]
-	}
-
-	fn get_encoded_attributes(&self) -> Vec<(NFTAttribute<KeyLimit>, NFTAttribute<ValueLimit>)> {
-		vec![
-			(bounded_vec![111], BoundedVec::try_from(self.field_1.clone()).unwrap()),
-			(bounded_vec![222], BoundedVec::try_from(self.field_2.to_le_bytes().to_vec()).unwrap()),
-			(bounded_vec![240], BoundedVec::try_from(vec![self.field_3 as u8]).unwrap()),
-		]
-	}
-}
+use parity_scale_codec::Encode;
+use sp_runtime::testing::H256;
 
 type CollectionConfig =
 	pallet_nfts::CollectionConfig<MockBalance, BlockNumberFor<Test>, MockCollectionId>;
@@ -85,7 +55,7 @@ mod store_as_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url.clone()
+					url.clone().try_into().unwrap(),
 				));
 				assert_eq!(Nft::collection_owner(collection_id), Some(ALICE));
 				assert_eq!(Nft::owner(collection_id, item_id), Some(BOB));
@@ -133,7 +103,7 @@ mod store_as_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url.clone()
+					url.clone().try_into().unwrap(),
 				));
 
 				System::assert_last_event(mock::RuntimeEvent::NftTransfer(
@@ -178,7 +148,13 @@ mod store_as_nft {
 				let url = vec![];
 
 				assert_err!(
-					NftTransfer::store_as_nft(ALICE, collection_id, item_id, item, url),
+					NftTransfer::store_as_nft(
+						ALICE,
+						collection_id,
+						item_id,
+						item,
+						url.try_into().unwrap()
+					),
 					Error::<Test>::EmptyIpfsUrl
 				);
 			});
@@ -200,10 +176,16 @@ mod store_as_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url.clone()
+					url.clone().try_into().unwrap()
 				));
 				assert_noop!(
-					NftTransfer::store_as_nft(ALICE, collection_id, item_id, item, url),
+					NftTransfer::store_as_nft(
+						ALICE,
+						collection_id,
+						item_id,
+						item,
+						url.try_into().unwrap()
+					),
 					pallet_nfts::Error::<Test>::AlreadyExists
 				);
 			});
@@ -227,7 +209,13 @@ mod store_as_nft {
 				assert!(item.encode().len() > ValueLimit::get() as usize);
 				// NOTE: As long as the execution is wrapped in an extrinsic, this is a noop.
 				assert_err!(
-					NftTransfer::store_as_nft(BOB, collection_id, item_id, item, url),
+					NftTransfer::store_as_nft(
+						BOB,
+						collection_id,
+						item_id,
+						item,
+						url.try_into().unwrap()
+					),
 					pallet_nfts::Error::<Test>::IncorrectData
 				);
 			});
@@ -254,7 +242,7 @@ mod recover_from_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url
+					url.try_into().unwrap()
 				));
 				assert_eq!(Balances::free_balance(BOB), 999);
 
@@ -297,7 +285,13 @@ mod recover_from_nft {
 				let item = MockItem::default();
 				let url = b"ipfs://test".to_vec();
 
-				assert_ok!(NftTransfer::store_as_nft(BOB, collection_id, item_id, item, url));
+				assert_ok!(NftTransfer::store_as_nft(
+					BOB,
+					collection_id,
+					item_id,
+					item,
+					url.try_into().unwrap()
+				));
 				NftStatuses::<Test>::insert(collection_id, item_id, NftStatus::Uploaded);
 
 				assert_noop!(
@@ -319,7 +313,13 @@ mod recover_from_nft {
 				let item = MockItem::default();
 				let url = b"ipfs://test".to_vec();
 
-				assert_ok!(NftTransfer::store_as_nft(BOB, collection_id, item_id, item, url));
+				assert_ok!(NftTransfer::store_as_nft(
+					BOB,
+					collection_id,
+					item_id,
+					item,
+					url.try_into().unwrap()
+				));
 
 				// NOTE: As long as the execution is wrapped in an extrinsic, this is a noop.
 				assert_err!(

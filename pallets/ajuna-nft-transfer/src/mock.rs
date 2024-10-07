@@ -14,21 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_nft_transfer};
+use crate::{
+	self as pallet_ajuna_nft_transfer,
+	traits::{NFTAttribute, NftConvertible},
+};
+use ajuna_primitives::asset_manager::AssetManager;
 use frame_support::{
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-	PalletId,
+	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
+	bounded_vec,
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
+	BuildStorage, DispatchError,
 };
+use std::{cell::RefCell, collections::BTreeMap};
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -111,6 +117,8 @@ impl<const N: u32> Get<u32> for ParameterGet<N> {
 	}
 }
 
+pub type ItemId = H256;
+
 pub type KeyLimit = ParameterGet<32>;
 pub type ValueLimit = ParameterGet<64>;
 
@@ -152,7 +160,7 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 impl pallet_nfts::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
-	type ItemId = H256;
+	type ItemId = ItemId;
 	type Currency = Balances;
 	type ForceOrigin = EnsureRoot<MockAccountId>;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<MockAccountId>>;
@@ -187,11 +195,99 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
 	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
-	type ItemId = H256;
+	type Item = MockItem;
+	type ItemId = ItemId;
 	type ItemConfig = pallet_nfts::ItemConfig;
+	type AssetManager = MockAssetManager;
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
+	type WeightInfo = ();
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+pub struct MockItem {
+	pub field_1: Vec<u8>,
+	pub field_2: u16,
+	pub field_3: bool,
+}
+
+impl Default for MockItem {
+	fn default() -> Self {
+		Self { field_1: vec![1, 2, 3], field_2: 333, field_3: true }
+	}
+}
+
+impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
+	const ITEM_CODE: &'static [u8] = &[11];
+	const IPFS_URL_CODE: &'static [u8] = &[21];
+
+	fn get_attribute_codes() -> Vec<NFTAttribute<KeyLimit>> {
+		vec![bounded_vec![111], bounded_vec![222], bounded_vec![240]]
+	}
+
+	fn get_encoded_attributes(&self) -> Vec<(NFTAttribute<KeyLimit>, NFTAttribute<ValueLimit>)> {
+		vec![
+			(bounded_vec![111], BoundedVec::try_from(self.field_1.clone()).unwrap()),
+			(bounded_vec![222], BoundedVec::try_from(self.field_2.to_le_bytes().to_vec()).unwrap()),
+			(bounded_vec![240], BoundedVec::try_from(vec![self.field_3 as u8]).unwrap()),
+		]
+	}
+}
+
+thread_local! {
+	pub static ASSETS: RefCell<BTreeMap<MockAccountId, MockItem>> = RefCell::new(BTreeMap::new());
+	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
+	pub static ORGANIZER: RefCell<MockAccountId> = RefCell::new(ALICE);
+}
+
+pub struct MockAssetManager;
+
+impl AssetManager for MockAssetManager {
+	type AccountId = MockAccountId;
+	type AssetId = ItemId;
+	type Asset = MockItem;
+
+	fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		todo!()
+	}
+
+	fn ensure_ownership(
+		owner: &Self::AccountId,
+		asset_id: &Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		todo!()
+	}
+
+	fn lock_asset(
+		owner: Self::AccountId,
+		asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		todo!()
+	}
+
+	fn unlock_asset(
+		owner: Self::AccountId,
+		asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		todo!()
+	}
+
+	fn is_locked(asset: &Self::AssetId) -> bool {
+		todo!()
+	}
+
+	fn nft_transfer_open() -> bool {
+		todo!()
+	}
+
+	fn handle_asset_fees(
+		asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		todo!()
+	}
 }
 
 #[derive(Default)]
