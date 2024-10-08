@@ -246,7 +246,7 @@ impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
 thread_local! {
 	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = RefCell::new(BTreeMap::new());
 	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
-	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock>> = RefCell::new(BTreeMap::new());
+	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = RefCell::new(BTreeMap::new());
 	pub static ORGANIZER: RefCell<MockAccountId> = RefCell::new(ALICE);
 	pub static NFT_TRANSFER_OPEN: RefCell<bool> = RefCell::new(true);
 	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
@@ -325,7 +325,7 @@ impl AssetManager for MockAssetManager {
 			if borrowed.contains_key(&asset_id) {
 				return DispatchError::Other(ALREADY_LOCKED_ERR).into();
 			} else {
-				borrowed.insert(asset_id, Lock::new(lock_id));
+				borrowed.insert(asset_id, Lock::new(lock_id, owner));
 				Ok(())
 			}
 		})?;
@@ -348,11 +348,12 @@ impl AssetManager for MockAssetManager {
 		})?;
 
 		ensure!(lock.id == lock_id, DispatchError::Other(LOCKED_BY_OTHER_ERR));
+		ensure!(lock.locker == owner, DispatchError::Other(NOT_OWNER_ERR));
 
 		Ok(asset)
 	}
 
-	fn is_locked(asset: &Self::AssetId) -> Option<Lock> {
+	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
 		LOCKED_ASSETS.with(|locked| locked.borrow().get(asset).cloned())
 	}
 

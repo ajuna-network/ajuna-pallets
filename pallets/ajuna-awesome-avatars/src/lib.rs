@@ -214,7 +214,8 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	pub type LockedAvatars<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, Lock>;
+	pub type LockedAvatars<T: Config> =
+		StorageMap<_, Identity, AvatarIdOf<T>, Lock<AccountIdFor<T>>>;
 
 	#[pallet::storage]
 	pub type PlayerConfigs<T: Config> =
@@ -2193,7 +2194,7 @@ pub mod pallet {
 
 			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)?;
 
-			LockedAvatars::<T>::insert(asset_id, Lock::new(lock_id));
+			LockedAvatars::<T>::insert(asset_id, Lock::new(lock_id, owner));
 			Self::deposit_event(Event::AvatarLocked { avatar_id: asset_id });
 
 			Ok(avatar)
@@ -2209,6 +2210,7 @@ pub mod pallet {
 
 			let lock = Self::is_locked(&asset_id).ok_or_else(|| Error::<T>::AvatarNotLocked)?;
 			ensure!(lock.id == lock_id, Error::<T>::AvatarLockedByOtherApplication);
+			ensure!(lock.locker == owner, Error::<T>::Ownership);
 
 			Self::try_restore_avatar_ownership_to(&owner, &avatar.season_id, &asset_id)?;
 
@@ -2218,7 +2220,7 @@ pub mod pallet {
 			Ok(avatar)
 		}
 
-		fn is_locked(asset_id: &Self::AssetId) -> Option<Lock> {
+		fn is_locked(asset_id: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
 			LockedAvatars::<T>::get(asset_id)
 		}
 
