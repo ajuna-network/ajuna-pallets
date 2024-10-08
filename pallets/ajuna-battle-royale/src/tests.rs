@@ -24,6 +24,9 @@ fn assert_all_storage_empty() {
 	assert_eq!(BattleStateStore::<Test, Instance1>::get(), BattleStateFor::<Test>::Inactive);
 	assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 0);
 	assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 0);
+	let bitmap = GridOccupancyBitmap::<Test, Instance1>::get();
+	assert!(bitmap.get_occupied_cells().is_empty());
+	assert!(bitmap.get_blocked_cells().is_empty());
 }
 
 fn assert_battle_state_is_active_with(
@@ -83,8 +86,12 @@ fn start_battle_with_config(
 	);
 }
 
-fn queue_player(account: &MockAccountId, initial_weapon: PlayerWeapon) -> Coordinates {
-	assert_ok!(BattleRoyale::try_queue_player(account, initial_weapon, None));
+fn queue_player(
+	account: &MockAccountId,
+	initial_weapon: PlayerWeapon,
+	maybe_position: Option<Coordinates>,
+) -> Coordinates {
+	assert_ok!(BattleRoyale::try_queue_player(account, initial_weapon, maybe_position));
 
 	System::assert_last_event(mock::RuntimeEvent::BattleRoyale(crate::Event::PlayerQueued {
 		player: account.clone(),
@@ -115,6 +122,9 @@ fn queue_player(account: &MockAccountId, initial_weapon: PlayerWeapon) -> Coordi
 		OccupancyState::Open(expected_set)
 	);
 
+	let bitmap = GridOccupancyBitmap::<Test, Instance1>::get();
+	assert!(bitmap.get_occupied_cells().contains(&player_position));
+
 	player_position
 }
 
@@ -126,7 +136,7 @@ mod try_start_battle {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 
@@ -159,6 +169,10 @@ mod try_start_battle {
 			);
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 0);
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 0);
+
+			let bitmap = GridOccupancyBitmap::<Test, Instance1>::get();
+			assert!(bitmap.get_occupied_cells().is_empty());
+			assert!(bitmap.get_blocked_cells().is_empty());
 		});
 	}
 
@@ -277,7 +291,7 @@ mod try_start_battle {
 			assert_ok!(BattleRoyale::try_start_battle(
 				MIN_BATTLE_DURATION,
 				20,
-				Coordinates::new(20, 20),
+				Coordinates::new(16, 16),
 				DEFAULT_SHRINK_PHASE_FREQUENCY,
 				DEFAULT_BOUNDARIES,
 				vec![]
@@ -306,16 +320,16 @@ mod try_finish_battle {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
 			let alice_weapon = PlayerWeapon::Rock;
-			let _ = queue_player(&ALICE, alice_weapon);
+			let _ = queue_player(&ALICE, alice_weapon, None);
 			let bob_weapon = PlayerWeapon::Scissors;
-			let _ = queue_player(&BOB, bob_weapon);
+			let _ = queue_player(&BOB, bob_weapon, None);
 
 			run_to_block((12 + QUEUE_DURATION) as u64);
 
@@ -360,7 +374,7 @@ mod try_finish_battle {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
@@ -410,7 +424,7 @@ mod try_finish_battle {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
@@ -445,7 +459,7 @@ mod try_queue_player {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
@@ -470,6 +484,8 @@ mod try_queue_player {
 					state: PlayerState::Inactive,
 				}
 			);
+			let bitmap = GridOccupancyBitmap::<Test, Instance1>::get();
+			assert_eq!(bitmap.get_occupied_cells().len(), 1);
 
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 1);
 			let expected_set = {
@@ -513,6 +529,8 @@ mod try_queue_player {
 				GridOccupancy::<Test, Instance1>::get(bob_position),
 				OccupancyState::Open(expected_set)
 			);
+			let bitmap = GridOccupancyBitmap::<Test, Instance1>::get();
+			assert_eq!(bitmap.get_occupied_cells().len(), 2);
 
 			run_to_block((10 + QUEUE_DURATION) as u64);
 
@@ -549,12 +567,12 @@ mod try_queue_player {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
-			let _ = queue_player(&ALICE, PlayerWeapon::Rock);
+			let _ = queue_player(&ALICE, PlayerWeapon::Rock, None);
 
 			assert_noop!(
 				BattleRoyale::try_queue_player(&ALICE, PlayerWeapon::Paper, None),
@@ -568,18 +586,20 @@ mod try_queue_player {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 4;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
-			queue_player(&ALICE, PlayerWeapon::Paper);
-			queue_player(&BOB, PlayerWeapon::Rock);
-			queue_player(&CHARLIE, PlayerWeapon::Scissors);
-			queue_player(&DAVE, PlayerWeapon::Paper);
+			queue_player(&ALICE, PlayerWeapon::Paper, None);
+			queue_player(&BOB, PlayerWeapon::Rock, None);
+			queue_player(&CHARLIE, PlayerWeapon::Scissors, None);
+			queue_player(&DAVE, PlayerWeapon::Paper, None);
 
 			assert_eq!(PlayerDetails::<Test, Instance1>::iter().count(), 4);
 			assert_eq!(GridOccupancy::<Test, Instance1>::iter().count(), 4);
+			let bitmap = GridOccupancyBitmap::<Test, Instance1>::get();
+			assert_eq!(bitmap.get_occupied_cells().len(), 4);
 
 			assert_noop!(
 				BattleRoyale::try_queue_player(&EDWARD, PlayerWeapon::Scissors, None),
@@ -597,21 +617,21 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
 			let alice_weapon = PlayerWeapon::Rock;
-			let alice_initial_position = queue_player(&ALICE, alice_weapon);
+			let alice_initial_position = queue_player(&ALICE, alice_weapon, None);
 			let bob_weapon = PlayerWeapon::Rock;
-			let bob_initial_position = queue_player(&BOB, bob_weapon);
+			let bob_initial_position = queue_player(&BOB, bob_weapon, None);
 
 			run_to_block(22);
 
 			let charlie_weapon = PlayerWeapon::Scissors;
-			let charlie_initial_position = queue_player(&CHARLIE, charlie_weapon);
+			let charlie_initial_position = queue_player(&CHARLIE, charlie_weapon, None);
 
 			run_to_block((10 + QUEUE_DURATION) as u64);
 
@@ -853,16 +873,16 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
 			let alice_weapon = PlayerWeapon::Rock;
-			let alice_initial_position = queue_player(&ALICE, alice_weapon);
+			let alice_initial_position = queue_player(&ALICE, alice_weapon, None);
 			let bob_weapon = PlayerWeapon::Scissors;
-			let bob_initial_position = queue_player(&BOB, bob_weapon);
+			let bob_initial_position = queue_player(&BOB, bob_weapon, None);
 
 			run_to_block((10 + QUEUE_DURATION) as u64);
 
@@ -1056,7 +1076,7 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = MAX_PLAYER_PER_BATTLE;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
@@ -1070,10 +1090,16 @@ mod try_perform_player_action {
 			let mut initial_position_vec = Vec::with_capacity(account_vec.len());
 
 			for (i, account) in account_vec.iter().enumerate() {
-				let initial_position = if i == (account_count - 1) {
-					queue_player(account, PlayerWeapon::Rock)
+				let initial_position = {
+					let x = ((i as u8) / battle_grid_size.x) + 1;
+					let y = ((i as u8) % battle_grid_size.y) + 1;
+					Coordinates::new(x, y)
+				};
+
+				if i == (account_count - 1) {
+					let _ = queue_player(account, PlayerWeapon::Rock, Some(initial_position));
 				} else {
-					queue_player(account, PlayerWeapon::Scissors)
+					let _ = queue_player(account, PlayerWeapon::Scissors, Some(initial_position));
 				};
 				initial_position_vec.push(initial_position);
 			}
@@ -1214,19 +1240,19 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
 
 			let alice_weapon = PlayerWeapon::Rock;
-			let alice_initial_position = queue_player(&ALICE, alice_weapon);
+			let alice_initial_position = queue_player(&ALICE, alice_weapon, None);
 			let bob_weapon = PlayerWeapon::Scissors;
-			let bob_initial_position = queue_player(&BOB, bob_weapon);
+			let bob_initial_position = queue_player(&BOB, bob_weapon, None);
 
 			// We forcefully move ALICE so that she gets caught in the first wall shrink
-			let move_to_coordinates = Coordinates::new(20, 20);
+			let move_to_coordinates = Coordinates::new(16, 16);
 			BattleRoyale::update_player_positions_storage(
 				&ALICE,
 				alice_initial_position,
@@ -1265,7 +1291,7 @@ mod try_perform_player_action {
 			// We advance 37 blocks, which will put us in the Shrink phase
 			run_to_block(System::block_number() + 37);
 			// The grid bound has shrunk
-			let battle_grid_size = Coordinates::new(19, 20);
+			let battle_grid_size = Coordinates::new(15, 16);
 			assert_battle_state_is_active_with(
 				BattlePhase::Shrink,
 				battle_max_players,
@@ -1302,8 +1328,7 @@ mod try_perform_player_action {
 			// since only 1 player is left which means during Verification we will switch in
 			// the same block to Finished phase
 			run_to_block(System::block_number() + 1);
-			// The grid bound has shrunk
-			let battle_grid_size = Coordinates::new(19, 20);
+			let battle_grid_size = Coordinates::new(15, 16);
 			assert_battle_state_is_active_with(
 				BattlePhase::Finished,
 				battle_max_players,
@@ -1320,24 +1345,24 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
-			let _ = queue_player(&ALICE, PlayerWeapon::Rock);
-			let bob_initial_position = queue_player(&BOB, PlayerWeapon::Scissors);
+			let _ = queue_player(&ALICE, PlayerWeapon::Rock, None);
+			let bob_initial_position = queue_player(&BOB, PlayerWeapon::Scissors, None);
 
 			// We forcefully move BOB so that she gets caught in the first wall shrink
 			BattleRoyale::update_player_positions_storage(
 				&BOB,
 				bob_initial_position,
-				Coordinates::new(20, 20),
+				Coordinates::new(16, 16),
 			);
 			PlayerDetails::<Test, Instance1>::mutate(&BOB, |maybe_details| {
 				if let Some(details) = maybe_details {
-					details.position = Coordinates::new(20, 20);
+					details.position = Coordinates::new(16, 16);
 				}
 			});
 
@@ -1413,7 +1438,7 @@ mod try_perform_player_action {
 			// Trying to perform an action here is also not allowed
 			run_to_block(System::block_number() + 29);
 			// The grid bound has shrunk
-			let battle_grid_size = Coordinates::new(19, 20);
+			let battle_grid_size = Coordinates::new(15, 16);
 			assert_battle_state_is_active_with(
 				BattlePhase::Shrink,
 				battle_max_players,
@@ -1450,13 +1475,13 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
-			queue_player(&ALICE, PlayerWeapon::Rock);
+			queue_player(&ALICE, PlayerWeapon::Rock, None);
 
 			// We advance 52 more blocks, this should put us in the Input phase.
 			run_to_block(System::block_number() + 52);
@@ -1492,13 +1517,13 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
-			queue_player(&ALICE, PlayerWeapon::Rock);
+			queue_player(&ALICE, PlayerWeapon::Rock, None);
 
 			// We advance 52 more blocks, this should put us in the Input phase.
 			run_to_block(System::block_number() + 52);
@@ -1530,13 +1555,13 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
-			queue_player(&ALICE, PlayerWeapon::Rock);
+			queue_player(&ALICE, PlayerWeapon::Rock, None);
 
 			// We advance 52 more blocks, this should put us in the Input phase.
 			run_to_block(System::block_number() + 52);
@@ -1588,13 +1613,13 @@ mod try_perform_player_action {
 		ExtBuilder::default().balances(&[(ALICE, 1000)]).build().execute_with(|| {
 			let battle_duration = 500;
 			let battle_max_players = 20;
-			let battle_grid_size = Coordinates::new(20, 20);
+			let battle_grid_size = Coordinates::new(16, 16);
 
 			run_to_block(10);
 			let battle_runs_until = 10 + (battle_duration + QUEUE_DURATION) as MockBlockNumber;
 
 			start_battle_with_config(battle_duration, battle_max_players, battle_grid_size);
-			queue_player(&ALICE, PlayerWeapon::Rock);
+			queue_player(&ALICE, PlayerWeapon::Rock, None);
 
 			// We advance 55 more blocks, this should put us in the Reveal phase.
 			run_to_block(System::block_number() + 55);

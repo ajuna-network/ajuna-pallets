@@ -12,7 +12,7 @@ pub(crate) const MIN_PLAYER_PER_BATTLE: u8 = 4;
 pub(crate) const MAX_PLAYER_PER_BATTLE: u8 = 64;
 
 pub(crate) const MIN_GRID_SIZE: u8 = 2;
-pub(crate) const MAX_GRID_SIZE: u8 = 50;
+pub(crate) const MAX_GRID_SIZE: u8 = 16;
 
 /// Amount if blocks in which a game remains open for players to queue in
 pub(crate) const QUEUE_DURATION: u32 = 50;
@@ -36,6 +36,7 @@ pub(crate) struct GridBits {
 
 type GridBitSlice = BitSlice<u32, Msb0>;
 
+#[allow(dead_code)]
 impl GridBits {
 	#[inline]
 	pub(crate) fn get_grid_coordinate_for(bit_idx: u8) -> Coordinates {

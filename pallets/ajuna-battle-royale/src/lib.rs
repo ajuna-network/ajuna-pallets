@@ -96,6 +96,10 @@ pub mod pallet {
 	pub type GridOccupancy<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, Coordinates, OccupancyStateFor<T>, ValueQuery>;
 
+	#[pallet::storage]
+	pub(crate) type GridOccupancyBitmap<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, GridBits, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
@@ -246,7 +250,15 @@ pub mod pallet {
 
 						GridOccupancy::<T, I>::mutate(details.position, |occupancy_state| {
 							if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+								let prev_length = account_set.len();
 								account_set.remove(account);
+								let new_length = account_set.len();
+
+								if prev_length > 0 && new_length == 0 {
+									GridOccupancyBitmap::<T, I>::mutate(|bitmap| {
+										bitmap.mark_player_cell_as(&details.position, false);
+									});
+								}
 							} else {
 								panic!("Tried to remove account from Blocked position!")
 							}
@@ -294,10 +306,12 @@ pub mod pallet {
 			let mut r: u64 = 0;
 			let mut w: u64 = 0;
 
-			let occupancy_vec = GridOccupancy::<T, I>::iter()
-				.filter_map(|(_, occupancy_state)| match occupancy_state {
+			let battle_cells = GridOccupancyBitmap::<T, I>::get()
+				.get_occupied_cells()
+				.into_iter()
+				.filter_map(|cell| match GridOccupancy::<T, I>::get(cell) {
 					OccupancyStateFor::<T>::Open(account_set) if account_set.len() > 1 =>
-						Some(account_set.iter().cloned().collect::<Vec<_>>()),
+						Some(account_set.into_iter().collect::<Vec<_>>()),
 					_ => None,
 				})
 				.collect::<Vec<_>>();
@@ -309,9 +323,9 @@ pub mod pallet {
 			};
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
-			r = r.saturating_add(occupancy_vec.len() as u64 + 1);
+			r = r.saturating_add(battle_cells.len() as u64 + 1);
 
-			for mut accounts in occupancy_vec.into_iter() {
+			for mut accounts in battle_cells.into_iter() {
 				r = r.saturating_add(accounts.len() as u64);
 
 				while accounts.len() > 1 {
@@ -398,21 +412,47 @@ pub mod pallet {
 				if let BattleStateFor::<T>::Active { boundaries, .. } = state {
 					boundaries.shrink();
 
-					for account in GridOccupancy::<T, I>::iter()
-						.filter_map(|(ref coordinates, state)| match state {
-							OccupancyStateFor::<T>::Open(account_set)
-								if !boundaries.is_in_boundaries(coordinates) =>
-								Some(account_set.iter().cloned().collect::<Vec<_>>()),
-							_ => None,
-						})
-						.fold(Vec::new(), |mut acc, account_list| {
-							acc.extend(account_list);
-							acc
-						}) {
-						let (r1, w1) = Self::mark_account_as_defeated(&account);
-						r = r.saturating_add(r1 + 1);
-						w = w.saturating_add(w1);
-					}
+					GridOccupancyBitmap::<T, I>::mutate(|bitmap| {
+						for cell in bitmap
+							.get_occupied_cells()
+							.iter()
+							.filter(|cell| !boundaries.is_in_boundaries(cell))
+						{
+							GridOccupancy::<T, I>::mutate(cell, |state| {
+								if let OccupancyStateFor::<T>::Open(account_set) = state {
+									for account in account_set.iter() {
+										PlayerDetails::<T, I>::mutate(account, |maybe_details| {
+											if let Some(details) = maybe_details {
+												if !matches!(details.state, PlayerState::Defeated) {
+													details.state = PlayerState::Defeated;
+												}
+
+												Self::deposit_event(
+													Event::<T, I>::PlayerDefeated {
+														player: account.clone(),
+													},
+												);
+
+												r = r.saturating_add(1);
+												w = w.saturating_add(1);
+											}
+										});
+									}
+								}
+
+								r = r.saturating_add(1);
+								w = w.saturating_add(1);
+
+								*state = OccupancyStateFor::<T>::Blocked;
+							});
+
+							bitmap.mark_player_cell_as(cell, false);
+							bitmap.mark_blocked_cell_as(cell, true);
+
+							r = r.saturating_add(1);
+							w = w.saturating_add(1);
+						}
+					});
 				} else {
 					panic!("Expected Active battle state for wall shrinkage phase!");
 				}
@@ -483,6 +523,7 @@ pub mod pallet {
 
 			// TODO: Check if we can split this between blocks (maybe using cursor during idle time)
 			let _ = GridOccupancy::<T, I>::clear(MAX_GRID_SIZE as u32 * MAX_GRID_SIZE as u32, None);
+			GridOccupancyBitmap::<T, I>::kill();
 		}
 
 		fn update_player_data_using_action(
@@ -529,12 +570,28 @@ pub mod pallet {
 				if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
 					GridOccupancy::<T, I>::mutate(prev_position, |occupancy_state| {
 						if let OccupancyStateFor::<T>::Open(account_set) = occupancy_state {
+							let prev_length = account_set.len();
 							account_set.remove(account);
+							let new_length = account_set.len();
+
+							if prev_length > 0 && new_length == 0 {
+								GridOccupancyBitmap::<T, I>::mutate(|bitmap| {
+									bitmap.mark_player_cell_as(&prev_position, false);
+								});
+							}
 						} else {
 							panic!("Tried to remove account from Blocked position!")
 						}
 					});
+					let prev_length = account_set.len();
 					account_set.try_insert(account.clone()).expect("Inserted account into set");
+					let new_length = account_set.len();
+
+					if prev_length == 0 && new_length > 0 {
+						GridOccupancyBitmap::<T, I>::mutate(|bitmap| {
+							bitmap.mark_player_cell_as(&new_position, true);
+						});
+					}
 				}
 			});
 		}
@@ -613,12 +670,18 @@ pub mod pallet {
 					.then(|| ShrinkBoundaries::new(shrink_sides));
 				let boundaries = GridBoundaries::new(grid_size, maybe_shrink_boundaries);
 
-				for blocked_cell in
-					blocked_cells.into_iter().filter(|cell| boundaries.is_in_boundaries(cell))
-				{
-					GridOccupancy::<T, I>::mutate(blocked_cell, |state| {
-						*state = OccupancyState::Blocked;
+				if !blocked_cells.is_empty() {
+					GridOccupancyBitmap::<T, I>::mutate(|bitmap| {
+						bitmap.mark_blocked_cells_as(blocked_cells.as_slice(), true);
 					});
+
+					for blocked_cell in
+						blocked_cells.into_iter().filter(|cell| boundaries.is_in_boundaries(cell))
+					{
+						GridOccupancy::<T, I>::mutate(blocked_cell, |state| {
+							*state = OccupancyState::Blocked;
+						});
+					}
 				}
 
 				*state = BattleStateFor::<T>::Active {
@@ -716,6 +779,10 @@ pub mod pallet {
 						Err(Error::<T, I>::CouldNotQueuePlayer)
 					}
 				})?;
+				// Marking cell bit as occupied by a player
+				GridOccupancyBitmap::<T, I>::mutate(|bitmap| {
+					bitmap.mark_player_cell_as(&initial_position, true);
+				});
 
 				PlayerDetails::<T, I>::insert(account, player_data);
 
