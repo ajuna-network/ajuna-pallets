@@ -2236,5 +2236,15 @@ pub mod pallet {
 			let Season { fee, .. } = Self::seasons(&asset.season_id)?;
 			T::Currency::transfer(&player, &fee_recipient, fee.prepare_avatar, AllowDeath)
 		}
+
+		#[cfg(feature = "runtime-benchmarks")]
+		fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
+			todo!();
+		}
+
+		#[cfg(feature = "runtime-benchmarks")]
+		fn set_organizer(organizer: Self::AccountId) {
+			Organizer::<T>::put(organizer)
+		}
 	}
 }

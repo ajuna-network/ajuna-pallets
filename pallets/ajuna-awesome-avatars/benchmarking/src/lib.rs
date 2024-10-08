@@ -21,44 +21,18 @@
 mod mock;
 
 use frame_benchmarking::benchmarks;
-use frame_support::{
-	pallet_prelude::{DispatchError, DispatchResult},
-	traits::{Currency, Get},
-};
+use frame_support::traits::{Currency, Get};
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use pallet_ajuna_awesome_avatars::{types::*, Config as AvatarsConfig, Pallet as AAvatars, *};
-use pallet_ajuna_nft_transfer::traits::NftHandler;
-use sp_runtime::traits::{
-	Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
-};
+use sp_runtime::traits::{Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero};
 use sp_std::vec;
 
 pub struct Pallet<T: Config>(pallet_ajuna_awesome_avatars::Pallet<T>);
-pub trait Config: AvatarsConfig + pallet_nfts::Config + pallet_balances::Config {}
+pub trait Config: AvatarsConfig + pallet_balances::Config {}
 
 type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-type AvatarIdOf<T> = <T as frame_system::Config>::Hash;
 type BalanceOf<T> = <CurrencyOf<T> as Currency<AccountIdFor<T>>>::Balance;
 type CurrencyOf<T> = <T as AvatarsConfig>::Currency;
-type KeyLimitOf<T> = <T as AvatarsConfig>::KeyLimit;
-type ValueLimitOf<T> = <T as AvatarsConfig>::ValueLimit;
-
-type CollectionIdOf<T> = <<T as AvatarsConfig>::NftHandler as NftHandler<
-	AccountIdFor<T>,
-	AvatarIdOf<T>,
-	KeyLimitOf<T>,
-	ValueLimitOf<T>,
-	AvatarOf<T>,
->>::CollectionId;
-
-type NftCollectionConfigOf<T> =
-	pallet_nfts::CollectionConfig<
-		<<T as pallet_nfts::Config>::Currency as Currency<
-			<T as frame_system::Config>::AccountId,
-		>>::Balance,
-		BlockNumberFor<T>,
-		<T as pallet_nfts::Config>::CollectionId,
-	>;
 
 fn account<T: Config>(name: &'static str) -> T::AccountId {
 	let index = 0;
@@ -177,44 +151,6 @@ fn create_avatars<T: Config>(name: &'static str, n: u32) -> Result<(), &'static 
 		)?;
 	}
 	Ok(())
-}
-
-fn create_collection<T: Config>(organizer: T::AccountId) -> DispatchResult {
-	let collection_deposit = <T as pallet_nfts::Config>::CollectionDeposit::get();
-	<T as pallet_nfts::Config>::Currency::make_free_balance_be(
-		&organizer,
-		collection_deposit + <T as pallet_nfts::Config>::Currency::minimum_balance(),
-	);
-
-	let collection_setting = NftCollectionConfigOf::<T> {
-		settings: pallet_nfts::CollectionSettings::all_enabled(),
-		max_supply: None,
-		mint_settings: pallet_nfts::MintSettings::default(),
-	};
-	pallet_nfts::Pallet::<T>::create(
-		RawOrigin::Signed(organizer.clone()).into(),
-		T::Lookup::unlookup(organizer),
-		collection_setting,
-	)?;
-	CollectionId::<T>::put(CollectionIdOf::<T>::from(0_u32));
-	Ok(())
-}
-
-fn create_service_account<T: Config>() -> T::AccountId {
-	let service_account = account::<T>("sa");
-	ServiceAccount::<T>::put(&service_account);
-	service_account
-}
-
-fn create_service_account_and_prepare_avatar<T: Config>(
-	player: &T::AccountId,
-	avatar_id: &AvatarIdOf<T>,
-) -> Result<T::AccountId, DispatchError> {
-	let service_account = create_service_account::<T>();
-	let season = Seasons::<T>::get(CurrentSeasonStatus::<T>::get().season_id).unwrap();
-	CurrencyOf::<T>::make_free_balance_be(player, season.fee.prepare_avatar);
-	AAvatars::<T>::prepare_avatar(RawOrigin::Signed(player.clone()).into(), *avatar_id)?;
-	Ok(service_account)
 }
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
@@ -401,15 +337,6 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::OrganizerSet { organizer })
 	}
 
-	set_collection_id {
-		let organizer = account::<T>("organizer");
-		Organizer::<T>::put(&organizer);
-		let collection_id = CollectionIdOf::<T>::from(u32::MAX);
-	}: _(RawOrigin::Signed(organizer), collection_id.clone())
-	verify {
-		assert_last_event::<T>(Event::CollectionIdSet { collection_id })
-	}
-
 	set_treasurer {
 		let season_id = 369;
 		let treasurer = account::<T>("treasurer");
@@ -550,15 +477,6 @@ benchmarks! {
 		let avatar_id = avatar_ids[avatar_ids.len() - 1];
 
 		let organizer = account::<T>("organizer");
-		create_collection::<T>(organizer)?;
-
-		let service_account = create_service_account_and_prepare_avatar::<T>(&player, &avatar_id)?;
-		let url = IpfsUrl::try_from(b"ipfs://test".to_vec()).unwrap();
-		AAvatars::<T>::prepare_ipfs(RawOrigin::Signed(service_account).into(), avatar_id, url)?;
-
-		let item_deposit = <T as pallet_nfts::Config>::ItemDeposit::get();
-		let ed = <T as pallet_nfts::Config>::Currency::minimum_balance();
-		<T as pallet_nfts::Config>::Currency::make_free_balance_be(&player, item_deposit + ed);
 	}: _(RawOrigin::Signed(player), avatar_id)
 	verify {
 		assert_last_event::<T>(Event::AvatarLocked { avatar_id })
@@ -575,65 +493,11 @@ benchmarks! {
 		let avatar_id = avatar_ids[avatar_ids.len() - 1];
 
 		let organizer = account::<T>("organizer");
-		create_collection::<T>(organizer)?;
 
-		let service_account = create_service_account_and_prepare_avatar::<T>(&player, &avatar_id)?;
-		let url = IpfsUrl::try_from(b"ipfs://test".to_vec()).unwrap();
-		AAvatars::<T>::prepare_ipfs(RawOrigin::Signed(service_account).into(), avatar_id, url)?;
-
-		let item_deposit = <T as pallet_nfts::Config>::ItemDeposit::get();
-		let ed = <T as pallet_nfts::Config>::Currency::minimum_balance();
-		<T as pallet_nfts::Config>::Currency::make_free_balance_be(&player, item_deposit + ed);
 		AAvatars::<T>::lock_avatar(RawOrigin::Signed(player.clone()).into(), avatar_id)?;
 	}: _(RawOrigin::Signed(player), avatar_id)
 	verify {
 		assert_last_event::<T>(Event::AvatarUnlocked { avatar_id })
-	}
-
-	set_service_account {
-		let service_account = account::<T>("sa");
-	}: _(RawOrigin::Root, service_account.clone())
-	verify {
-		assert_last_event::<T>(Event::<T>::ServiceAccountSet { service_account })
-	}
-
-	prepare_avatar {
-		let name = "player";
-		create_avatars::<T>(name, 1)?;
-		let player = account::<T>(name);
-		let season_id = CurrentSeasonStatus::<T>::get().season_id;
-		let avatar_id = Owners::<T>::get(&player, season_id)[0];
-		let _ = create_service_account::<T>();
-		let Season { fee, .. } = Seasons::<T>::get(season_id).unwrap();
-		CurrencyOf::<T>::make_free_balance_be(&player, fee.prepare_avatar);
-	}: _(RawOrigin::Signed(player), avatar_id)
-	verify {
-		assert_last_event::<T>(Event::<T>::PreparedAvatar { avatar_id })
-	}
-
-	unprepare_avatar {
-		let name = "player";
-		create_avatars::<T>(name, 1)?;
-		let player = account::<T>(name);
-		let season_id = CurrentSeasonStatus::<T>::get().season_id;
-		let avatar_id = Owners::<T>::get(&player, season_id)[0];
-		let _ = create_service_account_and_prepare_avatar::<T>(&player, &avatar_id)?;
-	}: _(RawOrigin::Signed(player), avatar_id)
-	verify {
-		assert_last_event::<T>(Event::<T>::UnpreparedAvatar { avatar_id })
-	}
-
-	prepare_ipfs {
-		let name = "player";
-		create_avatars::<T>(name, 1)?;
-		let player = account::<T>(name);
-		let season_id = CurrentSeasonStatus::<T>::get().season_id;
-		let avatar_id = Owners::<T>::get(&player, season_id)[0];
-		let service_account = create_service_account_and_prepare_avatar::<T>(&player, &avatar_id)?;
-		let url = IpfsUrl::try_from(b"ipfs://".to_vec()).unwrap();
-	}: _(RawOrigin::Signed(service_account), avatar_id, url.clone())
-	verify {
-		assert_last_event::<T>(Event::<T>::PreparedIpfsUrl { url })
 	}
 
 	impl_benchmark_test_suite!(
