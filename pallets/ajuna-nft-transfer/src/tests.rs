@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{mock::*, traits::*, Error, *};
+use ajuna_primitives::asset_manager::AssetManager;
 use frame_support::{
 	assert_err, assert_noop, assert_ok,
 	traits::tokens::nonfungibles_v2::{Create, Inspect},

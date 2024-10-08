@@ -58,9 +58,9 @@ pub trait AssetManager {
 		fees_recipient: &Self::AccountId,
 	) -> Result<(), DispatchError>;
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId>;
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn set_organizer(owner: Self::AccountId);
 }

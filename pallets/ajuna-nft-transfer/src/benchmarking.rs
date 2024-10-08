@@ -17,21 +17,25 @@
 #![cfg(feature = "runtime-benchmarks")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::{traits::IpfsUrl, *};
+use crate::{mock::Test, traits::IpfsUrl, *};
 use ajuna_primitives::asset_manager::AssetManager;
 use frame_benchmarking::benchmarks;
 use frame_support::{pallet_prelude::DispatchError, traits::Currency};
 use frame_system::RawOrigin;
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{BuildStorage, SaturatedConversion};
 
 type CurrencyOf<T> = <T as pallet_nfts::Config>::Currency;
 type CollectionIdOf<T> = <T as crate::Config>::CollectionId;
 type ItemIdOf<T> = <T as crate::Config>::ItemId;
 
+pub struct Pallet<T: Config>(crate::Pallet<T>);
+
 // Todo: If we can't get read of the pallet-nfts constraint here
 // we can just as well make the pallet-ajuna-nft-transfer depend
 // on it.
 pub trait Config: pallet_nfts::Config + crate::Config {}
+
+impl Config for Test {}
 
 fn account<T: Config>(name: &'static str) -> T::AccountId {
 	let index = 0;
@@ -55,8 +59,18 @@ fn create_service_account_and_prepare_avatar<T: Config>(
 ) -> Result<T::AccountId, DispatchError> {
 	let service_account = create_service_account::<T>();
 	enable_fee_payment::<T>(&player);
-	Pallet::<T>::prepare_asset(RawOrigin::Signed(player).into(), asset_id)?;
+	crate::Pallet::<T>::prepare_asset(RawOrigin::Signed(player).into(), asset_id)?;
 	Ok(service_account)
+}
+
+fn enable_fee_payment<T: Config>(player: &T::AccountId) {
+	let prepare_fee = 100_000_000_000_000u128;
+	CurrencyOf::<T>::make_free_balance_be(player, prepare_fee.saturated_into());
+}
+
+fn assert_last_event<T: Config>(avatars_event: Event<T>) {
+	let event = <T as crate::Config>::RuntimeEvent::from(avatars_event);
+	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
 benchmarks! {
@@ -80,7 +94,8 @@ benchmarks! {
 		let name = "player";
 		let player = account::<T>(name);
 		let asset_id = create_assets::<T>(player.clone(), 1)[0];
-		let _ = create_service_account_and_prepare_avatar::<T>(player.clone(), asset_id);
+		let _ = create_service_account::<T>();
+		enable_fee_payment::<T>(&player);
 	}: _(RawOrigin::Signed(player), asset_id)
 	verify {
 		assert_last_event::<T>(Event::<T>::PreparedAvatar { asset_id })
@@ -109,17 +124,12 @@ benchmarks! {
 
 	impl_benchmark_test_suite!(
 		Pallet,
-		crate::mock::new_test_ext(),
-		crate::mock::Runtime
+		crate::benchmarking::new_test_ext(),
+		crate::mock::Test
 	);
 }
 
-fn enable_fee_payment<T: Config>(player: &T::AccountId) {
-	let prepare_fee = 100_000_000_000_000u128;
-	CurrencyOf::<T>::make_free_balance_be(player, prepare_fee.saturated_into());
-}
-
-fn assert_last_event<T: Config>(avatars_event: Event<T>) {
-	let event = <T as crate::Config>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	sp_io::TestExternalities::new(t)
 }

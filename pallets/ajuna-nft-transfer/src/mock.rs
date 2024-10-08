@@ -368,7 +368,7 @@ impl AssetManager for MockAssetManager {
 		Ok(())
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
 		let mut ids = Vec::with_capacity(count as usize);
 		for i in 0..count {
@@ -380,7 +380,7 @@ impl AssetManager for MockAssetManager {
 		ids
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn set_organizer(organizer: Self::AccountId) {
 		ORGANIZER.with(|o| *o.borrow_mut() = organizer)
 	}
