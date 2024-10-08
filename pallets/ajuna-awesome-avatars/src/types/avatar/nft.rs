@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::types::{Avatar, ByteConvertible, Force, RarityTier};
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::traits::Get;
 use pallet_ajuna_nft_transfer::traits::{NFTAttribute, NftConvertible};
 use parity_scale_codec::alloc::string::ToString;
 use scale_info::prelude::format;
@@ -53,14 +53,14 @@ where
 		vec![
 			(
 				DNA_ATTRIBUTE.to_vec().try_into().unwrap(),
-				BoundedVec::try_from(
-					format!("0x{}", hex::encode(self.dna.as_slice())).into_bytes(),
-				)
-				.unwrap(),
+				format!("0x{}", hex::encode(self.dna.as_slice()))
+					.into_bytes()
+					.try_into()
+					.unwrap(),
 			),
 			(
 				SOUL_POINTS_ATTRIBUTE.to_vec().try_into().unwrap(),
-				BoundedVec::try_from(format!("{}", self.souls).into_bytes()).unwrap(),
+				format!("{}", self.souls).into_bytes().try_into().unwrap(),
 			),
 			(RARITY_ATTRIBUTE.to_vec().try_into().unwrap(), {
 				let rarity_value = RarityTier::from_byte(if self.season_id == 1 {
@@ -68,29 +68,27 @@ where
 				} else {
 					self.rarity()
 				});
-				BoundedVec::try_from(rarity_value.to_string().to_uppercase().into_bytes()).unwrap()
+				rarity_value.to_string().to_uppercase().into_bytes().try_into().unwrap()
 			}),
 			(
 				FORCE_ATTRIBUTE.to_vec().try_into().unwrap(),
-				BoundedVec::try_from(
-					Force::from_byte(self.force()).to_string().to_uppercase().into_bytes(),
-				)
-				.unwrap(),
+				Force::from_byte(self.force())
+					.to_string()
+					.to_uppercase()
+					.into_bytes()
+					.try_into()
+					.unwrap(),
 			),
 			(
 				SEASON_ID_ATTRIBUTE.to_vec().try_into().unwrap(),
-				BoundedVec::try_from(format!("{}", self.season_id).into_bytes()).unwrap(),
+				format!("{}", self.season_id).into_bytes().try_into().unwrap(),
 			),
 			(
 				MINTED_AT_ATTRIBUTE.to_vec().try_into().unwrap(),
-				BoundedVec::try_from(
-					format!(
-						"{}",
-						UniqueSaturatedInto::<u64>::unique_saturated_into(self.minted_at)
-					)
-					.into_bytes(),
-				)
-				.unwrap(),
+				format!("{}", UniqueSaturatedInto::<u64>::unique_saturated_into(self.minted_at))
+					.into_bytes()
+					.try_into()
+					.unwrap(),
 			),
 		]
 	}
