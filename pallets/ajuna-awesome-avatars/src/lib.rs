@@ -2238,13 +2238,13 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]
-		fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
-			todo!();
+		fn create_assets(_owner: Self::AccountId, _count: u32) -> Vec<Self::AssetId> {
+			unimplemented!("Not needed for now here, but nft-transfer needs it for the mock")
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]
-		fn set_organizer(organizer: Self::AccountId) {
-			Organizer::<T>::put(organizer)
+		fn set_organizer(_organizer: Self::AccountId) {
+			unimplemented!("Not needed for now here, but nft-transfer needs it for the mock")
 		}
 	}
 }
