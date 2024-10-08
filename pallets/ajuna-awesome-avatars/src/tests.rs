@@ -3778,33 +3778,28 @@ mod nft_transfer {
 			});
 	}
 
-	// #[test]
-	// fn cannot_unlock_transferred_avatar() {
-	// 	let season = Season::default();
-	// 	let season_schedule = SeasonSchedule::default();
-	//
-	// 	ExtBuilder::default()
-	// 		.seasons(&[(SEASON_ID, season)])
-	// 		.schedules(&[(SEASON_ID, season_schedule.clone())])
-	// 		.balances(&[(ALICE, 1_000_000_000_000)])
-	// 		.build()
-	// 		.execute_with(|| {
-	// 			run_to_block(season_schedule.start);
-	//
-	// 			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-	// 			assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-	//
-	// 			pallet_ajuna_nft_transfer::NftStatuses::<Test>::insert(
-	// 				CollectionId::<Test>::get().unwrap(),
-	// 				avatar_id,
-	// 				pallet_ajuna_nft_transfer::NftStatus::Uploaded,
-	// 			);
-	// 			assert_noop!(
-	// 				AAvatars::unlock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-	// 				pallet_ajuna_nft_transfer::Error::<Test>::NftOutsideOfChain
-	// 			);
-	// 		});
-	// }
+	#[test]
+	fn cannot_unlock_avatar_locked_by_other_application() {
+		let season = Season::default();
+		let season_schedule = SeasonSchedule::default();
+
+		ExtBuilder::default()
+			.seasons(&[(SEASON_ID, season)])
+			.schedules(&[(SEASON_ID, season_schedule.clone())])
+			.balances(&[(ALICE, 1_000_000_000_000)])
+			.build()
+			.execute_with(|| {
+				run_to_block(season_schedule.start);
+
+				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+				assert_ok!(AAvatars::lock_asset(*b"otherapp", ALICE, avatar_id));
+
+				assert_noop!(
+					AAvatars::unlock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
+					crate::Error::<Test>::AvatarLockedByOtherApplication
+				);
+			});
+	}
 }
 
 mod affiliates {
