@@ -30,7 +30,7 @@ type ItemIdOf<T> = <T as crate::Config>::ItemId;
 
 pub struct Pallet<T: Config>(crate::Pallet<T>);
 
-// Todo: If we can't get read of the pallet-nfts constraint here
+// Todo: If we can't get rid of the pallet-nfts constraint here
 // we can just as well make the pallet-ajuna-nft-transfer depend
 // on it.
 pub trait Config: pallet_nfts::Config + crate::Config {}
