@@ -30,6 +30,21 @@ fn create_avatars(season_id: SeasonId, account: MockAccountId, n: u8) -> Vec<Ava
 		.collect()
 }
 
+fn create_dummy_legendary_avatar_v3(
+	season_id: SeasonId,
+	souls: SoulCount,
+	minted_at: MockBlockNumber,
+) -> AvatarOf<Test> {
+	AvatarOf::<Test> {
+		season_id,
+		encoding: DnaEncoding::V3,
+		dna: Dna::try_from(vec![0x51, 0x50, 0x55, 0x53, 0x52, 0x51, 0x50, 0x53, 0x51, 0x51, 0x51])
+			.expect("Create avatar DNA"),
+		souls,
+		minted_at,
+	}
+}
+
 mod pallet_accounts {
 	use super::*;
 
@@ -4637,23 +4652,6 @@ mod tournament {
 	use pallet_ajuna_tournament::{GoldenDuckConfig, RankingTable, RewardDistributionTable};
 	use std::num::NonZeroU32;
 
-	fn create_dummy_legendary_avatar_v3(
-		season_id: SeasonId,
-		souls: SoulCount,
-		minted_at: MockBlockNumber,
-	) -> AvatarOf<Test> {
-		AvatarOf::<Test> {
-			season_id,
-			encoding: DnaEncoding::V3,
-			dna: Dna::try_from(vec![
-				0x51, 0x50, 0x55, 0x53, 0x52, 0x51, 0x50, 0x53, 0x51, 0x51, 0x51,
-			])
-			.expect("Create avatar DNA"),
-			souls,
-			minted_at,
-		}
-	}
-
 	#[test]
 	fn test_avatar_is_not_ranked_outside_active_tournament_phase() {
 		let initial_balance = 1_000_000;
@@ -5922,6 +5920,163 @@ mod tournament {
 					&leader_1,
 					&ranker
 				), pallet_ajuna_tournament::Error::<Test, TournamentInstance1>::NoActiveTournamentForSeason);
+			});
+	}
+}
+
+mod battle_royale {
+	use super::*;
+	use pallet_ajuna_battle_royale::PlayerAction;
+
+	#[test]
+	fn test_battle_royale_workflow_integrity() {
+		let initial_balance = 1_000_000;
+		let season_1 = Season::default()
+			.mint_fee(MintFees { one: 12, three: 34, six: 56 })
+			.tiers(&[RarityTier::Common, RarityTier::Epic, RarityTier::Legendary])
+			.forge_logic(LogicGeneration::Third)
+			.max_sacrifices(1);
+		let shrink_frequency = 3;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.seasons(&[(SEASON_ID, season_1.clone())])
+			.organizer(CHARLIE)
+			.build()
+			.execute_with(|| {
+				let avatar_id_1 = AvatarIdOf::<Test>::from_slice(&[
+					0x21, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x37, 0xFC, 0x17, 0x2C, 0xDD, 0x68, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x98, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let avatar_1 = create_dummy_legendary_avatar_v3(SEASON_ID, 2352, 3);
+				Avatars::<Test>::insert(avatar_id_1, (ALICE, avatar_1));
+
+				let avatar_id_2 = AvatarIdOf::<Test>::from_slice(&[
+					0x55, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
+					0x87, 0xFC, 0x17, 0x2C, 0xDD, 0x38, 0xC6, 0xBD, 0xE6, 0x96, 0xCB, 0x41, 0x8B,
+					0xCC, 0x58, 0xE3, 0x5F, 0xCF, 0x40,
+				]);
+				let avatar_2 = create_dummy_legendary_avatar_v3(SEASON_ID, 5345, 4);
+				Avatars::<Test>::insert(avatar_id_2, (BOB, avatar_2.clone()));
+
+				run_to_block(10);
+
+				assert_ok!(AAvatars::start_battle_royale(
+					RuntimeOrigin::signed(CHARLIE),
+					1_000,
+					5,
+					Coordinates::new(12, 12),
+					shrink_frequency,
+					[false, true, false, true],
+					vec![],
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::BattleStarted,
+				));
+
+				run_to_block(20);
+
+				assert_ok!(AAvatars::queue_player_in_active_battle_royale(
+					RuntimeOrigin::signed(ALICE),
+					avatar_id_1,
+					PlayerWeapon::Scissors,
+					None
+				));
+
+				assert!(LockedAvatars::<Test>::contains_key(avatar_id_1));
+				assert_eq!(BattlingAvatars::<Test>::get(ALICE), Some((SEASON_ID, avatar_id_1)));
+
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::PlayerQueued { player: ALICE },
+				));
+
+				run_to_block(30);
+
+				assert_ok!(AAvatars::queue_player_in_active_battle_royale(
+					RuntimeOrigin::signed(BOB),
+					avatar_id_2,
+					PlayerWeapon::Rock,
+					None
+				));
+
+				assert!(LockedAvatars::<Test>::contains_key(avatar_id_2));
+				assert_eq!(BattlingAvatars::<Test>::get(BOB), Some((SEASON_ID, avatar_id_2)));
+
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::PlayerQueued { player: BOB },
+				));
+
+				run_to_block(62);
+
+				let alice_payload_fill = [242; 28];
+				let alice_action =
+					PlayerAction::MoveAndSwap(Coordinates::new(2, 2), PlayerWeapon::Rock);
+				let alice_input_hash = alice_action.generate_hash_for(alice_payload_fill);
+				let alice_reveal_hash = alice_action.generate_full_payload_for(alice_payload_fill);
+				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
+					RuntimeOrigin::signed(ALICE),
+					alice_input_hash
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::PlayerPerformedAction { player: ALICE },
+				));
+
+				run_to_block(64);
+
+				let bob_payload_fill = [14; 28];
+				let bob_action =
+					PlayerAction::MoveAndSwap(Coordinates::new(2, 2), PlayerWeapon::Paper);
+				let bob_input_hash = bob_action.generate_hash_for(bob_payload_fill);
+				let bob_reveal_hash = bob_action.generate_full_payload_for(bob_payload_fill);
+				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
+					RuntimeOrigin::signed(BOB),
+					bob_input_hash,
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::PlayerPerformedAction { player: BOB },
+				));
+
+				run_to_block(65);
+				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
+					RuntimeOrigin::signed(BOB),
+					bob_reveal_hash,
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::PlayerRevealedAction { player: BOB },
+				));
+
+				run_to_block(66);
+				assert_ok!(AAvatars::perform_player_action_in_active_battle_royale(
+					RuntimeOrigin::signed(ALICE),
+					alice_reveal_hash,
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::PlayerRevealedAction { player: ALICE },
+				));
+
+				run_to_block(68);
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::PlayerDefeated { player: ALICE },
+				));
+
+				run_to_block(69);
+				System::assert_last_event(mock::RuntimeEvent::BattleRoyale(
+					pallet_ajuna_battle_royale::Event::BattleFinished,
+				));
+
+				assert_ok!(AAvatars::finish_current_battle_royale(RuntimeOrigin::signed(CHARLIE),));
+
+				assert!(!LockedAvatars::<Test>::contains_key(avatar_id_1));
+				assert!(!LockedAvatars::<Test>::contains_key(avatar_id_2));
+				assert_eq!(BattlingAvatars::<Test>::get(ALICE), None);
+				assert_eq!(BattlingAvatars::<Test>::get(BOB), None);
+				assert_eq!(Avatars::<Test>::get(avatar_id_1), None);
+				assert_eq!(Avatars::<Test>::get(avatar_id_2), Some((BOB, avatar_2)));
 			});
 	}
 }

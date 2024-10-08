@@ -16,6 +16,7 @@ members = [
 
 [workspace.dependencies]
 # General
+bitvec = { version = "1.0.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 log = { version = "0.4.17", default-features = false }
 
@@ -34,6 +35,7 @@ pallet-nfts                                = { version = "29.0.0", default-featu
 pallet-timestamp                           = { version = "34.0.0", default-features = false }
 sp-arithmetic                              = { version = "26.0.0", default-features = false }
 sp-core                                    = { version = "34.0.0", default-features = false }
+sp-crypto-hashing                          = { version = "0.1.0", default-features = false }
 sp-io                                      = { version = "37.0.0", default-features = false }
 sp-runtime                                 = { version = "38.0.0", default-features = false }
 sp-std                                     = { version = "14.0.0", default-features = false }
@@ -45,6 +47,7 @@ orml-vesting = { version = "0.13.0", default-features = false }
 pallet-ajuna-affiliates                   = { path = "pallets/ajuna-affiliates", default-features = false }
 pallet-ajuna-awesome-avatars              = { path = "pallets/ajuna-awesome-avatars", default-features = false }
 pallet-ajuna-battle-mogs                  = { path = "pallets/ajuna-battle-mogs", default-features = false }
+pallet-ajuna-battle-royale                = { path = "pallets/ajuna-battle-royale", default-features = false }
 pallet-ajuna-board                        = { path = "pallets/ajuna-board", default-features = false }
 pallet-ajuna-matchmaker                   = { path = "pallets/ajuna-matchmaker", default-features = false }
 pallet-ajuna-awesome-avatars-benchmarking = { path = "pallets/ajuna-awesome-avatars/benchmarking", default-features = false }

@@ -68,13 +68,14 @@ jobs:
     strategy:
       matrix:
         pallet:
+          - pallet-ajuna-affiliates
           - pallet-ajuna-awesome-avatars
           - pallet-ajuna-awesome-avatars-benchmarking
           - pallet-ajuna-battle-mogs
+          - pallet-ajuna-battle-royale
           - pallet-ajuna-nft-staking
           - pallet-ajuna-nft-staking-benchmarking
           - pallet-ajuna-nft-transfer
-          - pallet-ajuna-affiliates
           - pallet-ajuna-tournament
           - pallet-ajuna-wildcard
     steps:

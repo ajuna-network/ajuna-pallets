@@ -78,6 +78,7 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
 	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
 };
+use pallet_ajuna_battle_royale::{BattleProvider, Coordinates, PlayerActionHash, PlayerWeapon};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
@@ -174,6 +175,8 @@ pub mod pallet {
 			+ TournamentMutator<AccountIdFor<Self>, SeasonId, BlockNumberFor<Self>, BalanceOf<Self>>
 			+ TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>
 			+ TournamentClaimer<SeasonId, AccountIdFor<Self>, AvatarIdOf<Self>>;
+
+		type BattleHandler: BattleProvider<AccountIdFor<Self>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -291,6 +294,10 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	pub type BattlingAvatars<T: Config> =
+		StorageMap<_, Identity, AccountIdFor<T>, (SeasonId, AvatarIdOf<T>), OptionQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		_phantom: sp_std::marker::PhantomData<T>,
@@ -390,6 +397,8 @@ pub mod pallet {
 		PreparedIpfsUrl { url: IpfsUrl },
 		/// Unlock configurations updated.
 		UpdatedUnlockConfigs { season_id: SeasonId, unlock_configs: UnlockConfigs },
+		/// Account survived a BattleRoyale
+		AccountWonBattleRoyale { account: AccountIdFor<T>, avatar: AvatarIdOf<T> },
 	}
 
 	#[pallet::error]
@@ -550,6 +559,8 @@ pub mod pallet {
 		TournamentRankerNotFound,
 		/// Only whitelisted accounts can affiliate for others
 		AffiliateOthersOnlyWhiteListed,
+		/// Avatar is not legendary, making it not eligible for participating in battle royale
+		AvatarIsNotEligibleForBattle,
 	}
 
 	#[pallet::hooks]
@@ -1598,6 +1609,94 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			T::AffiliateHandler::force_set_affiliatee_chain_for(&account, chain)
+		}
+
+		#[pallet::call_index(35)]
+		#[pallet::weight({10_000})]
+		pub fn start_battle_royale(
+			origin: OriginFor<T>,
+			battle_duration: u32,
+			max_players: u8,
+			grid_size: Coordinates,
+			shrink_frequency: u8,
+			shrink_sides: [bool; 4],
+			blocked_cells: Vec<Coordinates>,
+		) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+
+			T::BattleHandler::try_start_battle(
+				battle_duration,
+				max_players,
+				grid_size,
+				shrink_frequency,
+				shrink_sides,
+				blocked_cells,
+			)
+		}
+
+		#[pallet::call_index(36)]
+		#[pallet::weight({10_000})]
+		pub fn finish_current_battle_royale(origin: OriginFor<T>) -> DispatchResult {
+			let _ = Self::ensure_organizer(origin)?;
+
+			for defeated_player in T::BattleHandler::try_finish_battle()? {
+				if let Some((season_id, avatar_id)) = BattlingAvatars::<T>::take(&defeated_player) {
+					LockedAvatars::<T>::remove(avatar_id);
+					Self::remove_avatar_from(&defeated_player, &season_id, &avatar_id);
+				} else {
+					let log_target = "runtime::ajuna-awesome-avatars";
+					log::error!(target: log_target, "Defeated account {:?} not found in BattlingAvatars storage!", &defeated_player);
+				}
+			}
+
+			for (account_id, (_, avatar_id)) in BattlingAvatars::<T>::drain() {
+				LockedAvatars::<T>::remove(avatar_id);
+
+				Self::deposit_event(Event::<T>::AccountWonBattleRoyale {
+					account: account_id,
+					avatar: avatar_id,
+				})
+			}
+
+			Ok(())
+		}
+
+		#[pallet::call_index(37)]
+		#[pallet::weight({10_000})]
+		pub fn queue_player_in_active_battle_royale(
+			origin: OriginFor<T>,
+			avatar_id: AvatarIdOf<T>,
+			initial_weapon: PlayerWeapon,
+			initial_position: Option<Coordinates>,
+		) -> DispatchResult {
+			let player = ensure_signed(origin)?;
+
+			let avatar = Self::ensure_ownership(&player, &avatar_id)?;
+			/*let season = Self::seasons(&avatar.season_id)?;
+			ensure!(
+				avatar.rarity() == season.max_tier().as_byte(),
+				Error::<T>::AvatarIsNotEligibleForBattle
+			);*/
+			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
+			Self::ensure_unlocked(&avatar_id)?;
+
+			T::BattleHandler::try_queue_player(&player, initial_weapon, initial_position)?;
+
+			LockedAvatars::<T>::insert(avatar_id, ());
+			BattlingAvatars::<T>::insert(&player, (avatar.season_id, avatar_id));
+
+			Ok(())
+		}
+
+		#[pallet::call_index(38)]
+		#[pallet::weight({10_000})]
+		pub fn perform_player_action_in_active_battle_royale(
+			origin: OriginFor<T>,
+			action: PlayerActionHash,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			T::BattleHandler::try_perform_player_action(&account, action)
 		}
 	}
 
