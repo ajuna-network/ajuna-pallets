@@ -255,6 +255,21 @@ thread_local! {
 pub struct MockAssetManager;
 
 impl MockAssetManager {
+	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<ItemId> {
+		let mut ids = Vec::with_capacity(count as usize);
+		for i in 0..count {
+			let id = ItemId::repeat_byte(i as u8);
+			ids.push(id);
+			Self::add_asset(owner, id, MockItem::new_with_field2(i))
+		}
+
+		ids
+	}
+
+	pub fn set_organizer(organizer: MockAccountId) {
+		ORGANIZER.with(|o| *o.borrow_mut() = organizer)
+	}
+
 	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
 		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id.clone()));
 		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));
@@ -368,21 +383,14 @@ impl AssetManager for MockAssetManager {
 		Ok(())
 	}
 
-	#[cfg(any(test, feature = "runtime-benchmarks"))]
+	#[cfg(feature = "runtime-benchmarks")]
 	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
-		let mut ids = Vec::with_capacity(count as usize);
-		for i in 0..count {
-			let id = ItemId::repeat_byte(i as u8);
-			ids.push(id);
-			Self::add_asset(owner, id, MockItem::new_with_field2(i))
-		}
-
-		ids
+		Self::create_assets(owner, count)
 	}
 
-	#[cfg(any(test, feature = "runtime-benchmarks"))]
+	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(organizer: Self::AccountId) {
-		ORGANIZER.with(|o| *o.borrow_mut() = organizer)
+		Self::set_organizer(organizer)
 	}
 }
 
