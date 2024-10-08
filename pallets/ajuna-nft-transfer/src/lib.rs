@@ -239,7 +239,8 @@ pub mod pallet {
 		pub fn recover_asset_from_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			let _asset = T::AssetManager::unlock_asset(player.clone(), asset_id)?;
+			let _asset =
+				T::AssetManager::unlock_asset(T::PalletId::get().0, player.clone(), asset_id)?;
 
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
 
@@ -266,7 +267,8 @@ pub mod pallet {
 			Self::ensure_unprepared(&asset_id)?;
 			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
 
-			let asset = T::AssetManager::lock_asset(player.clone(), asset_id)?;
+			let asset =
+				T::AssetManager::lock_asset(T::PalletId::get().0, player.clone(), asset_id)?;
 
 			let service_account = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
 			T::AssetManager::handle_asset_fees(&asset, &player, &service_account)?;

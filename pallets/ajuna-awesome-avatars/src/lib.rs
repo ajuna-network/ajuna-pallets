@@ -69,7 +69,7 @@ pub mod types;
 pub mod weights;
 
 use crate::{types::*, weights::WeightInfo};
-use ajuna_primitives::asset_manager::AssetManager;
+use ajuna_primitives::asset_manager::{AssetManager, Lock, LockIdentifier};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness, WithdrawReasons},
@@ -214,7 +214,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	pub type LockedAvatars<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, ()>;
+	pub type LockedAvatars<T: Config> = StorageMap<_, Identity, AvatarIdOf<T>, Lock>;
 
 	#[pallet::storage]
 	pub type PlayerConfigs<T: Config> =
@@ -451,10 +451,10 @@ pub mod pallet {
 		AvatarInTrade,
 		/// The avatar is currently locked and cannot be used.
 		AvatarLocked,
+		/// The avatar is locked by another application.
+		AvatarLockedByOtherApplication,
 		/// The avatar is not currently locked and cannot be unlocked.
 		AvatarNotLocked,
-		/// The avatar is currently unlocked and cannot be locked again.
-		AvatarUnlocked,
 		/// Tried to forge avatars from different seasons.
 		IncorrectAvatarSeason,
 		/// Tried to forge avatars with different DNA versions.
@@ -1004,7 +1004,7 @@ pub mod pallet {
 		pub fn lock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			Self::lock_asset(player, avatar_id)?;
+			Self::lock_asset(T::PalletId::get().0, player, avatar_id)?;
 
 			Ok(())
 		}
@@ -1023,7 +1023,7 @@ pub mod pallet {
 		pub fn unlock_avatar(origin: OriginFor<T>, avatar_id: AvatarIdOf<T>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 
-			Self::unlock_asset(player, avatar_id)?;
+			Self::unlock_asset(T::PalletId::get().0, player, avatar_id)?;
 			Ok(())
 		}
 
@@ -2192,30 +2192,34 @@ pub mod pallet {
 		}
 
 		fn lock_asset(
+			lock_id: LockIdentifier,
 			owner: Self::AccountId,
 			asset_id: Self::AssetId,
 		) -> Result<Self::Asset, DispatchError> {
 			let avatar = Self::ensure_ownership(&owner, &asset_id)?;
 			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
 			ensure!(Self::nft_transfer_open(), Error::<T>::NftTransferClosed);
-			ensure!(!Self::is_locked(&asset_id), Error::<T>::AvatarLocked);
+			ensure!(Self::is_locked(&asset_id).is_none(), Error::<T>::AvatarLocked);
 
 			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)?;
 
-			LockedAvatars::<T>::insert(asset_id, ());
+			LockedAvatars::<T>::insert(asset_id, Lock::new(lock_id));
 			Self::deposit_event(Event::AvatarLocked { avatar_id: asset_id });
 
 			Ok(avatar)
 		}
 
 		fn unlock_asset(
+			lock_id: LockIdentifier,
 			owner: Self::AccountId,
 			asset_id: Self::AssetId,
 		) -> Result<Self::Asset, DispatchError> {
 			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
 			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
 			ensure!(Self::nft_transfer_open(), Error::<T>::NftTransferClosed);
-			ensure!(Self::is_locked(&asset_id), Error::<T>::AvatarLocked);
+
+			let lock = Self::is_locked(&asset_id).ok_or_else(|| Error::<T>::AvatarNotLocked)?;
+			ensure!(lock.id == lock_id, Error::<T>::AvatarLockedByOtherApplication);
 
 			Self::try_restore_avatar_ownership_to(&owner, &avatar.season_id, &asset_id)?;
 
@@ -2225,8 +2229,8 @@ pub mod pallet {
 			Ok(avatar)
 		}
 
-		fn is_locked(asset_id: &Self::AssetId) -> bool {
-			LockedAvatars::<T>::contains_key(asset_id)
+		fn is_locked(asset_id: &Self::AssetId) -> Option<Lock> {
+			LockedAvatars::<T>::get(asset_id)
 		}
 
 		fn nft_transfer_open() -> bool {
