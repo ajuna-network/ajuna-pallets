@@ -1915,6 +1915,7 @@ name = "pallet-ajuna-nft-transfer"
 version = "0.13.0"
 dependencies = [
  "ajuna-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",

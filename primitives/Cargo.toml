@@ -20,3 +20,4 @@ std = [
     "parity-scale-codec/std",
     "scale-info/std",
 ]
+runtime-benchmarks = []
