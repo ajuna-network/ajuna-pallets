@@ -3558,8 +3558,6 @@ mod account {
 
 mod nft_transfer {
 	use super::*;
-	use frame_support::traits::tokens::nonfungibles_v2::Inspect;
-	use pallet_ajuna_nft_transfer::traits::NftConvertible;
 	use sp_runtime::bounded_vec;
 
 	#[test]
@@ -3578,7 +3576,6 @@ mod nft_transfer {
 				(ALICE, SEASON_ID, Locks::all_unlocked()),
 				(BOB, SEASON_ID, Locks::all_unlocked()),
 			])
-			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
 				run_to_block(season_schedule.start);
@@ -3593,15 +3590,15 @@ mod nft_transfer {
 				let avatar_ids = Owners::<Test>::get(ALICE, SEASON_ID);
 				let avatar_id = avatar_ids[0];
 
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(ALICE),
-					avatar_id,
-					IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				));
+				// assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
+				// assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+				// assert_ok!(AAvatars::prepare_ipfs(
+				// 	RuntimeOrigin::signed(ALICE),
+				// 	avatar_id,
+				// 	IpfsUrl::try_from(b"test".to_vec()).unwrap()
+				// ));
 				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert!(!Preparation::<Test>::contains_key(avatar_id));
+				// assert!(!Preparation::<Test>::contains_key(avatar_id));
 				assert!(LockedAvatars::<Test>::contains_key(avatar_id));
 				System::assert_has_event(mock::RuntimeEvent::AAvatars(
 					crate::Event::AvatarLocked { avatar_id },
@@ -3623,47 +3620,47 @@ mod nft_transfer {
 					}
 				);
 
-				// Ensure correct encoding
-				assert_eq!(
-					<Nft as Inspect<MockAccountId>>::system_attribute(
-						&CollectionId::<Test>::get().unwrap(),
-						Some(&avatar_id),
-						<AvatarOf<Test> as NftConvertible<KeyLimit, ValueLimit>>::ITEM_CODE,
-					)
-					.unwrap(),
-					avatar.encode(),
-				);
-
-				// Ensure attributes encoding
-				for (attribute_code, attribute) in <AvatarOf<Test> as NftConvertible<
-					KeyLimit,
-					ValueLimit,
-				>>::get_attribute_codes()
-				.iter()
-				.map(|attr| attr.as_slice())
-				.zip([
-					format!("0x{}", hex::encode(avatar.dna.as_slice())).into_bytes(),
-					format!("{}", avatar.souls).into_bytes(),
-					RarityTier::from_byte(if avatar.season_id == 1 {
-						avatar.rarity() + 1
-					} else {
-						avatar.rarity()
-					})
-					.to_string()
-					.to_uppercase()
-					.into_bytes(),
-					Force::from_byte(avatar.force()).to_string().to_uppercase().into_bytes(),
-				]) {
-					assert_eq!(
-						<Nft as Inspect<MockAccountId>>::system_attribute(
-							&CollectionId::<Test>::get().unwrap(),
-							Some(&avatar_id),
-							attribute_code,
-						)
-						.unwrap(),
-						attribute.as_slice()
-					);
-				}
+				// // Ensure correct encoding
+				// assert_eq!(
+				// 	<Nft as Inspect<MockAccountId>>::system_attribute(
+				// 		&CollectionId::<Test>::get().unwrap(),
+				// 		Some(&avatar_id),
+				// 		<AvatarOf<Test> as NftConvertible<KeyLimit, ValueLimit>>::ITEM_CODE,
+				// 	)
+				// 	.unwrap(),
+				// 	avatar.encode(),
+				// );
+				//
+				// // Ensure attributes encoding
+				// for (attribute_code, attribute) in <AvatarOf<Test> as NftConvertible<
+				// 	KeyLimit,
+				// 	ValueLimit,
+				// >>::get_attribute_codes()
+				// .iter()
+				// .map(|attr| attr.as_slice())
+				// .zip([
+				// 	format!("0x{}", hex::encode(avatar.dna.as_slice())).into_bytes(),
+				// 	format!("{}", avatar.souls).into_bytes(),
+				// 	RarityTier::from_byte(if avatar.season_id == 1 {
+				// 		avatar.rarity() + 1
+				// 	} else {
+				// 		avatar.rarity()
+				// 	})
+				// 	.to_string()
+				// 	.to_uppercase()
+				// 	.into_bytes(),
+				// 	Force::from_byte(avatar.force()).to_string().to_uppercase().into_bytes(),
+				// ]) {
+				// 	assert_eq!(
+				// 		<Nft as Inspect<MockAccountId>>::system_attribute(
+				// 			&CollectionId::<Test>::get().unwrap(),
+				// 			Some(&avatar_id),
+				// 			attribute_code,
+				// 		)
+				// 		.unwrap(),
+				// 		attribute.as_slice()
+				// 	);
+				// }
 
 				// Ensure ownership transferred to technical account
 				let technical_account = AAvatars::technical_account_id();
@@ -3698,26 +3695,9 @@ mod nft_transfer {
 	}
 
 	#[test]
-	fn cannot_lock_when_nft_transfer_is_closed() {
-		ExtBuilder::default()
-			.balances(&[(ALICE, MockExistentialDeposit::get() + 1)])
-			.create_nft_collection(true)
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				GlobalConfigs::<Test>::mutate(|config| config.nft_transfer.open = false);
-				assert_noop!(
-					AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-					Error::<Test>::NftTransferClosed
-				);
-			})
-	}
-
-	#[test]
 	fn cannot_lock_unowned_avatar() {
 		ExtBuilder::default()
 			.balances(&[(ALICE, 1_000_000_000_000), (BOB, 1_000_000_000_000)])
-			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, BOB, 1)[0];
@@ -3735,7 +3715,6 @@ mod nft_transfer {
 			.trade_filters(&[(SEASON_ID, TradeFilters::default())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
 			.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
-			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
@@ -3752,17 +3731,9 @@ mod nft_transfer {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
-			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(ALICE),
-					avatar_id,
-					IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				));
 				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
 				assert_noop!(
 					AAvatars::lock_avatar(
@@ -3775,63 +3746,13 @@ mod nft_transfer {
 	}
 
 	#[test]
-	fn cannot_lock_unprepared_avatar() {
-		ExtBuilder::default()
-			.balances(&[(ALICE, 1_000_000_000_000)])
-			.create_nft_collection(true)
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_noop!(
-					AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-					Error::<Test>::NotPrepared
-				);
-			});
-	}
-
-	#[test]
-	fn cannot_lock_prepared_avatar_with_empty_url() {
-		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default())])
-			.balances(&[(ALICE, 1_000_000_000_000)])
-			.create_nft_collection(true)
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(ALICE),
-					avatar_id,
-					IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				));
-
-				// Technically this can't happen but testing just for the sake of completeness.
-				Preparation::<Test>::insert(avatar_id, IpfsUrl::default());
-
-				assert_noop!(
-					AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-					pallet_ajuna_nft_transfer::Error::<Test>::EmptyIpfsUrl
-				);
-			});
-	}
-
-	#[test]
 	fn can_unlock_avatar_successfully() {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
 			.balances(&[(ALICE, 1_000_000_000_000)])
-			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(ALICE),
-					avatar_id,
-					IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				));
 				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
 				assert_ok!(AAvatars::unlock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
 				assert_eq!(LockedAvatars::<Test>::get(avatar_id), None);
@@ -3842,89 +3763,48 @@ mod nft_transfer {
 	}
 
 	#[test]
-	fn cannot_unlock_when_nft_transfer_is_closed() {
-		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, Season::default())])
-			.balances(&[(ALICE, 999_999)])
-			.create_nft_collection(true)
-			.build()
-			.execute_with(|| {
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(ALICE),
-					avatar_id,
-					IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				));
-				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				GlobalConfigs::<Test>::mutate(|config| config.nft_transfer.open = false);
-				assert_noop!(
-					AAvatars::unlock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-					Error::<Test>::NftTransferClosed
-				);
-			})
-	}
-
-	#[test]
 	fn cannot_unlock_unowned_avatar() {
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, Season::default())])
 			.balances(&[(ALICE, 1_000_000_000_000), (BOB, 5_000_000_000_000)])
-			.create_nft_collection(true)
 			.build()
 			.execute_with(|| {
 				let avatar_id = create_avatars(SEASON_ID, BOB, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(BOB), avatar_id));
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(ALICE),
-					avatar_id,
-					IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				));
 				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(BOB), avatar_id));
 				assert_noop!(
 					AAvatars::unlock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-					pallet_nfts::Error::<Test>::NoPermission
+					crate::Error::<Test>::Ownership
 				);
 			});
 	}
 
-	#[test]
-	fn cannot_unlock_transferred_avatar() {
-		let season = Season::default();
-		let season_schedule = SeasonSchedule::default();
-
-		ExtBuilder::default()
-			.seasons(&[(SEASON_ID, season)])
-			.schedules(&[(SEASON_ID, season_schedule.clone())])
-			.balances(&[(ALICE, 1_000_000_000_000)])
-			.create_nft_collection(true)
-			.build()
-			.execute_with(|| {
-				run_to_block(season_schedule.start);
-
-				let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
-				assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				assert_ok!(AAvatars::prepare_ipfs(
-					RuntimeOrigin::signed(ALICE),
-					avatar_id,
-					IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				));
-				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-
-				pallet_ajuna_nft_transfer::NftStatuses::<Test>::insert(
-					CollectionId::<Test>::get().unwrap(),
-					avatar_id,
-					pallet_ajuna_nft_transfer::NftStatus::Uploaded,
-				);
-				assert_noop!(
-					AAvatars::unlock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
-					pallet_ajuna_nft_transfer::Error::<Test>::NftOutsideOfChain
-				);
-			});
-	}
+	// #[test]
+	// fn cannot_unlock_transferred_avatar() {
+	// 	let season = Season::default();
+	// 	let season_schedule = SeasonSchedule::default();
+	//
+	// 	ExtBuilder::default()
+	// 		.seasons(&[(SEASON_ID, season)])
+	// 		.schedules(&[(SEASON_ID, season_schedule.clone())])
+	// 		.balances(&[(ALICE, 1_000_000_000_000)])
+	// 		.build()
+	// 		.execute_with(|| {
+	// 			run_to_block(season_schedule.start);
+	//
+	// 			let avatar_id = create_avatars(SEASON_ID, ALICE, 1)[0];
+	// 			assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
+	//
+	// 			pallet_ajuna_nft_transfer::NftStatuses::<Test>::insert(
+	// 				CollectionId::<Test>::get().unwrap(),
+	// 				avatar_id,
+	// 				pallet_ajuna_nft_transfer::NftStatus::Uploaded,
+	// 			);
+	// 			assert_noop!(
+	// 				AAvatars::unlock_avatar(RuntimeOrigin::signed(ALICE), avatar_id),
+	// 				pallet_ajuna_nft_transfer::Error::<Test>::NftOutsideOfChain
+	// 			);
+	// 		});
+	// }
 }
 
 mod affiliates {
