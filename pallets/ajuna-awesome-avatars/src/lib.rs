@@ -2208,7 +2208,7 @@ pub mod pallet {
 			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
 			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
 
-			let lock = Self::is_locked(&asset_id).ok_or_else(|| Error::<T>::AvatarNotLocked)?;
+			let lock = Self::is_locked(&asset_id).ok_or(Error::<T>::AvatarNotLocked)?;
 			ensure!(lock.id == lock_id, Error::<T>::AvatarLockedByOtherApplication);
 			ensure!(lock.locker == owner, Error::<T>::Ownership);
 
@@ -2234,7 +2234,7 @@ pub mod pallet {
 			fee_recipient: &Self::AccountId,
 		) -> Result<(), DispatchError> {
 			let Season { fee, .. } = Self::seasons(&asset.season_id)?;
-			T::Currency::transfer(&player, &fee_recipient, fee.prepare_avatar, AllowDeath)
+			T::Currency::transfer(player, fee_recipient, fee.prepare_avatar, AllowDeath)
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]

@@ -78,7 +78,7 @@ benchmarks! {
 		let organizer = account::<T>("organizer");
 		T::AssetManager::set_organizer(organizer.clone());
 		let collection_id = CollectionIdOf::<T>::from(u32::MAX);
-	}: _(RawOrigin::Signed(organizer), collection_id.clone())
+	}: _(RawOrigin::Signed(organizer), collection_id)
 	verify {
 		assert_last_event::<T>(Event::CollectionIdSet { collection_id })
 	}

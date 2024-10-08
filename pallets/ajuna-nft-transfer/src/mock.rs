@@ -268,7 +268,7 @@ impl MockAssetManager {
 	}
 
 	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
-		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id.clone()));
+		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id));
 		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));
 	}
 
@@ -306,11 +306,11 @@ impl AssetManager for MockAssetManager {
 		_asset_id: &Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
 		let id = OWNERS
-			.with(|owners| owners.borrow().get(&owner).cloned())
-			.ok_or_else(|| DispatchError::Other(NOT_OWNER_ERR))?;
+			.with(|owners| owners.borrow().get(owner).cloned())
+			.ok_or(DispatchError::Other(NOT_OWNER_ERR))?;
 		ASSETS
 			.with(|assets| assets.borrow().get(&id).cloned())
-			.ok_or_else(|| DispatchError::Other(NOT_OWNER_ERR))
+			.ok_or(DispatchError::Other(NOT_OWNER_ERR))
 	}
 
 	fn lock_asset(
@@ -321,13 +321,15 @@ impl AssetManager for MockAssetManager {
 		let asset = Self::ensure_ownership(&owner, &asset_id)?;
 
 		LOCKED_ASSETS.with(|locked| {
+			use std::collections::btree_map::Entry;
+
 			let mut borrowed = locked.borrow_mut();
 
-			if borrowed.contains_key(&asset_id) {
-				return DispatchError::Other(ALREADY_LOCKED_ERR).into();
-			} else {
-				borrowed.insert(asset_id, Lock::new(lock_id, owner));
+			if let Entry::Vacant(e) = borrowed.entry(asset_id) {
+				e.insert(Lock::new(lock_id, owner));
 				Ok(())
+			} else {
+				DispatchError::Other(ALREADY_LOCKED_ERR).into()
 			}
 		})?;
 
@@ -345,7 +347,7 @@ impl AssetManager for MockAssetManager {
 			locked
 				.borrow_mut()
 				.remove(&asset_id)
-				.ok_or_else(|| DispatchError::Other(NOT_LOCKED_ERR))
+				.ok_or(DispatchError::Other(NOT_LOCKED_ERR))
 		})?;
 
 		ensure!(lock.id == lock_id, DispatchError::Other(LOCKED_BY_OTHER_ERR));
@@ -359,7 +361,7 @@ impl AssetManager for MockAssetManager {
 	}
 
 	fn nft_transfer_open() -> bool {
-		NFT_TRANSFER_OPEN.with(|locked| locked.borrow().clone())
+		NFT_TRANSFER_OPEN.with(|locked| *locked.borrow())
 	}
 
 	fn handle_asset_fees(

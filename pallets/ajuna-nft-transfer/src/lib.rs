@@ -178,7 +178,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let signer = ensure_signed(origin)?;
 			T::AssetManager::ensure_organizer(&signer)?;
-			CollectionId::<T>::put(&collection_id);
+			CollectionId::<T>::put(collection_id);
 			Self::deposit_event(Event::CollectionIdSet { collection_id });
 			Ok(())
 		}
@@ -220,7 +220,7 @@ pub mod pallet {
 			let asset = T::AssetManager::ensure_ownership(&player, &asset_id)?;
 
 			let collection_id = CollectionId::<T>::get().ok_or(Error::<T>::CollectionIdNotSet)?;
-			let url = Preparation::<T>::take(&asset_id).ok_or(Error::<T>::AssetUnprepared)?;
+			let url = Preparation::<T>::take(asset_id).ok_or(Error::<T>::AssetUnprepared)?;
 
 			Self::store_as_nft(player, collection_id, asset_id, asset, url)?;
 
