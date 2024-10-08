@@ -21,7 +21,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::Encode;
-use sp_runtime::testing::H256;
+use sp_runtime::{testing::H256, DispatchError};
 
 type CollectionConfig =
 	pallet_nfts::CollectionConfig<MockBalance, BlockNumberFor<Test>, MockCollectionId>;
@@ -33,6 +33,29 @@ fn create_collection(organizer: MockAccountId) -> MockCollectionId {
 		&CollectionConfig::default(),
 	)
 	.expect("Should have create contract collection")
+}
+
+mod set_collection_id {
+	use super::*;
+
+	#[test]
+	fn set_collection_id_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let collection_id = 369;
+			assert_ok!(NftTransfer::set_collection_id(RuntimeOrigin::signed(ALICE), collection_id));
+			assert_eq!(CollectionId::<Test>::get(), Some(collection_id));
+		});
+	}
+
+	#[test]
+	fn set_collection_id_rejects_non_organizer_calls() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				NftTransfer::set_collection_id(RuntimeOrigin::signed(BOB), 333),
+				DispatchError::BadOrigin
+			);
+		});
+	}
 }
 
 mod ipfs {

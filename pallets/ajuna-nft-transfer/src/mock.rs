@@ -279,7 +279,6 @@ impl MockAssetManager {
 }
 
 pub const NOT_OWNER_ERR: &str = "NOT_OWNER";
-pub const NOT_ORGANIZER_ERR: &str = "NOT_ORGANIZER";
 pub const ALREADY_LOCKED_ERR: &str = "ALREADY_LOCKED";
 pub const NOT_LOCKED_ERR: &str = "NOT_LOCKED";
 
@@ -293,7 +292,7 @@ impl AssetManager for MockAssetManager {
 			if &*locked.borrow() == account {
 				Ok(())
 			} else {
-				DispatchError::Other(NOT_ORGANIZER_ERR).into()
+				DispatchError::BadOrigin.into()
 			}
 		})
 	}
