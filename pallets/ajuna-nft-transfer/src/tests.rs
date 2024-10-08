@@ -58,11 +58,8 @@ mod set_collection_id {
 	}
 }
 
-mod ipfs {
+mod set_service_account {
 	use super::*;
-	use ajuna_primitives::asset_manager::AssetManager;
-	use sp_runtime::DispatchError;
-
 	#[test]
 	fn set_service_account_works() {
 		ExtBuilder::default().build().execute_with(|| {
@@ -84,6 +81,12 @@ mod ipfs {
 			);
 		});
 	}
+}
+
+mod prepare_asset {
+	use super::*;
+	use ajuna_primitives::asset_manager::AssetManager;
+	use sp_runtime::DispatchError;
 
 	#[test]
 	fn prepare_avatar_works() {
@@ -215,6 +218,11 @@ mod ipfs {
 				);
 			});
 	}
+}
+
+mod unprepare_asset {
+	use super::*;
+	use sp_runtime::DispatchError;
 
 	#[test]
 	fn unprepare_avatar_works() {
@@ -273,6 +281,10 @@ mod ipfs {
 			);
 		});
 	}
+}
+
+mod prepare_ipfs {
+	use super::*;
 
 	#[test]
 	fn prepare_ipfs_works() {
