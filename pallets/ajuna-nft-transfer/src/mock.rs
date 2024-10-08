@@ -34,7 +34,7 @@ use sp_runtime::{
 	bounded_vec,
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, DispatchError,
+	DispatchError,
 };
 use std::{cell::RefCell, collections::BTreeMap};
 
@@ -44,9 +44,6 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 pub type MockCollectionId = u32;
-
-pub const ALICE: MockAccountId = 1;
-pub const BOB: MockAccountId = 2;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -247,7 +244,7 @@ thread_local! {
 	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = RefCell::new(BTreeMap::new());
 	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
 	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = RefCell::new(BTreeMap::new());
-	pub static ORGANIZER: RefCell<MockAccountId> = RefCell::new(ALICE);
+	pub static ORGANIZER: RefCell<MockAccountId> = RefCell::new(0);
 	pub static NFT_TRANSFER_OPEN: RefCell<bool> = RefCell::new(true);
 	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
 }
@@ -391,28 +388,5 @@ impl AssetManager for MockAssetManager {
 	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(organizer: Self::AccountId) {
 		Self::set_organizer(organizer)
-	}
-}
-
-#[derive(Default)]
-pub struct ExtBuilder {
-	balances: Vec<(MockAccountId, MockBalance)>,
-}
-
-impl ExtBuilder {
-	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
-		self.balances = balances.to_vec();
-		self
-	}
-
-	pub fn build(self) -> sp_io::TestExternalities {
-		let config = RuntimeGenesisConfig {
-			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
-		};
-
-		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
-		ext.execute_with(|| System::set_block_number(1));
-		ext
 	}
 }

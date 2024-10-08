@@ -35,6 +35,33 @@ fn create_collection(organizer: MockAccountId) -> MockCollectionId {
 	.expect("Should have create contract collection")
 }
 
+pub const ALICE: MockAccountId = 1;
+pub const BOB: MockAccountId = 2;
+
+#[derive(Default)]
+pub struct ExtBuilder {
+	balances: Vec<(MockAccountId, MockBalance)>,
+}
+
+impl ExtBuilder {
+	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
+		self.balances = balances.to_vec();
+		self
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		use sp_runtime::BuildStorage;
+		let config = RuntimeGenesisConfig {
+			system: Default::default(),
+			balances: BalancesConfig { balances: self.balances },
+		};
+
+		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
+}
+
 mod set_collection_id {
 	use super::*;
 
@@ -42,6 +69,7 @@ mod set_collection_id {
 	fn set_collection_id_works() {
 		ExtBuilder::default().build().execute_with(|| {
 			let collection_id = 369;
+			MockAssetManager::set_organizer(ALICE);
 			assert_ok!(NftTransfer::set_collection_id(RuntimeOrigin::signed(ALICE), collection_id));
 			assert_eq!(CollectionId::<Test>::get(), Some(collection_id));
 		});
