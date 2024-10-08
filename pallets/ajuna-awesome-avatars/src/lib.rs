@@ -2198,7 +2198,6 @@ pub mod pallet {
 		) -> Result<Self::Asset, DispatchError> {
 			let avatar = Self::ensure_ownership(&owner, &asset_id)?;
 			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
-			ensure!(Self::nft_transfer_open(), Error::<T>::NftTransferClosed);
 			ensure!(Self::is_locked(&asset_id).is_none(), Error::<T>::AvatarLocked);
 
 			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)?;
@@ -2216,7 +2215,6 @@ pub mod pallet {
 		) -> Result<Self::Asset, DispatchError> {
 			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
 			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
-			ensure!(Self::nft_transfer_open(), Error::<T>::NftTransferClosed);
 
 			let lock = Self::is_locked(&asset_id).ok_or_else(|| Error::<T>::AvatarNotLocked)?;
 			ensure!(lock.id == lock_id, Error::<T>::AvatarLockedByOtherApplication);
