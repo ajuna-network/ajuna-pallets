@@ -3590,15 +3590,7 @@ mod nft_transfer {
 				let avatar_ids = Owners::<Test>::get(ALICE, SEASON_ID);
 				let avatar_id = avatar_ids[0];
 
-				// assert_ok!(AAvatars::set_service_account(RuntimeOrigin::root(), ALICE));
-				// assert_ok!(AAvatars::prepare_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				// assert_ok!(AAvatars::prepare_ipfs(
-				// 	RuntimeOrigin::signed(ALICE),
-				// 	avatar_id,
-				// 	IpfsUrl::try_from(b"test".to_vec()).unwrap()
-				// ));
 				assert_ok!(AAvatars::lock_avatar(RuntimeOrigin::signed(ALICE), avatar_id));
-				// assert!(!Preparation::<Test>::contains_key(avatar_id));
 				assert!(LockedAvatars::<Test>::contains_key(avatar_id));
 				System::assert_has_event(mock::RuntimeEvent::AAvatars(
 					crate::Event::AvatarLocked { avatar_id },
@@ -3619,48 +3611,6 @@ mod nft_transfer {
 						minted_at: season_schedule.start,
 					}
 				);
-
-				// // Ensure correct encoding
-				// assert_eq!(
-				// 	<Nft as Inspect<MockAccountId>>::system_attribute(
-				// 		&CollectionId::<Test>::get().unwrap(),
-				// 		Some(&avatar_id),
-				// 		<AvatarOf<Test> as NftConvertible<KeyLimit, ValueLimit>>::ITEM_CODE,
-				// 	)
-				// 	.unwrap(),
-				// 	avatar.encode(),
-				// );
-				//
-				// // Ensure attributes encoding
-				// for (attribute_code, attribute) in <AvatarOf<Test> as NftConvertible<
-				// 	KeyLimit,
-				// 	ValueLimit,
-				// >>::get_attribute_codes()
-				// .iter()
-				// .map(|attr| attr.as_slice())
-				// .zip([
-				// 	format!("0x{}", hex::encode(avatar.dna.as_slice())).into_bytes(),
-				// 	format!("{}", avatar.souls).into_bytes(),
-				// 	RarityTier::from_byte(if avatar.season_id == 1 {
-				// 		avatar.rarity() + 1
-				// 	} else {
-				// 		avatar.rarity()
-				// 	})
-				// 	.to_string()
-				// 	.to_uppercase()
-				// 	.into_bytes(),
-				// 	Force::from_byte(avatar.force()).to_string().to_uppercase().into_bytes(),
-				// ]) {
-				// 	assert_eq!(
-				// 		<Nft as Inspect<MockAccountId>>::system_attribute(
-				// 			&CollectionId::<Test>::get().unwrap(),
-				// 			Some(&avatar_id),
-				// 			attribute_code,
-				// 		)
-				// 		.unwrap(),
-				// 		attribute.as_slice()
-				// 	);
-				// }
 
 				// Ensure ownership transferred to technical account
 				let technical_account = AAvatars::technical_account_id();

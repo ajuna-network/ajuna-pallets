@@ -22,6 +22,13 @@ use scale_info::prelude::format;
 use sp_runtime::traits::UniqueSaturatedInto;
 use sp_std::prelude::*;
 
+const DNA_ATTRIBUTE: [u8; 3] = *b"DNA";
+const SOUL_POINTS_ATTRIBUTE: [u8; 11] = *b"SOUL_POINTS";
+const RARITY_ATTRIBUTE: [u8; 6] = *b"RARITY";
+const FORCE_ATTRIBUTE: [u8; 5] = *b"FORCE";
+const SEASON_ID_ATTRIBUTE: [u8; 9] = *b"SEASON_ID";
+const MINTED_AT_ATTRIBUTE: [u8; 9] = *b"MINTED_AT";
+
 impl<KL, VL, BlockNumber> NftConvertible<KL, VL> for Avatar<BlockNumber>
 where
 	KL: Get<u32>,
@@ -33,29 +40,29 @@ where
 
 	fn get_attribute_codes() -> Vec<NFTAttribute<KL>> {
 		vec![
-			BoundedVec::try_from(b"DNA".to_vec()).unwrap(),
-			BoundedVec::try_from(b"SOUL_POINTS".to_vec()).unwrap(),
-			BoundedVec::try_from(b"RARITY".to_vec()).unwrap(),
-			BoundedVec::try_from(b"FORCE".to_vec()).unwrap(),
-			BoundedVec::try_from(b"SEASON_ID".to_vec()).unwrap(),
-			BoundedVec::try_from(b"MINTED_AT".to_vec()).unwrap(),
+			DNA_ATTRIBUTE.to_vec().try_into().unwrap(),
+			SOUL_POINTS_ATTRIBUTE.to_vec().try_into().unwrap(),
+			RARITY_ATTRIBUTE.to_vec().try_into().unwrap(),
+			FORCE_ATTRIBUTE.to_vec().try_into().unwrap(),
+			SEASON_ID_ATTRIBUTE.to_vec().try_into().unwrap(),
+			MINTED_AT_ATTRIBUTE.to_vec().try_into().unwrap(),
 		]
 	}
 
 	fn get_encoded_attributes(&self) -> Vec<(NFTAttribute<KL>, NFTAttribute<VL>)> {
 		vec![
 			(
-				BoundedVec::try_from(b"DNA".to_vec()).unwrap(),
+				DNA_ATTRIBUTE.to_vec().try_into().unwrap(),
 				BoundedVec::try_from(
 					format!("0x{}", hex::encode(self.dna.as_slice())).into_bytes(),
 				)
 				.unwrap(),
 			),
 			(
-				BoundedVec::try_from(b"SOUL_POINTS".to_vec()).unwrap(),
+				SOUL_POINTS_ATTRIBUTE.to_vec().try_into().unwrap(),
 				BoundedVec::try_from(format!("{}", self.souls).into_bytes()).unwrap(),
 			),
-			(BoundedVec::try_from(b"RARITY".to_vec()).unwrap(), {
+			(RARITY_ATTRIBUTE.to_vec().try_into().unwrap(), {
 				let rarity_value = RarityTier::from_byte(if self.season_id == 1 {
 					self.rarity() + 1
 				} else {
@@ -64,18 +71,18 @@ where
 				BoundedVec::try_from(rarity_value.to_string().to_uppercase().into_bytes()).unwrap()
 			}),
 			(
-				BoundedVec::try_from(b"FORCE".to_vec()).unwrap(),
+				FORCE_ATTRIBUTE.to_vec().try_into().unwrap(),
 				BoundedVec::try_from(
 					Force::from_byte(self.force()).to_string().to_uppercase().into_bytes(),
 				)
 				.unwrap(),
 			),
 			(
-				BoundedVec::try_from(b"SEASON_ID".to_vec()).unwrap(),
+				SEASON_ID_ATTRIBUTE.to_vec().try_into().unwrap(),
 				BoundedVec::try_from(format!("{}", self.season_id).into_bytes()).unwrap(),
 			),
 			(
-				BoundedVec::try_from(b"MINTED_AT".to_vec()).unwrap(),
+				MINTED_AT_ATTRIBUTE.to_vec().try_into().unwrap(),
 				BoundedVec::try_from(
 					format!(
 						"{}",
@@ -86,5 +93,106 @@ where
 				.unwrap(),
 			),
 		]
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::types::{
+		avatar::{
+			nft::{
+				DNA_ATTRIBUTE, FORCE_ATTRIBUTE, MINTED_AT_ATTRIBUTE, RARITY_ATTRIBUTE,
+				SEASON_ID_ATTRIBUTE, SOUL_POINTS_ATTRIBUTE,
+			},
+			ByteConvertible,
+		},
+		Avatar, DnaEncoding, Force, RarityTier,
+	};
+	use frame_support::{
+		__private::Get,
+		pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
+	};
+	use pallet_ajuna_nft_transfer::traits::NftConvertible;
+	use sp_core::bounded_vec;
+
+	type TestAvatar = Avatar<u64>;
+
+	#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+	pub struct ParameterGet<const N: u32>;
+
+	impl<const N: u32> Get<u32> for ParameterGet<N> {
+		fn get() -> u32 {
+			N
+		}
+	}
+
+	// Same values as we put in AAA tests
+	pub type KeyLimit = ParameterGet<32>;
+	pub type ValueLimit = ParameterGet<200>;
+
+	/// Avatar taken from the `can_lock_avatar_successfully` test.
+	pub fn test_avatar() -> TestAvatar {
+		Avatar {
+			season_id: 1,
+			dna: bounded_vec![
+				0x24, 0x00, 0x41, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00
+			],
+			souls: 60,
+			encoding: DnaEncoding::V2,
+			minted_at: 3,
+		}
+	}
+
+	#[test]
+	fn get_attributes_codes_works() {
+		let attribute_code =
+			<TestAvatar as NftConvertible<KeyLimit, ValueLimit>>::get_attribute_codes();
+
+		assert_eq!(attribute_code[0], DNA_ATTRIBUTE.to_vec());
+		assert_eq!(attribute_code[1], SOUL_POINTS_ATTRIBUTE.to_vec());
+		assert_eq!(attribute_code[2], RARITY_ATTRIBUTE.to_vec());
+		assert_eq!(attribute_code[3], FORCE_ATTRIBUTE.to_vec());
+		assert_eq!(attribute_code[4], SEASON_ID_ATTRIBUTE.to_vec());
+		assert_eq!(attribute_code[5], MINTED_AT_ATTRIBUTE.to_vec());
+	}
+
+	#[test]
+	fn get_encoded_attributes_works() {
+		let avatar = test_avatar();
+
+		let attributes =
+			<TestAvatar as NftConvertible<KeyLimit, ValueLimit>>::get_encoded_attributes(&avatar);
+
+		assert_eq!(attributes[0].0, DNA_ATTRIBUTE.to_vec());
+		assert_eq!(attributes[1].0, SOUL_POINTS_ATTRIBUTE.to_vec());
+		assert_eq!(attributes[2].0, RARITY_ATTRIBUTE.to_vec());
+		assert_eq!(attributes[3].0, FORCE_ATTRIBUTE.to_vec());
+		assert_eq!(attributes[4].0, SEASON_ID_ATTRIBUTE.to_vec());
+		assert_eq!(attributes[5].0, MINTED_AT_ATTRIBUTE.to_vec());
+
+		assert_eq!(
+			attributes[0].1,
+			format!("0x{}", hex::encode(avatar.dna.as_slice())).into_bytes()
+		);
+		assert_eq!(attributes[1].1, format!("{}", avatar.souls).into_bytes());
+		assert_eq!(
+			attributes[2].1,
+			RarityTier::from_byte(if avatar.season_id == 1 {
+				avatar.rarity() + 1
+			} else {
+				avatar.rarity()
+			})
+			.to_string()
+			.to_uppercase()
+			.into_bytes()
+		);
+		assert_eq!(
+			attributes[3].1,
+			Force::from_byte(avatar.force()).to_string().to_uppercase().into_bytes(),
+		);
+		assert_eq!(attributes[4].1, format!("{}", avatar.season_id).into_bytes());
+		assert_eq!(attributes[5].1, format!("{}", avatar.minted_at).into_bytes());
 	}
 }
