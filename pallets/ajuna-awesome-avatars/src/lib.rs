@@ -64,6 +64,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(any(test, feature = "runtime-benchmarks"))]
+pub mod benchmark_helper;
 pub mod migration;
 pub mod types;
 pub mod weights;
@@ -2238,13 +2240,18 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]
-		fn create_assets(_owner: Self::AccountId, _count: u32) -> Vec<Self::AssetId> {
-			unimplemented!("Not needed for now here, but nft-transfer needs it for the mock")
+		fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
+			benchmark_helper::create_avatars::<T>(owner.clone(), count).unwrap();
+
+			let season_id = CurrentSeasonStatus::<T>::get().season_id;
+			let avatar_ids = Owners::<T>::get(owner, season_id);
+
+			avatar_ids.into()
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]
-		fn set_organizer(_organizer: Self::AccountId) {
-			unimplemented!("Not needed for now here, but nft-transfer needs it for the mock")
+		fn set_organizer(organizer: Self::AccountId) {
+			Organizer::<T>::put(organizer)
 		}
 	}
 }
