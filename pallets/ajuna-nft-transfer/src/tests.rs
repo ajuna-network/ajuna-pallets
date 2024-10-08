@@ -179,7 +179,8 @@ mod ipfs {
 	fn prepare_avatar_rejects_locked_avatars() {
 		ExtBuilder::default().build().execute_with(|| {
 			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
-			MockAssetManager::lock_asset(ALICE, asset_id).unwrap();
+			MockAssetManager::lock_asset(<Test as Config>::PalletId::get().0, ALICE, asset_id)
+				.unwrap();
 			assert_noop!(
 				NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
 				DispatchError::Other(ALREADY_LOCKED_ERR)

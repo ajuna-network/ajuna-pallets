@@ -18,10 +18,12 @@ use crate::{
 	self as pallet_ajuna_nft_transfer,
 	traits::{NFTAttribute, NftConvertible},
 };
-use ajuna_primitives::asset_manager::AssetManager;
+use ajuna_primitives::asset_manager::{AssetManager, Lock};
 use frame_support::{
-	parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, Currency, ExistenceRequirement},
+	ensure, parameter_types,
+	traits::{
+		AsEnsureOriginWithArg, ConstU16, ConstU64, Currency, ExistenceRequirement, LockIdentifier,
+	},
 	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
@@ -244,7 +246,7 @@ impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
 thread_local! {
 	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = RefCell::new(BTreeMap::new());
 	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
-	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
+	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock>> = RefCell::new(BTreeMap::new());
 	pub static ORGANIZER: RefCell<MockAccountId> = RefCell::new(ALICE);
 	pub static NFT_TRANSFER_OPEN: RefCell<bool> = RefCell::new(true);
 	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
@@ -281,6 +283,7 @@ impl MockAssetManager {
 pub const NOT_OWNER_ERR: &str = "NOT_OWNER";
 pub const ALREADY_LOCKED_ERR: &str = "ALREADY_LOCKED";
 pub const NOT_LOCKED_ERR: &str = "NOT_LOCKED";
+pub const LOCKED_BY_OTHER_ERR: &str = "LOCKED_BY_OTHER";
 
 impl AssetManager for MockAssetManager {
 	type AccountId = MockAccountId;
@@ -310,6 +313,7 @@ impl AssetManager for MockAssetManager {
 	}
 
 	fn lock_asset(
+		lock_id: LockIdentifier,
 		owner: Self::AccountId,
 		asset_id: Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
@@ -321,7 +325,7 @@ impl AssetManager for MockAssetManager {
 			if borrowed.contains_key(&asset_id) {
 				return DispatchError::Other(ALREADY_LOCKED_ERR).into();
 			} else {
-				borrowed.insert(asset_id, asset.clone());
+				borrowed.insert(asset_id, Lock::new(lock_id));
 				Ok(())
 			}
 		})?;
@@ -330,21 +334,26 @@ impl AssetManager for MockAssetManager {
 	}
 
 	fn unlock_asset(
+		lock_id: LockIdentifier,
 		owner: Self::AccountId,
 		asset_id: Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		let _asset = Self::ensure_ownership(&owner, &asset_id)?;
+		let asset = Self::ensure_ownership(&owner, &asset_id)?;
 
-		LOCKED_ASSETS.with(|locked| {
+		let lock = LOCKED_ASSETS.with(|locked| {
 			locked
 				.borrow_mut()
 				.remove(&asset_id)
 				.ok_or_else(|| DispatchError::Other(NOT_LOCKED_ERR))
-		})
+		})?;
+
+		ensure!(lock.id == lock_id, DispatchError::Other(LOCKED_BY_OTHER_ERR));
+
+		Ok(asset)
 	}
 
-	fn is_locked(asset: &Self::AssetId) -> bool {
-		LOCKED_ASSETS.with(|locked| locked.borrow().contains_key(asset))
+	fn is_locked(asset: &Self::AssetId) -> Option<Lock> {
+		LOCKED_ASSETS.with(|locked| locked.borrow().get(asset).cloned())
 	}
 
 	fn nft_transfer_open() -> bool {
