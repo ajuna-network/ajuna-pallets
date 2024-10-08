@@ -116,10 +116,9 @@ fn create_seasons<T: Config>(n: usize) -> Result<(), &'static str> {
 	Ok(())
 }
 
-fn create_avatars<T: Config>(name: &'static str, n: u32) -> Result<(), &'static str> {
+fn create_avatars<T: Config>(player: T::AccountId, n: u32) -> Result<(), &'static str> {
 	create_seasons::<T>(3)?;
 
-	let player = account::<T>(name);
 	PlayerConfigs::<T>::mutate(&player, |config| {
 		config.free_mints = n as MintCount;
 	});
@@ -161,10 +160,10 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 benchmarks! {
 	mint_free {
 		let name = "player";
-		let n in 0 .. (MaxAvatarsPerPlayer::get() - 6);
-		create_avatars::<T>(name, n)?;
-
 		let caller = account::<T>(name);
+		let n in 0 .. (MaxAvatarsPerPlayer::get() - 6);
+		create_avatars::<T>(caller.clone(), n)?;
+
 		PlayerConfigs::<T>::mutate(&caller, |account| account.free_mints = MintCount::MAX);
 
 		let mint_option = MintOption { payment: MintPayment::Free, pack_size: MintPackSize::Six,
@@ -179,10 +178,11 @@ benchmarks! {
 
 	mint_normal {
 		let name = "player";
-		let n in 0 .. (MaxAvatarsPerPlayer::get() - 6);
-		create_avatars::<T>(name, n)?;
-
 		let caller = account::<T>(name);
+
+		let n in 0 .. (MaxAvatarsPerPlayer::get() - 6);
+		create_avatars::<T>(caller.clone(), n)?;
+
 		let season = Seasons::<T>::get(CurrentSeasonStatus::<T>::get().season_id).unwrap();
 		let mint_fee = season.fee.mint.fee_for(&MintPackSize::Six);
 		CurrencyOf::<T>::make_free_balance_be(&caller, mint_fee);
@@ -199,10 +199,10 @@ benchmarks! {
 
 	forge {
 		let name = "player";
-		let n in 5 .. (MaxAvatarsPerPlayer::get() - 10);
-		create_avatars::<T>(name, n)?;
-
 		let player = account::<T>(name);
+		let n in 5 .. (MaxAvatarsPerPlayer::get() - 10);
+		create_avatars::<T>(player.clone(), n)?;
+
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_ids = Owners::<T>::get(&player, season_id);
 		let avatar_id = avatar_ids[0];
@@ -227,8 +227,8 @@ benchmarks! {
 		let from = account::<T>("from");
 		let to = account::<T>("to");
 		let n in 1 .. MaxAvatarsPerPlayer::get();
-		create_avatars::<T>("from", MaxAvatarsPerPlayer::get())?;
-		create_avatars::<T>("to", MaxAvatarsPerPlayer::get() - n)?;
+		create_avatars::<T>(from.clone(), MaxAvatarsPerPlayer::get())?;
+		create_avatars::<T>(to.clone(), MaxAvatarsPerPlayer::get() - n)?;
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_id = Owners::<T>::get(&from, season_id)[n as usize - 1];
 
@@ -243,8 +243,8 @@ benchmarks! {
 		let organizer = account::<T>("organizer");
 		let to = account::<T>("to");
 		let n in 1 .. MaxAvatarsPerPlayer::get();
-		create_avatars::<T>("organizer", MaxAvatarsPerPlayer::get())?;
-		create_avatars::<T>("to", MaxAvatarsPerPlayer::get() - n)?;
+		create_avatars::<T>(organizer.clone(), MaxAvatarsPerPlayer::get())?;
+		create_avatars::<T>(to.clone(), MaxAvatarsPerPlayer::get() - n)?;
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_id = Owners::<T>::get(&organizer, season_id)[n as usize - 1];
 
@@ -275,8 +275,8 @@ benchmarks! {
 
 	set_price {
 		let name = "player";
-		create_avatars::<T>(name, MaxAvatarsPerPlayer::get())?;
 		let caller = account::<T>(name);
+		create_avatars::<T>(caller.clone(), MaxAvatarsPerPlayer::get())?;
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_id = Owners::<T>::get(&caller, season_id)[0];
 		let price = BalanceOf::<T>::unique_saturated_from(u128::MAX);
@@ -287,8 +287,8 @@ benchmarks! {
 
 	remove_price {
 		let name = "player";
-		create_avatars::<T>(name, MaxAvatarsPerPlayer::get())?;
 		let caller = account::<T>(name);
+		create_avatars::<T>(caller.clone(), MaxAvatarsPerPlayer::get())?;
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_id = Owners::<T>::get(&caller, season_id)[0];
 		Trade::<T>::insert(season_id, avatar_id, BalanceOf::<T>::unique_saturated_from(u128::MAX));
@@ -301,8 +301,8 @@ benchmarks! {
 		let (buyer_name, seller_name) = ("buyer", "seller");
 		let (buyer, seller) = (account::<T>(buyer_name), account::<T>(seller_name));
 		let n in 1 .. MaxAvatarsPerPlayer::get();
-		create_avatars::<T>(buyer_name, n - 1)?;
-		create_avatars::<T>(seller_name, n)?;
+		create_avatars::<T>(buyer.clone(), n - 1)?;
+		create_avatars::<T>(seller.clone(), n)?;
 
 		let sell_fee = BalanceOf::<T>::unique_saturated_from(u64::MAX / 2);
 		let trade_fee = sell_fee / BalanceOf::<T>::unique_saturated_from(100_u8);
@@ -468,10 +468,10 @@ benchmarks! {
 
 	lock_avatar {
 		let name = "player";
-		let n in 1 .. MaxAvatarsPerPlayer::get();
-		create_avatars::<T>(name, n)?;
-
 		let player = account::<T>(name);
+		let n in 1 .. MaxAvatarsPerPlayer::get();
+		create_avatars::<T>(player.clone(), n)?;
+
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_ids = Owners::<T>::get(&player, season_id);
 		let avatar_id = avatar_ids[avatar_ids.len() - 1];
@@ -484,10 +484,10 @@ benchmarks! {
 
 	unlock_avatar {
 		let name = "player";
-		let n in 1 .. MaxAvatarsPerPlayer::get();
-		create_avatars::<T>(name, n)?;
-
 		let player = account::<T>(name);
+		let n in 1 .. MaxAvatarsPerPlayer::get();
+		create_avatars::<T>(player.clone(), n)?;
+
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_ids = Owners::<T>::get(&player, season_id);
 		let avatar_id = avatar_ids[avatar_ids.len() - 1];
