@@ -1716,15 +1716,6 @@ pub mod pallet {
 			Ok((season_id, season))
 		}
 
-		fn ensure_ownership(
-			player: &T::AccountId,
-			avatar_id: &AvatarIdOf<T>,
-		) -> Result<AvatarOf<T>, DispatchError> {
-			let (owner, avatar) = Self::avatars(avatar_id)?;
-			ensure!(player == &owner, Error::<T>::Ownership);
-			Ok(avatar)
-		}
-
 		pub(crate) fn ensure_for_mint(
 			player: &T::AccountId,
 			season_id: &SeasonId,
