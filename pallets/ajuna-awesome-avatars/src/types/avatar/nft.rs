@@ -143,7 +143,7 @@ mod tests {
 		}
 	}
 
-	fn rarity(avatar: TestAvatar) -> RarityTier {
+	fn rarity(avatar: &TestAvatar) -> RarityTier {
 		RarityTier::from_byte(if avatar.season_id == 1 {
 			avatar.rarity() + 1
 		} else {
@@ -183,7 +183,7 @@ mod tests {
 			format!("0x{}", hex::encode(avatar.dna.as_slice())).into_bytes()
 		);
 		assert_eq!(attributes[1].1, format!("{}", avatar.souls).into_bytes());
-		assert_eq!(attributes[2].1, rarity(avatar).to_string().to_uppercase().into_bytes());
+		assert_eq!(attributes[2].1, rarity(&avatar).to_string().to_uppercase().into_bytes());
 		assert_eq!(
 			attributes[3].1,
 			Force::from_byte(avatar.force()).to_string().to_uppercase().into_bytes(),
