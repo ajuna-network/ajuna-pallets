@@ -129,7 +129,7 @@ mod tests {
 	pub type ValueLimit = ParameterGet<200>;
 
 	/// Avatar taken from the `can_lock_avatar_successfully` test.
-	pub fn test_avatar() -> TestAvatar {
+	fn test_avatar() -> TestAvatar {
 		Avatar {
 			season_id: 1,
 			dna: bounded_vec![
@@ -141,6 +141,14 @@ mod tests {
 			encoding: DnaEncoding::V2,
 			minted_at: 3,
 		}
+	}
+
+	fn rarity(avatar: TestAvatar) -> RarityTier {
+		RarityTier::from_byte(if avatar.season_id == 1 {
+			avatar.rarity() + 1
+		} else {
+			avatar.rarity()
+		})
 	}
 
 	#[test]
@@ -175,17 +183,7 @@ mod tests {
 			format!("0x{}", hex::encode(avatar.dna.as_slice())).into_bytes()
 		);
 		assert_eq!(attributes[1].1, format!("{}", avatar.souls).into_bytes());
-		assert_eq!(
-			attributes[2].1,
-			RarityTier::from_byte(if avatar.season_id == 1 {
-				avatar.rarity() + 1
-			} else {
-				avatar.rarity()
-			})
-			.to_string()
-			.to_uppercase()
-			.into_bytes()
-		);
+		assert_eq!(attributes[2].1, rarity(avatar).to_string().to_uppercase().into_bytes());
 		assert_eq!(
 			attributes[3].1,
 			Force::from_byte(avatar.force()).to_string().to_uppercase().into_bytes(),
