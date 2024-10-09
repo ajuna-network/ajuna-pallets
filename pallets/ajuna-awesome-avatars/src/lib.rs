@@ -2174,10 +2174,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		//! Ensured that the account owns the asset it.
-		//!
-		//! This will return false if the asset is locked
-		//! because it belongs to the technical account then.
 		fn ensure_ownership(
 			account: &Self::AccountId,
 			asset_id: &Self::AssetId,
@@ -2228,13 +2224,10 @@ pub mod pallet {
 			LockedAvatars::<T>::get(asset_id)
 		}
 
-		// Todo: It probably makes sense that we move this config value to nft-transfer?
 		fn nft_transfer_open() -> bool {
 			GlobalConfigs::<T>::get().nft_transfer.open
 		}
 
-		// Todo: The fee-handling will be done by a separate component in the course
-		// of the sage engine architecture.
 		fn handle_asset_fees(
 			asset: &Self::Asset,
 			player: &Self::AccountId,
