@@ -177,6 +177,8 @@ pub mod pallet {
 			collection_id: T::CollectionId,
 		) -> DispatchResult {
 			let signer = ensure_signed(origin)?;
+			// Todo: this should not be with the asset manager.
+			// This will be changed in the course of the sage architecture.
 			T::AssetManager::ensure_organizer(&signer)?;
 			CollectionId::<T>::put(collection_id);
 			Self::deposit_event(Event::CollectionIdSet { collection_id });
