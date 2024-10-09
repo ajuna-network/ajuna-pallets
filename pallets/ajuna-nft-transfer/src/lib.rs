@@ -139,7 +139,7 @@ pub mod pallet {
 		CollectionIdNotSet,
 		/// Tried to prepare an already prepared asset.
 		AssetAlreadyPrepared,
-		/// IPFS URL is not prepared yet.
+		/// Asset is not not prepared yet.
 		AssetUnprepared,
 		/// IPFS URL must not be an empty string.
 		EmptyIpfsUrl,

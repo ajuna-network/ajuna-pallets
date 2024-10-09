@@ -402,8 +402,6 @@ pub mod pallet {
 		TransferClosed,
 		/// Trading is not available at the moment.
 		TradeClosed,
-		/// NFT transfer is not available at the moment.
-		NftTransferClosed,
 		/// Free mint transfer is not available at the moment.
 		FreeMintTransferClosed,
 		/// Attempt to mint or forge outside of an active season.
