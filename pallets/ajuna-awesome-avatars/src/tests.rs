@@ -5442,3 +5442,38 @@ mod tournament {
 			});
 	}
 }
+
+mod asset_manager {
+	use super::*;
+
+	#[test]
+	fn locking_and_unlocking_works() {
+		let season_id_1 = 123;
+		let lock_id = *b"testlock";
+
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_id = create_avatars(season_id_1, ALICE, 1)[0];
+
+			assert_ok!(AAvatars::lock_asset(lock_id, ALICE, avatar_id));
+			assert_eq!(AAvatars::is_locked(&avatar_id), Some(Lock::new(lock_id, ALICE)));
+			assert_ok!(AAvatars::unlock_asset(lock_id, ALICE, avatar_id));
+		})
+	}
+
+	#[test]
+	fn unlocking_by_non_owner_fails() {
+		let season_id_1 = 123;
+		let lock_id = *b"testlock";
+
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_id = create_avatars(season_id_1, ALICE, 1)[0];
+
+			// locked by alice
+			assert_ok!(AAvatars::lock_asset(lock_id, ALICE, avatar_id));
+			assert_eq!(AAvatars::is_locked(&avatar_id), Some(Lock::new(lock_id, ALICE)));
+
+			// ... bob can't unlock
+			assert_noop!(AAvatars::unlock_asset(lock_id, BOB, avatar_id), Error::<Test>::Ownership);
+		})
+	}
+}
