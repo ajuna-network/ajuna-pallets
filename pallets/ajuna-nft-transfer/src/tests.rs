@@ -137,24 +137,6 @@ mod prepare_asset {
 			});
 	}
 
-	// #[test]
-	// fn prepare_avatar_rejects_forging_trading_and_transferring() {
-	// 	ExtBuilder::default().build().execute_with(|| {
-	// 		let asset_ids = MockAssetManager::create_assets(ALICE, 5);
-	// 		let asset_id = asset_ids[0];
-	// 		assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
-	// 		assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
-	//
-	// 		for extrinsic in [
-	// 			NftTransfer::set_price(RuntimeOrigin::signed(ALICE), asset_id, 1_000),
-	// 			NftTransfer::transfer_avatar(RuntimeOrigin::signed(ALICE), BOB, asset_id),
-	// 			NftTransfer::forge(RuntimeOrigin::signed(ALICE), asset_id, asset_ids[1..3].to_vec()),
-	// 		] {
-	// 			assert_noop!(extrinsic, Error::<Test>::AlreadyPrepared);
-	// 		}
-	// 	});
-	// }
-
 	#[test]
 	fn prepare_avatar_rejects_unsigned_calls() {
 		ExtBuilder::default().build().execute_with(|| {
@@ -176,22 +158,6 @@ mod prepare_asset {
 			);
 		});
 	}
-
-	// #[test]
-	// fn prepare_avatar_rejects_avatars_in_trade() {
-	// 	ExtBuilder::default()
-	// 		.trade_filters(&[(SEASON_ID, TradeFilters::default())])
-	// 		.locks(&[(ALICE, SEASON_ID, Locks::all_unlocked())])
-	// 		.build()
-	// 		.execute_with(|| {
-	// 			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
-	// 			assert_ok!(NftTransfer::set_price(RuntimeOrigin::signed(ALICE), asset_id, 1));
-	// 			assert_noop!(
-	// 				NftTransfer::prepare_avatar(RuntimeOrigin::signed(ALICE), asset_id),
-	// 				Error::<Test>::AvatarInTrade
-	// 			);
-	// 		});
-	// }
 
 	#[test]
 	fn prepare_avatar_rejects_when_closed() {
