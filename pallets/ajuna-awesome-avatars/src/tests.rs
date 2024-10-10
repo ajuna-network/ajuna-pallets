@@ -5518,7 +5518,7 @@ mod asset_manager {
 				assert_ok!(AAvatars::handle_asset_prepare_fee(
 					&alice_avatar,
 					&ALICE,
-					&fee_recipient
+					fee_recipient
 				));
 
 				// balance checks
