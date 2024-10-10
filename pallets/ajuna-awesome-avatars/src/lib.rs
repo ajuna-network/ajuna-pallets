@@ -66,6 +66,8 @@ mod tests;
 
 #[cfg(any(test, feature = "runtime-benchmarks"))]
 pub mod benchmark_helper;
+
+pub mod impls;
 pub mod migration;
 pub mod types;
 pub mod weights;
@@ -1971,7 +1973,7 @@ pub mod pallet {
 			});
 		}
 
-		fn try_remove_avatar_ownership_from(
+		pub(crate) fn try_remove_avatar_ownership_from(
 			player: &AccountIdFor<T>,
 			season_id: &SeasonId,
 			avatar_id: &AvatarIdOf<T>,
@@ -1987,7 +1989,7 @@ pub mod pallet {
 			})
 		}
 
-		fn try_restore_avatar_ownership_to(
+		pub(crate) fn try_restore_avatar_ownership_to(
 			player: &AccountIdFor<T>,
 			season_id: &SeasonId,
 			avatar_id: &AvatarIdOf<T>,
@@ -2009,7 +2011,7 @@ pub mod pallet {
 			})
 		}
 
-		fn ensure_for_trade(
+		pub(crate) fn ensure_for_trade(
 			avatar_id: &AvatarIdOf<T>,
 		) -> Result<(T::AccountId, BalanceOf<T>), DispatchError> {
 			let (seller, avatar) = Self::avatars(avatar_id)?;
@@ -2075,14 +2077,14 @@ pub mod pallet {
 			}
 		}
 
-		fn avatars(
+		pub(crate) fn avatars(
 			avatar_id: &AvatarIdOf<T>,
 		) -> Result<(T::AccountId, AvatarOf<T>), DispatchError> {
 			let (owner, avatar) = Avatars::<T>::get(avatar_id).ok_or(Error::<T>::UnknownAvatar)?;
 			Ok((owner, avatar))
 		}
 
-		fn seasons(season_id: &SeasonId) -> Result<SeasonOf<T>, DispatchError> {
+		pub(crate) fn seasons(season_id: &SeasonId) -> Result<SeasonOf<T>, DispatchError> {
 			let season = Seasons::<T>::get(season_id).ok_or(Error::<T>::UnknownSeason)?;
 			Ok(season)
 		}
@@ -2160,96 +2162,6 @@ pub mod pallet {
 				config[2] <= forged &&
 				config[3] <= bought &&
 				config[4] <= sold
-		}
-	}
-
-	impl<T: Config> AssetManager for Pallet<T> {
-		type AccountId = AccountIdFor<T>;
-		type AssetId = AvatarIdOf<T>;
-		type Asset = AvatarOf<T>;
-
-		fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
-			let existing_organizer = Organizer::<T>::get().ok_or(Error::<T>::OrganizerNotSet)?;
-			ensure!(account == &existing_organizer, DispatchError::BadOrigin);
-			Ok(())
-		}
-
-		fn ensure_ownership(
-			account: &Self::AccountId,
-			asset_id: &Self::AssetId,
-		) -> Result<Self::Asset, DispatchError> {
-			let (owner, avatar) = Self::avatars(asset_id)?;
-			ensure!(account == &owner, Error::<T>::Ownership);
-			Ok(avatar)
-		}
-
-		fn lock_asset(
-			lock_id: LockIdentifier,
-			owner: Self::AccountId,
-			asset_id: Self::AssetId,
-		) -> Result<Self::Asset, DispatchError> {
-			let avatar = Self::ensure_ownership(&owner, &asset_id)?;
-			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
-			ensure!(Self::is_locked(&asset_id).is_none(), Error::<T>::AvatarLocked);
-
-			Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)?;
-
-			LockedAvatars::<T>::insert(asset_id, Lock::new(lock_id, owner));
-			Self::deposit_event(Event::AvatarLocked { avatar_id: asset_id });
-
-			Ok(avatar)
-		}
-
-		fn unlock_asset(
-			lock_id: LockIdentifier,
-			owner: Self::AccountId,
-			asset_id: Self::AssetId,
-		) -> Result<Self::Asset, DispatchError> {
-			let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
-			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
-
-			let lock = Self::is_locked(&asset_id).ok_or(Error::<T>::AvatarNotLocked)?;
-			ensure!(lock.id == lock_id, Error::<T>::AvatarLockedByOtherApplication);
-			ensure!(lock.locker == owner, Error::<T>::Ownership);
-
-			Self::try_restore_avatar_ownership_to(&owner, &avatar.season_id, &asset_id)?;
-
-			LockedAvatars::<T>::remove(asset_id);
-			Self::deposit_event(Event::AvatarUnlocked { avatar_id: asset_id });
-
-			Ok(avatar)
-		}
-
-		fn is_locked(asset_id: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
-			LockedAvatars::<T>::get(asset_id)
-		}
-
-		fn nft_transfer_open() -> bool {
-			GlobalConfigs::<T>::get().nft_transfer.open
-		}
-
-		fn handle_asset_fees(
-			asset: &Self::Asset,
-			player: &Self::AccountId,
-			fee_recipient: &Self::AccountId,
-		) -> Result<(), DispatchError> {
-			let Season { fee, .. } = Self::seasons(&asset.season_id)?;
-			T::Currency::transfer(player, fee_recipient, fee.prepare_avatar, AllowDeath)
-		}
-
-		#[cfg(feature = "runtime-benchmarks")]
-		fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
-			benchmark_helper::create_avatars::<T>(owner.clone(), count).unwrap();
-
-			let season_id = CurrentSeasonStatus::<T>::get().season_id;
-			let avatar_ids = Owners::<T>::get(owner, season_id);
-
-			avatar_ids.into()
-		}
-
-		#[cfg(feature = "runtime-benchmarks")]
-		fn set_organizer(organizer: Self::AccountId) {
-			Organizer::<T>::put(organizer)
 		}
 	}
 }
