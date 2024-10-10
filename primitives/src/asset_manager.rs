@@ -76,7 +76,7 @@ pub trait AssetManager {
 	fn nft_transfer_open() -> bool;
 
 	/// This should als be extracted to a separate fee handler component.
-	fn handle_asset_fees(
+	fn handle_asset_prepare_fee(
 		asset: &Self::Asset,
 		from: &Self::AccountId,
 		fees_recipient: &Self::AccountId,

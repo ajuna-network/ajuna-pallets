@@ -5492,4 +5492,42 @@ mod asset_manager {
 			assert_eq!(AAvatars::ensure_ownership(&ALICE, &avatar_id), Ok(avatar));
 		})
 	}
+
+	#[test]
+	fn handle_asset_prepare_fee_works() {
+		let season_id_1 = 123;
+
+		let avatar_prepare_fee_1 = 888;
+
+		let initial_balance = MockExistentialDeposit::get() + avatar_prepare_fee_1;
+		let total_supply = initial_balance + MockExistentialDeposit::get();
+
+		ExtBuilder::default()
+			.seasons(&[(season_id_1, Season::default().prepare_avatar_fee(avatar_prepare_fee_1))])
+			.balances(&[(ALICE, initial_balance), (BOB, MockExistentialDeposit::get())])
+			.build()
+			.execute_with(|| {
+				let fee_recipient = &BOB;
+				let fee_recipient_initial_balance = MockExistentialDeposit::get();
+				assert_eq!(Balances::free_balance(fee_recipient), fee_recipient_initial_balance);
+				assert_eq!(Balances::total_issuance(), total_supply);
+
+				let alice_avatar_id = create_avatars(season_id_1, ALICE, 1)[0];
+				let alice_avatar = Avatars::<Test>::get(alice_avatar_id).unwrap().1;
+
+				assert_ok!(AAvatars::handle_asset_prepare_fee(
+					&alice_avatar,
+					&ALICE,
+					&fee_recipient
+				));
+
+				// balance checks
+				assert_eq!(Balances::free_balance(ALICE), initial_balance - avatar_prepare_fee_1);
+				assert_eq!(
+					Balances::free_balance(fee_recipient),
+					fee_recipient_initial_balance + avatar_prepare_fee_1
+				);
+				assert_eq!(Balances::total_issuance(), total_supply);
+			});
+	}
 }

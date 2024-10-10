@@ -251,7 +251,7 @@ pub mod pallet {
 				T::AssetManager::lock_asset(T::PalletId::get().0, player.clone(), asset_id)?;
 
 			let service_account = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
-			T::AssetManager::handle_asset_fees(&asset, &player, &service_account)?;
+			T::AssetManager::handle_asset_prepare_fee(&asset, &player, &service_account)?;
 
 			Preparation::<T>::insert(asset_id, IpfsUrl::default());
 			Self::deposit_event(Event::PreparedAvatar { asset_id });

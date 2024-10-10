@@ -368,7 +368,7 @@ impl AssetManager for MockAssetManager {
 		NFT_TRANSFER_OPEN.with(|locked| *locked.borrow())
 	}
 
-	fn handle_asset_fees(
+	fn handle_asset_prepare_fee(
 		_asset: &Self::Asset,
 		from: &Self::AccountId,
 		fees_recipient: &Self::AccountId,

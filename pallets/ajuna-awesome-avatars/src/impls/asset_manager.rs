@@ -89,7 +89,7 @@ impl<T: Config> AssetManager for Pallet<T> {
 		GlobalConfigs::<T>::get().nft_transfer.open
 	}
 
-	fn handle_asset_fees(
+	fn handle_asset_prepare_fee(
 		asset: &Self::Asset,
 		player: &Self::AccountId,
 		fee_recipient: &Self::AccountId,
