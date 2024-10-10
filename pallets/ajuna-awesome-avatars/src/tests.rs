@@ -5472,8 +5472,24 @@ mod asset_manager {
 			assert_ok!(AAvatars::lock_asset(lock_id, ALICE, avatar_id));
 			assert_eq!(AAvatars::is_locked(&avatar_id), Some(Lock::new(lock_id, ALICE)));
 
-			// ... bob can't unlock
+			// ... bob isn't owner and can't unlock
+			assert_noop!(AAvatars::ensure_ownership(&BOB, &avatar_id), Error::<Test>::Ownership);
 			assert_noop!(AAvatars::unlock_asset(lock_id, BOB, avatar_id), Error::<Test>::Ownership);
+		})
+	}
+
+	#[test]
+	fn ensure_ownership_works_after_locking() {
+		let season_id_1 = 123;
+		let lock_id = *b"testlock";
+
+		ExtBuilder::default().build().execute_with(|| {
+			let avatar_id = create_avatars(season_id_1, ALICE, 1)[0];
+
+			assert_ok!(AAvatars::lock_asset(lock_id, ALICE, avatar_id));
+
+			let avatar = Avatars::<Test>::get(avatar_id).unwrap().1;
+			assert_eq!(AAvatars::ensure_ownership(&ALICE, &avatar_id), Ok(avatar));
 		})
 	}
 }

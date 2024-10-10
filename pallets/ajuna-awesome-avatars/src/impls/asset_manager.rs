@@ -32,8 +32,16 @@ impl<T: Config> AssetManager for Pallet<T> {
 		asset_id: &Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
 		let (owner, avatar) = Self::avatars(asset_id)?;
-		ensure!(account == &owner, Error::<T>::Ownership);
-		Ok(avatar)
+
+		if account == &owner {
+			return Ok(avatar)
+		} else {
+			if Self::is_locked(&asset_id).map(|lock| &lock.locker == account).unwrap_or(false) {
+				return Ok(avatar)
+			}
+		}
+
+		Err(Error::<T>::Ownership.into())
 	}
 
 	fn lock_asset(
