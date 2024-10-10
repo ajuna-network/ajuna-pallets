@@ -67,7 +67,6 @@ impl<T: Config> AssetManager for Pallet<T> {
 		asset_id: Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
 		let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
-		ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
 
 		let lock = Self::is_locked(&asset_id).ok_or(Error::<T>::AvatarNotLocked)?;
 		ensure!(lock.id == lock_id, Error::<T>::AvatarLockedByOtherApplication);
