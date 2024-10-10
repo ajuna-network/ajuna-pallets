@@ -20,8 +20,8 @@ use scale_info::TypeInfo;
 
 pub type LockIdentifier = [u8; 8];
 
-/// A single lock on a balance. There can be many of these on an account and they "overlap", so the
-/// same balance is frozen by multiple locks.
+/// A lock that tracks the purpose of the lock via the `id` and
+/// who was the `locker`.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, MaxEncodedLen, TypeInfo)]
 pub struct Lock<AccountId> {
 	/// An identifier for this lock. Only one lock may be in existence for each identifier.
@@ -38,6 +38,11 @@ impl<AccountId> Lock<AccountId> {
 	}
 }
 
+/// The asset manager trait that can be passed around to other pallets that want to do
+/// something with the assets.
+///
+/// This trait is more powerful than it is supposed to be in the future, but simplification here
+/// shall be done in the course of implementing sage.
 pub trait AssetManager {
 	type AccountId: Member + Codec;
 
@@ -45,6 +50,7 @@ pub trait AssetManager {
 
 	type Asset: Member + Codec;
 
+	/// This should be removed in the course of sage.
 	fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
 
 	fn ensure_ownership(
@@ -66,8 +72,10 @@ pub trait AssetManager {
 
 	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>>;
 
+	/// This should probably be moved from the global config into the nft-transfer-pallet?
 	fn nft_transfer_open() -> bool;
 
+	/// This should als be extracted to a separate fee handler component.
 	fn handle_asset_fees(
 		asset: &Self::Asset,
 		from: &Self::AccountId,

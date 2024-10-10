@@ -249,6 +249,10 @@ thread_local! {
 	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
 }
 
+/// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this
+/// pallet is too loaded and requires many dependencies.
+///
+/// Hence, we implement our own little asset manager here.
 pub struct MockAssetManager;
 
 impl MockAssetManager {

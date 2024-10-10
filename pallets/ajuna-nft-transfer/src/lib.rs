@@ -139,7 +139,7 @@ pub mod pallet {
 		CollectionIdNotSet,
 		/// Tried to prepare an already prepared asset.
 		AssetAlreadyPrepared,
-		/// Asset is not not prepared yet.
+		/// Asset is not prepared yet.
 		AssetUnprepared,
 		/// IPFS URL must not be an empty string.
 		EmptyIpfsUrl,
@@ -153,7 +153,7 @@ pub mod pallet {
 		NoServiceAccount,
 		/// The given NFT is not owned by the requester.
 		NftNotOwned,
-		/// The given NFT is currently outside of the chain, transfer it back before attempting a
+		/// The given NFT is currently offchain. It should be transferred back before attempting a
 		/// restore.
 		NftOutsideOfChain,
 		/// NFT transfer is not available at the moment.
@@ -203,17 +203,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Locks an asset to be tokenized as an NFT.
-		///
-		/// The origin of this call must specify an asset, owned by the origin, to prevent it from
-		/// forging, trading and transferring it to other players. When successful, the ownership of
-		/// the asset is removed from the player.
-		///
-		/// Locking an asset allows for new
-		/// ways of interacting with it currently under development.
-		///
-		/// Weight: `O(n)` where:
-		/// - `n = max assets per player`
+		/// Store the origin's asset that has been prepared as an NFT.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::lock_asset())]
 		pub fn store_prepared_as_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
@@ -229,15 +219,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Unlocks an asset removing its NFT representation.
-		///
-		/// The origin of this call must specify an asset, owned and locked by the origin, to allow
-		/// forging, trading and transferring it to other players. When successful, the ownership of
-		/// the asset is transferred from the pallet's technical account back to the player and its
-		/// existing NFT representation is destroyed.
-		///
-		/// Weight: `O(n)` where:
-		/// - `n = max assets per player`
+		/// Removes the NFT representation of an asset owned by the origin and unlock it.
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::unlock_asset())]
 		pub fn recover_asset_from_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
@@ -257,13 +239,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Prepare an asset to be uploaded to IPFS.
-		///
-		/// The origin of this call must specify an asset, owned by the origin, to display the
-		/// intention of uploading it to an IPFS storage. When successful, the `PreparedAvatar`
-		/// event is emitted to be picked up by our external service that interacts with the IPFS.
-		///
-		/// Weight: `O(1)`
+		/// Prepare an asset owned by the origin to be uploaded to IPFS.
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::prepare_asset())]
 		pub fn prepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
@@ -282,12 +258,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Unprepare an asset to be detached from IPFS.
-		///
-		/// The origin of this call must specify an asset, owned by the origin, that is undergoing
-		/// the IPFS upload process.
-		///
-		/// Weight: `O(1)`
+		/// Unprepare an asset owned by the origin to be detached from IPFS.
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::unprepare_asset())]
 		pub fn unprepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
@@ -301,14 +272,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Prepare IPFS for an asset.
+		/// Prepare IPFS Url for an asset.
 		///
 		/// The origin of this call must be signed by the service account to upload the given asset
 		/// to an IPFS storage and stores its CID. A third-party service subscribes for the
 		/// `PreparedAvatar` events which triggers preparing assets, their upload to IPFS and
 		/// storing their CIDs.
-		//
-		/// Weight: `O(1)`
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::prepare_ipfs())]
 		pub fn prepare_ipfs(
