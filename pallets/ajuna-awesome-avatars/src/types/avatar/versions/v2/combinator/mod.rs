@@ -21,7 +21,7 @@ impl<T: Config> AvatarCombinator<T> {
 	pub(super) fn combine_avatars_in(
 		forge_type: ForgeType,
 		season_id: SeasonId,
-		season: &SeasonOf<T>,
+		_season: &SeasonOf<T>,
 		leader: WrappedForgeItem<T>,
 		sacrifices: Vec<WrappedForgeItem<T>>,
 		hash_provider: &mut HashProvider<T, 32>,
@@ -31,7 +31,7 @@ impl<T: Config> AvatarCombinator<T> {
 			ForgeType::Tinker => Self::tinker_avatars(leader, sacrifices, season_id),
 			ForgeType::Build => Self::build_avatars(leader, sacrifices, season_id, hash_provider),
 			ForgeType::Assemble =>
-				Self::assemble_avatars(leader, sacrifices, season, hash_provider),
+				Self::assemble_avatars(leader, sacrifices, hash_provider),
 			ForgeType::Breed => Self::breed_avatars(
 				leader,
 				sacrifices,

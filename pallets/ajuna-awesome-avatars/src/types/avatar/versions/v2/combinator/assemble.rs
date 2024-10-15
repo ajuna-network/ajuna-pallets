@@ -6,7 +6,6 @@ impl<T: Config> AvatarCombinator<T> {
 	pub(super) fn assemble_avatars(
 		input_leader: WrappedForgeItem<T>,
 		input_sacrifices: Vec<WrappedForgeItem<T>>,
-		season: &SeasonOf<T>,
 		hash_provider: &mut HashProvider<T, 32>,
 	) -> Result<(LeaderForgeOutput<T>, Vec<ForgeOutput<T>>), DispatchError> {
 		let (matching_sacrifices, non_matching): (Vec<_>, Vec<_>) =
@@ -16,14 +15,14 @@ impl<T: Config> AvatarCombinator<T> {
 			});
 
 		let leader_progress_array = input_leader.1.get_progress();
-		let is_leader_legendary = input_leader.1.get_rarity() == season.max_tier();
+		let is_leader_legendary = input_leader.1.get_rarity() >= RarityTier::Legendary;
 		let progress_rarity =
 			RarityTier::from_byte(DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(
 				&leader_progress_array,
 				ByteType::High,
 			));
 
-		if is_leader_legendary && progress_rarity == RarityTier::Legendary {
+		if is_leader_legendary && progress_rarity >= RarityTier::Legendary {
 			let (leader_id, mut leader) = input_leader;
 
 			let sacrifice_souls = matching_sacrifices
@@ -215,7 +214,6 @@ mod test {
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
 				leader_armor_component,
 				armor_component_sacrifices,
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -358,7 +356,6 @@ mod test {
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
 				leader_armor_component,
 				armor_component_sacrifices,
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -470,7 +467,6 @@ mod test {
 			let (leader_output, _) = AvatarCombinator::<Test>::assemble_avatars(
 				leader_armor_component,
 				armor_component_sacrifices,
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -585,7 +581,6 @@ mod test {
 			let (leader_output, _) = AvatarCombinator::<Test>::assemble_avatars(
 				leader_armor_component,
 				armor_component_sacrifices,
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -700,7 +695,6 @@ mod test {
 			let (leader_output, _) = AvatarCombinator::<Test>::assemble_avatars(
 				leader_armor_component,
 				armor_component_sacrifices,
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -816,7 +810,6 @@ mod test {
 			let (leader_output, _) = AvatarCombinator::<Test>::assemble_avatars(
 				leader_armor_component,
 				armor_component_sacrifices,
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -941,7 +934,6 @@ mod test {
 			let (leader_output, _) = AvatarCombinator::<Test>::assemble_avatars(
 				leader,
 				vec![sac_1, sac_2, sac_3, sac_4],
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -1070,7 +1062,6 @@ mod test {
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
 				leader_armor_component,
 				armor_component_sacrifices,
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -1139,7 +1130,6 @@ mod test {
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
 				leader,
 				vec![sac_1, sac_2, sac_3, sac_4],
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -1231,7 +1221,6 @@ mod test {
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
 				leader,
 				vec![sac_1, sac_2, sac_3, sac_4],
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -1328,7 +1317,6 @@ mod test {
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
 				leader,
 				vec![sac_1, sac_2, sac_3, sac_4],
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
@@ -1402,7 +1390,6 @@ mod test {
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
 				leader,
 				vec![sac_1],
-				&Season::default(),
 				&mut hash_provider,
 			)
 			.expect("Should succeed in forging");
