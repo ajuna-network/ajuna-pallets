@@ -766,4 +766,80 @@ mod test {
 				));
 			});
 	}
+
+	fn create_avatar_from_rarity(
+		owner: MockAccountId,
+		season_id: SeasonId,
+		rarity_tier: &RarityTier,
+		with_souls: SoulCount,
+	) -> (AvatarIdOf<Test>, AvatarOf<Test>) {
+		let dna = [rarity_tier.as_byte() << 4; 8];
+		let mut avatar = Avatar::default().season_id(season_id).dna(&dna);
+		avatar.souls = with_souls;
+
+		let avatar_id = H256::random();
+		Avatars::<Test>::insert(avatar_id, (owner, avatar.clone()));
+		Owners::<Test>::try_append(owner, season_id, avatar_id).unwrap();
+
+		(avatar_id, avatar)
+	}
+
+	#[test]
+	fn forge_should_not_allow_higher_tiers_into_lower_tier() {
+		let tiers = &[
+			RarityTier::Common,
+			RarityTier::Uncommon,
+			RarityTier::Rare,
+			RarityTier::Epic,
+			RarityTier::Legendary,
+		];
+		let season_id = 1;
+		let season = Season::default()
+			.tiers(tiers)
+			.batch_mint_probs(&[33, 33, 34])
+			.max_components(10)
+			.max_variations(12)
+			.min_sacrifices(1)
+			.max_sacrifices(5);
+
+		ExtBuilder::default().build().execute_with(|| {
+			for leader_rarity in tiers {
+				let (leader_id, leader) =
+					create_avatar_from_rarity(CHARLIE, season_id, leader_rarity, 0);
+				assert_eq!(leader.rarity(), leader_rarity.as_byte());
+				for s_rarity_1 in tiers {
+					let (s_id_1, sac_1) =
+						create_avatar_from_rarity(CHARLIE, season_id, s_rarity_1, 0);
+					assert_eq!(sac_1.rarity(), s_rarity_1.as_byte());
+					for s_rarity_2 in tiers {
+						let (s_id_2, sac_2) =
+							create_avatar_from_rarity(CHARLIE, season_id, s_rarity_2, 0);
+						assert_eq!(sac_2.rarity(), s_rarity_2.as_byte());
+
+						let (leader_output, sacrifice_output) = ForgerV4::<Test>::forge(
+							&CHARLIE,
+							season_id,
+							&season,
+							(leader_id, leader.clone()),
+							vec![(s_id_1, sac_1.clone()), (s_id_2, sac_2.clone())],
+							false,
+						)
+						.expect("Forge should succeed");
+
+						// If any of the sacrifices has greater rarity than the leader the forge
+						// goes through without changing any of the inputs.
+						if s_rarity_1 > leader_rarity || s_rarity_2 > leader_rarity {
+							assert!(matches!(leader_output, LeaderForgeOutput::Unchanged(_)));
+							assert!(matches!(sacrifice_output[0], ForgeOutput::Unchanged(_)));
+							assert!(matches!(sacrifice_output[1], ForgeOutput::Unchanged(_)));
+						} else {
+							assert!(matches!(leader_output, LeaderForgeOutput::Forged(_, _)));
+							assert!(matches!(sacrifice_output[0], ForgeOutput::Consumed(_)));
+							assert!(matches!(sacrifice_output[1], ForgeOutput::Consumed(_)));
+						}
+					}
+				}
+			}
+		});
+	}
 }
