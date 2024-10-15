@@ -1387,12 +1387,9 @@ mod test {
 				ForgeType::Assemble
 			);
 
-			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::assemble_avatars(
-				leader,
-				vec![sac_1],
-				&mut hash_provider,
-			)
-			.expect("Should succeed in forging");
+			let (leader_output, sacrifice_output) =
+				AvatarCombinator::<Test>::assemble_avatars(leader, vec![sac_1], &mut hash_provider)
+					.expect("Should succeed in forging");
 
 			assert_eq!(sacrifice_output.len(), 1);
 			assert_eq!(sacrifice_output.iter().filter(|output| is_consumed(output)).count(), 1);
