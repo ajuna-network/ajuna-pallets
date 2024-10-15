@@ -106,10 +106,13 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 	) -> Result<(LeaderForgeOutput<T>, Vec<ForgeOutput<T>>), DispatchError> {
 		let (leader_id, mut leader) = input_leader;
 
-		let max_tier = season.max_tier() as u8;
+		let leader_rarity = leader.rarity();
+		let any_sacrifice_higher_rarity =
+			input_sacrifices.iter().any(|(_, sacrifice)| sacrifice.rarity() > leader_rarity);
 
-		// If the leader is of max rarity we don't allow any forging
-		if leader.rarity() == max_tier {
+		// If any sacrifice has a higher rarity than the leader we forbid forging
+		// All sacrifices should have the same or lower rarity than the leader
+		if any_sacrifice_higher_rarity {
 			return Ok((
 				LeaderForgeOutput::Unchanged((leader_id, leader)),
 				input_sacrifices
@@ -127,7 +130,9 @@ impl<T: Config> Forger<T> for ForgerV4<T> {
 		let (mut unique_matched_indexes, matches, soul_count) =
 			Self::compare_all(&leader, sacrifice_avatars.as_slice(), 0)?;
 
-		leader.souls += soul_count;
+		if matches > 0 {
+			leader.souls += soul_count;
+		}
 
 		let mut upgraded_components = 0;
 		let prob = Self::forge_probability(&leader, season, &current_block, matches);
@@ -760,5 +765,185 @@ mod test {
 					crate::Event::AvatarsForged { avatar_ids: vec![(leader_id, 0)] },
 				));
 			});
+	}
+
+	fn create_avatar_from_rarity(
+		owner: MockAccountId,
+		season_id: SeasonId,
+		rarity_tier: &RarityTier,
+		with_souls: SoulCount,
+	) -> (AvatarIdOf<Test>, AvatarOf<Test>) {
+		let dna = [rarity_tier.as_byte() << 4; 8];
+		let mut avatar = Avatar::default().season_id(season_id).dna(&dna);
+		avatar.souls = with_souls;
+
+		let avatar_id = H256::random();
+		Avatars::<Test>::insert(avatar_id, (owner, avatar.clone()));
+		Owners::<Test>::try_append(owner, season_id, avatar_id).unwrap();
+
+		(avatar_id, avatar)
+	}
+
+	#[test]
+	fn forge_should_not_allow_higher_tiers_into_lower_tier() {
+		let tiers = &[
+			RarityTier::Common,
+			RarityTier::Uncommon,
+			RarityTier::Rare,
+			RarityTier::Epic,
+			RarityTier::Legendary,
+		];
+		let season_id = 1;
+		let season = Season::default()
+			.tiers(tiers)
+			.batch_mint_probs(&[33, 33, 34])
+			.max_components(10)
+			.max_variations(12)
+			.min_sacrifices(1)
+			.max_sacrifices(5);
+
+		ExtBuilder::default().build().execute_with(|| {
+			for leader_rarity in tiers {
+				let (leader_id, leader) =
+					create_avatar_from_rarity(CHARLIE, season_id, leader_rarity, 0);
+				assert_eq!(leader.rarity(), leader_rarity.as_byte());
+				for s_rarity_1 in tiers {
+					let (s_id_1, sac_1) =
+						create_avatar_from_rarity(CHARLIE, season_id, s_rarity_1, 0);
+					assert_eq!(sac_1.rarity(), s_rarity_1.as_byte());
+					for s_rarity_2 in tiers {
+						let (s_id_2, sac_2) =
+							create_avatar_from_rarity(CHARLIE, season_id, s_rarity_2, 0);
+						assert_eq!(sac_2.rarity(), s_rarity_2.as_byte());
+
+						let (leader_output, sacrifice_output) = ForgerV4::<Test>::forge(
+							&CHARLIE,
+							season_id,
+							&season,
+							(leader_id, leader.clone()),
+							vec![(s_id_1, sac_1.clone()), (s_id_2, sac_2.clone())],
+							false,
+						)
+						.expect("Forge should succeed");
+
+						// If any of the sacrifices has greater rarity than the leader the forge
+						// goes through without changing any of the inputs.
+						if s_rarity_1 > leader_rarity || s_rarity_2 > leader_rarity {
+							assert!(matches!(leader_output, LeaderForgeOutput::Unchanged(_)));
+							assert!(matches!(sacrifice_output[0], ForgeOutput::Unchanged(_)));
+							assert!(matches!(sacrifice_output[1], ForgeOutput::Unchanged(_)));
+						} else {
+							assert!(matches!(leader_output, LeaderForgeOutput::Forged(_, _)));
+							assert!(matches!(sacrifice_output[0], ForgeOutput::Consumed(_)));
+							assert!(matches!(sacrifice_output[1], ForgeOutput::Consumed(_)));
+						}
+					}
+				}
+			}
+		});
+	}
+
+	#[test]
+	fn forge_should_only_add_sp_if_there_is_matching_sacrifices() {
+		let season_id = 1;
+		let season = Season::default()
+			.batch_mint_probs(&[33, 33, 34])
+			.max_components(10)
+			.max_variations(12)
+			.min_sacrifices(1)
+			.max_sacrifices(5);
+
+		ExtBuilder::default().build().execute_with(|| {
+			let leader_souls = 150;
+			let (leader_id, mut leader) =
+				create_avatar_from_rarity(CHARLIE, season_id, &RarityTier::Rare, leader_souls);
+			leader.dna = Dna::try_from(vec![
+				0x12, 0x12, 0x13, 0x14, 0x10, 0x15, 0x15, 0x13, 0x34, 0x30, 0x13,
+			])
+			.expect("Valid Dna");
+			let matching_souls = 50;
+			let (matching_id, mut matching_avatar) =
+				create_avatar_from_rarity(CHARLIE, season_id, &RarityTier::Common, matching_souls);
+			matching_avatar.dna = Dna::try_from(vec![
+				0x11, 0x11, 0x13, 0x14, 0x10, 0x15, 0x15, 0x12, 0x33, 0x30, 0x12,
+			])
+			.expect("Valid Dna");
+			let non_matching_souls = 200;
+			let (non_matching_id, mut non_matching_avatar) = create_avatar_from_rarity(
+				CHARLIE,
+				season_id,
+				&RarityTier::Common,
+				non_matching_souls,
+			);
+			non_matching_avatar.dna = Dna::try_from(vec![
+				0x12, 0x12, 0x13, 0x14, 0x10, 0x15, 0x15, 0x13, 0x34, 0x30, 0x13,
+			])
+			.expect("Valid Dna");
+
+			// Forging with a matching valid sacrifice should add its SP to the leader
+			let (_, matches, _) =
+				ForgerV4::<Test>::compare_all(&leader, &[matching_avatar.clone()], 0)
+					.expect("Compare should succeed");
+			assert_eq!(matches, 1);
+
+			let (leader_output, sacrifice_output) = ForgerV4::<Test>::forge(
+				&CHARLIE,
+				season_id,
+				&season,
+				(leader_id, leader.clone()),
+				vec![(matching_id, matching_avatar.clone())],
+				false,
+			)
+			.expect("Forge should succeed");
+			assert!(matches!(sacrifice_output[0], ForgeOutput::Consumed(_)));
+			match leader_output {
+				LeaderForgeOutput::Forged((_, forged_leader), _) =>
+					assert_eq!(forged_leader.souls, leader_souls + matching_souls),
+				_ => panic!("Forge output should be Forged"),
+			}
+
+			// Forging with a non-matching valid sacrifice should not add its SP to the leader
+			let (_, matches, _) =
+				ForgerV4::<Test>::compare_all(&leader, &[non_matching_avatar.clone()], 0)
+					.expect("Compare should succeed");
+			assert_eq!(matches, 0);
+
+			let (leader_output, sacrifice_output) = ForgerV4::<Test>::forge(
+				&CHARLIE,
+				season_id,
+				&season,
+				(leader_id, leader.clone()),
+				vec![(non_matching_id, non_matching_avatar.clone())],
+				false,
+			)
+			.expect("Forge should succeed");
+			assert!(matches!(sacrifice_output[0], ForgeOutput::Consumed(_)));
+			match leader_output {
+				LeaderForgeOutput::Forged((_, forged_leader), _) =>
+					assert_eq!(forged_leader.souls, leader_souls),
+				_ => panic!("Forge output should be Forged"),
+			}
+
+			// Forging with a both a non-matching and a matching sacrifice should all sacrifice SP
+			// to the leader
+			let (leader_output, sacrifice_output) = ForgerV4::<Test>::forge(
+				&CHARLIE,
+				season_id,
+				&season,
+				(leader_id, leader.clone()),
+				vec![(non_matching_id, non_matching_avatar), (matching_id, matching_avatar)],
+				false,
+			)
+			.expect("Forge should succeed");
+			assert!(matches!(sacrifice_output[0], ForgeOutput::Consumed(_)));
+			assert!(matches!(sacrifice_output[1], ForgeOutput::Consumed(_)));
+			match leader_output {
+				LeaderForgeOutput::Forged((_, forged_leader), _) => assert_eq!(
+					forged_leader.souls,
+					leader_souls + matching_souls + non_matching_souls
+				),
+				_ => panic!("Forge output should be Forged"),
+			}
+		});
 	}
 }
