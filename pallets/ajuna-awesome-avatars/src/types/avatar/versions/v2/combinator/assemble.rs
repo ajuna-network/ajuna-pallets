@@ -1,4 +1,5 @@
 use super::*;
+use sp_runtime::SaturatedConversion;
 use sp_std::ops::Not;
 
 impl<T: Config> AvatarCombinator<T> {
@@ -14,65 +15,95 @@ impl<T: Config> AvatarCombinator<T> {
 			});
 
 		let leader_progress_array = input_leader.1.get_progress();
-
-		let ((leader_id, mut input_leader), matching_sacrifices) = Self::match_avatars(
-			input_leader,
-			matching_sacrifices,
-			MATCH_ALGO_START_RARITY.as_byte(),
-			hash_provider,
-		);
-
-		let (additionals, non_additionals): (Vec<_>, Vec<_>) =
-			matching_sacrifices.into_iter().chain(non_matching).partition(|(_, sacrifice)| {
-				sacrifice
-					.same_full_and_class_types(&input_leader)
-					.not()
-					.then(|| {
-						DnaUtils::<BlockNumberFor<T>>::is_progress_match(
-							leader_progress_array,
-							sacrifice.get_progress(),
-							MATCH_ALGO_START_RARITY.as_byte(),
-						)
-						.is_some()
-					})
-					.unwrap_or(false)
-			});
-
+		let is_leader_legendary = input_leader.1.get_rarity() >= RarityTier::Legendary;
 		let progress_rarity =
 			RarityTier::from_byte(DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(
-				&input_leader.get_progress(),
+				&leader_progress_array,
 				ByteType::High,
 			));
 
-		if input_leader.has_full_type(ItemType::Equippable, EquippableItemType::ArmorBase) &&
-			input_leader.get_rarity() < progress_rarity
-		{
-			// Add a component to the base armor, only first component will be added
-			if let Some((_, armor_component)) = additionals.iter().find(|(_, sacrifice)| {
-				sacrifice.has_type(ItemType::Equippable) &&
-					!sacrifice.has_subtype(EquippableItemType::ArmorBase)
-			}) {
-				input_leader.set_spec(
-					SpecIdx::Byte1,
-					input_leader.get_spec::<u8>(SpecIdx::Byte1) |
-						armor_component.get_spec::<u8>(SpecIdx::Byte1),
-				);
+		if is_leader_legendary && progress_rarity >= RarityTier::Legendary {
+			let (leader_id, mut leader) = input_leader;
+
+			let sacrifice_souls = matching_sacrifices
+				.iter()
+				.chain(non_matching.iter())
+				.map(|(_, sacrifice)| sacrifice.get_souls())
+				.fold(0_u32, |acc, souls| acc.saturating_add(souls));
+
+			leader.set_souls(leader.get_souls().saturating_add(sacrifice_souls));
+
+			let output_vec: Vec<ForgeOutput<T>> = matching_sacrifices
+				.into_iter()
+				.map(|(sacrifice_id, _)| ForgeOutput::Consumed(sacrifice_id))
+				.chain(
+					non_matching
+						.into_iter()
+						.map(|(sacrifice_id, _)| ForgeOutput::Consumed(sacrifice_id)),
+				)
+				.collect();
+
+			Ok((LeaderForgeOutput::Forged((leader_id, leader.unwrap()), 0), output_vec))
+		} else {
+			let ((leader_id, mut input_leader), matching_sacrifices) = Self::match_avatars(
+				input_leader,
+				matching_sacrifices,
+				MATCH_ALGO_START_RARITY.as_byte(),
+				hash_provider,
+			);
+
+			let (additionals, non_additionals): (Vec<_>, Vec<_>) =
+				matching_sacrifices.into_iter().chain(non_matching).partition(|(_, sacrifice)| {
+					sacrifice
+						.same_full_and_class_types(&input_leader)
+						.not()
+						.then(|| {
+							DnaUtils::<BlockNumberFor<T>>::is_progress_match(
+								leader_progress_array,
+								sacrifice.get_progress(),
+								MATCH_ALGO_START_RARITY.as_byte(),
+							)
+							.is_some()
+						})
+						.unwrap_or(false)
+				});
+
+			let progress_rarity =
+				RarityTier::from_byte(DnaUtils::<BlockNumberFor<T>>::lowest_progress_byte(
+					&input_leader.get_progress(),
+					ByteType::High,
+				));
+
+			if input_leader.has_full_type(ItemType::Equippable, EquippableItemType::ArmorBase) &&
+				input_leader.get_rarity() < progress_rarity
+			{
+				// Add a component to the base armor, only first component will be added
+				if let Some((_, armor_component)) = additionals.iter().find(|(_, sacrifice)| {
+					sacrifice.has_type(ItemType::Equippable) &&
+						!sacrifice.has_subtype(EquippableItemType::ArmorBase)
+				}) {
+					input_leader.set_spec(
+						SpecIdx::Byte1,
+						input_leader.get_spec::<u8>(SpecIdx::Byte1) |
+							armor_component.get_spec::<u8>(SpecIdx::Byte1),
+					);
+				}
 			}
+
+			input_leader.set_rarity(progress_rarity);
+
+			let output_vec: Vec<ForgeOutput<T>> = additionals
+				.into_iter()
+				.map(|(sacrifice_id, _)| ForgeOutput::Consumed(sacrifice_id))
+				.chain(
+					non_additionals
+						.into_iter()
+						.map(|(sacrifice_id, _)| ForgeOutput::Consumed(sacrifice_id)),
+				)
+				.collect();
+
+			Ok((LeaderForgeOutput::Forged((leader_id, input_leader.unwrap()), 0), output_vec))
 		}
-
-		input_leader.set_rarity(progress_rarity);
-
-		let output_vec: Vec<ForgeOutput<T>> = additionals
-			.into_iter()
-			.map(|(sacrifice_id, _)| ForgeOutput::Consumed(sacrifice_id))
-			.chain(
-				non_additionals
-					.into_iter()
-					.map(|(sacrifice_id, _)| ForgeOutput::Consumed(sacrifice_id)),
-			)
-			.collect();
-
-		Ok((LeaderForgeOutput::Forged((leader_id, input_leader.unwrap()), 0), output_vec))
 	}
 }
 
@@ -1311,6 +1342,73 @@ mod test {
 					0x41, 0x42, 0x45, 0x43, 0x43, 0x41,
 				];
 				assert_eq!(avatar.dna.as_slice(), &expected_dna);
+			} else {
+				panic!("LeaderForgeOutput should have been Forged!")
+			}
+		});
+	}
+
+	#[test]
+	fn test_assemble_non_mythical() {
+		ExtBuilder::default().build().execute_with(|| {
+			let mut hash_provider = HashProvider::new_with_bytes(HASH_BYTES);
+
+			let hash_base = [
+				[
+					0x41, 0x24, 0x05, 0x01, 0x00, 0xcf, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x54, 0x55, 0x51, 0x51, 0x52,
+					0x55, 0x51, 0x51, 0x51, 0x51, 0x53,
+				],
+				[
+					0x41, 0x24, 0x05, 0x01, 0x00, 0xcf, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x53, 0x54, 0x52, 0x52, 0x53,
+					0x54, 0x51, 0x51, 0x51, 0x51, 0x53,
+				],
+			];
+
+			let avatar_fn = |souls: SoulCount| {
+				let mutate_fn = move |avatar: AvatarOf<Test>| {
+					let mut avatar = avatar;
+					avatar.souls = souls;
+					WrappedAvatar::new(avatar)
+				};
+
+				Some(mutate_fn)
+			};
+
+			let leader =
+				create_random_avatar::<Test, _>(&ALICE, Some(hash_base[0]), avatar_fn(179));
+			let sac_1 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[1]), avatar_fn(150));
+
+			let total_souls = leader.1.get_souls() + sac_1.1.get_souls();
+
+			assert_eq!(
+				ForgerV2::<Test>::determine_forge_type(&leader.1, &[&sac_1.1]),
+				ForgeType::Assemble
+			);
+
+			let (leader_output, sacrifice_output) =
+				AvatarCombinator::<Test>::assemble_avatars(leader, vec![sac_1], &mut hash_provider)
+					.expect("Should succeed in forging");
+
+			assert_eq!(sacrifice_output.len(), 1);
+			assert_eq!(sacrifice_output.iter().filter(|output| is_consumed(output)).count(), 1);
+			assert_eq!(sacrifice_output.iter().filter(|output| is_forged(output)).count(), 0);
+
+			if let LeaderForgeOutput::Forged((_, avatar), _) = leader_output {
+				assert_eq!(avatar.souls, total_souls);
+
+				for a in &avatar.dna[21..] {
+					print!("0x{:02X} ", a);
+				}
+
+				println!();
+
+				let leader_rarity = DnaUtils::<BlockNumberFor<Test>>::read_attribute::<RarityTier>(
+					&avatar,
+					AvatarAttr::RarityTier,
+				);
+				assert_eq!(leader_rarity, RarityTier::Legendary);
 			} else {
 				panic!("LeaderForgeOutput should have been Forged!")
 			}
