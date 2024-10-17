@@ -130,7 +130,13 @@ parameter_types! {
 pub struct Helper;
 #[cfg(feature = "runtime-benchmarks")]
 impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
-	pallet_nfts::BenchmarkHelper<CollectionId, ItemId> for Helper
+	pallet_nfts::BenchmarkHelper<
+		CollectionId,
+		ItemId,
+		MockAccountPublic,
+		MockAccountId,
+		MockSignature,
+	> for Helper
 {
 	fn collection(i: u16) -> CollectionId {
 		i.into()
@@ -141,6 +147,18 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 		id[0] = bytes[0];
 		id[1] = bytes[1];
 		id.into()
+	}
+
+	fn signer() -> (sp_runtime::MultiSigner, sp_runtime::AccountId32) {
+		let public = sp_io::crypto::sr25519_generate(0.into(), None);
+		let account = sp_runtime::MultiSigner::Sr25519(public).into_account();
+		(public.into(), account)
+	}
+	fn sign(signer: &sp_runtime::MultiSigner, message: &[u8]) -> sp_runtime::MultiSignature {
+		sp_runtime::MultiSignature::Sr25519(
+			sp_io::crypto::sr25519_sign(0.into(), &signer.clone().try_into().unwrap(), message)
+				.unwrap(),
+		)
 	}
 }
 
