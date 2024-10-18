@@ -31,6 +31,12 @@ pub trait AsErrorCode {
 	fn as_error_code(&self) -> u8;
 }
 
+impl AsErrorCode for u8 {
+	fn as_error_code(&self) -> u8 {
+		*self
+	}
+}
+
 pub trait SageGameTransition {
 	type Asset: AssetT + Member + Encode + Decode + MaxEncodedLen + TypeInfo;
 
@@ -38,6 +44,8 @@ pub trait SageGameTransition {
 
 	type Balance;
 
+	/// An optional extra, which is simply forwarded to the `verify_rule` and `do_transition`
+	/// method. If you don't need custom arguments, you can define that type as `()`.
 	type Extra: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
 
 	type Error: AsErrorCode;

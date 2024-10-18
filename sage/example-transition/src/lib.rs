@@ -4,8 +4,9 @@
 
 use frame_support::ensure;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sage_api::SageApi;
+use sage_api::{AsErrorCode, AssetT, SageApi, SageGameTransition};
 use scale_info::TypeInfo;
+use std::marker::PhantomData;
 
 /// Placeholder type, this was just a quick brain dump to get things going.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -19,6 +20,54 @@ pub struct Asset {
 	pub dna: [u8; 32],
 
 	pub minted_at: u32,
+}
+
+impl AssetT for Asset {
+	fn collection_id(&self) -> u32 {
+		self.collection_id
+	}
+
+	fn asset_type(&self) -> u32 {
+		self.asset_type
+	}
+
+	fn dna(&self) -> [u8; 32] {
+		self.dna
+	}
+
+	fn minted_at(&self) -> u32 {
+		self.minted_at
+	}
+}
+
+pub struct ExampleTransition<Sage, AccountId, Balance> {
+	_phantom: PhantomData<(Sage, Balance, AccountId)>,
+}
+
+impl<Sage: SageApi<Asset = Asset>, AccountId, Balance> SageGameTransition
+	for ExampleTransition<Sage, AccountId, Balance>
+{
+	type Asset = Asset;
+	type AccountId = AccountId;
+	type Balance = Balance;
+	type Extra = ();
+	type Error = u8;
+
+	fn verify_rule(
+		transition_id: u32,
+		assets: &[Self::Asset],
+		_extra: &Self::Extra,
+	) -> Result<(), Self::Error> {
+		verify_transition_rule::<Sage>(transition_id, assets).map_err(|e| e.as_error_code())
+	}
+
+	fn do_transition(
+		transition_id: u32,
+		assets: Vec<Self::Asset>,
+		_extra: Self::Extra,
+	) -> Result<(), Self::Error> {
+		transition::<Sage>(transition_id, assets).map_err(|e| e.as_error_code())
+	}
 }
 
 /// Verifies a transition rule with a given transition id.

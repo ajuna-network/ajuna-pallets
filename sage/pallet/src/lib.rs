@@ -22,7 +22,7 @@ pub mod weights;
 
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
-use sage_api::{AsErrorCode, SageApi, SageGameTransition};
+use sage_api::{AsErrorCode, SageGameTransition};
 use sp_std::prelude::*;
 use weights::WeightInfo;
 
