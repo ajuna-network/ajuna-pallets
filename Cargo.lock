@@ -836,6 +836,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "example-transition"
+version = "0.13.0"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "sage-api",
+ "scale-info",
+ "sp-std",
+]
+
+[[package]]
 name = "expander"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2473,9 +2484,20 @@ dependencies = [
 name = "sage-api"
 version = "0.13.0"
 dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "sage-pallet"
+version = "0.13.0"
+dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "sage-api",
  "scale-info",
  "sp-core",
  "sp-io",

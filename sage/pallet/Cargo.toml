@@ -1,5 +1,5 @@
 [package]
-name = "sage-api"
+name = "sage-pallet"
 authors.workspace = true
 edition.workspace = true
 homepage.workspace = true
@@ -18,6 +18,8 @@ sp-core            = { workspace = true }
 sp-io              = { workspace = true }
 sp-runtime         = { workspace = true }
 sp-std             = { workspace = true }
+# Ajuna
+sage-api           = { workspace = true }
 
 [dev-dependencies]
 
@@ -32,6 +34,8 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
+    # Ajuna
+    "sage-api/std",
 ]
 runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
