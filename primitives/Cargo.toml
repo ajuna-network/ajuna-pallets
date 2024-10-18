@@ -1,0 +1,23 @@
+[package]
+name = "ajuna-primitives"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+# Substrate - SCALE codec
+parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
+scale-info         = { workspace = true, features = [ "derive" ] }
+
+# Substrate frame
+frame-support = { workspace = true}
+
+[features]
+std = [
+    "frame-support/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+]
+runtime-benchmarks = []

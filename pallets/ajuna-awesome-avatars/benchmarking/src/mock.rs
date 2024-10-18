@@ -18,19 +18,17 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
+	traits::{ConstU16, ConstU64},
 	PalletId,
 };
-use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSigned};
+use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_ajuna_awesome_avatars::{
 	types::{AffiliateMethods, Avatar, SeasonId},
 	FeePropagationOf,
 };
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
 use sp_runtime::{
 	testing::H256,
-	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, MultiSignature,
 };
 
@@ -40,7 +38,6 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Runtime>;
 pub type MockBlockNumber = u64;
 pub type MockBalance = u64;
-pub type MockCollectionId = u32;
 
 impl crate::Config for Runtime {}
 
@@ -49,9 +46,7 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		Randomness: pallet_insecure_randomness_collective_flip = 2,
-		Nft: pallet_nfts = 3,
 		AAvatars: pallet_ajuna_awesome_avatars = 4,
-		NftTransfer: pallet_ajuna_nft_transfer = 5,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
 		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
 	}
@@ -126,66 +121,6 @@ parameter_types! {
 	pub ConfigFeatures: pallet_nfts::PalletFeatures = pallet_nfts::PalletFeatures::all_enabled();
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-pub struct Helper;
-#[cfg(feature = "runtime-benchmarks")]
-impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
-	pallet_nfts::BenchmarkHelper<CollectionId, ItemId> for Helper
-{
-	fn collection(i: u16) -> CollectionId {
-		i.into()
-	}
-	fn item(i: u16) -> ItemId {
-		let mut id = [0_u8; 32];
-		let bytes = i.to_be_bytes();
-		id[0] = bytes[0];
-		id[1] = bytes[1];
-		id.into()
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
-pub struct ParameterGet<const N: u32>;
-
-impl<const N: u32> Get<u32> for ParameterGet<N> {
-	fn get() -> u32 {
-		N
-	}
-}
-
-pub type KeyLimit = ParameterGet<32>;
-pub type ValueLimit = ParameterGet<64>;
-
-impl pallet_nfts::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type CollectionId = MockCollectionId;
-	type ItemId = H256;
-	type Currency = Balances;
-	type ForceOrigin = EnsureRoot<MockAccountId>;
-	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<MockAccountId>>;
-	type Locker = ();
-	type CollectionDeposit = CollectionDeposit;
-	type ItemDeposit = ItemDeposit;
-	type MetadataDepositBase = MetadataDepositBase;
-	type AttributeDepositBase = AttributeDepositBase;
-	type DepositPerByte = DepositPerByte;
-	type StringLimit = StringLimit;
-	type KeyLimit = KeyLimit;
-	type ValueLimit = ValueLimit;
-	type ApprovalsLimit = ApprovalsLimit;
-	type ItemAttributesApprovalsLimit = ItemAttributesApprovalsLimit;
-	type MaxTips = MaxTips;
-	type MaxDeadlineDuration = MaxDeadlineDuration;
-	type MaxAttributesPerCall = MaxAttributesPerCall;
-	type Features = ConfigFeatures;
-	type OffchainSignature = MockSignature;
-	type OffchainPublic = MockAccountPublic;
-	pallet_nfts::runtime_benchmarks_enabled! {
-		type Helper = Helper;
-	}
-	type WeightInfo = ();
-}
-
 parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
@@ -195,28 +130,10 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Randomness = Randomness;
-	type KeyLimit = KeyLimit;
-	type ValueLimit = ValueLimit;
-	type NftHandler = NftTransfer;
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
 	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const NftTransferPalletId: PalletId = PalletId(*b"aj/nfttr");
-}
-
-impl pallet_ajuna_nft_transfer::Config for Runtime {
-	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
-	type CollectionId = MockCollectionId;
-	type ItemId = H256;
-	type ItemConfig = pallet_nfts::ItemConfig;
-	type KeyLimit = KeyLimit;
-	type ValueLimit = ValueLimit;
-	type NftHelper = Nft;
 }
 
 parameter_types! {
