@@ -946,4 +946,98 @@ mod test {
 			}
 		});
 	}
+
+	#[test]
+	fn forging_avatars_doesnt_go_above_max_rarity_in_season() {
+		let tiers = &[RarityTier::Common, RarityTier::Rare, RarityTier::Legendary];
+		let season_id = 1;
+		let season = Season::default().tiers(tiers);
+		let season_schedule = SeasonSchedule::default();
+
+		ExtBuilder::default()
+			.seasons(&[(season_id, season.clone())])
+			.schedules(&[(season_id, season_schedule.clone())])
+			.mint_cooldown(1)
+			.free_mints(&[(BOB, 10)])
+			.build()
+			.execute_with(|| {
+				let legendary_1_dna = Dna::try_from(vec![
+					0x52, 0x52, 0x53, 0x54, 0x50, 0x55, 0x55, 0x53, 0x54, 0x50, 0x53,
+				])
+				.expect("Valid Dna");
+				let (legendary_id_1, mut legendary_1) =
+					create_avatar_from_rarity(BOB, season_id, &RarityTier::Legendary, 100);
+				legendary_1.dna = legendary_1_dna.clone();
+				assert_eq!(legendary_1.rarity(), RarityTier::Legendary.as_byte());
+				let (legendary_id_2, mut legendary_2) =
+					create_avatar_from_rarity(BOB, season_id, &RarityTier::Legendary, 100);
+				legendary_2.dna = Dna::try_from(vec![
+					0x53, 0x52, 0x54, 0x53, 0x51, 0x55, 0x55, 0x54, 0x54, 0x51, 0x53,
+				])
+				.expect("Valid Dna");
+				assert_eq!(legendary_2.rarity(), RarityTier::Legendary.as_byte());
+				let (legendary_id_3, mut legendary_3) =
+					create_avatar_from_rarity(BOB, season_id, &RarityTier::Legendary, 100);
+				legendary_3.dna = Dna::try_from(vec![
+					0x53, 0x52, 0x54, 0x53, 0x51, 0x55, 0x55, 0x54, 0x54, 0x51, 0x53,
+				])
+				.expect("Valid Dna");
+				assert_eq!(legendary_3.rarity(), RarityTier::Legendary.as_byte());
+				let (legendary_id_4, mut legendary_4) =
+					create_avatar_from_rarity(BOB, season_id, &RarityTier::Legendary, 100);
+				legendary_4.dna = Dna::try_from(vec![
+					0x53, 0x52, 0x54, 0x53, 0x51, 0x55, 0x55, 0x54, 0x54, 0x51, 0x53,
+				])
+				.expect("Valid Dna");
+				assert_eq!(legendary_4.rarity(), RarityTier::Legendary.as_byte());
+				let (legendary_id_5, mut legendary_5) =
+					create_avatar_from_rarity(BOB, season_id, &RarityTier::Legendary, 100);
+				legendary_5.dna = Dna::try_from(vec![
+					0x53, 0x52, 0x54, 0x53, 0x51, 0x55, 0x55, 0x54, 0x54, 0x51, 0x53,
+				])
+				.expect("Valid Dna");
+				assert_eq!(legendary_5.rarity(), RarityTier::Legendary.as_byte());
+
+				// Forging with a matching valid sacrifice should add its SP to the leader
+				let (_, matches, _) = ForgerV4::<Test>::compare_all(
+					&legendary_1,
+					&[
+						legendary_2.clone(),
+						legendary_3.clone(),
+						legendary_4.clone(),
+						legendary_5.clone(),
+					],
+					0,
+				)
+				.expect("Compare should succeed");
+				assert_eq!(matches, 4);
+
+				let (leader_output, sacrifice_output) = ForgerV4::<Test>::forge(
+					&CHARLIE,
+					season_id,
+					&season,
+					(legendary_id_1, legendary_1),
+					vec![
+						(legendary_id_2, legendary_2),
+						(legendary_id_3, legendary_3),
+						(legendary_id_4, legendary_4),
+						(legendary_id_5, legendary_5),
+					],
+					false,
+				)
+				.expect("Forge should succeed");
+				assert!(matches!(sacrifice_output[0], ForgeOutput::Consumed(_)));
+				assert!(matches!(sacrifice_output[1], ForgeOutput::Consumed(_)));
+				assert!(matches!(sacrifice_output[2], ForgeOutput::Consumed(_)));
+				assert!(matches!(sacrifice_output[3], ForgeOutput::Consumed(_)));
+				match leader_output {
+					LeaderForgeOutput::Forged((_, forged_leader), _) => {
+						assert_eq!(forged_leader.rarity(), RarityTier::Legendary.as_byte());
+						assert_eq!(forged_leader.dna.to_vec(), legendary_1_dna.to_vec());
+					},
+
+					_ => panic!("Forge output should be Forged"),
+				}
+			});
+	}
 }
