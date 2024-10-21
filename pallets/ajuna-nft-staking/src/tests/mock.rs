@@ -25,7 +25,7 @@ use sp_core::bounded_vec;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
+	BuildStorage, RuntimeAppPublic,
 };
 
 pub type MockSignature = TestSignature;
@@ -129,7 +129,13 @@ parameter_types! {
 pub struct Helper;
 #[cfg(feature = "runtime-benchmarks")]
 impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
-	pallet_nfts::BenchmarkHelper<CollectionId, ItemId> for Helper
+	pallet_nfts::BenchmarkHelper<
+		CollectionId,
+		ItemId,
+		MockAccountPublic,
+		MockAccountId,
+		MockSignature,
+	> for Helper
 {
 	fn collection(i: u16) -> CollectionId {
 		i.into()
@@ -140,6 +146,13 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 		id[0] = bytes[0];
 		id[1] = bytes[1];
 		id.into()
+	}
+
+	fn signer() -> (MockAccountPublic, MockAccountId) {
+		(0.into(), 0)
+	}
+	fn sign(signer: &MockAccountPublic, message: &[u8]) -> MockSignature {
+		signer.sign(&message.to_vec()).unwrap()
 	}
 }
 
