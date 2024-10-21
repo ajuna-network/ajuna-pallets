@@ -1,5 +1,5 @@
 [package]
-name = "sage-pallet"
+name = "pallet-sage"
 authors.workspace = true
 edition.workspace = true
 homepage.workspace = true
@@ -22,6 +22,8 @@ sp-std             = { workspace = true }
 sage-api           = { workspace = true }
 
 [dev-dependencies]
+example-transition = { workspace = true, features = ["std"] }
+pallet-balances = { workspace = true, features = ["std"] }
 
 [features]
 default = [ "std" ]

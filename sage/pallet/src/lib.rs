@@ -19,9 +19,12 @@
 pub mod handle_fees;
 pub mod weights;
 
-use frame_support::pallet_prelude::*;
+#[cfg(test)]
+pub mod mock;
+
+use frame_support::{pallet_prelude::*, traits::Currency};
 use frame_system::pallet_prelude::*;
-use sage_api::{AsErrorCode, SageGameTransition};
+use sage_api::{AsErrorCode, SageApi, SageGameTransition};
 use sp_std::prelude::*;
 use weights::WeightInfo;
 
@@ -35,11 +38,15 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	pub type AssetOf<T> = <<T as Config>::SageGameTransition as SageGameTransition>::Asset;
+	pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 	pub type ExtraOf<T> = <<T as Config>::SageGameTransition as SageGameTransition>::Extra;
+	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type SageGameTransition: SageGameTransition;
+
+		type Currency: Currency<AccountIdOf<Self>>;
 
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;

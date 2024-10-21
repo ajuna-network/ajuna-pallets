@@ -2029,6 +2029,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-sage"
+version = "0.13.0"
+dependencies = [
+ "example-transition",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "sage-api",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-timestamp"
 version = "34.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2486,21 +2503,6 @@ version = "0.13.0"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "sage-pallet"
-version = "0.13.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sage-api",
- "scale-info",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
 ]

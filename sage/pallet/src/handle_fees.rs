@@ -6,13 +6,12 @@
 //! * Handle tournament fees (if configured)
 //! * Handle affiliation fees (if configured)
 
-use crate::primitives::Error;
 use std::marker::PhantomData;
 
 pub trait HandleFees {
 	type Balance;
 
-	fn handle_fees(balance: Self::Balance) -> Result<(), Error>;
+	fn handle_fees(balance: Self::Balance) -> Result<(), ()>;
 }
 
 pub struct FeeHandler<Balance> {
@@ -22,7 +21,7 @@ pub struct FeeHandler<Balance> {
 impl<Balance> HandleFees for FeeHandler<Balance> {
 	type Balance = Balance;
 
-	fn handle_fees(_balance: Self::Balance) -> Result<(), Error> {
+	fn handle_fees(_balance: Self::Balance) -> Result<(), ()> {
 		todo!()
 	}
 }
