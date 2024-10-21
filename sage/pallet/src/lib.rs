@@ -35,21 +35,22 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
-	pub type AssetOf<T> = <<T as Config>::SageGameTransition as SageGameTransition>::Asset;
-	pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
-	pub type ExtraOf<T> = <<T as Config>::SageGameTransition as SageGameTransition>::Extra;
+	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
+	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
+	pub type ExtraOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Extra;
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config<I: 'static = ()>: frame_system::Config {
 		type SageGameTransition: SageGameTransition;
 
 		type Currency: Currency<AccountIdOf<Self>>;
 
 		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type RuntimeEvent: From<Event<Self, I>>
+			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The weight calculations
 		type WeightInfo: WeightInfo;
@@ -57,7 +58,7 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
+	pub enum Event<T: Config<I>, I: 'static = ()> {
 		/// A transition has been executed.
 		TransitionExecuted {
 			/// Account who initiated execution.
@@ -75,7 +76,7 @@ pub mod pallet {
 
 	/// Error for the treasury pallet.
 	#[pallet::error]
-	pub enum Error<T> {
+	pub enum Error<T, I = ()> {
 		/// The rule for a given transition was not satisfied.
 		RuleNotSatisfied,
 		/// An error occurred during the state transition.
@@ -83,23 +84,23 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Entry point for the custom state transition.
 		#[pallet::weight(T::WeightInfo::state_transition())]
 		#[pallet::call_index(0)]
 		pub fn state_transition(
 			origin: OriginFor<T>,
 			transition_id: u32,
-			assets: Vec<AssetOf<T>>,
-			extra: ExtraOf<T>,
+			assets: Vec<AssetOf<T, I>>,
+			extra: ExtraOf<T, I>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			T::SageGameTransition::verify_rule::<Self>(transition_id, &assets, &extra)
-				.map_err(|_e| Error::<T>::RuleNotSatisfied)?;
+				.map_err(|_e| Error::<T, I>::RuleNotSatisfied)?;
 
 			T::SageGameTransition::do_transition::<Self>(transition_id, assets, extra)
-				.map_err(|e| Error::<T>::Transition { code: e.as_error_code() })?;
+				.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
 
 			Self::deposit_event(Event::TransitionExecuted { account: sender, id: transition_id });
 
@@ -109,9 +110,9 @@ pub mod pallet {
 
 	/// Implement the SageApi for this instance, this is essentially where all the associated
 	/// types are wired together and aggregated to the API.
-	impl<T: Config> SageApi for Pallet<T> {
-		type Asset = AssetOf<T>;
-		type Balance = BalanceOf<T>;
+	impl<T: Config<I>, I: 'static> SageApi for Pallet<T, I> {
+		type Asset = AssetOf<T, I>;
+		type Balance = BalanceOf<T, I>;
 		type AccountId = AccountIdOf<T>;
 		type Error = sage_api::Error;
 
