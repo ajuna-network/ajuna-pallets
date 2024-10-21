@@ -46,7 +46,6 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for pallet_ajuna_nft_staking.
 pub trait WeightInfo {
     fn state_transition() -> Weight;
-    fn transition_one() -> Weight;
 }
 
 /// Weights for pallet_ajuna_nft_staking using the Substrate node and recommended hardware.
@@ -57,22 +56,10 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
         Weight::from_parts(0, 0)
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
-
-    fn transition_one() -> Weight {
-        // Minimum execution time: 26_582 nanoseconds.
-        Weight::from_parts(0, 0)
-            .saturating_add(T::DbWeight::get().writes(1 as u64))
-    }
 }
 
 impl WeightInfo for () {
     fn state_transition() -> Weight {
-        // Minimum execution time: 26_582 nanoseconds.
-        Weight::from_parts(0, 0)
-            .saturating_add(RocksDbWeight::get().writes(1 as u64))
-    }
-
-    fn transition_one() -> Weight {
         // Minimum execution time: 26_582 nanoseconds.
         Weight::from_parts(0, 0)
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
