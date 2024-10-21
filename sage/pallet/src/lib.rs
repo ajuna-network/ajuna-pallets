@@ -63,14 +63,8 @@ pub mod pallet {
 		TransitionExecuted {
 			/// Account who initiated execution.
 			account: T::AccountId,
-			/// Transition Id that was executed.
+			/// Transition ID that was executed.
 			id: u32,
-		},
-
-		/// A transition has been executed.
-		TransitionOneExecuted {
-			/// Account who initiated execution.
-			account: T::AccountId,
 		},
 	}
 
@@ -78,7 +72,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T, I = ()> {
 		/// The rule for a given transition was not satisfied.
-		RuleNotSatisfied,
+		RuleNotSatisfied { code: u8 },
 		/// An error occurred during the state transition.
 		Transition { code: u8 },
 	}
@@ -97,7 +91,7 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
 			T::SageGameTransition::verify_rule::<Self>(transition_id, &assets, &extra)
-				.map_err(|_e| Error::<T, I>::RuleNotSatisfied)?;
+				.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
 
 			T::SageGameTransition::do_transition::<Self>(transition_id, assets, extra)
 				.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
