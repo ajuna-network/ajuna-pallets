@@ -38,9 +38,10 @@ pub const BOB: MockAccountId = 2;
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
-		System: frame_system,
-		Balances: pallet_balances,
-		Sage: pallet_sage,
+		System: frame_system = 0,
+		Balances: pallet_balances = 1,
+		// pub type SageExampleTransitionInstance = pallet_sage::<Instance1>;
+		SageExampleTransition: pallet_sage::<Instance1> = 2,
 	}
 );
 
@@ -96,7 +97,8 @@ impl pallet_balances::Config for Test {
 	type RuntimeFreezeReason = ();
 }
 
-impl crate::Config for Test {
+pub type SageExampleTransitionInstance = pallet_sage::Instance1;
+impl crate::Config<SageExampleTransitionInstance> for Test {
 	type SageGameTransition = example_transition::ExampleTransition<MockAccountId, MockBalance>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
