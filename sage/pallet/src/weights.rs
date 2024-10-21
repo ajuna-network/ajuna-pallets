@@ -64,3 +64,18 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }
+
+impl WeightInfo for () {
+    fn state_transition() -> Weight {
+        // Minimum execution time: 26_582 nanoseconds.
+        Weight::from_parts(0, 0)
+            .saturating_add(RocksDbWeight::get().writes(1 as u64))
+    }
+
+    fn transition_one() -> Weight {
+        // Minimum execution time: 26_582 nanoseconds.
+        Weight::from_parts(0, 0)
+            .saturating_add(RocksDbWeight::get().writes(1 as u64))
+    }
+}
+
