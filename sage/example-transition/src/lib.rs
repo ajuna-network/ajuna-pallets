@@ -40,20 +40,18 @@ impl AssetT for Asset {
 	}
 }
 
-pub struct ExampleTransition<Sage, AccountId, Balance> {
-	_phantom: PhantomData<(Sage, Balance, AccountId)>,
+pub struct ExampleTransition<AccountId, Balance> {
+	_phantom: PhantomData<(Balance, AccountId)>,
 }
 
-impl<Sage: SageApi<Asset = Asset>, AccountId, Balance> SageGameTransition
-	for ExampleTransition<Sage, AccountId, Balance>
-{
+impl<AccountId, Balance> SageGameTransition for ExampleTransition<AccountId, Balance> {
 	type Asset = Asset;
 	type AccountId = AccountId;
 	type Balance = Balance;
 	type Extra = ();
 	type Error = u8;
 
-	fn verify_rule(
+	fn verify_rule<Sage: SageApi<Asset = Self::Asset>>(
 		transition_id: u32,
 		assets: &[Self::Asset],
 		_extra: &Self::Extra,
@@ -61,7 +59,7 @@ impl<Sage: SageApi<Asset = Asset>, AccountId, Balance> SageGameTransition
 		verify_transition_rule::<Sage>(transition_id, assets).map_err(|e| e.as_error_code())
 	}
 
-	fn do_transition(
+	fn do_transition<Sage: SageApi<Asset = Self::Asset>>(
 		transition_id: u32,
 		assets: Vec<Self::Asset>,
 		_extra: Self::Extra,

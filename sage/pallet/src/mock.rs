@@ -15,12 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_sage};
-use example_transition::Asset;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-use sage_api::SageApi;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -99,28 +97,10 @@ impl pallet_balances::Config for Test {
 }
 
 impl crate::Config for Test {
-	type SageGameTransition =
-		example_transition::ExampleTransition<MockSage, MockAccountId, MockBalance>;
+	type SageGameTransition = example_transition::ExampleTransition<MockAccountId, MockBalance>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
-}
-
-pub struct MockSage;
-
-impl SageApi for MockSage {
-	type Asset = Asset;
-	type Balance = MockBalance;
-	type AccountId = MockAccountId;
-	type Error = sage_api::Error;
-
-	fn transfer_ownership(_asset: Self::Asset, _to: Self::AccountId) -> Result<(), Self::Error> {
-		todo!()
-	}
-
-	fn handle_fees(_balance: Self::Balance) -> Result<(), Self::Error> {
-		todo!()
-	}
 }
 
 #[derive(Default)]

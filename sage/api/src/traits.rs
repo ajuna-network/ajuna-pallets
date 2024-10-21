@@ -50,13 +50,13 @@ pub trait SageGameTransition {
 
 	type Error: AsErrorCode;
 
-	fn verify_rule(
+	fn verify_rule<Sage: SageApi<Asset = Self::Asset>>(
 		transition_id: u32,
 		assets: &[Self::Asset],
 		extra: &Self::Extra,
 	) -> Result<(), Self::Error>;
 
-	fn do_transition(
+	fn do_transition<Sage: SageApi<Asset = Self::Asset>>(
 		transition_id: u32,
 		assets: Vec<Self::Asset>,
 		extra: Self::Extra,

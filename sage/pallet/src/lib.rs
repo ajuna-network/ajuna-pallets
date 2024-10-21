@@ -95,15 +95,35 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			T::SageGameTransition::verify_rule(transition_id, &assets, &extra)
+			T::SageGameTransition::verify_rule::<Self>(transition_id, &assets, &extra)
 				.map_err(|_e| Error::<T>::RuleNotSatisfied)?;
 
-			T::SageGameTransition::do_transition(transition_id, assets, extra)
+			T::SageGameTransition::do_transition::<Self>(transition_id, assets, extra)
 				.map_err(|e| Error::<T>::Transition { code: e.as_error_code() })?;
 
 			Self::deposit_event(Event::TransitionExecuted { account: sender, id: transition_id });
 
 			Ok(())
+		}
+	}
+
+	/// Implement the SageApi for this instance, this is essentially where all the associated
+	/// types are wired together and aggregated to the API.
+	impl<T: Config> SageApi for Pallet<T> {
+		type Asset = AssetOf<T>;
+		type Balance = BalanceOf<T>;
+		type AccountId = AccountIdOf<T>;
+		type Error = sage_api::Error;
+
+		fn transfer_ownership(
+			_asset: Self::Asset,
+			_to: Self::AccountId,
+		) -> Result<(), Self::Error> {
+			todo!()
+		}
+
+		fn handle_fees(_balance: Self::Balance) -> Result<(), Self::Error> {
+			todo!()
 		}
 	}
 }
