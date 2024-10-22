@@ -159,7 +159,6 @@ pub struct ExtBuilder {
 	mint_cooldown: MockBlockNumber,
 	balances: Vec<(MockAccountId, MockBalance)>,
 	free_mints: Vec<(MockAccountId, MintCount)>,
-	affiliators: Vec<MockAccountId>,
 	locks: Vec<(MockAccountId, SeasonId, Locks)>,
 }
 
@@ -174,7 +173,6 @@ impl Default for ExtBuilder {
 			mint_cooldown: Default::default(),
 			balances: Default::default(),
 			free_mints: Default::default(),
-			affiliators: Default::default(),
 			locks: Default::default(),
 		}
 	}
@@ -214,11 +212,6 @@ impl ExtBuilder {
 	}
 	pub fn free_mints(mut self, free_mints: &[(MockAccountId, MintCount)]) -> Self {
 		self.free_mints = free_mints.to_vec();
-		self
-	}
-
-	pub fn affiliators(mut self, affiliators: &[MockAccountId]) -> Self {
-		self.affiliators = affiliators.to_vec();
 		self
 	}
 
@@ -268,17 +261,6 @@ impl ExtBuilder {
 				PlayerConfigs::<Test>::mutate(account_id, |account| {
 					account.free_mints = mint_amount
 				});
-			}
-
-			if !self.affiliators.is_empty() {
-				pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::set(
-					self.affiliators.len() as u32,
-				);
-				for (i, account) in self.affiliators.into_iter().enumerate() {
-					Affiliates::try_mark_account_as_affiliatable(&account)
-						.expect("Should mark as affiliatable");
-					pallet_ajuna_affiliates::AffiliateIdMapping::<Test, AffiliatesInstance1>::insert(i as u32, account);
-				}
 			}
 
 			if !self.locks.is_empty() {

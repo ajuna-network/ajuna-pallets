@@ -14,15 +14,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_affiliates};
+use crate::{self as pallet_ajuna_affiliates, *};
+use ajuna_primitives::account_manager::WhitelistKey;
 use frame_support::{
-	parameter_types,
+	ensure, parameter_types,
 	traits::{ConstU16, ConstU64},
 };
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
-	BoundedVec, BuildStorage,
+	BoundedVec, BuildStorage, DispatchError,
+};
+use sp_std::{
+	cell::RefCell,
+	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 };
 
 pub type MockSignature = TestSignature;
@@ -103,20 +108,89 @@ parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
 }
 
+thread_local! {
+	pub static WHITELISTED_ACCOUNTS: RefCell<BTreeMap<WhitelistKey ,BTreeSet<MockAccountId>>> = RefCell::new({
+		let mut account_map = BTreeMap::new();
+		account_map.insert(AffiliateWhitelistKey::get(), BTreeSet::new());
+		account_map
+	});
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
+}
+
+pub struct MockAccountManager;
+
+pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
+pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
+
+impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
+	type AccountId = MockAccountId;
+
+	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		ORGANIZER.with(|maybe_account| {
+			if let Some(organizer) = maybe_account.borrow().as_ref() {
+				ensure!(organizer == account, DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER));
+				Ok(())
+			} else {
+				Err(DispatchError::Other(NO_ORGANIZER_SET))
+			}
+		})
+	}
+
+	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.contains(account)
+			} else {
+				false
+			}
+		})
+	}
+
+	fn try_add_to_whitelist(
+		identifier: &WhitelistKey,
+		account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.insert(*account);
+				Ok(())
+			} else {
+				Err(DispatchError::Other("No account set for identifier"))
+			}
+		})
+	}
+
+	fn remove_from_whitelist(identifier: &WhitelistKey, account: &Self::AccountId) {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.remove(account);
+			}
+		})
+	}
+}
+
 pub type MockRuleId = u8;
 pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
 
-type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
+parameter_types! {
+	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
+}
+
+pub(crate) type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 }
 
-type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
+pub(crate) type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
@@ -125,11 +199,23 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 #[derive(Default)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
+	organizer: Option<MockAccountId>,
+	affiliators: Vec<MockAccountId>,
 }
 
 impl ExtBuilder {
 	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
 		self.balances = balances.to_vec();
+		self
+	}
+
+	pub fn organizer(mut self, organizer: MockAccountId) -> Self {
+		self.organizer = Some(organizer);
+		self
+	}
+
+	pub fn affiliators(mut self, affiliators: &[MockAccountId]) -> Self {
+		self.affiliators = affiliators.to_vec();
 		self
 	}
 
@@ -141,6 +227,21 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			if let Some(account) = self.organizer {
+				ORGANIZER.with(|organizer| {
+					*organizer.borrow_mut() = Some(account);
+				})
+			}
+			if !self.affiliators.is_empty() {
+				for account in self.affiliators.into_iter() {
+					AffiliatesAlpha::try_mark_account_as_affiliatable(&account)
+						.expect("Should mark as affiliatable");
+					AffiliatesBeta::try_mark_account_as_affiliatable(&account)
+						.expect("Should mark as affiliatable");
+				}
+			}
+		});
 		ext
 	}
 }

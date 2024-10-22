@@ -2,6 +2,272 @@ use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::bounded_vec;
 
+mod extrinsic {
+	use super::*;
+	use ajuna_primitives::account_manager::AccountManager;
+
+	#[test]
+	fn add_affiliate_to_account() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.affiliators(&[ALICE])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
+				);
+
+				assert_ok!(AffiliatesAlpha::add_affiliation(RuntimeOrigin::signed(BOB), None, 0));
+
+				System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+					Event::AccountAffiliated { account: BOB, to: ALICE },
+				));
+
+				assert_eq!(
+					Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					Some(bounded_vec![ALICE])
+				);
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 1 }
+				);
+			});
+	}
+
+	#[test]
+	fn add_affiliate_to_another_account() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.affiliators(&[ALICE])
+			.build()
+			.execute_with(|| {
+				MockAccountManager::try_add_to_whitelist(&AffiliateWhitelistKey::get(), &CHARLIE)
+					.expect("Should be whitelisted");
+
+				assert_ok!(AffiliatesAlpha::add_affiliation(
+					RuntimeOrigin::signed(CHARLIE),
+					Some(BOB),
+					0
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+					Event::AccountAffiliated { account: BOB, to: ALICE },
+				));
+
+				assert_eq!(
+					Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					Some(bounded_vec![ALICE])
+				);
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 1 }
+				);
+			});
+	}
+
+	#[test]
+	fn cannot_affiliate_to_non_enabled_account() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::NonAffiliatable, affiliates: 0 }
+				);
+
+				assert_noop!(
+					AffiliatesAlpha::add_affiliation(RuntimeOrigin::signed(BOB), None, 0),
+					Error::<Test, AffiliatesInstance1>::AffiliatorNotFound
+				);
+			});
+	}
+
+	#[test]
+	fn cannot_affiliate_another_account_if_not_in_whitelist() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.affiliators(&[ALICE])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
+				);
+
+				assert_noop!(
+					AffiliatesAlpha::add_affiliation(RuntimeOrigin::signed(CHARLIE), Some(BOB), 0),
+					Error::<Test, AffiliatesInstance1>::AffiliateOthersOnlyWhiteListed
+				);
+			});
+	}
+
+	#[test]
+	fn remove_affiliate_chain() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.affiliators(&[ALICE])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
+				);
+
+				assert_ok!(AffiliatesAlpha::add_affiliation(RuntimeOrigin::signed(BOB), None, 0));
+				assert_eq!(
+					Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					Some(bounded_vec![ALICE])
+				);
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 1 }
+				);
+
+				assert_ok!(AffiliatesAlpha::remove_affiliation(RuntimeOrigin::signed(ALICE), BOB));
+				assert_eq!(Affiliatees::<Test, AffiliatesInstance1>::get(BOB), None);
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
+				);
+			});
+	}
+	#[test]
+	fn remove_affiliate_only_allowed_to_organizer() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.affiliators(&[ALICE])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
+				);
+
+				assert_ok!(AffiliatesAlpha::add_affiliation(RuntimeOrigin::signed(BOB), None, 0));
+				assert_eq!(
+					Affiliatees::<Test, AffiliatesInstance1>::get(BOB),
+					Some(bounded_vec![ALICE])
+				);
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 1 }
+				);
+
+				// CHARLIE cannot remove affiliation since he is not the organizer
+				assert_noop!(
+					AffiliatesAlpha::remove_affiliation(RuntimeOrigin::signed(CHARLIE), BOB),
+					DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
+				);
+
+				// ALICE can because she is set as the organizer
+				assert_ok!(AffiliatesAlpha::remove_affiliation(RuntimeOrigin::signed(ALICE), BOB));
+				assert_eq!(Affiliatees::<Test, AffiliatesInstance1>::get(BOB), None);
+				assert_eq!(
+					Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
+					AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 }
+				);
+			});
+	}
+
+	#[test]
+	fn set_rule_works() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule =
+					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				assert_ok!(AffiliatesAlpha::set_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					0,
+					rule.clone()
+				));
+
+				System::assert_last_event(RuntimeEvent::AffiliatesAlpha(Event::RuleAdded {
+					rule_id: 0,
+				}));
+
+				assert_eq!(AffiliateRules::<Test, AffiliatesInstance1>::get(0), Some(rule));
+			});
+	}
+
+	#[test]
+	fn set_rule_not_allowed_for_non_organizer() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule =
+					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				assert_noop!(
+					AffiliatesAlpha::set_rule_for(RuntimeOrigin::signed(BOB), 0, rule.clone()),
+					DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
+				);
+			});
+	}
+
+	#[test]
+	fn clear_rule_works() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule =
+					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				assert_ok!(AffiliatesAlpha::set_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					1,
+					rule.clone()
+				));
+				assert_eq!(AffiliateRules::<Test, AffiliatesInstance1>::get(1), Some(rule));
+				assert_ok!(AffiliatesAlpha::clear_rule_for(RuntimeOrigin::signed(ALICE), 1));
+
+				System::assert_last_event(RuntimeEvent::AffiliatesAlpha(Event::RuleCleared {
+					rule_id: 1,
+				}));
+			});
+	}
+
+	#[test]
+	fn clear_rule_not_allowed_for_non_organizer() {
+		let initial_balance = 1_000_000;
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.organizer(ALICE)
+			.build()
+			.execute_with(|| {
+				let rule =
+					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				assert_ok!(AffiliatesAlpha::set_rule_for(
+					RuntimeOrigin::signed(ALICE),
+					1,
+					rule.clone()
+				));
+				assert_eq!(AffiliateRules::<Test, AffiliatesInstance1>::get(1), Some(rule));
+				assert_noop!(
+					AffiliatesAlpha::clear_rule_for(RuntimeOrigin::signed(BOB), 1),
+					DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
+				);
+			});
+	}
+}
+
 mod add_rule {
 	use super::*;
 

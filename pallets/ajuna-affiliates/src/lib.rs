@@ -27,12 +27,14 @@ mod tests;
 pub mod traits;
 
 use frame_support::pallet_prelude::*;
+use frame_system::{ensure_signed, pallet_prelude::*};
 
 use traits::*;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
 	use sp_runtime::ArithmeticError;
 	use sp_std::vec::Vec;
 
@@ -40,6 +42,8 @@ pub mod pallet {
 		BoundedVec<<T as frame_system::Config>::AccountId, <T as Config<I>>::AffiliateMaxLevel>;
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
+	pub type RuleIdentifierFor<T, I> = <T as Config<I>>::RuleIdentifier;
+	pub type RuntimeRuleFor<T, I> = <T as Config<I>>::RuntimeRule;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -53,6 +57,11 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self, I>>
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		#[pallet::constant]
+		type WhitelistKey: Get<WhitelistKey>;
+
+		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 
 		/// The rule identifier type at runtime.
 		type RuleIdentifier: Parameter + MaxEncodedLen;
@@ -106,6 +115,10 @@ pub mod pallet {
 		CannotAffiliateSelf,
 		/// The account is not allowed to receive affiliates
 		TargetAccountIsNotAffiliatable,
+		/// Only whitelisted accounts can affiliate for others
+		AffiliateOthersOnlyWhiteListed,
+		/// No account matches the provided affiliator identifier
+		AffiliatorNotFound,
 		/// This account has reached the affiliate limit
 		CannotAffiliateMoreAccounts,
 		/// This account has already been affiliated by another affiliator
@@ -118,6 +131,70 @@ pub mod pallet {
 		ExtrinsicAlreadyHasRule,
 		/// The given extrinsic identifier is not associated with any rule
 		ExtrinsicHasNoRule,
+	}
+
+	#[pallet::call]
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		#[pallet::call_index(0)]
+		#[pallet::weight({1000})]
+		pub fn add_affiliation(
+			origin: OriginFor<T>,
+			target_affiliatee: Option<AccountIdFor<T>>,
+			affiliate_id: AffiliateId,
+		) -> DispatchResult {
+			let signer = ensure_signed(origin)?;
+
+			let account = if let Some(acc) = target_affiliatee {
+				ensure!(
+					T::AccountManager::is_whitelisted_for(&T::WhitelistKey::get(), &signer),
+					Error::<T, I>::AffiliateOthersOnlyWhiteListed
+				);
+				acc
+			} else {
+				signer
+			};
+
+			if let Some(affiliator) = Self::get_account_for_id(affiliate_id) {
+				Self::try_add_affiliate_to(&affiliator, &account)
+			} else {
+				Err(Error::<T, I>::AffiliatorNotFound.into())
+			}
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight({1000})]
+		pub fn remove_affiliation(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
+			let maybe_organizer = ensure_signed(origin)?;
+			T::AccountManager::is_organizer(&maybe_organizer)?;
+			Self::try_clear_affiliation_for(&account)
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight({1000})]
+		pub fn set_rule_for(
+			origin: OriginFor<T>,
+			rule_id: RuleIdentifierFor<T, I>,
+			rule: RuntimeRuleFor<T, I>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::AccountManager::is_organizer(&account)?;
+
+			Self::try_add_rule_for(rule_id, rule)
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight({1000})]
+		pub fn clear_rule_for(
+			origin: OriginFor<T>,
+			rule_id: RuleIdentifierFor<T, I>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::AccountManager::is_organizer(&account)?;
+
+			<Self as RuleMutator<_, _>>::clear_rule_for(rule_id);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {

@@ -1069,33 +1069,6 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::call_index(22)]
-		#[pallet::weight({1000})]
-		pub fn add_affiliation(
-			origin: OriginFor<T>,
-			target_affiliatee: Option<AccountIdFor<T>>,
-			affiliate_id: AffiliateId,
-		) -> DispatchResult {
-			let signer = ensure_signed(origin)?;
-
-			let account = if let Some(acc) = target_affiliatee {
-				let whitelisted_accounts = WhitelistedAccounts::<T>::get();
-				ensure!(
-					whitelisted_accounts.contains(&signer),
-					Error::<T>::AffiliateOthersOnlyWhiteListed
-				);
-				acc
-			} else {
-				signer
-			};
-
-			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
-				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
-			} else {
-				Err(Error::<T>::AffiliatorNotFound.into())
-			}
-		}
-
 		#[pallet::call_index(23)]
 		#[pallet::weight({1000})]
 		pub fn enable_affiliator(
@@ -1170,35 +1143,6 @@ pub mod pallet {
 					})
 				},
 			}
-		}
-
-		#[pallet::call_index(24)]
-		#[pallet::weight({1000})]
-		pub fn remove_affiliation(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-			T::AffiliateHandler::try_clear_affiliation_for(&account)
-		}
-
-		#[pallet::call_index(25)]
-		#[pallet::weight({1000})]
-		pub fn set_rule_for(
-			origin: OriginFor<T>,
-			rule_id: AffiliateMethods,
-			rule: FeePropagationOf<T>,
-		) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-
-			T::AffiliateHandler::try_add_rule_for(rule_id, rule)
-		}
-
-		#[pallet::call_index(26)]
-		#[pallet::weight({1000})]
-		pub fn clear_rule_for(origin: OriginFor<T>, rule_id: AffiliateMethods) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-
-			T::AffiliateHandler::clear_rule_for(rule_id);
-
-			Ok(())
 		}
 
 		#[pallet::call_index(27)]
