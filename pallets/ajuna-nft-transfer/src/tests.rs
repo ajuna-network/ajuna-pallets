@@ -20,38 +20,8 @@ use frame_support::{
 	traits::tokens::nonfungibles_v2::{Create, Inspect},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use parity_scale_codec::{Decode, Encode};
-use sp_runtime::{bounded_vec, testing::H256, BoundedVec};
-
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-struct MockItem {
-	field_1: Vec<u8>,
-	field_2: u16,
-	field_3: bool,
-}
-
-impl Default for MockItem {
-	fn default() -> Self {
-		Self { field_1: vec![1, 2, 3], field_2: 333, field_3: true }
-	}
-}
-
-impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
-	const ITEM_CODE: &'static [u8] = &[11];
-	const IPFS_URL_CODE: &'static [u8] = &[21];
-
-	fn get_attribute_codes() -> Vec<NFTAttribute<KeyLimit>> {
-		vec![bounded_vec![111], bounded_vec![222], bounded_vec![240]]
-	}
-
-	fn get_encoded_attributes(&self) -> Vec<(NFTAttribute<KeyLimit>, NFTAttribute<ValueLimit>)> {
-		vec![
-			(bounded_vec![111], BoundedVec::try_from(self.field_1.clone()).unwrap()),
-			(bounded_vec![222], BoundedVec::try_from(self.field_2.to_le_bytes().to_vec()).unwrap()),
-			(bounded_vec![240], BoundedVec::try_from(vec![self.field_3 as u8]).unwrap()),
-		]
-	}
-}
+use parity_scale_codec::Encode;
+use sp_runtime::{testing::H256, DispatchError};
 
 type CollectionConfig =
 	pallet_nfts::CollectionConfig<MockBalance, BlockNumberFor<Test>, MockCollectionId>;
@@ -63,6 +33,301 @@ fn create_collection(organizer: MockAccountId) -> MockCollectionId {
 		&CollectionConfig::default(),
 	)
 	.expect("Should have create contract collection")
+}
+
+pub const ALICE: MockAccountId = 1;
+pub const BOB: MockAccountId = 2;
+
+#[derive(Default)]
+pub struct ExtBuilder {
+	balances: Vec<(MockAccountId, MockBalance)>,
+}
+
+impl ExtBuilder {
+	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
+		self.balances = balances.to_vec();
+		self
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		use sp_runtime::BuildStorage;
+		let config = RuntimeGenesisConfig {
+			system: Default::default(),
+			balances: BalancesConfig { balances: self.balances },
+		};
+
+		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
+}
+
+mod set_collection_id {
+	use super::*;
+
+	#[test]
+	fn set_collection_id_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let collection_id = 369;
+			MockAssetManager::set_organizer(ALICE);
+			assert_ok!(NftTransfer::set_collection_id(RuntimeOrigin::signed(ALICE), collection_id));
+			assert_eq!(CollectionId::<Test>::get(), Some(collection_id));
+		});
+	}
+
+	#[test]
+	fn set_collection_id_rejects_non_organizer_calls() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				NftTransfer::set_collection_id(RuntimeOrigin::signed(BOB), 333),
+				DispatchError::BadOrigin
+			);
+		});
+	}
+}
+
+mod set_service_account {
+	use super::*;
+	#[test]
+	fn set_service_account_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_eq!(ServiceAccount::<Test>::get(), None);
+			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_eq!(ServiceAccount::<Test>::get(), Some(ALICE));
+			System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+				crate::Event::ServiceAccountSet { service_account: ALICE },
+			));
+		});
+	}
+
+	#[test]
+	fn set_service_account_rejects_non_root_calls() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				NftTransfer::set_service_account(RuntimeOrigin::signed(BOB), ALICE),
+				DispatchError::BadOrigin
+			);
+		});
+	}
+}
+
+mod prepare_asset {
+	use super::*;
+	use ajuna_primitives::asset_manager::AssetManager;
+	use sp_runtime::DispatchError;
+
+	#[test]
+	fn prepare_avatar_works() {
+		let prepare_fee = 999;
+		let initial_balance = prepare_fee + MockExistentialDeposit::get();
+
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
+				assert_eq!(Balances::free_balance(ALICE), initial_balance);
+				assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+				assert_eq!(Balances::free_balance(ALICE), initial_balance - prepare_fee);
+				assert_eq!(Preparation::<Test>::get(asset_id).unwrap().to_vec(), Vec::<u8>::new());
+				System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+					crate::Event::PreparedAvatar { asset_id },
+				));
+			});
+	}
+
+	#[test]
+	fn prepare_avatar_rejects_unsigned_calls() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_noop!(
+				NftTransfer::prepare_asset(RuntimeOrigin::none(), asset_id),
+				DispatchError::BadOrigin
+			);
+		});
+	}
+
+	#[test]
+	fn prepare_avatar_rejects_unowned_avatars() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_noop!(
+				NftTransfer::prepare_asset(RuntimeOrigin::signed(BOB), asset_id),
+				DispatchError::Other(NOT_OWNER_ERR)
+			);
+		});
+	}
+
+	#[test]
+	fn prepare_avatar_rejects_when_closed() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			MockAssetManager::set_nft_transfer_open(false);
+			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
+			assert_noop!(
+				NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::NftTransferClosed
+			);
+		});
+	}
+
+	#[test]
+	fn prepare_avatar_rejects_locked_avatars() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			MockAssetManager::lock_asset(<Test as Config>::PalletId::get().0, ALICE, asset_id)
+				.unwrap();
+			assert_noop!(
+				NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+				DispatchError::Other(ALREADY_LOCKED_ERR)
+			);
+		});
+	}
+
+	#[test]
+	fn prepare_avatar_rejects_already_prepared_avatars() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let ipfs_url = IpfsUrl::try_from(Vec::new()).unwrap();
+			Preparation::<Test>::insert(asset_id, ipfs_url);
+			assert_noop!(
+				NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::AssetAlreadyPrepared
+			);
+		});
+	}
+
+	#[test]
+	fn prepare_avatar_rejects_insufficient_balance() {
+		ExtBuilder::default()
+			.balances(&[(ALICE, MockExistentialDeposit::get()), (BOB, 999_999)])
+			.build()
+			.execute_with(|| {
+				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
+				assert_noop!(
+					NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+					sp_runtime::TokenError::FundsUnavailable
+				);
+			});
+	}
+}
+
+mod unprepare_asset {
+	use super::*;
+	use sp_runtime::DispatchError;
+
+	#[test]
+	fn unprepare_avatar_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			assert_ok!(NftTransfer::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			assert!(!Preparation::<Test>::contains_key(asset_id));
+			System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+				crate::Event::UnpreparedAvatar { asset_id },
+			));
+		});
+	}
+
+	#[test]
+	fn unprepare_avatar_rejects_unsigned_calls() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				NftTransfer::unprepare_asset(RuntimeOrigin::none(), H256::random()),
+				DispatchError::BadOrigin
+			);
+		});
+	}
+
+	#[test]
+	fn unprepare_avatar_rejects_unowned_avatars() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_noop!(
+				NftTransfer::unprepare_asset(RuntimeOrigin::signed(BOB), asset_id),
+				DispatchError::Other(NOT_OWNER_ERR)
+			);
+		});
+	}
+
+	#[test]
+	fn unprepare_avatar_rejects_when_closed() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			MockAssetManager::set_nft_transfer_open(false);
+			assert_noop!(
+				NftTransfer::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::NftTransferClosed
+			);
+		});
+	}
+
+	#[test]
+	fn unprepare_avatar_rejects_unprepared_avatars() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_noop!(
+				NftTransfer::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::AssetUnprepared
+			);
+		});
+	}
+}
+
+mod prepare_ipfs {
+	use super::*;
+
+	#[test]
+	fn prepare_ipfs_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			ServiceAccount::<Test>::put(BOB);
+
+			let ipfs_url = b"ipfs://{CID}/{optional path to resource}".to_vec();
+			let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
+			assert_ok!(NftTransfer::prepare_ipfs(
+				RuntimeOrigin::signed(BOB),
+				asset_id,
+				ipfs_url.clone()
+			));
+			assert_eq!(Preparation::<Test>::get(asset_id).unwrap(), ipfs_url);
+			System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+				crate::Event::PreparedIpfsUrl { url: ipfs_url },
+			));
+
+			let ipfs_url = b"ipfs://123".to_vec();
+			let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
+			assert_ok!(NftTransfer::prepare_ipfs(
+				RuntimeOrigin::signed(BOB),
+				asset_id,
+				ipfs_url.clone()
+			));
+			assert_eq!(Preparation::<Test>::get(asset_id).unwrap(), ipfs_url);
+			System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+				crate::Event::PreparedIpfsUrl { url: ipfs_url },
+			));
+		});
+	}
+
+	#[test]
+	fn prepare_ipfs_rejects_empty_url() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			ServiceAccount::<Test>::put(BOB);
+
+			assert_noop!(
+				NftTransfer::prepare_ipfs(RuntimeOrigin::signed(BOB), asset_id, IpfsUrl::default()),
+				Error::<Test>::EmptyIpfsUrl
+			);
+		});
+	}
 }
 
 mod store_as_nft {
@@ -85,7 +350,7 @@ mod store_as_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url.clone()
+					url.clone().try_into().unwrap(),
 				));
 				assert_eq!(Nft::collection_owner(collection_id), Some(ALICE));
 				assert_eq!(Nft::owner(collection_id, item_id), Some(BOB));
@@ -133,7 +398,7 @@ mod store_as_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url.clone()
+					url.clone().try_into().unwrap(),
 				));
 
 				System::assert_last_event(mock::RuntimeEvent::NftTransfer(
@@ -178,7 +443,13 @@ mod store_as_nft {
 				let url = vec![];
 
 				assert_err!(
-					NftTransfer::store_as_nft(ALICE, collection_id, item_id, item, url),
+					NftTransfer::store_as_nft(
+						ALICE,
+						collection_id,
+						item_id,
+						item,
+						url.try_into().unwrap()
+					),
 					Error::<Test>::EmptyIpfsUrl
 				);
 			});
@@ -200,10 +471,16 @@ mod store_as_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url.clone()
+					url.clone().try_into().unwrap()
 				));
 				assert_noop!(
-					NftTransfer::store_as_nft(ALICE, collection_id, item_id, item, url),
+					NftTransfer::store_as_nft(
+						ALICE,
+						collection_id,
+						item_id,
+						item,
+						url.try_into().unwrap()
+					),
 					pallet_nfts::Error::<Test>::AlreadyExists
 				);
 			});
@@ -227,7 +504,13 @@ mod store_as_nft {
 				assert!(item.encode().len() > ValueLimit::get() as usize);
 				// NOTE: As long as the execution is wrapped in an extrinsic, this is a noop.
 				assert_err!(
-					NftTransfer::store_as_nft(BOB, collection_id, item_id, item, url),
+					NftTransfer::store_as_nft(
+						BOB,
+						collection_id,
+						item_id,
+						item,
+						url.try_into().unwrap()
+					),
 					pallet_nfts::Error::<Test>::IncorrectData
 				);
 			});
@@ -254,7 +537,7 @@ mod recover_from_nft {
 					collection_id,
 					item_id,
 					item.clone(),
-					url
+					url.try_into().unwrap()
 				));
 				assert_eq!(Balances::free_balance(BOB), 999);
 
@@ -297,7 +580,13 @@ mod recover_from_nft {
 				let item = MockItem::default();
 				let url = b"ipfs://test".to_vec();
 
-				assert_ok!(NftTransfer::store_as_nft(BOB, collection_id, item_id, item, url));
+				assert_ok!(NftTransfer::store_as_nft(
+					BOB,
+					collection_id,
+					item_id,
+					item,
+					url.try_into().unwrap()
+				));
 				NftStatuses::<Test>::insert(collection_id, item_id, NftStatus::Uploaded);
 
 				assert_noop!(
@@ -319,7 +608,13 @@ mod recover_from_nft {
 				let item = MockItem::default();
 				let url = b"ipfs://test".to_vec();
 
-				assert_ok!(NftTransfer::store_as_nft(BOB, collection_id, item_id, item, url));
+				assert_ok!(NftTransfer::store_as_nft(
+					BOB,
+					collection_id,
+					item_id,
+					item,
+					url.try_into().unwrap()
+				));
 
 				// NOTE: As long as the execution is wrapped in an extrinsic, this is a noop.
 				assert_err!(

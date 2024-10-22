@@ -17,15 +17,14 @@
 use crate::{self as pallet_ajuna_awesome_avatars, types::*, *};
 use frame_support::{
 	parameter_types,
-	traits::{tokens::nonfungibles_v2::Create, AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks},
+	traits::{ConstU16, ConstU64, Hooks},
 	PalletId,
 };
-use frame_system::{EnsureRoot, EnsureSigned};
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
 	testing::TestSignature,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, RuntimeAppPublic,
+	BuildStorage,
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
@@ -35,7 +34,6 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlockNumber = u64;
 pub type MockBalance = u64;
 pub type MockNonce = u64;
-pub type MockCollectionId = u32;
 
 pub const ALICE: MockAccountId = 1;
 pub const BOB: MockAccountId = 2;
@@ -49,9 +47,7 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		Randomness: pallet_insecure_randomness_collective_flip = 2,
-		Nft: pallet_nfts = 3,
 		AAvatars: pallet_ajuna_awesome_avatars = 4,
-		NftTransfer: pallet_ajuna_nft_transfer = 5,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
 		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
 	}
@@ -112,94 +108,6 @@ impl pallet_balances::Config for Test {
 impl pallet_insecure_randomness_collective_flip::Config for Test {}
 
 parameter_types! {
-	pub const CollectionDeposit: MockBalance = 1;
-	pub const ItemDeposit: MockBalance = 1;
-	pub const StringLimit: u32 = 128;
-	pub const MetadataDepositBase: MockBalance = 1;
-	pub const AttributeDepositBase: MockBalance = 1;
-	pub const DepositPerByte: MockBalance = 1;
-	pub const ApprovalsLimit: u32 = 1;
-	pub const ItemAttributesApprovalsLimit: u32 = 10;
-	pub const MaxTips: u32 = 1;
-	pub const MaxDeadlineDuration: u32 = 1;
-	pub const MaxAttributesPerCall: u32 = 10;
-	pub ConfigFeatures: pallet_nfts::PalletFeatures = pallet_nfts::PalletFeatures::all_enabled();
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-pub struct Helper;
-#[cfg(feature = "runtime-benchmarks")]
-impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
-	pallet_nfts::BenchmarkHelper<
-		CollectionId,
-		ItemId,
-		MockAccountPublic,
-		MockAccountId,
-		MockSignature,
-	> for Helper
-{
-	fn collection(i: u16) -> CollectionId {
-		i.into()
-	}
-	fn item(i: u16) -> ItemId {
-		let mut id = [0_u8; 32];
-		let bytes = i.to_be_bytes();
-		id[0] = bytes[0];
-		id[1] = bytes[1];
-		id.into()
-	}
-
-	fn signer() -> (MockAccountPublic, MockAccountId) {
-		(0.into(), 0)
-	}
-	fn sign(signer: &MockAccountPublic, message: &[u8]) -> MockSignature {
-		signer.sign(&message.to_vec()).unwrap()
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
-pub struct ParameterGet<const N: u32>;
-
-impl<const N: u32> Get<u32> for ParameterGet<N> {
-	fn get() -> u32 {
-		N
-	}
-}
-
-pub type KeyLimit = ParameterGet<32>;
-pub type ValueLimit = ParameterGet<200>;
-
-impl pallet_nfts::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type CollectionId = MockCollectionId;
-	type ItemId = H256;
-	type Currency = Balances;
-	type ForceOrigin = EnsureRoot<MockAccountId>;
-	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<MockAccountId>>;
-	type Locker = ();
-	type CollectionDeposit = CollectionDeposit;
-	type ItemDeposit = ItemDeposit;
-	type MetadataDepositBase = MetadataDepositBase;
-	type AttributeDepositBase = AttributeDepositBase;
-	type DepositPerByte = DepositPerByte;
-	type StringLimit = StringLimit;
-	type KeyLimit = KeyLimit;
-	type ValueLimit = ValueLimit;
-	type ApprovalsLimit = ApprovalsLimit;
-	type ItemAttributesApprovalsLimit = ItemAttributesApprovalsLimit;
-	type MaxTips = MaxTips;
-	type MaxDeadlineDuration = MaxDeadlineDuration;
-	type MaxAttributesPerCall = MaxAttributesPerCall;
-	type Features = ConfigFeatures;
-	type OffchainSignature = MockSignature;
-	type OffchainPublic = MockAccountPublic;
-	pallet_nfts::runtime_benchmarks_enabled! {
-		type Helper = Helper;
-	}
-	type WeightInfo = ();
-}
-
-parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
@@ -208,28 +116,10 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Randomness = Randomness;
-	type KeyLimit = KeyLimit;
-	type ValueLimit = ValueLimit;
-	type NftHandler = NftTransfer;
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
 	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const NftTransferPalletId: PalletId = PalletId(*b"aj/nfttr");
-}
-
-impl pallet_ajuna_nft_transfer::Config for Test {
-	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
-	type CollectionId = MockCollectionId;
-	type ItemId = H256;
-	type ItemConfig = pallet_nfts::ItemConfig;
-	type KeyLimit = KeyLimit;
-	type ValueLimit = ValueLimit;
-	type NftHelper = Nft;
 }
 
 parameter_types! {
@@ -269,7 +159,6 @@ pub struct ExtBuilder {
 	mint_cooldown: MockBlockNumber,
 	balances: Vec<(MockAccountId, MockBalance)>,
 	free_mints: Vec<(MockAccountId, MintCount)>,
-	create_nft_collection: bool,
 	affiliators: Vec<MockAccountId>,
 	locks: Vec<(MockAccountId, SeasonId, Locks)>,
 }
@@ -285,7 +174,6 @@ impl Default for ExtBuilder {
 			mint_cooldown: Default::default(),
 			balances: Default::default(),
 			free_mints: Default::default(),
-			create_nft_collection: Default::default(),
 			affiliators: Default::default(),
 			locks: Default::default(),
 		}
@@ -326,10 +214,6 @@ impl ExtBuilder {
 	}
 	pub fn free_mints(mut self, free_mints: &[(MockAccountId, MintCount)]) -> Self {
 		self.free_mints = free_mints.to_vec();
-		self
-	}
-	pub fn create_nft_collection(mut self, create_nft_collection: bool) -> Self {
-		self.create_nft_collection = create_nft_collection;
 		self
 	}
 
@@ -384,16 +268,6 @@ impl ExtBuilder {
 				PlayerConfigs::<Test>::mutate(account_id, |account| {
 					account.free_mints = mint_amount
 				});
-			}
-
-			if self.create_nft_collection {
-				let collection_id = Nft::create_collection(
-					&ALICE,
-					&ALICE,
-					&pallet_nfts::CollectionConfig::default(),
-				)
-				.expect("Collection created");
-				CollectionId::<Test>::put(collection_id);
 			}
 
 			if !self.affiliators.is_empty() {

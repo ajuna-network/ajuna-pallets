@@ -12,6 +12,7 @@ members = [
     "pallets/*",
     "pallets/ajuna-awesome-avatars/benchmarking",
     "pallets/ajuna-nft-staking/benchmarking",
+    "primitives"
 ]
 
 [workspace.dependencies]
@@ -42,6 +43,7 @@ sp-std                                     = { version = "14.0.0", default-featu
 orml-vesting = { version = "1.0.0", default-features = false }
 
 # Ajuna
+ajuna-primitives                          = { path = "primitives", default-features = false }
 pallet-ajuna-affiliates                   = { path = "pallets/ajuna-affiliates", default-features = false }
 pallet-ajuna-awesome-avatars              = { path = "pallets/ajuna-awesome-avatars", default-features = false }
 pallet-ajuna-battle-mogs                  = { path = "pallets/ajuna-battle-mogs", default-features = false }
