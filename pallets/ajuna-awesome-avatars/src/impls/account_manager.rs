@@ -25,7 +25,7 @@ impl<T: Config> AccountManager for Pallet<T> {
 		Ok(())
 	}
 
-	// TODO: For new we ignore the 'identifier' parameter in the AAA implementation
+	// TODO: For now we ignore the 'identifier' parameter in the AAA implementation
 	fn is_whitelisted_for(_identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
 		WhitelistedAccounts::<T>::get().contains(account)
 	}
