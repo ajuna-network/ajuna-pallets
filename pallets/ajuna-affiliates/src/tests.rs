@@ -4,7 +4,6 @@ use sp_runtime::bounded_vec;
 
 mod extrinsic {
 	use super::*;
-	use ajuna_primitives::account_manager::AccountManager;
 
 	#[test]
 	fn add_affiliate_to_account() {

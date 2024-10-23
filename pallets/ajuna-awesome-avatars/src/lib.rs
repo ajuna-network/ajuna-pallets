@@ -102,7 +102,7 @@ use sp_std::prelude::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use pallet_ajuna_affiliates::traits::{AffiliateId, RuleExecutor};
+	use pallet_ajuna_affiliates::traits::RuleExecutor;
 	use pallet_ajuna_tournament::{Percentage, TournamentId};
 	use sp_std::collections::vec_deque::VecDeque;
 

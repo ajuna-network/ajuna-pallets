@@ -36,6 +36,7 @@ pallet-ajuna-affiliates = { workspace = true }
 pallet-ajuna-nft-transfer = { workspace = true }
 pallet-ajuna-awesome-avatars = { workspace = true }
 pallet-ajuna-tournament = { workspace = true }
+ajuna-primitives = { workspace = true }
 
 [dev-dependencies]
 # Substrate - Primitives
@@ -49,6 +50,7 @@ std = [
     "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
+    "ajuna-primitives/std",
     "pallet-ajuna-affiliates/std",
     "pallet-ajuna-awesome-avatars/std",
     "pallet-ajuna-nft-transfer/std",
@@ -67,6 +69,7 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "ajuna-primitives/runtime-benchmarks",
     "pallet-ajuna-affiliates/runtime-benchmarks",
     "pallet-ajuna-awesome-avatars/runtime-benchmarks",
     "pallet-ajuna-nft-transfer/runtime-benchmarks",

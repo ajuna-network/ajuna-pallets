@@ -124,11 +124,14 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 
 parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
+	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
 }
 
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = AAvatars;
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;

@@ -122,6 +122,22 @@ pub struct MockAccountManager;
 pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
+impl MockAccountManager {
+	pub(crate) fn try_add_to_whitelist(
+		identifier: &WhitelistKey,
+		account: &MockAccountId,
+	) -> Result<(), DispatchError> {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.insert(*account);
+				Ok(())
+			} else {
+				Err(DispatchError::Other("No account set for identifier"))
+			}
+		})
+	}
+}
+
 impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 	type AccountId = MockAccountId;
 
@@ -142,28 +158,6 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 				entry.contains(account)
 			} else {
 				false
-			}
-		})
-	}
-
-	fn try_add_to_whitelist(
-		identifier: &WhitelistKey,
-		account: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		WHITELISTED_ACCOUNTS.with(|accounts| {
-			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
-				entry.insert(*account);
-				Ok(())
-			} else {
-				Err(DispatchError::Other("No account set for identifier"))
-			}
-		})
-	}
-
-	fn remove_from_whitelist(identifier: &WhitelistKey, account: &Self::AccountId) {
-		WHITELISTED_ACCOUNTS.with(|accounts| {
-			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
-				entry.remove(account);
 			}
 		})
 	}

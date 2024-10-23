@@ -16,6 +16,7 @@
 
 #![cfg(test)]
 
+use ajuna_primitives::account_manager::WhitelistKey;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
@@ -138,11 +139,14 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 
 parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
+	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
 }
 
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = AAvatars;
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
