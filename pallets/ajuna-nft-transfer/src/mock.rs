@@ -18,7 +18,10 @@ use crate::{
 	self as pallet_ajuna_nft_transfer,
 	traits::{NFTAttribute, NftConvertible},
 };
-use ajuna_primitives::asset_manager::{AssetManager, Lock};
+use ajuna_primitives::{
+	account_manager::WhitelistKey,
+	asset_manager::{AssetManager, Lock},
+};
 use frame_support::{
 	ensure, parameter_types,
 	traits::{
@@ -211,6 +214,7 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 	type ItemId = ItemId;
 	type ItemConfig = pallet_nfts::ItemConfig;
 	type AssetManager = MockAssetManager;
+	type AccountManager = MockAccountManager;
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
@@ -253,11 +257,13 @@ impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
 	}
 }
 
+pub const ALICE: MockAccountId = 1;
+
 thread_local! {
 	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = RefCell::new(BTreeMap::new());
 	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
 	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = RefCell::new(BTreeMap::new());
-	pub static ORGANIZER: RefCell<MockAccountId> = RefCell::new(0);
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(Some(ALICE));
 	pub static NFT_TRANSFER_OPEN: RefCell<bool> = RefCell::new(true);
 	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
 }
@@ -281,7 +287,7 @@ impl MockAssetManager {
 	}
 
 	pub fn set_organizer(organizer: MockAccountId) {
-		ORGANIZER.with(|o| *o.borrow_mut() = organizer)
+		ORGANIZER.with(|o| *o.borrow_mut() = Some(organizer))
 	}
 
 	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
@@ -307,16 +313,6 @@ impl AssetManager for MockAssetManager {
 	type AccountId = MockAccountId;
 	type AssetId = ItemId;
 	type Asset = MockItem;
-
-	fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
-		ORGANIZER.with(|locked| {
-			if &*locked.borrow() == account {
-				Ok(())
-			} else {
-				DispatchError::BadOrigin.into()
-			}
-		})
-	}
 
 	fn ensure_ownership(
 		owner: &Self::AccountId,
@@ -407,5 +403,33 @@ impl AssetManager for MockAssetManager {
 	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(organizer: Self::AccountId) {
 		Self::set_organizer(organizer)
+	}
+}
+
+/// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this
+/// pallet is too loaded and requires many dependencies.
+///
+/// Hence, we implement our own little account manager here.
+pub struct MockAccountManager;
+
+pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
+pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
+
+impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
+	type AccountId = MockAccountId;
+
+	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		ORGANIZER.with(|maybe_account| {
+			if let Some(organizer) = maybe_account.borrow().as_ref() {
+				ensure!(organizer == account, DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER));
+				Ok(())
+			} else {
+				Err(DispatchError::Other(NO_ORGANIZER_SET))
+			}
+		})
+	}
+
+	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
+		todo!()
 	}
 }

@@ -14,11 +14,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Ajuna primitives crate.
-//!
-//! It intends to implement things that are shared over various pallets.
+use crate::*;
 
-#![cfg_attr(not(feature = "std"), no_std)]
+impl<T: Config> AccountManager for Pallet<T> {
+	type AccountId = AccountIdFor<T>;
 
-pub mod account_manager;
-pub mod asset_manager;
+	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		let existing_organizer = Organizer::<T>::get().ok_or(Error::<T>::OrganizerNotSet)?;
+		ensure!(account == &existing_organizer, DispatchError::BadOrigin);
+		Ok(())
+	}
+
+	// TODO: For now we ignore the 'identifier' parameter in the AAA implementation
+	fn is_whitelisted_for(_identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
+		WhitelistedAccounts::<T>::get().contains(account)
+	}
+}

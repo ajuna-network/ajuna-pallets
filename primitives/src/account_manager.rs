@@ -14,11 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Ajuna primitives crate.
-//!
-//! It intends to implement things that are shared over various pallets.
+use frame_support::pallet_prelude::{DispatchError, Member};
 
-#![cfg_attr(not(feature = "std"), no_std)]
+pub type WhitelistKey = [u8; 8];
 
-pub mod account_manager;
-pub mod asset_manager;
+/// The account manager trait that can be passed around to other pallets that need to works with
+/// Accounts
+pub trait AccountManager {
+	type AccountId: Member + Clone;
+
+	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
+
+	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool;
+}
