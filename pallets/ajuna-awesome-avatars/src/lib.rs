@@ -73,7 +73,10 @@ pub mod types;
 pub mod weights;
 
 use crate::{types::*, weights::WeightInfo};
-use ajuna_primitives::asset_manager::{AssetManager, Lock, LockIdentifier};
+use ajuna_primitives::{
+	account_manager::{AccountManager, WhitelistKey},
+	asset_manager::{AssetManager, Lock, LockIdentifier},
+};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness, WithdrawReasons},

@@ -21,12 +21,6 @@ impl<T: Config> AssetManager for Pallet<T> {
 	type AssetId = AvatarIdOf<T>;
 	type Asset = AvatarOf<T>;
 
-	fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
-		let existing_organizer = Organizer::<T>::get().ok_or(Error::<T>::OrganizerNotSet)?;
-		ensure!(account == &existing_organizer, DispatchError::BadOrigin);
-		Ok(())
-	}
-
 	fn ensure_ownership(
 		account: &Self::AccountId,
 		asset_id: &Self::AssetId,

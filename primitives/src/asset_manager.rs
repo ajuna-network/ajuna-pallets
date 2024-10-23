@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::{__private::DispatchError, pallet_prelude::Member};
+use frame_support::pallet_prelude::{DispatchError, Member};
 use parity_scale_codec::{Codec, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
@@ -49,9 +49,6 @@ pub trait AssetManager {
 	type AssetId: Member + Codec;
 
 	type Asset: Member + Codec;
-
-	/// This should be removed in the course of sage.
-	fn ensure_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
 
 	fn ensure_ownership(
 		owner: &Self::AccountId,

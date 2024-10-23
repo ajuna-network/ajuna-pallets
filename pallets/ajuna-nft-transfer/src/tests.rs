@@ -80,7 +80,7 @@ mod set_collection_id {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
 				NftTransfer::set_collection_id(RuntimeOrigin::signed(BOB), 333),
-				DispatchError::BadOrigin
+				DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
 			);
 		});
 	}

@@ -35,7 +35,7 @@ use crate::weights::WeightInfo;
 pub mod pallet {
 	use super::*;
 	use crate::traits::*;
-	use ajuna_primitives::asset_manager::AssetManager;
+	use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{
@@ -85,6 +85,8 @@ pub mod pallet {
 			AssetId = Self::ItemId,
 			Asset = Self::Item,
 		>;
+
+		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 
 		/// The maximum length of an attribute key.
 		#[pallet::constant]
@@ -177,9 +179,8 @@ pub mod pallet {
 			collection_id: T::CollectionId,
 		) -> DispatchResult {
 			let signer = ensure_signed(origin)?;
-			// Todo: this should not be with the asset manager.
-			// This will be changed in the course of the sage architecture.
-			T::AssetManager::ensure_organizer(&signer)?;
+			// This may be changed in the course of the sage architecture.
+			T::AccountManager::is_organizer(&signer)?;
 			CollectionId::<T>::put(collection_id);
 			Self::deposit_event(Event::CollectionIdSet { collection_id });
 			Ok(())
