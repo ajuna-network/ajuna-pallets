@@ -98,9 +98,4 @@ impl<T: Config> AssetManager for Pallet<T> {
 
 		avatar_ids.into()
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(organizer: Self::AccountId) {
-		Organizer::<T>::put(organizer)
-	}
 }

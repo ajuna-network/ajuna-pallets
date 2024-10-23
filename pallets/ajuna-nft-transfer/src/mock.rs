@@ -286,10 +286,6 @@ impl MockAssetManager {
 		ids
 	}
 
-	pub fn set_organizer(organizer: MockAccountId) {
-		ORGANIZER.with(|o| *o.borrow_mut() = Some(organizer))
-	}
-
 	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
 		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id));
 		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));
@@ -399,11 +395,6 @@ impl AssetManager for MockAssetManager {
 	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
 		Self::create_assets(owner, count)
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(organizer: Self::AccountId) {
-		Self::set_organizer(organizer)
-	}
 }
 
 /// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this
@@ -414,6 +405,12 @@ pub struct MockAccountManager;
 
 pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
+
+impl MockAccountManager {
+	pub fn set_organizer(organizer: MockAccountId) {
+		ORGANIZER.with(|o| *o.borrow_mut() = Some(organizer))
+	}
+}
 
 impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 	type AccountId = MockAccountId;
@@ -429,7 +426,19 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 		})
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(organizer: Self::AccountId) {
+		Self::set_organizer(organizer)
+	}
+
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
-		todo!()
+		unimplemented!()
+	}
+
+	fn try_set_whitelisted_for(
+		_identifier: &WhitelistKey,
+		_account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		unimplemented!()
 	}
 }

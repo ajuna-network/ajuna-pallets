@@ -25,8 +25,26 @@ impl<T: Config> AccountManager for Pallet<T> {
 		Ok(())
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(organizer: Self::AccountId) {
+		Organizer::<T>::put(organizer)
+	}
+
 	// TODO: For now we ignore the 'identifier' parameter in the AAA implementation
 	fn is_whitelisted_for(_identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
 		WhitelistedAccounts::<T>::get().contains(account)
+	}
+
+	// TODO: For now we ignore the 'identifier' parameter in the AAA implementation
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_set_whitelisted_for(
+		_identifier: &WhitelistKey,
+		account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		WhitelistedAccounts::<T>::try_mutate(|accounts| {
+			accounts
+				.try_push(account.clone())
+				.map_err(|_| Error::<T>::WhitelistedAccountsLimitReached.into())
+		})
 	}
 }

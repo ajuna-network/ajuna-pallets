@@ -81,7 +81,4 @@ pub trait AssetManager {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId>;
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(owner: Self::AccountId);
 }

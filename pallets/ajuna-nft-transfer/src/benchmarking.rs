@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::{mock::Test, traits::IpfsUrl, *};
-use ajuna_primitives::asset_manager::AssetManager;
+use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
 use frame_benchmarking::benchmarks;
 use frame_support::{pallet_prelude::DispatchError, traits::Currency};
 use frame_system::RawOrigin;
@@ -76,7 +76,7 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 benchmarks! {
 	set_collection_id {
 		let organizer = account::<T>("organizer");
-		T::AssetManager::set_organizer(organizer.clone());
+		T::AccountManager::set_organizer(organizer.clone());
 		let collection_id = CollectionIdOf::<T>::from(u32::MAX);
 	}: _(RawOrigin::Signed(organizer), collection_id)
 	verify {

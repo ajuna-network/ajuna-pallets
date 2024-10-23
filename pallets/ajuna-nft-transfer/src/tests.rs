@@ -69,7 +69,7 @@ mod set_collection_id {
 	fn set_collection_id_works() {
 		ExtBuilder::default().build().execute_with(|| {
 			let collection_id = 369;
-			MockAssetManager::set_organizer(ALICE);
+			MockAccountManager::set_organizer(ALICE);
 			assert_ok!(NftTransfer::set_collection_id(RuntimeOrigin::signed(ALICE), collection_id));
 			assert_eq!(CollectionId::<Test>::get(), Some(collection_id));
 		});
