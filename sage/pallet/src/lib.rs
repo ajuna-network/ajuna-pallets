@@ -37,6 +37,8 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
+	pub type AssetIdOf<T, I> =
+		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
 	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 	pub type TransitionIdOf<T, I> =
@@ -90,7 +92,7 @@ pub mod pallet {
 		pub fn state_transition(
 			origin: OriginFor<T>,
 			transition_id: TransitionIdOf<T, I>,
-			assets: Vec<AssetOf<T, I>>,
+			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
@@ -98,7 +100,7 @@ pub mod pallet {
 			T::SageGameTransition::verify_rule::<Self>(
 				transition_id.clone(),
 				&sender,
-				&assets,
+				&asset_ids,
 				&extra,
 			)
 			.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
@@ -106,7 +108,7 @@ pub mod pallet {
 			T::SageGameTransition::do_transition::<Self>(
 				transition_id.clone(),
 				sender.clone(),
-				assets,
+				asset_ids,
 				extra,
 			)
 			.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
@@ -120,19 +122,27 @@ pub mod pallet {
 	/// Implement the SageApi for this instance, this is essentially where all the associated
 	/// types are wired together and aggregated to the API.
 	impl<T: Config<I>, I: 'static> SageApi for Pallet<T, I> {
+		type AssetId = AssetIdOf<T, I>;
 		type Asset = AssetOf<T, I>;
 		type Balance = BalanceOf<T, I>;
 		type AccountId = AccountIdOf<T>;
 
 		fn ensure_ownership(
 			_owner: &Self::AccountId,
-			_asset: &Self::Asset,
+			_asset: &Self::AssetId,
 		) -> Result<(), sage_api::Error> {
 			todo!()
 		}
 
+		fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, sage_api::Error>>(
+			_asset: &Self::AssetId,
+			_f: F,
+		) -> Result<R, sage_api::Error> {
+			todo!()
+		}
+
 		fn transfer_ownership(
-			_asset: Self::Asset,
+			_asset: Self::AssetId,
 			_to: Self::AccountId,
 		) -> Result<(), sage_api::Error> {
 			todo!()

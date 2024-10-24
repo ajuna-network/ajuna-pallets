@@ -8,15 +8,24 @@ use sp_std::vec::Vec;
 ///
 /// This will be much more elaborate in th actual implementation.
 pub trait SageApi {
+	type AssetId;
+
 	type Asset: AssetT;
 
 	type Balance;
 
 	type AccountId;
 
-	fn ensure_ownership(account: &Self::AccountId, asset: &Self::Asset)
-		-> Result<(), crate::Error>;
-	fn transfer_ownership(asset: Self::Asset, to: Self::AccountId) -> Result<(), crate::Error>;
+	fn ensure_ownership(
+		account: &Self::AccountId,
+		asset: &Self::AssetId,
+	) -> Result<(), crate::Error>;
+
+	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, crate::Error>>(
+		asset: &Self::AssetId,
+		f: F,
+	) -> Result<R, crate::Error>;
+	fn transfer_ownership(asset: Self::AssetId, to: Self::AccountId) -> Result<(), crate::Error>;
 	fn handle_fees(balance: Self::Balance) -> Result<(), crate::Error>;
 }
 
@@ -38,6 +47,7 @@ impl AsErrorCode for u8 {
 }
 
 pub trait SageGameTransition {
+	type AssetId: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
 	type Asset: AssetT + Member + Encode + Decode + MaxEncodedLen + TypeInfo;
 
 	type AccountId;
@@ -52,20 +62,30 @@ pub trait SageGameTransition {
 	type Extra: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
 
 	fn verify_rule<
-		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+		Sage: SageApi<
+			AssetId = Self::AssetId,
+			Asset = Self::Asset,
+			AccountId = Self::AccountId,
+			Balance = Self::Balance,
+		>,
 	>(
 		transition_id: Self::TransitionId,
 		account_id: &Self::AccountId,
-		assets: &[Self::Asset],
+		asset_ids: &[Self::AssetId],
 		extra: &Self::Extra,
 	) -> Result<(), crate::Error>;
 
 	fn do_transition<
-		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+		Sage: SageApi<
+			AssetId = Self::AssetId,
+			Asset = Self::Asset,
+			AccountId = Self::AccountId,
+			Balance = Self::Balance,
+		>,
 	>(
 		transition_id: Self::TransitionId,
 		account_id: Self::AccountId,
-		assets: Vec<Self::Asset>,
+		assets_ids: Vec<Self::AssetId>,
 		extra: Self::Extra,
 	) -> Result<(), crate::Error>;
 }
