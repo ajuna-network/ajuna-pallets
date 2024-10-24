@@ -1733,6 +1733,7 @@ name = "pallet-ajuna-affiliates"
 version = "0.15.0"
 dependencies = [
  "ajuna-primitives",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",

@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_affiliates, *};
-use ajuna_primitives::account_manager::WhitelistKey;
+use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
 use frame_support::{
 	ensure, parameter_types,
 	traits::{ConstU16, ConstU64},
@@ -49,6 +49,8 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances = 1,
 		AffiliatesAlpha: pallet_ajuna_affiliates::<Instance1> = 2,
 		AffiliatesBeta: pallet_ajuna_affiliates::<Instance2> = 3,
+		#[cfg(feature = "runtime-benchmarks")]
+		AffiliatesBench: pallet_ajuna_affiliates = 4,
 	}
 );
 
@@ -152,6 +154,13 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 		})
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(owner: Self::AccountId) {
+		ORGANIZER.with(|maybe_account| {
+			*maybe_account.borrow_mut() = Some(owner);
+		});
+	}
+
 	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
 		WHITELISTED_ACCOUNTS.with(|accounts| {
 			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
@@ -160,6 +169,14 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 				false
 			}
 		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_set_whitelisted_for(
+		identifier: &WhitelistKey,
+		account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		Self::try_add_to_whitelist(identifier, account)
 	}
 }
 
@@ -223,9 +240,7 @@ impl ExtBuilder {
 		ext.execute_with(|| System::set_block_number(1));
 		ext.execute_with(|| {
 			if let Some(account) = self.organizer {
-				ORGANIZER.with(|organizer| {
-					*organizer.borrow_mut() = Some(account);
-				})
+				MockAccountManager::set_organizer(account);
 			}
 			if !self.affiliators.is_empty() {
 				for account in self.affiliators.into_iter() {
