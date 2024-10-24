@@ -4,7 +4,7 @@
 
 use frame_support::ensure;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sage_api::{AsErrorCode, AssetT, SageApi, SageGameTransition};
+use sage_api::{rules::ensure_asset_length, AsErrorCode, AssetT, SageApi, SageGameTransition};
 use scale_info::TypeInfo;
 use std::marker::PhantomData;
 
@@ -74,7 +74,7 @@ pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
 	assets: &[Asset],
 ) -> Result<(), sage_api::Error> {
 	match transition_id {
-		1 => rule_asset_length_1::<Sage>(assets),
+		1 => ensure_asset_length(assets, 2),
 		_ => Err(sage_api::Error::InvalidTransitionId),
 	}
 }
@@ -95,12 +95,4 @@ pub fn transition_one<Sage: SageApi<Asset = Asset>>(
 	_assets: Vec<Asset>,
 ) -> Result<(), sage_api::Error> {
 	todo!()
-}
-
-/// A rule that maybe many different transitions want to fulfill.
-pub fn rule_asset_length_1<Sage: SageApi<Asset = Asset>>(
-	assets: &[Asset],
-) -> Result<(), sage_api::Error> {
-	ensure!(assets.len() == 1, sage_api::Error::InvalidAssetLength);
-	Ok(())
 }
