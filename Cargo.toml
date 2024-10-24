@@ -12,7 +12,10 @@ members = [
     "pallets/*",
     "pallets/ajuna-awesome-avatars/benchmarking",
     "pallets/ajuna-nft-staking/benchmarking",
-    "primitives"
+    "primitives",
+    "sage/example-transition",
+    "sage/pallet",
+    "sage/api",
 ]
 
 [workspace.dependencies]
@@ -54,3 +57,8 @@ pallet-ajuna-nft-transfer                 = { path = "pallets/ajuna-nft-transfer
 pallet-ajuna-nft-staking                  = { path = "pallets/ajuna-nft-staking", default-features = false }
 pallet-ajuna-tournament                   = { path = "pallets/ajuna-tournament", default-features = false }
 pallet-ajuna-wildcard                     = { path = "pallets/ajuna-wildcard", default-features = false }
+
+# Sage
+example-transition              = { path = "sage/example-transition", default-features = false }
+pallet-sage                     = { path = "sage/pallet", default-features = false }
+sage-api                        = { path = "sage/api", default-features = false }
