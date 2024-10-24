@@ -155,7 +155,7 @@ pub fn transition<Sage: SageApi<AssetId = AssetId, Asset = Asset>>(
 			asset.level = asset.level.upgrade()?;
 			Ok(())
 		}),
-		ConsumeAsset => Sage::try_mutate_asset(&asset_ids[0], |asset| consume_asset(asset)),
+		ConsumeAsset => Sage::try_mutate_asset(&asset_ids[0], consume_asset),
 	}
 }
 
