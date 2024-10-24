@@ -20,6 +20,7 @@ use frame_support::{
 	traits::{ConstU16, ConstU64, Hooks},
 	PalletId,
 };
+use pallet_ajuna_affiliates::BenchmarkHelper;
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
 	testing::TestSignature,
@@ -127,6 +128,21 @@ parameter_types! {
 	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AffiliateBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Test>> for AffiliateBenchmarkHelper {
+	fn create_rule_id(_id: u32) -> AffiliateMethods {
+		AffiliateMethods::Mint
+	}
+
+	fn create_rule(id: u32) -> FeePropagationOf<Test> {
+		FeePropagationOf::<Test>::try_from(vec![id as u8])
+			.expect("Should convert rule to mock runtime rule")
+	}
+}
+
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -135,6 +151,9 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
 parameter_types! {

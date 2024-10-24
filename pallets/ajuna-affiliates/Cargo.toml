@@ -24,6 +24,8 @@ sp-std             = { workspace = true }
 
 # Benchmarking
 frame-benchmarking = { workspace = true, optional = true }
+pallet-balances    = { workspace = true, optional = true }
+sp-io              = { workspace = true, optional = true }
 
 [dev-dependencies]
 pallet-balances = { workspace = true }

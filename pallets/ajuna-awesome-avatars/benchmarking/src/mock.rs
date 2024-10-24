@@ -23,6 +23,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+use pallet_ajuna_affiliates::BenchmarkHelper;
 use pallet_ajuna_awesome_avatars::{
 	types::{AffiliateMethods, Avatar, SeasonId},
 	FeePropagationOf,
@@ -142,6 +143,21 @@ parameter_types! {
 	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AffiliateBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Runtime>> for AffiliateBenchmarkHelper {
+	fn create_rule_id(_id: u32) -> AffiliateMethods {
+		AffiliateMethods::Mint
+	}
+
+	fn create_rule(id: u32) -> FeePropagationOf<Runtime> {
+		FeePropagationOf::<Runtime>::try_from(vec![id as u8])
+			.expect("Should convert rule to mock runtime rule")
+	}
+}
+
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -150,6 +166,9 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
 parameter_types! {

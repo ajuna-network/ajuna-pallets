@@ -19,13 +19,13 @@
 
 use crate::{
 	mock::{
-		AffiliateMaxLevel, AffiliateWhitelistKey, MockAccountManager, MockRuleId, MockRuntimeRule,
-		RuntimeEvent, Test,
+		AffiliateBenchmarkHelper, AffiliateMaxLevel, AffiliateWhitelistKey, MockAccountManager,
+		MockRuleId, MockRuntimeRule, RuntimeEvent, System, Test,
 	},
 	Pallet as Affiliates, *,
 };
 use ajuna_primitives::account_manager::AccountManager;
-use frame_benchmarking::{benchmarks_instance_pallet};
+use frame_benchmarking::benchmarks_instance_pallet;
 use frame_system::RawOrigin;
 use sp_runtime::BuildStorage;
 
@@ -36,10 +36,29 @@ impl Config for Test {
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type WeightInfo = ();
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
+const ACC_1: &str = "acc_1";
+const ACC_2: &str = "acc_2";
+const ACC_3: &str = "acc_3";
+const ACC_4: &str = "acc_4";
+const ACC_5: &str = "acc_5";
+
 fn mark_as_affiliatable<T: Config<I>, I: 'static>(account: &T::AccountId) {
-	Affiliates::<T, I>::try_mark_account_as_affiliatable(account).expect("Should mark as affiliatable");
+	Affiliates::<T, I>::try_mark_account_as_affiliatable(account)
+		.expect("Should mark as affiliatable");
+}
+
+fn affiliate_account_to<T: Config<I>, I: 'static>(
+	account: &T::AccountId,
+	affiliate: &T::AccountId,
+) {
+	<Affiliates<T, I> as AffiliateMutator<AccountIdFor<T>>>::try_add_affiliate_to(
+		account, affiliate,
+	)
+	.expect("Should affiliate");
 }
 
 fn account<T: Config<I>, I: 'static>(name: &'static str) -> T::AccountId {
@@ -55,29 +74,56 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 
 benchmarks_instance_pallet! {
 	add_affiliation {
-		let acc_1 = account::<T, I>("acc_1");
-		let acc_2 = account::<T, I>("acc_2");
-		let acc_3 = account::<T, I>("acc_3");
+		let acc_1 = account::<T, I>(ACC_1);
+		let acc_2 = account::<T, I>(ACC_2);
+		let acc_3 = account::<T, I>(ACC_3);
+		mark_as_affiliatable::<T, I>(&acc_3);
 		let key = T::WhitelistKey::get();
 		T::AccountManager::try_set_whitelisted_for(&key, &acc_1).expect("Set whitelisted");
-		mark_as_affiliatable::<T, I>(&acc_3);
 	}: _(RawOrigin::Signed(acc_1.clone()), Some(acc_2.clone()), 0)
 	verify {
 		assert_last_event::<T, I>(Event::AccountAffiliated { account: acc_2, to: acc_3 })
 	}
 
 	remove_affiliation {
-		let acc_1 = account::<T, I>("acc_1");
-		let acc_2 = account::<T, I>("acc_2");
-		let acc_3 = account::<T, I>("acc_3");
-		let acc_4 = account::<T, I>("acc_3");
-		let acc_5 = account::<T, I>("acc_3");
-		let key = T::WhitelistKey::get();
-		T::AccountManager::try_set_whitelisted_for(&key, &acc_1).expect("Set whitelisted");
+		let acc_1 = account::<T, I>(ACC_1);
+		mark_as_affiliatable::<T, I>(&acc_1);
+		let acc_2 = account::<T, I>(ACC_2);
+		mark_as_affiliatable::<T, I>(&acc_2);
+		let acc_3 = account::<T, I>(ACC_3);
 		mark_as_affiliatable::<T, I>(&acc_3);
-	}: _(RawOrigin::Signed(acc_1.clone()), Some(acc_2.clone()), 0)
+		let acc_4 = account::<T, I>(ACC_4);
+		mark_as_affiliatable::<T, I>(&acc_4);
+		let acc_5 = account::<T, I>(ACC_5);
+		let key = T::WhitelistKey::get();
+		affiliate_account_to::<T, I>(&acc_1, &acc_2);
+		affiliate_account_to::<T, I>(&acc_2, &acc_3);
+		affiliate_account_to::<T, I>(&acc_3, &acc_4);
+		affiliate_account_to::<T, I>(&acc_4, &acc_5);
+	}: _(RawOrigin::Signed(acc_1.clone()), acc_5.clone())
 	verify {
-		assert_last_event::<T, I>(Event::AccountAffiliated { account: acc_2, to: acc_3 })
+		assert_last_event::<T, I>(Event::AccountUnaffiliated { account: acc_5 })
+	}
+
+	set_rule_for {
+		let acc_1 = account::<T, I>(ACC_1);
+		let rule_id = T::BenchmarkHelper::create_rule_id(1);
+		let rule = T::BenchmarkHelper::create_rule(1);
+	}: _(RawOrigin::Signed(acc_1.clone()), rule_id.clone(), rule)
+	verify {
+		assert_last_event::<T, I>(Event::RuleAdded { rule_id })
+	}
+
+	clear_rule_for {
+		let acc_1 = account::<T, I>(ACC_1);
+		let rule_id = T::BenchmarkHelper::create_rule_id(1);
+		let rule = T::BenchmarkHelper::create_rule(1);
+		<Affiliates<T, I> as RuleMutator<RuleIdentifierFor<T, I>, RuntimeRuleFor<T, I>>>::try_add_rule_for(
+			rule_id.clone(), rule
+		).expect("Should be able to add rule");
+	}: _(RawOrigin::Signed(acc_1.clone()), rule_id.clone())
+	verify {
+		assert_last_event::<T, I>(Event::RuleCleared { rule_id })
 	}
 
 	impl_benchmark_test_suite!(
@@ -89,5 +135,11 @@ benchmarks_instance_pallet! {
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	sp_io::TestExternalities::new(t)
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| {
+		let acc_1 = account::<Test, ()>(ACC_1);
+		MockAccountManager::set_organizer(acc_1);
+	});
+	ext
 }

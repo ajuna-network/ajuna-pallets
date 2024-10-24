@@ -15,16 +15,21 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_affiliates, *};
-use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
+#[cfg(test)]
+use ajuna_primitives::account_manager::AccountManager;
+use ajuna_primitives::account_manager::WhitelistKey;
 use frame_support::{
 	ensure, parameter_types,
 	traits::{ConstU16, ConstU64},
 };
+#[cfg(test)]
+use sp_runtime::BuildStorage;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
-	BoundedVec, BuildStorage, DispatchError,
+	BoundedVec, DispatchError,
 };
+
 use sp_std::{
 	cell::RefCell,
 	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
@@ -36,10 +41,15 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 
+#[cfg(test)]
 pub const ALICE: MockAccountId = 1;
+#[cfg(test)]
 pub const BOB: MockAccountId = 2;
+#[cfg(test)]
 pub const CHARLIE: MockAccountId = 3;
+#[cfg(test)]
 pub const DAVE: MockAccountId = 4;
+#[cfg(test)]
 pub const EDWARD: MockAccountId = 5;
 
 // Configure a mock runtime to test the pallet.
@@ -183,6 +193,18 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 pub type MockRuleId = u8;
 pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
 
+pub struct AffiliateBenchmarkHelper;
+
+impl BenchmarkHelper<MockRuleId, MockRuntimeRule> for AffiliateBenchmarkHelper {
+	fn create_rule_id(id: u32) -> MockRuleId {
+		id as u8
+	}
+
+	fn create_rule(id: u32) -> MockRuntimeRule {
+		MockRuntimeRule::try_from(vec![id as u8]).expect("Should convert rule to mock runtime rule")
+	}
+}
+
 parameter_types! {
 	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
 }
@@ -195,6 +217,9 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
 pub(crate) type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
@@ -205,8 +230,12 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
+#[cfg(test)]
 #[derive(Default)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
@@ -214,6 +243,7 @@ pub struct ExtBuilder {
 	affiliators: Vec<MockAccountId>,
 }
 
+#[cfg(test)]
 impl ExtBuilder {
 	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
 		self.balances = balances.to_vec();

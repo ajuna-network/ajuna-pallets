@@ -18,7 +18,7 @@
 
 pub use pallet::*;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "runtime-benchmarks"))]
 mod mock;
 
 #[cfg(test)]
@@ -27,8 +27,9 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 pub mod traits;
+pub mod weights;
 
-//pub mod weights;
+use crate::weights::WeightInfo;
 
 use frame_support::pallet_prelude::*;
 use frame_system::{ensure_signed, pallet_prelude::*};
@@ -48,6 +49,25 @@ pub mod pallet {
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub type RuleIdentifierFor<T, I> = <T as Config<I>>::RuleIdentifier;
 	pub type RuntimeRuleFor<T, I> = <T as Config<I>>::RuntimeRule;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<RuleIdParameter, RuleParameter> {
+		fn create_rule_id(id: u32) -> RuleIdParameter;
+
+		fn create_rule(id: u32) -> RuleParameter;
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<RuleIdParameter: From<u32>, RuleParameter: From<u32>>
+		BenchmarkHelper<RuleIdParameter, RuleParameter> for ()
+	{
+		fn create_rule_id(id: u32) -> RuleIdParameter {
+			id.into()
+		}
+
+		fn create_rule(id: u32) -> RuleParameter {
+			id.into()
+		}
+	}
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -76,6 +96,11 @@ pub mod pallet {
 		/// The maximum depth of the affiliate relation chain,
 		#[pallet::constant]
 		type AffiliateMaxLevel: Get<u32>;
+
+		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type BenchmarkHelper: BenchmarkHelper<Self::RuleIdentifier, Self::RuntimeRule>;
 	}
 
 	/// Stores the affiliated accounts from the perspectives of the affiliatee
@@ -109,6 +134,7 @@ pub mod pallet {
 	pub enum Event<T: Config<I>, I: 'static = ()> {
 		AccountMarkedAsAffiliatable { account: T::AccountId, affiliate_id: AffiliateId },
 		AccountAffiliated { account: T::AccountId, to: T::AccountId },
+		AccountUnaffiliated { account: T::AccountId },
 		RuleAdded { rule_id: T::RuleIdentifier },
 		RuleCleared { rule_id: T::RuleIdentifier },
 	}
@@ -319,7 +345,7 @@ pub mod pallet {
 		}
 
 		fn try_clear_affiliation_for(account: &AccountIdFor<T>) -> DispatchResult {
-			Affiliatees::<T, I>::take(account)
+			let result = Affiliatees::<T, I>::take(account)
 				.and_then(|mut affiliate_chain| {
 					if affiliate_chain.is_empty() {
 						None
@@ -339,7 +365,11 @@ pub mod pallet {
 							Ok(())
 						})
 					},
-				)
+				);
+
+			Self::deposit_event(Event::AccountUnaffiliated { account: account.clone() });
+
+			result
 		}
 
 		fn force_set_affiliatee_chain_for(

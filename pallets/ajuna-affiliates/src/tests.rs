@@ -807,6 +807,10 @@ mod clear_affiliation {
 				)
 			);
 
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountUnaffiliated { account: ALICE },
+			));
+
 			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 0);
 			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
 		});
@@ -870,6 +874,10 @@ mod clear_affiliation {
 				)
 			);
 
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountUnaffiliated { account: ALICE },
+			));
+
 			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 2);
 			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
 			assert_eq!(Affiliators::<Test, Instance1>::get(DAVE).affiliates, 1);
@@ -880,6 +888,10 @@ mod clear_affiliation {
 					&EDWARD
 				)
 			);
+
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountUnaffiliated { account: EDWARD },
+			));
 
 			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 2);
 			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
@@ -898,6 +910,10 @@ mod clear_affiliation {
 					&ALICE
 				)
 			);
+
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountUnaffiliated { account: ALICE },
+			));
 
 			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
 		});
