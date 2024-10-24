@@ -39,6 +39,12 @@ impl AssetT for Asset {
 	}
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+pub enum ExampleTransitionId {
+	UpgradeAsset,
+	ConsumeAsset,
+}
+
 pub struct ExampleTransition<AccountId, Balance> {
 	_phantom: PhantomData<(Balance, AccountId)>,
 }
@@ -47,51 +53,62 @@ impl<AccountId, Balance> SageGameTransition for ExampleTransition<AccountId, Bal
 	type Asset = Asset;
 	type AccountId = AccountId;
 	type Balance = Balance;
+
+	type TransitionId = ExampleTransitionId;
 	type Extra = ();
 	type Error = u8;
 
-	fn verify_rule<Sage: SageApi<Asset = Self::Asset>>(
-		transition_id: u32,
+	fn verify_rule<Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId>>(
+		transition_id: Self::TransitionId,
+		account: &Self::AccountId,
 		assets: &[Self::Asset],
 		_extra: &Self::Extra,
 	) -> Result<(), Self::Error> {
-		verify_transition_rule::<Sage>(transition_id, assets).map_err(|e| e.as_error_code())
+		verify_transition_rule::<Sage>(transition_id, account, assets)
+			.map_err(|e| e.as_error_code())
 	}
 
 	fn do_transition<Sage: SageApi<Asset = Self::Asset>>(
-		transition_id: u32,
+		transition_id: Self::TransitionId,
+		account: &Self::AccountId,
 		assets: Vec<Self::Asset>,
 		_extra: Self::Extra,
 	) -> Result<(), Self::Error> {
-		transition::<Sage>(transition_id, assets).map_err(|e| e.as_error_code())
+		transition::<Sage>(transition_id, account, assets).map_err(|e| e.as_error_code())
 	}
 }
 
 /// Verifies a transition rule with a given transition id.
 pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
-	transition_id: u32,
+	transition_id: ExampleTransitionId,
+	account: &Sage::AccountId,
 	assets: &[Asset],
 ) -> Result<(), sage_api::Error> {
+	use ExampleTransitionId::*;
 	match transition_id {
 		// use our rule provided in the sage api
-		1 => ensure_asset_length(assets, 2),
+		UpgradeAsset => {
+			ensure_asset_length(assets, 1)?;
+			SageApi::ensure_ownership(account, &assets[0])
+		},
 		_ => Err(sage_api::Error::InvalidTransitionId),
 	}
 }
 
 /// Executes a transition with a given transition id.
 pub fn transition<Sage: SageApi<Asset = Asset>>(
-	transition_id: u32,
+	transition_id: ExampleTransitionId,
 	assets: Vec<Asset>,
 ) -> Result<(), sage_api::Error> {
+	use ExampleTransitionId::*;
 	match transition_id {
-		1 => transition_one::<Sage>(assets),
+		UpgradeAsset => upgrade_asset::<Sage>(assets),
 		_ => Err(sage_api::Error::InvalidTransitionId),
 	}
 }
 
 /// One specific transition that a game wants to execute.
-pub fn transition_one<Sage: SageApi<Asset = Asset>>(
+pub fn upgrade_asset<Sage: SageApi<Asset = Asset>>(
 	_assets: Vec<Asset>,
 ) -> Result<(), sage_api::Error> {
 	todo!()
