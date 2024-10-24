@@ -14,21 +14,32 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_nft_transfer};
+use crate::{
+	self as pallet_ajuna_nft_transfer,
+	traits::{NFTAttribute, NftConvertible},
+};
+use ajuna_primitives::{
+	account_manager::WhitelistKey,
+	asset_manager::{AssetManager, Lock},
+};
 use frame_support::{
-	parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-	PalletId,
+	ensure, parameter_types,
+	traits::{
+		AsEnsureOriginWithArg, ConstU16, ConstU64, Currency, ExistenceRequirement, LockIdentifier,
+	},
+	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
+	bounded_vec,
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
+	DispatchError, RuntimeAppPublic,
 };
+use std::{cell::RefCell, collections::BTreeMap};
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -36,9 +47,6 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 pub type MockCollectionId = u32;
-
-pub const ALICE: MockAccountId = 1;
-pub const BOB: MockAccountId = 2;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -111,6 +119,8 @@ impl<const N: u32> Get<u32> for ParameterGet<N> {
 	}
 }
 
+pub type ItemId = H256;
+
 pub type KeyLimit = ParameterGet<32>;
 pub type ValueLimit = ParameterGet<64>;
 
@@ -135,7 +145,13 @@ parameter_types! {
 pub struct Helper;
 #[cfg(feature = "runtime-benchmarks")]
 impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
-	pallet_nfts::BenchmarkHelper<CollectionId, ItemId> for Helper
+	pallet_nfts::BenchmarkHelper<
+		CollectionId,
+		ItemId,
+		MockAccountPublic,
+		MockAccountId,
+		MockSignature,
+	> for Helper
 {
 	fn collection(i: u16) -> CollectionId {
 		i.into()
@@ -147,12 +163,19 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 		id[1] = bytes[1];
 		id.into()
 	}
+
+	fn signer() -> (MockAccountPublic, MockAccountId) {
+		(0.into(), 0)
+	}
+	fn sign(signer: &MockAccountPublic, message: &[u8]) -> MockSignature {
+		signer.sign(&message.to_vec()).unwrap()
+	}
 }
 
 impl pallet_nfts::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
-	type ItemId = H256;
+	type ItemId = ItemId;
 	type Currency = Balances;
 	type ForceOrigin = EnsureRoot<MockAccountId>;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<MockAccountId>>;
@@ -187,32 +210,235 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
 	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
-	type ItemId = H256;
+	type Item = MockItem;
+	type ItemId = ItemId;
 	type ItemConfig = pallet_nfts::ItemConfig;
+	type AssetManager = MockAssetManager;
+	type AccountManager = MockAccountManager;
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
+	type WeightInfo = ();
 }
 
-#[derive(Default)]
-pub struct ExtBuilder {
-	balances: Vec<(MockAccountId, MockBalance)>,
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+pub struct MockItem {
+	pub field_1: Vec<u8>,
+	pub field_2: u32,
+	pub field_3: bool,
 }
 
-impl ExtBuilder {
-	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
-		self.balances = balances.to_vec();
-		self
+impl MockItem {
+	pub fn new_with_field2(number: u32) -> Self {
+		Self { field_2: number, ..Self::default() }
+	}
+}
+
+impl Default for MockItem {
+	fn default() -> Self {
+		Self { field_1: vec![1, 2, 3], field_2: 333, field_3: true }
+	}
+}
+
+impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
+	const ITEM_CODE: &'static [u8] = &[11];
+	const IPFS_URL_CODE: &'static [u8] = &[21];
+
+	fn get_attribute_codes() -> Vec<NFTAttribute<KeyLimit>> {
+		vec![bounded_vec![111], bounded_vec![222], bounded_vec![240]]
 	}
 
-	pub fn build(self) -> sp_io::TestExternalities {
-		let config = RuntimeGenesisConfig {
-			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
-		};
+	fn get_encoded_attributes(&self) -> Vec<(NFTAttribute<KeyLimit>, NFTAttribute<ValueLimit>)> {
+		vec![
+			(bounded_vec![111], BoundedVec::try_from(self.field_1.clone()).unwrap()),
+			(bounded_vec![222], BoundedVec::try_from(self.field_2.to_le_bytes().to_vec()).unwrap()),
+			(bounded_vec![240], BoundedVec::try_from(vec![self.field_3 as u8]).unwrap()),
+		]
+	}
+}
 
-		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
-		ext.execute_with(|| System::set_block_number(1));
-		ext
+pub const ALICE: MockAccountId = 1;
+
+thread_local! {
+	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = RefCell::new(BTreeMap::new());
+	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
+	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = RefCell::new(BTreeMap::new());
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(Some(ALICE));
+	pub static NFT_TRANSFER_OPEN: RefCell<bool> = RefCell::new(true);
+	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
+}
+
+/// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this
+/// pallet is too loaded and requires many dependencies.
+///
+/// Hence, we implement our own little asset manager here.
+pub struct MockAssetManager;
+
+impl MockAssetManager {
+	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<ItemId> {
+		let mut ids = Vec::with_capacity(count as usize);
+		for i in 0..count {
+			let id = ItemId::repeat_byte(i as u8);
+			ids.push(id);
+			Self::add_asset(owner, id, MockItem::new_with_field2(i))
+		}
+
+		ids
+	}
+
+	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
+		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id));
+		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));
+	}
+
+	pub fn set_nft_transfer_open(open: bool) {
+		NFT_TRANSFER_OPEN.with(|is_open| *is_open.borrow_mut() = open)
+	}
+
+	pub fn set_prepare_fee(fee: MockBalance) {
+		PREPARE_FEE.with(|current| *current.borrow_mut() = fee)
+	}
+}
+
+pub const NOT_OWNER_ERR: &str = "NOT_OWNER";
+pub const ALREADY_LOCKED_ERR: &str = "ALREADY_LOCKED";
+pub const NOT_LOCKED_ERR: &str = "NOT_LOCKED";
+pub const LOCKED_BY_OTHER_ERR: &str = "LOCKED_BY_OTHER";
+
+impl AssetManager for MockAssetManager {
+	type AccountId = MockAccountId;
+	type AssetId = ItemId;
+	type Asset = MockItem;
+
+	fn ensure_ownership(
+		owner: &Self::AccountId,
+		_asset_id: &Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		let id = OWNERS
+			.with(|owners| owners.borrow().get(owner).cloned())
+			.ok_or(DispatchError::Other(NOT_OWNER_ERR))?;
+		ASSETS
+			.with(|assets| assets.borrow().get(&id).cloned())
+			.ok_or(DispatchError::Other(NOT_OWNER_ERR))
+	}
+
+	fn lock_asset(
+		lock_id: LockIdentifier,
+		owner: Self::AccountId,
+		asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		let asset = Self::ensure_ownership(&owner, &asset_id)?;
+
+		LOCKED_ASSETS.with(|locked| {
+			use std::collections::btree_map::Entry;
+
+			let mut borrowed = locked.borrow_mut();
+
+			if let Entry::Vacant(e) = borrowed.entry(asset_id) {
+				e.insert(Lock::new(lock_id, owner));
+				Ok(())
+			} else {
+				DispatchError::Other(ALREADY_LOCKED_ERR).into()
+			}
+		})?;
+
+		Ok(asset)
+	}
+
+	fn unlock_asset(
+		lock_id: LockIdentifier,
+		owner: Self::AccountId,
+		asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		let asset = Self::ensure_ownership(&owner, &asset_id)?;
+
+		let lock = LOCKED_ASSETS.with(|locked| {
+			locked
+				.borrow_mut()
+				.remove(&asset_id)
+				.ok_or(DispatchError::Other(NOT_LOCKED_ERR))
+		})?;
+
+		ensure!(lock.id == lock_id, DispatchError::Other(LOCKED_BY_OTHER_ERR));
+		ensure!(lock.locker == owner, DispatchError::Other(NOT_OWNER_ERR));
+
+		Ok(asset)
+	}
+
+	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
+		LOCKED_ASSETS.with(|locked| locked.borrow().get(asset).cloned())
+	}
+
+	fn nft_transfer_open() -> bool {
+		NFT_TRANSFER_OPEN.with(|locked| *locked.borrow())
+	}
+
+	fn handle_asset_prepare_fee(
+		_asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		PREPARE_FEE.with(|fee| {
+			let f = *fee.borrow();
+			<Balances as Currency<MockAccountId>>::transfer(
+				from,
+				fees_recipient,
+				f,
+				ExistenceRequirement::AllowDeath,
+			)
+		})?;
+
+		Ok(())
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
+		Self::create_assets(owner, count)
+	}
+}
+
+/// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this
+/// pallet is too loaded and requires many dependencies.
+///
+/// Hence, we implement our own little account manager here.
+pub struct MockAccountManager;
+
+pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
+pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
+
+impl MockAccountManager {
+	pub fn set_organizer(organizer: MockAccountId) {
+		ORGANIZER.with(|o| *o.borrow_mut() = Some(organizer))
+	}
+}
+
+impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
+	type AccountId = MockAccountId;
+
+	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		ORGANIZER.with(|maybe_account| {
+			if let Some(organizer) = maybe_account.borrow().as_ref() {
+				ensure!(organizer == account, DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER));
+				Ok(())
+			} else {
+				Err(DispatchError::Other(NO_ORGANIZER_SET))
+			}
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(organizer: Self::AccountId) {
+		Self::set_organizer(organizer)
+	}
+
+	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
+		unimplemented!()
+	}
+
+	fn try_set_whitelisted_for(
+		_identifier: &WhitelistKey,
+		_account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		unimplemented!()
 	}
 }

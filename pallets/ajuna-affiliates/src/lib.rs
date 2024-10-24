@@ -239,7 +239,13 @@ pub mod pallet {
 
 		fn try_clear_affiliation_for(account: &AccountIdFor<T>) -> DispatchResult {
 			Affiliatees::<T, I>::take(account)
-				.and_then(|mut affiliate_chain| affiliate_chain.pop())
+				.and_then(|mut affiliate_chain| {
+					if affiliate_chain.is_empty() {
+						None
+					} else {
+						Some(affiliate_chain.remove(0))
+					}
+				})
 				.map_or_else(
 					|| Ok(()),
 					|affiliator| {

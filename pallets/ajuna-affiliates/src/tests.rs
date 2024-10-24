@@ -548,6 +548,82 @@ mod clear_affiliation {
 	}
 
 	#[test]
+	fn clear_affiliation_should_work_with_long_chains() {
+		ExtBuilder::default().balances(&[(ALICE, 1_000_000)]).build().execute_with(|| {
+			let state =
+				AffiliatorState { status: AffiliatableStatus::Affiliatable(0), affiliates: 0 };
+			Affiliators::<Test, Instance1>::insert(BOB, state);
+			Affiliators::<Test, Instance1>::insert(DAVE, state);
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::try_add_affiliate_to(
+					&BOB, &ALICE
+				)
+			);
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountAffiliated { account: ALICE, to: BOB },
+			));
+			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), Some(bounded_vec![BOB]));
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::try_add_affiliate_to(
+					&BOB, &CHARLIE
+				)
+			);
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountAffiliated { account: CHARLIE, to: BOB },
+			));
+			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 2);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(CHARLIE), Some(bounded_vec![BOB]));
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::try_add_affiliate_to(
+					&BOB, &DAVE
+				)
+			);
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountAffiliated { account: DAVE, to: BOB },
+			));
+			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 3);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(DAVE), Some(bounded_vec![BOB]));
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::try_add_affiliate_to(
+					&DAVE, &EDWARD
+				)
+			);
+			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
+				crate::Event::AccountAffiliated { account: EDWARD, to: DAVE },
+			));
+			assert_eq!(Affiliators::<Test, Instance1>::get(DAVE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(EDWARD), Some(bounded_vec![DAVE, BOB]));
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::try_clear_affiliation_for(
+					&ALICE
+				)
+			);
+
+			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 2);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
+			assert_eq!(Affiliators::<Test, Instance1>::get(DAVE).affiliates, 1);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(EDWARD), Some(bounded_vec![DAVE, BOB]));
+
+			assert_ok!(
+				<AffiliatesAlpha as AffiliateMutator<AccountIdFor<Test>>>::try_clear_affiliation_for(
+					&EDWARD
+				)
+			);
+
+			assert_eq!(Affiliators::<Test, Instance1>::get(BOB).affiliates, 2);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);
+			assert_eq!(Affiliators::<Test, Instance1>::get(DAVE).affiliates, 0);
+			assert_eq!(Affiliatees::<Test, Instance1>::get(EDWARD), None);
+		});
+	}
+
+	#[test]
 	fn clear_affiliation_returns_ok_if_no_affiliation_exists() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000_000)]).build().execute_with(|| {
 			assert_eq!(Affiliatees::<Test, Instance1>::get(ALICE), None);

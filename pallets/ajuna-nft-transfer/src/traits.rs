@@ -1,4 +1,20 @@
-use frame_support::Parameter;
+// Ajuna Node
+// Copyright (C) 2022 BlogaTech AG
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use frame_support::{pallet_prelude::ConstU32, Parameter};
 use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_runtime::{traits::AtLeast32BitUnsigned, BoundedVec, DispatchError, DispatchResult};
 use sp_std::vec::Vec;
@@ -7,7 +23,7 @@ use sp_std::vec::Vec;
 pub type NFTAttribute<N> = BoundedVec<u8, N>;
 
 /// Type to denote an IPFS URL.
-pub type IpfsUrl = Vec<u8>;
+pub type IpfsUrl = BoundedVec<u8, ConstU32<100>>;
 
 /// Marker trait for items that can be converted back and forth into an NFT representation.
 pub trait NftConvertible<KL, VL>: Codec {

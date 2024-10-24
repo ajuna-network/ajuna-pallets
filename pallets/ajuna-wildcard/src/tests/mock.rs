@@ -13,7 +13,7 @@ use sp_core::Pair;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
+	BuildStorage, RuntimeAppPublic,
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
@@ -130,14 +130,27 @@ parameter_types! {
 #[cfg(feature = "runtime-benchmarks")]
 pub struct Helper;
 #[cfg(feature = "runtime-benchmarks")]
-impl<CollectionId: From<u32>, ItemId: From<u32>> pallet_nfts::BenchmarkHelper<CollectionId, ItemId>
-	for Helper
+impl<CollectionId: From<u16>, ItemId: From<u16>>
+	pallet_nfts::BenchmarkHelper<
+		CollectionId,
+		ItemId,
+		MockAccountPublic,
+		MockAccountId,
+		MockSignature,
+	> for Helper
 {
 	fn collection(i: u16) -> CollectionId {
-		CollectionId::from(i as u32)
+		i.into()
 	}
 	fn item(i: u16) -> ItemId {
-		ItemId::from(i as u32)
+		i.into()
+	}
+
+	fn signer() -> (MockAccountPublic, MockAccountId) {
+		(0.into(), 0)
+	}
+	fn sign(signer: &MockAccountPublic, message: &[u8]) -> MockSignature {
+		signer.sign(&message.to_vec()).unwrap()
 	}
 }
 

@@ -3,7 +3,7 @@ authors    = [ "Ajuna Network <https://github.com/ajuna-network>" ]
 edition    = "2021"
 homepage   = "https://ajuna.io"
 repository = "https://github.com/ajuna-network/ajuna-pallets"
-version    = "0.13.0"
+version    = "0.15.0"
 
 [workspace]
 resolver = "2"
@@ -12,6 +12,7 @@ members = [
     "pallets/*",
     "pallets/ajuna-awesome-avatars/benchmarking",
     "pallets/ajuna-nft-staking/benchmarking",
+    "primitives",
     "sage/example-transition",
     "sage/pallet",
     "sage/api",
@@ -27,24 +28,25 @@ parity-scale-codec = { version = "3.0.0", default-features = false }
 scale-info         = { version = "2.1.1", default-features = false }
 
 # Substrate
-frame-benchmarking                         = { version = "35.0.0", default-features = false }
-frame-support                              = { version = "35.0.0", default-features = false }
-frame-system                               = { version = "35.0.0", default-features = false }
-pallet-assets                              = { version = "36.0.0", default-features = false }
-pallet-balances                            = { version = "36.0.0", default-features = false }
-pallet-insecure-randomness-collective-flip = { version = "23.0.0", default-features = false }
-pallet-nfts                                = { version = "29.0.0", default-features = false }
-pallet-timestamp                           = { version = "34.0.0", default-features = false }
+frame-benchmarking                         = { version = "37.0.0", default-features = false }
+frame-support                              = { version = "37.0.1", default-features = false }
+frame-system                               = { version = "37.1.0", default-features = false }
+pallet-assets                              = { version = "39.0.0", default-features = false }
+pallet-balances                            = { version = "38.0.0", default-features = false }
+pallet-insecure-randomness-collective-flip = { version = "25.0.0", default-features = false }
+pallet-nfts                                = { version = "31.0.0", default-features = false }
+pallet-timestamp                           = { version = "36.0.1", default-features = false }
 sp-arithmetic                              = { version = "26.0.0", default-features = false }
 sp-core                                    = { version = "34.0.0", default-features = false }
-sp-io                                      = { version = "37.0.0", default-features = false }
-sp-runtime                                 = { version = "38.0.0", default-features = false }
+sp-io                                      = { version = "38.0.0", default-features = false }
+sp-runtime                                 = { version = "39.0.2", default-features = false }
 sp-std                                     = { version = "14.0.0", default-features = false }
 
 # orml
-orml-vesting = { version = "0.13.0", default-features = false }
+orml-vesting = { version = "1.0.0", default-features = false }
 
 # Ajuna
+ajuna-primitives                          = { path = "primitives", default-features = false }
 pallet-ajuna-affiliates                   = { path = "pallets/ajuna-affiliates", default-features = false }
 pallet-ajuna-awesome-avatars              = { path = "pallets/ajuna-awesome-avatars", default-features = false }
 pallet-ajuna-battle-mogs                  = { path = "pallets/ajuna-battle-mogs", default-features = false }
