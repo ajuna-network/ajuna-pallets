@@ -19,6 +19,35 @@ pub struct Asset {
 	pub dna: [u8; 32],
 
 	pub minted_at: u32,
+
+	// Example of a game's custom field.
+	pub level: Level,
+
+	// Example of a game's custom field.
+	pub consumed: bool,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+pub enum Level {
+	One,
+	Two,
+	Three,
+	Max,
+}
+
+const MAX_LEVEL_REACHED_ERROR: u8 = 100;
+const ASSET_ALREADY_CONSUMED: u8 = 101;
+
+impl Level {
+	pub fn upgrade(self) -> Result<Self, sage_api::Error> {
+		use Level::*;
+		match self {
+			One => Ok(Two),
+			Two => Ok(Three),
+			Three => Ok(Three),
+			Max => Err(sage_api::Error::Transition { error: MAX_LEVEL_REACHED_ERROR }),
+		}
+	}
 }
 
 impl AssetT for Asset {
@@ -93,7 +122,10 @@ pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
 			ensure_asset_length(assets, 1)?;
 			Sage::ensure_ownership(account, &assets[0])
 		},
-		_ => Err(sage_api::Error::InvalidTransitionId),
+		ConsumeAsset => {
+			ensure_asset_length(assets, 1)?;
+			Sage::ensure_ownership(account, &assets[0])
+		},
 	}
 }
 
@@ -105,14 +137,32 @@ pub fn transition<Sage: SageApi<Asset = Asset>>(
 ) -> Result<(), sage_api::Error> {
 	use ExampleTransitionId::*;
 	match transition_id {
-		UpgradeAsset => upgrade_asset::<Sage>(assets),
+		// Todo: this is not persisted anywhere. We have to figure out how to persist
+		// mutated assets.
+		UpgradeAsset => {
+			let _upgraded = assets[0].level.upgrade();
+			// todo what to do with mutated asset.
+			// We probably want to have a `Sage::store_asset()`
+			Ok(())
+		},
 		_ => Err(sage_api::Error::InvalidTransitionId),
 	}
 }
 
 /// One specific transition that a game wants to execute.
-pub fn upgrade_asset<Sage: SageApi<Asset = Asset>>(
-	_assets: Vec<Asset>,
+pub fn consume_asset<Sage: SageApi<Asset = Asset>>(
+	assets: Vec<Asset>,
 ) -> Result<(), sage_api::Error> {
-	todo!()
+	// make mut
+	let mut assets = assets;
+
+	if assets[0].consumed {
+		Err(sage_api::Error::Transition { error: ASSET_ALREADY_CONSUMED })
+	} else {
+		assets[0].consumed = true;
+		Ok(())
+	}
+
+	// todo what to do with mutated asset.
+	// We probably want to have a `Sage::store_asset()`
 }
