@@ -2501,6 +2501,7 @@ dependencies = [
 name = "sage-api"
 version = "0.13.0"
 dependencies = [
+ "frame-support",
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",

@@ -12,13 +12,15 @@ version.workspace = true
 parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
 scale-info         = { workspace = true, features = [ "derive" ] }
 
-sp-runtime             = { workspace = true }
+frame-support      = { workspace = true}
+sp-runtime         = { workspace = true }
 sp-std             = { workspace = true }
 
 [features]
 std = [
     "parity-scale-codec/std",
     "scale-info/std",
+    "frame-support/std",
     "sp-runtime/std",
     "sp-std/std",
 ]

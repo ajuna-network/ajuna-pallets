@@ -5,6 +5,7 @@ pub enum Error {
 	InvalidAssetLength,
 	TransferError,
 	FeeError,
+	Transition { error: u8 },
 }
 
 impl AsErrorCode for Error {
@@ -15,6 +16,7 @@ impl AsErrorCode for Error {
 			InvalidAssetLength => 1,
 			TransferError => 2,
 			FeeError => 3,
+			Transition { error } => *error,
 		}
 	}
 }
