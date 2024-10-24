@@ -39,12 +39,14 @@ pub mod pallet {
 
 	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
+	pub type TransitionIdOf<T, I> =
+		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
 	pub type ExtraOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Extra;
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-		type SageGameTransition: SageGameTransition;
+		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
 
 		type Currency: Currency<AccountIdOf<Self>>;
 
@@ -64,7 +66,7 @@ pub mod pallet {
 			/// Account who initiated execution.
 			account: T::AccountId,
 			/// Transition ID that was executed.
-			id: u32,
+			id: TransitionIdOf<T, I>,
 		},
 	}
 
@@ -84,17 +86,27 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		pub fn state_transition(
 			origin: OriginFor<T>,
-			transition_id: u32,
+			transition_id: TransitionIdOf<T, I>,
 			assets: Vec<AssetOf<T, I>>,
 			extra: ExtraOf<T, I>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			T::SageGameTransition::verify_rule::<Self>(transition_id, &assets, &extra)
-				.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
+			T::SageGameTransition::verify_rule::<Self>(
+				transition_id.clone(),
+				&sender,
+				&assets,
+				&extra,
+			)
+			.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
 
-			T::SageGameTransition::do_transition::<Self>(transition_id, assets, extra)
-				.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
+			T::SageGameTransition::do_transition::<Self>(
+				transition_id.clone(),
+				sender.clone(),
+				assets,
+				extra,
+			)
+			.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
 
 			Self::deposit_event(Event::TransitionExecuted { account: sender, id: transition_id });
 
@@ -109,6 +121,13 @@ pub mod pallet {
 		type Balance = BalanceOf<T, I>;
 		type AccountId = AccountIdOf<T>;
 		type Error = sage_api::Error;
+
+		fn ensure_ownership(
+			_owner: &Self::AccountId,
+			_asset: &Self::Asset,
+		) -> Result<(), Self::Error> {
+			todo!()
+		}
 
 		fn transfer_ownership(
 			_asset: Self::Asset,

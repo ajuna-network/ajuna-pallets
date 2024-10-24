@@ -16,6 +16,7 @@ pub trait SageApi {
 
 	type Error: AsErrorCode;
 
+	fn ensure_ownership(account: &Self::AccountId, asset: &Self::Asset) -> Result<(), Self::Error>;
 	fn transfer_ownership(asset: Self::Asset, to: Self::AccountId) -> Result<(), Self::Error>;
 	fn handle_fees(balance: Self::Balance) -> Result<(), Self::Error>;
 }
@@ -44,6 +45,9 @@ pub trait SageGameTransition {
 
 	type Balance;
 
+	/// Transition Id type, can be a simple u32, or an enum.
+	type TransitionId: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
+
 	/// An optional extra, which is simply forwarded to the `verify_rule` and `do_transition`
 	/// method. If you don't need custom arguments, you can define that type as `()`.
 	type Extra: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
@@ -51,13 +55,15 @@ pub trait SageGameTransition {
 	type Error: AsErrorCode;
 
 	fn verify_rule<Sage: SageApi<Asset = Self::Asset>>(
-		transition_id: u32,
+		transition_id: Self::TransitionId,
+		account_id: &Self::AccountId,
 		assets: &[Self::Asset],
 		extra: &Self::Extra,
 	) -> Result<(), Self::Error>;
 
 	fn do_transition<Sage: SageApi<Asset = Self::Asset>>(
-		transition_id: u32,
+		transition_id: Self::TransitionId,
+		account_id: Self::AccountId,
 		assets: Vec<Self::Asset>,
 		extra: Self::Extra,
 	) -> Result<(), Self::Error>;
