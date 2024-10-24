@@ -46,7 +46,10 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
+		type SageGameTransition: SageGameTransition<
+			AccountId = AccountIdOf<Self>,
+			Balance = BalanceOf<Self, I>,
+		>;
 
 		type Currency: Currency<AccountIdOf<Self>>;
 
@@ -120,23 +123,22 @@ pub mod pallet {
 		type Asset = AssetOf<T, I>;
 		type Balance = BalanceOf<T, I>;
 		type AccountId = AccountIdOf<T>;
-		type Error = sage_api::Error;
 
 		fn ensure_ownership(
 			_owner: &Self::AccountId,
 			_asset: &Self::Asset,
-		) -> Result<(), Self::Error> {
+		) -> Result<(), sage_api::Error> {
 			todo!()
 		}
 
 		fn transfer_ownership(
 			_asset: Self::Asset,
 			_to: Self::AccountId,
-		) -> Result<(), Self::Error> {
+		) -> Result<(), sage_api::Error> {
 			todo!()
 		}
 
-		fn handle_fees(_balance: Self::Balance) -> Result<(), Self::Error> {
+		fn handle_fees(_balance: Self::Balance) -> Result<(), sage_api::Error> {
 			todo!()
 		}
 	}

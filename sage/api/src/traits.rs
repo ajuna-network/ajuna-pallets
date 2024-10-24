@@ -14,11 +14,10 @@ pub trait SageApi {
 
 	type AccountId;
 
-	type Error: AsErrorCode;
-
-	fn ensure_ownership(account: &Self::AccountId, asset: &Self::Asset) -> Result<(), Self::Error>;
-	fn transfer_ownership(asset: Self::Asset, to: Self::AccountId) -> Result<(), Self::Error>;
-	fn handle_fees(balance: Self::Balance) -> Result<(), Self::Error>;
+	fn ensure_ownership(account: &Self::AccountId, asset: &Self::Asset)
+		-> Result<(), crate::Error>;
+	fn transfer_ownership(asset: Self::Asset, to: Self::AccountId) -> Result<(), crate::Error>;
+	fn handle_fees(balance: Self::Balance) -> Result<(), crate::Error>;
 }
 
 pub trait AssetT {
@@ -52,19 +51,21 @@ pub trait SageGameTransition {
 	/// method. If you don't need custom arguments, you can define that type as `()`.
 	type Extra: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
 
-	type Error: AsErrorCode;
-
-	fn verify_rule<Sage: SageApi<Asset = Self::Asset>>(
+	fn verify_rule<
+		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+	>(
 		transition_id: Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets: &[Self::Asset],
 		extra: &Self::Extra,
-	) -> Result<(), Self::Error>;
+	) -> Result<(), crate::Error>;
 
-	fn do_transition<Sage: SageApi<Asset = Self::Asset>>(
+	fn do_transition<
+		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+	>(
 		transition_id: Self::TransitionId,
 		account_id: Self::AccountId,
 		assets: Vec<Self::Asset>,
 		extra: Self::Extra,
-	) -> Result<(), Self::Error>;
+	) -> Result<(), crate::Error>;
 }

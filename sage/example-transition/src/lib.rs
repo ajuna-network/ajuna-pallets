@@ -3,7 +3,7 @@
 //! These should be expanded to really showcase the power of the SageApi design.
 
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sage_api::{rules::ensure_asset_length, AsErrorCode, AssetT, SageApi, SageGameTransition};
+use sage_api::{rules::ensure_asset_length, AssetT, SageApi, SageGameTransition};
 use scale_info::TypeInfo;
 use std::marker::PhantomData;
 
@@ -56,25 +56,27 @@ impl<AccountId, Balance> SageGameTransition for ExampleTransition<AccountId, Bal
 
 	type TransitionId = ExampleTransitionId;
 	type Extra = ();
-	type Error = u8;
 
-	fn verify_rule<Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId>>(
+	fn verify_rule<
+		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+	>(
 		transition_id: Self::TransitionId,
 		account: &Self::AccountId,
 		assets: &[Self::Asset],
 		_extra: &Self::Extra,
-	) -> Result<(), Self::Error> {
+	) -> Result<(), sage_api::Error> {
 		verify_transition_rule::<Sage>(transition_id, account, assets)
-			.map_err(|e| e.as_error_code())
 	}
 
-	fn do_transition<Sage: SageApi<Asset = Self::Asset>>(
+	fn do_transition<
+		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+	>(
 		transition_id: Self::TransitionId,
-		account: &Self::AccountId,
+		account: Self::AccountId,
 		assets: Vec<Self::Asset>,
 		_extra: Self::Extra,
-	) -> Result<(), Self::Error> {
-		transition::<Sage>(transition_id, account, assets).map_err(|e| e.as_error_code())
+	) -> Result<(), sage_api::Error> {
+		transition::<Sage>(transition_id, account, assets)
 	}
 }
 
@@ -89,7 +91,7 @@ pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
 		// use our rule provided in the sage api
 		UpgradeAsset => {
 			ensure_asset_length(assets, 1)?;
-			SageApi::ensure_ownership(account, &assets[0])
+			Sage::ensure_ownership(account, &assets[0])
 		},
 		_ => Err(sage_api::Error::InvalidTransitionId),
 	}
@@ -98,6 +100,7 @@ pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
 /// Executes a transition with a given transition id.
 pub fn transition<Sage: SageApi<Asset = Asset>>(
 	transition_id: ExampleTransitionId,
+	_account: Sage::AccountId,
 	assets: Vec<Asset>,
 ) -> Result<(), sage_api::Error> {
 	use ExampleTransitionId::*;
