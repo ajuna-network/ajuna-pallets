@@ -2,10 +2,13 @@
 //!
 //! These should be expanded to really showcase the power of the SageApi design.
 
+use frame_support::sp_runtime::testing::H256;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use sage_api::{rules::ensure_asset_length, AssetT, SageApi, SageGameTransition};
 use scale_info::TypeInfo;
 use std::marker::PhantomData;
+
+pub type AssetId = H256;
 
 /// Placeholder type, this was just a quick brain dump to get things going.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -79,6 +82,7 @@ pub struct ExampleTransition<AccountId, Balance> {
 }
 
 impl<AccountId, Balance> SageGameTransition for ExampleTransition<AccountId, Balance> {
+	type AssetId = AssetId;
 	type Asset = Asset;
 	type AccountId = AccountId;
 	type Balance = Balance;
@@ -87,33 +91,43 @@ impl<AccountId, Balance> SageGameTransition for ExampleTransition<AccountId, Bal
 	type Extra = ();
 
 	fn verify_rule<
-		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+		Sage: SageApi<
+			AssetId = Self::AssetId,
+			Asset = Self::Asset,
+			AccountId = Self::AccountId,
+			Balance = Self::Balance,
+		>,
 	>(
 		transition_id: Self::TransitionId,
 		account: &Self::AccountId,
-		assets: &[Self::Asset],
+		asset_ids: &[Self::AssetId],
 		_extra: &Self::Extra,
 	) -> Result<(), sage_api::Error> {
-		verify_transition_rule::<Sage>(transition_id, account, assets)
+		verify_transition_rule::<Sage>(transition_id, account, asset_ids)
 	}
 
 	fn do_transition<
-		Sage: SageApi<Asset = Self::Asset, AccountId = Self::AccountId, Balance = Self::Balance>,
+		Sage: SageApi<
+			AssetId = Self::AssetId,
+			Asset = Self::Asset,
+			AccountId = Self::AccountId,
+			Balance = Self::Balance,
+		>,
 	>(
 		transition_id: Self::TransitionId,
 		account: Self::AccountId,
-		assets: Vec<Self::Asset>,
+		asset_ids: Vec<Self::AssetId>,
 		_extra: Self::Extra,
 	) -> Result<(), sage_api::Error> {
-		transition::<Sage>(transition_id, account, assets)
+		transition::<Sage>(transition_id, account, asset_ids)
 	}
 }
 
 /// Verifies a transition rule with a given transition id.
-pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
+pub fn verify_transition_rule<Sage: SageApi<AssetId = AssetId, Asset = Asset>>(
 	transition_id: ExampleTransitionId,
 	account: &Sage::AccountId,
-	assets: &[Asset],
+	assets: &[AssetId],
 ) -> Result<(), sage_api::Error> {
 	use ExampleTransitionId::*;
 	match transition_id {
@@ -130,39 +144,27 @@ pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
 }
 
 /// Executes a transition with a given transition id.
-pub fn transition<Sage: SageApi<Asset = Asset>>(
+pub fn transition<Sage: SageApi<AssetId = AssetId, Asset = Asset>>(
 	transition_id: ExampleTransitionId,
 	_account: Sage::AccountId,
-	assets: Vec<Asset>,
+	asset_ids: Vec<AssetId>,
 ) -> Result<(), sage_api::Error> {
 	use ExampleTransitionId::*;
 	match transition_id {
-		// Todo: this is not persisted anywhere. We have to figure out how to persist
-		// mutated assets.
-		UpgradeAsset => {
-			let _upgraded = assets[0].level.upgrade();
-			// todo what to do with mutated asset.
-			// We probably want to have a `Sage::store_asset()`
+		UpgradeAsset => Sage::try_mutate_asset(&asset_ids[0], |asset| {
+			asset.level = asset.level.upgrade()?;
 			Ok(())
-		},
-		_ => Err(sage_api::Error::InvalidTransitionId),
+		}),
+		ConsumeAsset => Sage::try_mutate_asset(&asset_ids[0], |asset| consume_asset(asset)),
 	}
 }
 
 /// One specific transition that a game wants to execute.
-pub fn consume_asset<Sage: SageApi<Asset = Asset>>(
-	assets: Vec<Asset>,
-) -> Result<(), sage_api::Error> {
-	// make mut
-	let mut assets = assets;
-
-	if assets[0].consumed {
+pub fn consume_asset(asset: &mut Asset) -> Result<(), sage_api::Error> {
+	if asset.consumed {
 		Err(sage_api::Error::Transition { error: ASSET_ALREADY_CONSUMED })
 	} else {
-		assets[0].consumed = true;
+		asset.consumed = true;
 		Ok(())
 	}
-
-	// todo what to do with mutated asset.
-	// We probably want to have a `Sage::store_asset()`
 }
