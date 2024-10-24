@@ -16,7 +16,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod handle_fees;
 pub mod weights;
 
 #[cfg(test)]
