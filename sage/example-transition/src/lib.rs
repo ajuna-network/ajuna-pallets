@@ -2,7 +2,6 @@
 //!
 //! These should be expanded to really showcase the power of the SageApi design.
 
-use frame_support::ensure;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use sage_api::{rules::ensure_asset_length, AsErrorCode, AssetT, SageApi, SageGameTransition};
 use scale_info::TypeInfo;
@@ -74,6 +73,7 @@ pub fn verify_transition_rule<Sage: SageApi<Asset = Asset>>(
 	assets: &[Asset],
 ) -> Result<(), sage_api::Error> {
 	match transition_id {
+		// use our rule provided in the sage api
 		1 => ensure_asset_length(assets, 2),
 		_ => Err(sage_api::Error::InvalidTransitionId),
 	}
