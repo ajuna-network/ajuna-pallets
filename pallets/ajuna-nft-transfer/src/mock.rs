@@ -435,6 +435,7 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 		unimplemented!()
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
 	fn try_set_whitelisted_for(
 		_identifier: &WhitelistKey,
 		_account: &Self::AccountId,
