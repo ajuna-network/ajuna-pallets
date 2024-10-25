@@ -164,7 +164,7 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn set_organizer(owner: Self::AccountId) {
 		ORGANIZER.with(|maybe_account| {
 			*maybe_account.borrow_mut() = Some(owner);
@@ -181,7 +181,7 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn try_set_whitelisted_for(
 		identifier: &WhitelistKey,
 		account: &Self::AccountId,

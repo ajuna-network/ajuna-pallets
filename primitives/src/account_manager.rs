@@ -25,12 +25,12 @@ pub trait AccountManager {
 
 	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn set_organizer(owner: Self::AccountId);
 
 	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool;
 
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	fn try_set_whitelisted_for(
 		identifier: &WhitelistKey,
 		account: &Self::AccountId,
