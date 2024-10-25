@@ -3754,6 +3754,7 @@ mod nft_transfer {
 
 mod affiliates {
 	use super::*;
+	use crate::impls::AffiliateUnlockParams;
 	use pallet_ajuna_affiliates::traits::*;
 	use sp_runtime::bounded_vec;
 
@@ -3782,11 +3783,12 @@ mod affiliates {
 					SeasonInfo { minted: 1_125, free_minted: 38, forged: 258, bought: 0, sold: 0 },
 				);
 
-				assert_ok!(AAvatars::enable_affiliator(
-					RuntimeOrigin::signed(ALICE),
-					UnlockTarget::OneselfFree,
-					SEASON_ID
-				));
+				let params = AffiliateUnlockParams::<MockAccountId> {
+					target: UnlockTarget::OneselfFree,
+					season_id: SEASON_ID,
+				};
+
+				assert_ok!(Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
@@ -3826,11 +3828,12 @@ mod affiliates {
 					config.affiliate_config.affiliator_enable_fee = affiliator_enable_fee;
 				});
 
-				assert_ok!(AAvatars::enable_affiliator(
-					RuntimeOrigin::signed(ALICE),
-					UnlockTarget::OneselfPaying,
-					SEASON_ID
-				));
+				let params = AffiliateUnlockParams::<MockAccountId> {
+					target: UnlockTarget::OneselfPaying,
+					season_id: SEASON_ID,
+				};
+
+				assert_ok!(Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
@@ -3873,11 +3876,12 @@ mod affiliates {
 					config.affiliate_config.affiliator_enable_fee = affiliator_enable_fee;
 				});
 
-				assert_ok!(AAvatars::enable_affiliator(
-					RuntimeOrigin::signed(ALICE),
-					UnlockTarget::OtherPaying(BOB),
-					SEASON_ID
-				));
+				let params = AffiliateUnlockParams::<MockAccountId> {
+					target: UnlockTarget::OtherPaying(BOB),
+					season_id: SEASON_ID,
+				};
+
+				assert_ok!(Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
@@ -3924,12 +3928,13 @@ mod affiliates {
 					config.affiliate_config.affiliator_enable_fee = affiliator_enable_fee;
 				});
 
+				let params = AffiliateUnlockParams::<MockAccountId> {
+					target: UnlockTarget::OneselfPaying,
+					season_id: SEASON_ID,
+				};
+
 				assert_noop!(
-					AAvatars::enable_affiliator(
-						RuntimeOrigin::signed(ALICE),
-						UnlockTarget::OneselfPaying,
-						SEASON_ID
-					),
+					Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params),
 					Error::<Test>::FeatureLockedThroughPayment
 				);
 			});

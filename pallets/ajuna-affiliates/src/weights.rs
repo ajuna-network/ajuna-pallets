@@ -31,6 +31,7 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_ajuna_awesome_avatars.
 pub trait WeightInfo {
+	fn enable_affiliator() -> Weight;
 	fn add_affiliation() -> Weight;
 	fn remove_affiliation() -> Weight;
 	fn set_rule_for() -> Weight;
@@ -40,6 +41,19 @@ pub trait WeightInfo {
 /// Weights for pallet_ajuna_awesome_avatars using the Substrate node and recommended hardware.
 pub struct AjunaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
+	/// Storage: AwesomeAvatars Organizer (r:1 w:0)
+	/// Proof: AwesomeAvatars Organizer (max_values: Some(1), max_size: Some(32), added: 527, mode: MaxEncodedLen)
+	/// Storage: AwesomeAvatars CollectionId (r:0 w:1)
+	/// Proof: AwesomeAvatars CollectionId (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
+	fn enable_affiliator() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `96`
+		//  Estimated: `1517`
+		// Minimum execution time: 58_048_000 picoseconds.
+		Weight::from_parts(61_852_000, 1517)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
 	/// Storage: AwesomeAvatars Organizer (r:1 w:0)
 	/// Proof: AwesomeAvatars Organizer (max_values: Some(1), max_size: Some(32), added: 527, mode: MaxEncodedLen)
 	/// Storage: AwesomeAvatars CollectionId (r:0 w:1)
@@ -157,6 +171,19 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
+	/// Storage: AwesomeAvatars Organizer (r:1 w:0)
+	/// Proof: AwesomeAvatars Organizer (max_values: Some(1), max_size: Some(32), added: 527, mode: MaxEncodedLen)
+	/// Storage: AwesomeAvatars CollectionId (r:0 w:1)
+	/// Proof: AwesomeAvatars CollectionId (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
+	fn enable_affiliator() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `96`
+		//  Estimated: `1517`
+		// Minimum execution time: 58_048_000 picoseconds.
+		Weight::from_parts(61_852_000, 1517)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
 	/// Storage: AwesomeAvatars Organizer (r:1 w:0)
 	/// Proof: AwesomeAvatars Organizer (max_values: Some(1), max_size: Some(32), added: 527, mode: MaxEncodedLen)
 	/// Storage: AwesomeAvatars CollectionId (r:0 w:1)

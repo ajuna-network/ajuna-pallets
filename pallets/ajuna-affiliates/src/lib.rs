@@ -51,20 +51,26 @@ pub mod pallet {
 	pub type RuntimeRuleFor<T, I> = <T as Config<I>>::RuntimeRule;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<RuleIdParameter, RuleParameter> {
+	pub trait BenchmarkHelper<RuleIdParameter, RuleParameter, UnlockParams> {
 		fn create_rule_id(id: u32) -> RuleIdParameter;
 
 		fn create_rule(id: u32) -> RuleParameter;
+
+		fn create_params(id: u32) -> UnlockParams;
 	}
 	#[cfg(feature = "runtime-benchmarks")]
-	impl<RuleIdParameter: From<u32>, RuleParameter: From<u32>>
-		BenchmarkHelper<RuleIdParameter, RuleParameter> for ()
+	impl<RuleIdParameter: From<u32>, RuleParameter: From<u32>, UnlockParams: From<u32>>
+		BenchmarkHelper<RuleIdParameter, RuleParameter, UnlockParams> for ()
 	{
 		fn create_rule_id(id: u32) -> RuleIdParameter {
 			id.into()
 		}
 
 		fn create_rule(id: u32) -> RuleParameter {
+			id.into()
+		}
+
+		fn create_params(id: u32) -> UnlockParams {
 			id.into()
 		}
 	}
@@ -97,10 +103,21 @@ pub mod pallet {
 		#[pallet::constant]
 		type AffiliateMaxLevel: Get<u32>;
 
+		type UnlockParameters: Parameter;
+
+		type AffiliatesUnlockRules: AffiliateUnlockRules<
+			AccountId = AccountIdFor<Self>,
+			UnlockParameters = Self::UnlockParameters,
+		>;
+
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: BenchmarkHelper<Self::RuleIdentifier, Self::RuntimeRule>;
+		type BenchmarkHelper: BenchmarkHelper<
+			Self::RuleIdentifier,
+			Self::RuntimeRule,
+			Self::UnlockParameters,
+		>;
 	}
 
 	/// Stores the affiliated accounts from the perspectives of the affiliatee
@@ -166,7 +183,21 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		#[pallet::call_index(0)]
-		#[pallet::weight({1000})]
+		#[pallet::weight({T::WeightInfo::enable_affiliator()})]
+		pub fn enable_affiliator(
+			origin: OriginFor<T>,
+			params: T::UnlockParameters,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			let account = T::AffiliatesUnlockRules::try_validate_unlock(&account, params)?;
+			Self::try_mark_account_as_affiliatable(&account)?;
+
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight({T::WeightInfo::add_affiliation()})]
 		pub fn add_affiliation(
 			origin: OriginFor<T>,
 			target_affiliatee: Option<AccountIdFor<T>>,
@@ -191,16 +222,16 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::call_index(1)]
-		#[pallet::weight({1000})]
+		#[pallet::call_index(2)]
+		#[pallet::weight({T::WeightInfo::remove_affiliation()})]
 		pub fn remove_affiliation(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
 			let maybe_organizer = ensure_signed(origin)?;
 			T::AccountManager::is_organizer(&maybe_organizer)?;
 			Self::try_clear_affiliation_for(&account)
 		}
 
-		#[pallet::call_index(2)]
-		#[pallet::weight({1000})]
+		#[pallet::call_index(3)]
+		#[pallet::weight({T::WeightInfo::set_rule_for()})]
 		pub fn set_rule_for(
 			origin: OriginFor<T>,
 			rule_id: RuleIdentifierFor<T, I>,
@@ -212,8 +243,8 @@ pub mod pallet {
 			Self::try_add_rule_for(rule_id, rule)
 		}
 
-		#[pallet::call_index(3)]
-		#[pallet::weight({1000})]
+		#[pallet::call_index(4)]
+		#[pallet::weight({T::WeightInfo::clear_rule_for()})]
 		pub fn clear_rule_for(
 			origin: OriginFor<T>,
 			rule_id: RuleIdentifierFor<T, I>,

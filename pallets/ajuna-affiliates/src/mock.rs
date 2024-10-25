@@ -195,7 +195,9 @@ pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
 
 pub struct AffiliateBenchmarkHelper;
 
-impl BenchmarkHelper<MockRuleId, MockRuntimeRule> for AffiliateBenchmarkHelper {
+impl BenchmarkHelper<MockRuleId, MockRuntimeRule, MockUnlockParameter>
+	for AffiliateBenchmarkHelper
+{
 	fn create_rule_id(id: u32) -> MockRuleId {
 		id as u8
 	}
@@ -203,10 +205,29 @@ impl BenchmarkHelper<MockRuleId, MockRuntimeRule> for AffiliateBenchmarkHelper {
 	fn create_rule(id: u32) -> MockRuntimeRule {
 		MockRuntimeRule::try_from(vec![id as u8]).expect("Should convert rule to mock runtime rule")
 	}
+
+	fn create_params(id: u32) -> MockUnlockParameter {
+		id as u8
+	}
 }
 
 parameter_types! {
 	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
+}
+
+pub type MockUnlockParameter = u8;
+pub struct MockAffiliateRules;
+
+impl AffiliateUnlockRules for MockAffiliateRules {
+	type AccountId = MockAccountId;
+	type UnlockParameters = MockUnlockParameter;
+
+	fn try_validate_unlock(
+		account: &Self::AccountId,
+		_params: Self::UnlockParameters,
+	) -> Result<Self::AccountId, DispatchError> {
+		Ok(*account)
+	}
 }
 
 pub(crate) type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
@@ -217,6 +238,8 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AffiliateBenchmarkHelper;
@@ -230,6 +253,8 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AffiliateBenchmarkHelper;

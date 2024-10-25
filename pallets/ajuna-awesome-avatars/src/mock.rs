@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_awesome_avatars, types::*, *};
+use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
@@ -132,7 +132,9 @@ parameter_types! {
 pub struct AffiliateBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Test>> for AffiliateBenchmarkHelper {
+impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Test>, AffiliateUnlockParams<MockAccountId>>
+	for AffiliateBenchmarkHelper
+{
 	fn create_rule_id(_id: u32) -> AffiliateMethods {
 		AffiliateMethods::Mint
 	}
@@ -140,6 +142,10 @@ impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Test>> for AffiliateBenc
 	fn create_rule(id: u32) -> FeePropagationOf<Test> {
 		FeePropagationOf::<Test>::try_from(vec![id as u8])
 			.expect("Should convert rule to mock runtime rule")
+	}
+
+	fn create_params(id: u32) -> AffiliateUnlockParams<MockAccountId> {
+		AffiliateUnlockParams { target: UnlockTarget::OneselfFree, season_id: id as SeasonId }
 	}
 }
 
@@ -151,6 +157,8 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = AffiliateUnlockParams<MockAccountId>;
+	type AffiliatesUnlockRules = AAvatars;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AffiliateBenchmarkHelper;

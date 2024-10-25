@@ -15,4 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 mod account_manager;
+mod affiliate_unlock_rules;
 mod asset_manager;
+
+pub use affiliate_unlock_rules::AffiliateUnlockParams;

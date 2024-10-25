@@ -23,7 +23,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use pallet_ajuna_affiliates::BenchmarkHelper;
+use pallet_ajuna_affiliates::{traits::AffiliateUnlockRules, BenchmarkHelper};
 use pallet_ajuna_awesome_avatars::{
 	types::{AffiliateMethods, Avatar, SeasonId},
 	FeePropagationOf,
@@ -31,7 +31,7 @@ use pallet_ajuna_awesome_avatars::{
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
+	BuildStorage, DispatchError, MultiSignature,
 };
 
 pub type MockSignature = MultiSignature;
@@ -147,7 +147,9 @@ parameter_types! {
 pub struct AffiliateBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Runtime>> for AffiliateBenchmarkHelper {
+impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Runtime>, MockUnlockParameter>
+	for AffiliateBenchmarkHelper
+{
 	fn create_rule_id(_id: u32) -> AffiliateMethods {
 		AffiliateMethods::Mint
 	}
@@ -155,6 +157,25 @@ impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Runtime>> for AffiliateB
 	fn create_rule(id: u32) -> FeePropagationOf<Runtime> {
 		FeePropagationOf::<Runtime>::try_from(vec![id as u8])
 			.expect("Should convert rule to mock runtime rule")
+	}
+
+	fn create_params(id: u32) -> MockUnlockParameter {
+		id as u8
+	}
+}
+
+pub type MockUnlockParameter = u8;
+pub struct MockAffiliateRules;
+
+impl AffiliateUnlockRules for MockAffiliateRules {
+	type AccountId = MockAccountId;
+	type UnlockParameters = MockUnlockParameter;
+
+	fn try_validate_unlock(
+		account: &Self::AccountId,
+		_params: Self::UnlockParameters,
+	) -> Result<Self::AccountId, DispatchError> {
+		Ok(account.clone())
 	}
 }
 
@@ -166,6 +187,8 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AffiliateBenchmarkHelper;

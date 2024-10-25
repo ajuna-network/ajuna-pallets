@@ -72,3 +72,15 @@ pub struct AffiliatorState {
 	pub status: AffiliatableStatus,
 	pub affiliates: u32,
 }
+
+/// The affiliate unlock rules trait can be passed around to define the specific logic for which and
+/// Account may be allowed to be affiliated to
+pub trait AffiliateUnlockRules {
+	type AccountId: Parameter + Member;
+	type UnlockParameters: Parameter;
+
+	fn try_validate_unlock(
+		account: &Self::AccountId,
+		params: Self::UnlockParameters,
+	) -> Result<Self::AccountId, DispatchError>;
+}

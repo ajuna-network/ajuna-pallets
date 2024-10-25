@@ -20,7 +20,8 @@
 use crate::{
 	mock::{
 		AffiliateBenchmarkHelper, AffiliateMaxLevel, AffiliateWhitelistKey, MockAccountManager,
-		MockRuleId, MockRuntimeRule, RuntimeEvent, System, Test,
+		MockAffiliateRules, MockRuleId, MockRuntimeRule, MockUnlockParameter, RuntimeEvent, System,
+		Test,
 	},
 	Pallet as Affiliates, *,
 };
@@ -36,6 +37,8 @@ impl Config for Test {
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
 	type WeightInfo = ();
 	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
@@ -73,6 +76,14 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 }
 
 benchmarks_instance_pallet! {
+	enable_affiliator {
+		let acc_1 = account::<T, I>(ACC_1);
+		let params = T::BenchmarkHelper::create_params(1);
+	}: _(RawOrigin::Signed(acc_1.clone()), params)
+	verify {
+		assert_last_event::<T, I>(Event::AccountMarkedAsAffiliatable { account: acc_1, affiliate_id: 0 })
+	}
+
 	add_affiliation {
 		let acc_1 = account::<T, I>(ACC_1);
 		let acc_2 = account::<T, I>(ACC_2);
