@@ -15,9 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_affiliates, *};
-#[cfg(test)]
-use ajuna_primitives::account_manager::AccountManager;
-use ajuna_primitives::account_manager::WhitelistKey;
+use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
 use frame_support::{
 	ensure, parameter_types,
 	traits::{ConstU16, ConstU64},
@@ -150,7 +148,7 @@ impl MockAccountManager {
 	}
 }
 
-impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
+impl AccountManager for MockAccountManager {
 	type AccountId = MockAccountId;
 
 	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
