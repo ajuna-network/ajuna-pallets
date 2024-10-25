@@ -193,8 +193,10 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 pub type MockRuleId = u8;
 pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
 
+#[cfg(feature = "runtime-benchmarks")]
 pub struct AffiliateBenchmarkHelper;
 
+#[cfg(feature = "runtime-benchmarks")]
 impl BenchmarkHelper<MockRuleId, MockRuntimeRule, MockUnlockParameter>
 	for AffiliateBenchmarkHelper
 {
