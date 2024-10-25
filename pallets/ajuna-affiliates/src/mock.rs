@@ -146,6 +146,12 @@ impl MockAccountManager {
 			}
 		})
 	}
+
+	pub(crate) fn set_organizer(owner: MockAccountId) {
+		ORGANIZER.with(|maybe_account| {
+			*maybe_account.borrow_mut() = Some(owner);
+		});
+	}
 }
 
 impl AccountManager for MockAccountManager {
@@ -162,11 +168,9 @@ impl AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(any(test, feature = "runtime-benchmarks"))]
+	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(owner: Self::AccountId) {
-		ORGANIZER.with(|maybe_account| {
-			*maybe_account.borrow_mut() = Some(owner);
-		});
+		MockAccountManager::set_organizer(owner);
 	}
 
 	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
@@ -179,7 +183,7 @@ impl AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(any(test, feature = "runtime-benchmarks"))]
+	#[cfg(feature = "runtime-benchmarks")]
 	fn try_set_whitelisted_for(
 		identifier: &WhitelistKey,
 		account: &Self::AccountId,
