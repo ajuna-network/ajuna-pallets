@@ -20,7 +20,6 @@ use frame_support::{
 	traits::{ConstU16, ConstU64, Hooks},
 	PalletId,
 };
-use pallet_ajuna_affiliates::BenchmarkHelper;
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
 	testing::TestSignature,
@@ -132,8 +131,12 @@ parameter_types! {
 pub struct AffiliateBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Test>, AffiliateUnlockParams<MockAccountId>>
-	for AffiliateBenchmarkHelper
+impl
+	pallet_ajuna_affiliates::BenchmarkHelper<
+		AffiliateMethods,
+		FeePropagationOf<Test>,
+		AffiliateUnlockParams<MockAccountId>,
+	> for AffiliateBenchmarkHelper
 {
 	fn create_rule_id(_id: u32) -> AffiliateMethods {
 		AffiliateMethods::Mint
