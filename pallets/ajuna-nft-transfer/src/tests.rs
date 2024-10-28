@@ -111,7 +111,7 @@ mod set_service_account {
 	}
 }
 
-// This tests the ext
+// This tests the extrinsic, the `NftHandler` trait is tested further below
 mod store_prepared_as_nft {
 	use super::*;
 
@@ -192,6 +192,7 @@ mod store_prepared_as_nft {
 	}
 }
 
+// This tests the extrinsic, the `NftHandler` trait is tested further below
 mod recover_asset_from_nft {
 	use super::*;
 
