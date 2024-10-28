@@ -124,9 +124,9 @@ pub mod pallet {
 		/// A service account has been set.
 		ServiceAccountSet { service_account: T::AccountId },
 		/// Avatar prepared.
-		PreparedAvatar { asset_id: T::ItemId },
+		PreparedAsset { asset_id: T::ItemId },
 		/// Avatar unprepared.
-		UnpreparedAvatar { asset_id: T::ItemId },
+		UnpreparedAsset { asset_id: T::ItemId },
 		/// IPFS URL prepared.
 		PreparedIpfsUrl { url: IpfsUrl },
 		/// Item has been stored as an NFT [collection_id, item_id, owner]
@@ -255,7 +255,7 @@ pub mod pallet {
 			T::AssetManager::handle_asset_prepare_fee(&asset, &player, &service_account)?;
 
 			Preparation::<T>::insert(asset_id, IpfsUrl::default());
-			Self::deposit_event(Event::PreparedAvatar { asset_id });
+			Self::deposit_event(Event::PreparedAsset { asset_id });
 			Ok(())
 		}
 
@@ -269,7 +269,7 @@ pub mod pallet {
 			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::AssetUnprepared);
 
 			Preparation::<T>::remove(asset_id);
-			Self::deposit_event(Event::UnpreparedAvatar { asset_id });
+			Self::deposit_event(Event::UnpreparedAsset { asset_id });
 			Ok(())
 		}
 
