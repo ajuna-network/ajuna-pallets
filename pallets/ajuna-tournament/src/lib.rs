@@ -46,6 +46,7 @@ pub type RankingTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use ajuna_primitives::account_manager::AccountManager;
 	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_arithmetic::traits::AtLeast16BitUnsigned;
 	use sp_runtime::{
@@ -58,7 +59,8 @@ pub mod pallet {
 		<<T as Config<I>>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub(crate) type TournamentScheduledActionFor<T, I> =
 		TournamentScheduledAction<<T as Config<I>>::SeasonId>;
-	pub type TournamentConfigFor<T, I> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T, I>>;
+	pub type TournamentConfigFor<T, I> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T, I>, T::EntityRanker>;
+	pub type TournamentCategoryIdFor<T, I> = <T as Config<I>>::TournamentCategoryId;
 	pub(crate) type RankingTableFor<T, I> =
 		RankingTable<(<T as Config<I>>::EntityId, <T as Config<I>>::RankedEntity)>;
 	pub(crate) type RewardClaimStateFor<T> = RewardClaimState<AccountIdFor<T>>;
@@ -92,11 +94,18 @@ pub mod pallet {
 			+ Copy
 			+ Default;
 
+		/// The tournament category identifier type.
+		type TournamentCategoryId: Member + Parameter;
+
 		/// The ranked entity identifier type.
 		type EntityId: Member + Parameter + MaxEncodedLen + PartialOrd + Ord;
 
 		/// The ranked entities type
 		type RankedEntity: Member + Parameter + MaxEncodedLen;
+
+		type EntityRanker: EntityRanker<EntityId = Self::EntityId, Entity = Self::RankedEntity>;
+
+		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 
 		/// Minimum duration of the tournament active and claim periods in blocks.
 		#[pallet::constant]
@@ -279,6 +288,28 @@ pub mod pallet {
 			};
 
 			weight
+		}
+	}
+
+	#[pallet::call]
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		#[pallet::call_index(0)]
+		#[pallet::weight({10_000})]
+		pub fn create_tournament(
+			origin: OriginFor<T>,
+			category_id: TournamentCategoryIdFor<T, I>,
+			config: TournamentConfigFor<T>,
+		) -> DispatchResult {
+			let organizer = ensure_signed(origin)?;
+			let _  = T::AccountManager::is_organizer(&organizer)?;
+
+			/*let tournament_id = Self::try_create_new_tournament_for(
+				&organizer, &season_id, config,
+			)?;
+
+			TournamentRankers::<T>::insert(season_id, tournament_id, with_ranker);*/
+
+			Ok(())
 		}
 	}
 
