@@ -79,8 +79,8 @@ pub trait AffiliateUnlockRules {
 	type AccountId: Parameter + Member;
 	type UnlockParameters: Parameter;
 
-	fn try_validate_unlock(
+	fn execute_unlock_rule_for(
 		account: &Self::AccountId,
 		params: Self::UnlockParameters,
-	) -> Result<Self::AccountId, DispatchError>;
+	) -> Result<(), DispatchError>;
 }

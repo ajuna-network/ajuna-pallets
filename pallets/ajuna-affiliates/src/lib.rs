@@ -186,12 +186,16 @@ pub mod pallet {
 		#[pallet::weight({T::WeightInfo::enable_affiliator()})]
 		pub fn enable_affiliator(
 			origin: OriginFor<T>,
+			target: Option<AccountIdFor<T>>,
 			params: T::UnlockParameters,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 
-			let account = T::AffiliatesUnlockRules::try_validate_unlock(&account, params)?;
-			Self::try_mark_account_as_affiliatable(&account)?;
+			T::AffiliatesUnlockRules::execute_unlock_rule_for(&account, params)?;
+
+			let account_to_mark = if let Some(other) = target { other } else { account };
+
+			Self::try_mark_account_as_affiliatable(&account_to_mark)?;
 
 			Ok(())
 		}

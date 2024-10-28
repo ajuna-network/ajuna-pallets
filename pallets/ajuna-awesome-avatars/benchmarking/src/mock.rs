@@ -171,11 +171,11 @@ impl AffiliateUnlockRules for MockAffiliateRules {
 	type AccountId = MockAccountId;
 	type UnlockParameters = MockUnlockParameter;
 
-	fn try_validate_unlock(
-		account: &Self::AccountId,
+	fn execute_unlock_rule_for(
+		_account: &Self::AccountId,
 		_params: Self::UnlockParameters,
-	) -> Result<Self::AccountId, DispatchError> {
-		Ok(account.clone())
+	) -> Result<(), DispatchError> {
+		Ok(())
 	}
 }
 

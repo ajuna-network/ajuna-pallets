@@ -12,10 +12,10 @@ impl<T: Config> AffiliateUnlockRules for Pallet<T> {
 	type AccountId = AccountIdFor<T>;
 	type UnlockParameters = AffiliateUnlockParams<Self::AccountId>;
 
-	fn try_validate_unlock(
+	fn execute_unlock_rule_for(
 		account: &Self::AccountId,
 		params: Self::UnlockParameters,
-	) -> Result<Self::AccountId, DispatchError> {
+	) -> Result<(), DispatchError> {
 		let AffiliateUnlockParams { target, season_id } = params;
 		ensure!(Seasons::<T>::contains_key(season_id), Error::<T>::UnknownSeason);
 
@@ -32,7 +32,7 @@ impl<T: Config> AffiliateUnlockRules for Pallet<T> {
 					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
 						config.locks.affiliate = true;
 					});
-					Ok(account.clone())
+					Ok(())
 				} else {
 					Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 				}
@@ -54,7 +54,7 @@ impl<T: Config> AffiliateUnlockRules for Pallet<T> {
 						)?;
 						config.locks.affiliate = true;
 					}
-					Ok(account.clone())
+					Ok(())
 				})
 			},
 			UnlockTarget::OtherPaying(other) => {
@@ -74,7 +74,7 @@ impl<T: Config> AffiliateUnlockRules for Pallet<T> {
 						)?;
 						config.locks.affiliate = true;
 					}
-					Ok(other.clone())
+					Ok(())
 				})
 			},
 		}

@@ -3787,7 +3787,11 @@ mod affiliates {
 					season_id: SEASON_ID,
 				};
 
-				assert_ok!(Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params));
+				assert_ok!(Affiliates::enable_affiliator(
+					RuntimeOrigin::signed(ALICE),
+					None,
+					params
+				));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
@@ -3832,7 +3836,11 @@ mod affiliates {
 					season_id: SEASON_ID,
 				};
 
-				assert_ok!(Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params));
+				assert_ok!(Affiliates::enable_affiliator(
+					RuntimeOrigin::signed(ALICE),
+					None,
+					params
+				));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
@@ -3880,7 +3888,11 @@ mod affiliates {
 					season_id: SEASON_ID,
 				};
 
-				assert_ok!(Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params));
+				assert_ok!(Affiliates::enable_affiliator(
+					RuntimeOrigin::signed(ALICE),
+					Some(BOB),
+					params
+				));
 
 				assert_eq!(
 					pallet_ajuna_affiliates::Affiliators::<Test, AffiliatesInstance1>::get(ALICE),
@@ -3933,7 +3945,7 @@ mod affiliates {
 				};
 
 				assert_noop!(
-					Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), params),
+					Affiliates::enable_affiliator(RuntimeOrigin::signed(ALICE), None, params),
 					Error::<Test>::FeatureLockedThroughPayment
 				);
 			});

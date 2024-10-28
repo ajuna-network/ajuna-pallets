@@ -78,10 +78,11 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 benchmarks_instance_pallet! {
 	enable_affiliator {
 		let acc_1 = account::<T, I>(ACC_1);
+		let acc_2 = account::<T, I>(ACC_2);
 		let params = T::BenchmarkHelper::create_params(1);
-	}: _(RawOrigin::Signed(acc_1.clone()), params)
+	}: _(RawOrigin::Signed(acc_1), Some(acc_2.clone()), params)
 	verify {
-		assert_last_event::<T, I>(Event::AccountMarkedAsAffiliatable { account: acc_1, affiliate_id: 0 })
+		assert_last_event::<T, I>(Event::AccountMarkedAsAffiliatable { account: acc_2, affiliate_id: 0 })
 	}
 
 	add_affiliation {

@@ -39,17 +39,6 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 
-#[cfg(test)]
-pub const ALICE: MockAccountId = 1;
-#[cfg(test)]
-pub const BOB: MockAccountId = 2;
-#[cfg(test)]
-pub const CHARLIE: MockAccountId = 3;
-#[cfg(test)]
-pub const DAVE: MockAccountId = 4;
-#[cfg(test)]
-pub const EDWARD: MockAccountId = 5;
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
@@ -226,11 +215,11 @@ impl AffiliateUnlockRules for MockAffiliateRules {
 	type AccountId = MockAccountId;
 	type UnlockParameters = MockUnlockParameter;
 
-	fn try_validate_unlock(
-		account: &Self::AccountId,
+	fn execute_unlock_rule_for(
+		_account: &Self::AccountId,
 		_params: Self::UnlockParameters,
-	) -> Result<Self::AccountId, DispatchError> {
-		Ok(*account)
+	) -> Result<(), DispatchError> {
+		Ok(())
 	}
 }
 

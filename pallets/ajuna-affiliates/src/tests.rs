@@ -2,6 +2,12 @@ use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::bounded_vec;
 
+pub const ALICE: MockAccountId = 1;
+pub const BOB: MockAccountId = 2;
+pub const CHARLIE: MockAccountId = 3;
+pub const DAVE: MockAccountId = 4;
+pub const EDWARD: MockAccountId = 5;
+
 mod extrinsic {
 	use super::*;
 
