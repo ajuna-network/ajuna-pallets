@@ -192,7 +192,77 @@ mod store_prepared_as_nft {
 	}
 }
 
-mod recover_asset_from_nft {}
+mod recover_asset_from_nft {
+	use super::*;
+
+	#[test]
+	fn recover_asset_from_nft_works() {
+		let prepare_fee = 999;
+		let initial_balance =
+			prepare_fee + MockExistentialDeposit::get() + CollectionDeposit::get();
+
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				// setup phase
+				MockAccountManager::set_organizer(ALICE);
+				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+
+				let collection_id = create_collection(ALICE);
+				assert_ok!(NftTransfer::set_collection_id(
+					RuntimeOrigin::signed(ALICE),
+					collection_id
+				));
+
+				assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+
+				let ipfs_url = IpfsUrl::try_from(b"ipfs://123".to_vec()).unwrap();
+				assert_ok!(NftTransfer::prepare_ipfs(
+					RuntimeOrigin::signed(ALICE),
+					asset_id,
+					ipfs_url
+				));
+
+				assert_ok!(NftTransfer::store_prepared_as_nft(
+					RuntimeOrigin::signed(ALICE),
+					asset_id
+				));
+
+				// test
+				assert_ok!(NftTransfer::recover_asset_from_nft(
+					RuntimeOrigin::signed(ALICE),
+					asset_id
+				));
+
+				// assert
+				System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+					crate::Event::ItemRestored { collection_id, item_id: asset_id, owner: ALICE },
+				));
+			});
+	}
+
+	#[test]
+	fn recover_asset_from_nft_rejects_if_asset_not_locked() {
+		let prepare_fee = 999;
+		let initial_balance =
+			prepare_fee + MockExistentialDeposit::get() + CollectionDeposit::get();
+
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				// preparation
+				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+
+				assert_noop!(
+					NftTransfer::recover_asset_from_nft(RuntimeOrigin::signed(ALICE), asset_id),
+					DispatchError::Other(NOT_LOCKED_ERR)
+				);
+			});
+	}
+}
 
 mod prepare_asset {
 	use super::*;
