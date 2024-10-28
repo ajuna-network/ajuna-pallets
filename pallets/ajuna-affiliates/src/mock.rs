@@ -14,15 +14,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_affiliates};
+use crate::{self as pallet_ajuna_affiliates, *};
+use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
 use frame_support::{
-	parameter_types,
+	ensure, parameter_types,
 	traits::{ConstU16, ConstU64},
 };
+#[cfg(test)]
+use sp_runtime::BuildStorage;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
-	BoundedVec, BuildStorage,
+	BoundedVec, DispatchError,
+};
+
+use sp_std::{
+	cell::RefCell,
+	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 };
 
 pub type MockSignature = TestSignature;
@@ -31,12 +39,6 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 
-pub const ALICE: MockAccountId = 1;
-pub const BOB: MockAccountId = 2;
-pub const CHARLIE: MockAccountId = 3;
-pub const DAVE: MockAccountId = 4;
-pub const EDWARD: MockAccountId = 5;
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
@@ -44,6 +46,8 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances = 1,
 		AffiliatesAlpha: pallet_ajuna_affiliates::<Instance1> = 2,
 		AffiliatesBeta: pallet_ajuna_affiliates::<Instance2> = 3,
+		#[cfg(feature = "runtime-benchmarks")]
+		AffiliatesBench: pallet_ajuna_affiliates = 4,
 	}
 );
 
@@ -103,33 +107,174 @@ parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
 }
 
+thread_local! {
+	pub static WHITELISTED_ACCOUNTS: RefCell<BTreeMap<WhitelistKey ,BTreeSet<MockAccountId>>> = RefCell::new({
+		let mut account_map = BTreeMap::new();
+		account_map.insert(AffiliateWhitelistKey::get(), BTreeSet::new());
+		account_map
+	});
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
+}
+
+pub struct MockAccountManager;
+
+pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
+pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
+
+impl MockAccountManager {
+	pub(crate) fn try_add_to_whitelist(
+		identifier: &WhitelistKey,
+		account: &MockAccountId,
+	) -> Result<(), DispatchError> {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.insert(*account);
+				Ok(())
+			} else {
+				Err(DispatchError::Other("No account set for identifier"))
+			}
+		})
+	}
+
+	pub(crate) fn set_organizer(owner: MockAccountId) {
+		ORGANIZER.with(|maybe_account| {
+			*maybe_account.borrow_mut() = Some(owner);
+		});
+	}
+}
+
+impl AccountManager for MockAccountManager {
+	type AccountId = MockAccountId;
+
+	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		ORGANIZER.with(|maybe_account| {
+			if let Some(organizer) = maybe_account.borrow().as_ref() {
+				ensure!(organizer == account, DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER));
+				Ok(())
+			} else {
+				Err(DispatchError::Other(NO_ORGANIZER_SET))
+			}
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(owner: Self::AccountId) {
+		MockAccountManager::set_organizer(owner);
+	}
+
+	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.contains(account)
+			} else {
+				false
+			}
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_set_whitelisted_for(
+		identifier: &WhitelistKey,
+		account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		Self::try_add_to_whitelist(identifier, account)
+	}
+}
+
 pub type MockRuleId = u8;
 pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
 
-type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AffiliateBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<MockRuleId, MockRuntimeRule, MockUnlockParameter>
+	for AffiliateBenchmarkHelper
+{
+	fn create_rule_id(id: u32) -> MockRuleId {
+		id as u8
+	}
+
+	fn create_rule(id: u32) -> MockRuntimeRule {
+		MockRuntimeRule::try_from(vec![id as u8]).expect("Should convert rule to mock runtime rule")
+	}
+
+	fn create_params(id: u32) -> MockUnlockParameter {
+		id as u8
+	}
+}
+
+parameter_types! {
+	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
+}
+
+pub type MockUnlockParameter = u8;
+pub struct MockAffiliateRules;
+
+impl AffiliateUnlockRules for MockAffiliateRules {
+	type AccountId = MockAccountId;
+	type UnlockParameters = MockUnlockParameter;
+
+	fn execute_unlock_rule_for(
+		_account: &Self::AccountId,
+		_params: Self::UnlockParameters,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
+}
+
+pub(crate) type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
-type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
+pub(crate) type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
+#[cfg(test)]
 #[derive(Default)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
+	organizer: Option<MockAccountId>,
+	affiliators: Vec<MockAccountId>,
 }
 
+#[cfg(test)]
 impl ExtBuilder {
 	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
 		self.balances = balances.to_vec();
+		self
+	}
+
+	pub fn organizer(mut self, organizer: MockAccountId) -> Self {
+		self.organizer = Some(organizer);
+		self
+	}
+
+	pub fn affiliators(mut self, affiliators: &[MockAccountId]) -> Self {
+		self.affiliators = affiliators.to_vec();
 		self
 	}
 
@@ -141,6 +286,19 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			if let Some(account) = self.organizer {
+				MockAccountManager::set_organizer(account);
+			}
+			if !self.affiliators.is_empty() {
+				for account in self.affiliators.into_iter() {
+					AffiliatesAlpha::try_mark_account_as_affiliatable(&account)
+						.expect("Should mark as affiliatable");
+					AffiliatesBeta::try_mark_account_as_affiliatable(&account)
+						.expect("Should mark as affiliatable");
+				}
+			}
+		});
 		ext
 	}
 }

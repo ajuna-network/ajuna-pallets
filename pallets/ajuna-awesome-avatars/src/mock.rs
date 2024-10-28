@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_ajuna_awesome_avatars, types::*, *};
+use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
@@ -124,14 +124,47 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 
 parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
+	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AffiliateBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl
+	pallet_ajuna_affiliates::BenchmarkHelper<
+		AffiliateMethods,
+		FeePropagationOf<Test>,
+		AffiliateUnlockParams<MockAccountId>,
+	> for AffiliateBenchmarkHelper
+{
+	fn create_rule_id(_id: u32) -> AffiliateMethods {
+		AffiliateMethods::Mint
+	}
+
+	fn create_rule(id: u32) -> FeePropagationOf<Test> {
+		FeePropagationOf::<Test>::try_from(vec![id as u8])
+			.expect("Should convert rule to mock runtime rule")
+	}
+
+	fn create_params(id: u32) -> AffiliateUnlockParams<MockAccountId> {
+		AffiliateUnlockParams { target: UnlockTarget::OneselfFree, season_id: id as SeasonId }
+	}
 }
 
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = AAvatars;
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = AffiliateUnlockParams<MockAccountId>;
+	type AffiliatesUnlockRules = AAvatars;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
 parameter_types! {
@@ -159,7 +192,6 @@ pub struct ExtBuilder {
 	mint_cooldown: MockBlockNumber,
 	balances: Vec<(MockAccountId, MockBalance)>,
 	free_mints: Vec<(MockAccountId, MintCount)>,
-	affiliators: Vec<MockAccountId>,
 	locks: Vec<(MockAccountId, SeasonId, Locks)>,
 }
 
@@ -174,7 +206,6 @@ impl Default for ExtBuilder {
 			mint_cooldown: Default::default(),
 			balances: Default::default(),
 			free_mints: Default::default(),
-			affiliators: Default::default(),
 			locks: Default::default(),
 		}
 	}
@@ -214,11 +245,6 @@ impl ExtBuilder {
 	}
 	pub fn free_mints(mut self, free_mints: &[(MockAccountId, MintCount)]) -> Self {
 		self.free_mints = free_mints.to_vec();
-		self
-	}
-
-	pub fn affiliators(mut self, affiliators: &[MockAccountId]) -> Self {
-		self.affiliators = affiliators.to_vec();
 		self
 	}
 
@@ -268,17 +294,6 @@ impl ExtBuilder {
 				PlayerConfigs::<Test>::mutate(account_id, |account| {
 					account.free_mints = mint_amount
 				});
-			}
-
-			if !self.affiliators.is_empty() {
-				pallet_ajuna_affiliates::NextAffiliateId::<Test, AffiliatesInstance1>::set(
-					self.affiliators.len() as u32,
-				);
-				for (i, account) in self.affiliators.into_iter().enumerate() {
-					Affiliates::try_mark_account_as_affiliatable(&account)
-						.expect("Should mark as affiliatable");
-					pallet_ajuna_affiliates::AffiliateIdMapping::<Test, AffiliatesInstance1>::insert(i as u32, account);
-				}
 			}
 
 			if !self.locks.is_empty() {

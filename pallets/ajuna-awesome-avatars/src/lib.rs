@@ -83,9 +83,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use pallet_ajuna_affiliates::traits::{
-	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
-};
+use pallet_ajuna_affiliates::traits::{AffiliateInspector, AffiliateMutator, RuleInspector};
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
 	traits::{TournamentClaimer, TournamentInspector, TournamentMutator, TournamentRanker},
@@ -102,7 +100,7 @@ use sp_std::prelude::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use pallet_ajuna_affiliates::traits::{AffiliateId, RuleExecutor};
+	use pallet_ajuna_affiliates::traits::RuleExecutor;
 	use pallet_ajuna_tournament::{Percentage, TournamentId};
 	use sp_std::collections::vec_deque::VecDeque;
 
@@ -149,7 +147,6 @@ pub mod pallet {
 		type AffiliateHandler: AffiliateInspector<AccountIdFor<Self>>
 			+ AffiliateMutator<AccountIdFor<Self>>
 			+ RuleInspector<AffiliateMethods, FeePropagationOf<Self>>
-			+ RuleMutator<AffiliateMethods, FeePropagationOf<Self>>
 			+ RuleExecutor<AffiliateMethods, FeePropagationOf<Self>>;
 
 		type TournamentHandler: TournamentInspector<SeasonId, BlockNumberFor<Self>, BalanceOf<Self>, AccountIdFor<Self>>
@@ -1033,7 +1030,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(21)]
+		#[pallet::call_index(17)]
 		#[pallet::weight({1000})]
 		pub fn modify_freemint_whitelist(
 			origin: OriginFor<T>,
@@ -1069,139 +1066,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::call_index(22)]
-		#[pallet::weight({1000})]
-		pub fn add_affiliation(
-			origin: OriginFor<T>,
-			target_affiliatee: Option<AccountIdFor<T>>,
-			affiliate_id: AffiliateId,
-		) -> DispatchResult {
-			let signer = ensure_signed(origin)?;
-
-			let account = if let Some(acc) = target_affiliatee {
-				let whitelisted_accounts = WhitelistedAccounts::<T>::get();
-				ensure!(
-					whitelisted_accounts.contains(&signer),
-					Error::<T>::AffiliateOthersOnlyWhiteListed
-				);
-				acc
-			} else {
-				signer
-			};
-
-			if let Some(affiliator) = T::AffiliateHandler::get_account_for_id(affiliate_id) {
-				T::AffiliateHandler::try_add_affiliate_to(&affiliator, &account)
-			} else {
-				Err(Error::<T>::AffiliatorNotFound.into())
-			}
-		}
-
-		#[pallet::call_index(23)]
-		#[pallet::weight({1000})]
-		pub fn enable_affiliator(
-			origin: OriginFor<T>,
-			target: UnlockTarget<T::AccountId>,
-			season_id: SeasonId,
-		) -> DispatchResult {
-			let account = ensure_signed(origin)?;
-			ensure!(Seasons::<T>::contains_key(season_id), Error::<T>::UnknownSeason);
-
-			match target {
-				UnlockTarget::OneselfFree => {
-					// Check criteria
-					if let Some(UnlockConfigs { affiliate_unlock: Some(unlock_vec), .. }) =
-						SeasonUnlocks::<T>::get(season_id)
-					{
-						let player_stats = SeasonStats::<T>::get(season_id, &account);
-
-						if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
-							PlayerSeasonConfigs::<T>::mutate(&account, season_id, |config| {
-								config.locks.affiliate = true;
-							});
-
-							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)
-						} else {
-							Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
-						}
-					} else {
-						Err(Error::<T>::FeatureLockedInSeason.into())
-					}
-				},
-				UnlockTarget::OneselfPaying => {
-					// Substract amout for paying if account not affiliator
-					PlayerSeasonConfigs::<T>::try_mutate(&account, season_id, |config| {
-						if !config.locks.affiliate {
-							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
-							ensure!(
-								affiliate_config.affiliator_enable_fee > 0_u32.into(),
-								Error::<T>::FeatureLockedThroughPayment
-							);
-							T::Currency::transfer(
-								&account,
-								&Self::treasury_account_id(),
-								affiliate_config.affiliator_enable_fee,
-								AllowDeath,
-							)?;
-							T::AffiliateHandler::try_mark_account_as_affiliatable(&account)?;
-							config.locks.affiliate = true;
-						}
-						Ok(())
-					})
-				},
-				UnlockTarget::OtherPaying(other) => {
-					// Substract amout for paying if other not affiliator
-					PlayerSeasonConfigs::<T>::try_mutate(&other, season_id, |config| {
-						if !config.locks.affiliate {
-							let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
-							ensure!(
-								affiliate_config.affiliator_enable_fee > 0_u32.into(),
-								Error::<T>::FeatureLockedThroughPayment
-							);
-							T::Currency::transfer(
-								&account,
-								&Self::treasury_account_id(),
-								affiliate_config.affiliator_enable_fee,
-								AllowDeath,
-							)?;
-							T::AffiliateHandler::try_mark_account_as_affiliatable(&other)?;
-							config.locks.affiliate = true;
-						}
-						Ok(())
-					})
-				},
-			}
-		}
-
-		#[pallet::call_index(24)]
-		#[pallet::weight({1000})]
-		pub fn remove_affiliation(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-			T::AffiliateHandler::try_clear_affiliation_for(&account)
-		}
-
-		#[pallet::call_index(25)]
-		#[pallet::weight({1000})]
-		pub fn set_rule_for(
-			origin: OriginFor<T>,
-			rule_id: AffiliateMethods,
-			rule: FeePropagationOf<T>,
-		) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-
-			T::AffiliateHandler::try_add_rule_for(rule_id, rule)
-		}
-
-		#[pallet::call_index(26)]
-		#[pallet::weight({1000})]
-		pub fn clear_rule_for(origin: OriginFor<T>, rule_id: AffiliateMethods) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-
-			T::AffiliateHandler::clear_rule_for(rule_id);
-
-			Ok(())
-		}
-
-		#[pallet::call_index(27)]
+		#[pallet::call_index(18)]
 		#[pallet::weight({1000})]
 		pub fn enable_set_avatar_price(
 			origin: OriginFor<T>,
@@ -1274,7 +1139,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::call_index(28)]
+		#[pallet::call_index(19)]
 		#[pallet::weight({1000})]
 		pub fn enable_avatar_transfer(
 			origin: OriginFor<T>,
@@ -1348,7 +1213,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::call_index(29)]
+		#[pallet::call_index(20)]
 		#[pallet::weight({1000})]
 		pub fn set_unlock_config(
 			origin: OriginFor<T>,
@@ -1361,7 +1226,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(30)]
+		#[pallet::call_index(21)]
 		#[pallet::weight({10_000})]
 		pub fn create_tournament(
 			origin: OriginFor<T>,
@@ -1379,7 +1244,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(31)]
+		#[pallet::call_index(22)]
 		#[pallet::weight({10_000})]
 		pub fn remove_latest_tournament(
 			origin: OriginFor<T>,
@@ -1389,7 +1254,7 @@ pub mod pallet {
 			T::TournamentHandler::try_remove_latest_tournament_for(&season_id)
 		}
 
-		#[pallet::call_index(32)]
+		#[pallet::call_index(23)]
 		#[pallet::weight({10_000})]
 		pub fn claim_tournament_reward_for(
 			origin: OriginFor<T>,
@@ -1402,7 +1267,7 @@ pub mod pallet {
 			T::TournamentHandler::try_claim_tournament_reward_for(&season_id, &account, &avatar_id)
 		}
 
-		#[pallet::call_index(33)]
+		#[pallet::call_index(24)]
 		#[pallet::weight({10_000})]
 		pub fn claim_golden_duck_for(
 			origin: OriginFor<T>,
@@ -1413,18 +1278,6 @@ pub mod pallet {
 			Self::ensure_ownership(&account, &avatar_id)?;
 
 			T::TournamentHandler::try_claim_golden_duck_for(&season_id, &account, &avatar_id)
-		}
-
-		#[pallet::call_index(34)]
-		#[pallet::weight({10_000})]
-		pub fn force_set_affiliatee_state(
-			origin: OriginFor<T>,
-			account: AccountIdFor<T>,
-			chain: Vec<AccountIdFor<T>>,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-
-			T::AffiliateHandler::force_set_affiliatee_chain_for(&account, chain)
 		}
 	}
 
@@ -2150,7 +2003,7 @@ pub mod pallet {
 			Ok(final_fee)
 		}
 
-		fn evaluate_unlock_state(
+		pub(crate) fn evaluate_unlock_state(
 			config: &BoundedVec<u8, ConstU32<5>>,
 			account_stats: &SeasonInfo,
 		) -> bool {

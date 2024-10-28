@@ -16,12 +16,14 @@
 
 #![cfg(test)]
 
+use ajuna_primitives::account_manager::WhitelistKey;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+use pallet_ajuna_affiliates::{traits::AffiliateUnlockRules, BenchmarkHelper};
 use pallet_ajuna_awesome_avatars::{
 	types::{AffiliateMethods, Avatar, SeasonId},
 	FeePropagationOf,
@@ -29,7 +31,7 @@ use pallet_ajuna_awesome_avatars::{
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
+	BuildStorage, DispatchError, MultiSignature,
 };
 
 pub type MockSignature = MultiSignature;
@@ -138,14 +140,58 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 
 parameter_types! {
 	pub const AffiliateMaxLevel: u32 = 2;
+	pub const AffiliateWhitelistKey: WhitelistKey = [1, 2, 1, 2, 3, 3, 4, 5];
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AffiliateBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Runtime>, MockUnlockParameter>
+	for AffiliateBenchmarkHelper
+{
+	fn create_rule_id(_id: u32) -> AffiliateMethods {
+		AffiliateMethods::Mint
+	}
+
+	fn create_rule(id: u32) -> FeePropagationOf<Runtime> {
+		FeePropagationOf::<Runtime>::try_from(vec![id as u8])
+			.expect("Should convert rule to mock runtime rule")
+	}
+
+	fn create_params(id: u32) -> MockUnlockParameter {
+		id as u8
+	}
+}
+
+pub type MockUnlockParameter = u8;
+pub struct MockAffiliateRules;
+
+impl AffiliateUnlockRules for MockAffiliateRules {
+	type AccountId = MockAccountId;
+	type UnlockParameters = MockUnlockParameter;
+
+	fn execute_unlock_rule_for(
+		_account: &Self::AccountId,
+		_params: Self::UnlockParameters,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
 }
 
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = AAvatars;
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
 parameter_types! {

@@ -137,7 +137,7 @@ pub struct GlobalConfig<BlockNumber, Balance> {
 	pub affiliate_config: AffiliateConfig<Balance>,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
 pub enum UnlockTarget<AccountId> {
 	OneselfFree,
 	OneselfPaying,

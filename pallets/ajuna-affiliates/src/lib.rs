@@ -18,21 +18,28 @@
 
 pub use pallet::*;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "runtime-benchmarks"))]
 mod mock;
 
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
 pub mod traits;
+pub mod weights;
+
+use crate::weights::WeightInfo;
 
 use frame_support::pallet_prelude::*;
+use frame_system::{ensure_signed, pallet_prelude::*};
 
 use traits::*;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
 	use sp_runtime::ArithmeticError;
 	use sp_std::vec::Vec;
 
@@ -40,6 +47,33 @@ pub mod pallet {
 		BoundedVec<<T as frame_system::Config>::AccountId, <T as Config<I>>::AffiliateMaxLevel>;
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
+	pub type RuleIdentifierFor<T, I> = <T as Config<I>>::RuleIdentifier;
+	pub type RuntimeRuleFor<T, I> = <T as Config<I>>::RuntimeRule;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<RuleIdParameter, RuleParameter, UnlockParams> {
+		fn create_rule_id(id: u32) -> RuleIdParameter;
+
+		fn create_rule(id: u32) -> RuleParameter;
+
+		fn create_params(id: u32) -> UnlockParams;
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<RuleIdParameter: From<u32>, RuleParameter: From<u32>, UnlockParams: From<u32>>
+		BenchmarkHelper<RuleIdParameter, RuleParameter, UnlockParams> for ()
+	{
+		fn create_rule_id(id: u32) -> RuleIdParameter {
+			id.into()
+		}
+
+		fn create_rule(id: u32) -> RuleParameter {
+			id.into()
+		}
+
+		fn create_params(id: u32) -> UnlockParams {
+			id.into()
+		}
+	}
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -54,6 +88,11 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self, I>>
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+		#[pallet::constant]
+		type WhitelistKey: Get<WhitelistKey>;
+
+		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
+
 		/// The rule identifier type at runtime.
 		type RuleIdentifier: Parameter + MaxEncodedLen;
 
@@ -63,6 +102,22 @@ pub mod pallet {
 		/// The maximum depth of the affiliate relation chain,
 		#[pallet::constant]
 		type AffiliateMaxLevel: Get<u32>;
+
+		type UnlockParameters: Parameter;
+
+		type AffiliatesUnlockRules: AffiliateUnlockRules<
+			AccountId = AccountIdFor<Self>,
+			UnlockParameters = Self::UnlockParameters,
+		>;
+
+		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type BenchmarkHelper: BenchmarkHelper<
+			Self::RuleIdentifier,
+			Self::RuntimeRule,
+			Self::UnlockParameters,
+		>;
 	}
 
 	/// Stores the affiliated accounts from the perspectives of the affiliatee
@@ -96,6 +151,7 @@ pub mod pallet {
 	pub enum Event<T: Config<I>, I: 'static = ()> {
 		AccountMarkedAsAffiliatable { account: T::AccountId, affiliate_id: AffiliateId },
 		AccountAffiliated { account: T::AccountId, to: T::AccountId },
+		AccountUnaffiliated { account: T::AccountId },
 		RuleAdded { rule_id: T::RuleIdentifier },
 		RuleCleared { rule_id: T::RuleIdentifier },
 	}
@@ -106,6 +162,10 @@ pub mod pallet {
 		CannotAffiliateSelf,
 		/// The account is not allowed to receive affiliates
 		TargetAccountIsNotAffiliatable,
+		/// Only whitelisted accounts can affiliate for others
+		AffiliateOthersOnlyWhiteListed,
+		/// No account matches the provided affiliator identifier
+		AffiliatorNotFound,
 		/// This account has reached the affiliate limit
 		CannotAffiliateMoreAccounts,
 		/// This account has already been affiliated by another affiliator
@@ -118,6 +178,88 @@ pub mod pallet {
 		ExtrinsicAlreadyHasRule,
 		/// The given extrinsic identifier is not associated with any rule
 		ExtrinsicHasNoRule,
+	}
+
+	#[pallet::call]
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		#[pallet::call_index(0)]
+		#[pallet::weight({T::WeightInfo::enable_affiliator()})]
+		pub fn enable_affiliator(
+			origin: OriginFor<T>,
+			target: Option<AccountIdFor<T>>,
+			params: T::UnlockParameters,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+
+			T::AffiliatesUnlockRules::execute_unlock_rule_for(&account, params)?;
+
+			let account_to_mark = if let Some(other) = target { other } else { account };
+
+			Self::try_mark_account_as_affiliatable(&account_to_mark)?;
+
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight({T::WeightInfo::add_affiliation()})]
+		pub fn add_affiliation(
+			origin: OriginFor<T>,
+			target_affiliatee: Option<AccountIdFor<T>>,
+			affiliate_id: AffiliateId,
+		) -> DispatchResult {
+			let signer = ensure_signed(origin)?;
+
+			let account = if let Some(acc) = target_affiliatee {
+				ensure!(
+					T::AccountManager::is_whitelisted_for(&T::WhitelistKey::get(), &signer),
+					Error::<T, I>::AffiliateOthersOnlyWhiteListed
+				);
+				acc
+			} else {
+				signer
+			};
+
+			if let Some(affiliator) = Self::get_account_for_id(affiliate_id) {
+				Self::try_add_affiliate_to(&affiliator, &account)
+			} else {
+				Err(Error::<T, I>::AffiliatorNotFound.into())
+			}
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight({T::WeightInfo::remove_affiliation()})]
+		pub fn remove_affiliation(origin: OriginFor<T>, account: T::AccountId) -> DispatchResult {
+			let maybe_organizer = ensure_signed(origin)?;
+			T::AccountManager::is_organizer(&maybe_organizer)?;
+			Self::try_clear_affiliation_for(&account)
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight({T::WeightInfo::set_rule_for()})]
+		pub fn set_rule_for(
+			origin: OriginFor<T>,
+			rule_id: RuleIdentifierFor<T, I>,
+			rule: RuntimeRuleFor<T, I>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::AccountManager::is_organizer(&account)?;
+
+			Self::try_add_rule_for(rule_id, rule)
+		}
+
+		#[pallet::call_index(4)]
+		#[pallet::weight({T::WeightInfo::clear_rule_for()})]
+		pub fn clear_rule_for(
+			origin: OriginFor<T>,
+			rule_id: RuleIdentifierFor<T, I>,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::AccountManager::is_organizer(&account)?;
+
+			<Self as RuleMutator<_, _>>::clear_rule_for(rule_id);
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
@@ -238,7 +380,7 @@ pub mod pallet {
 		}
 
 		fn try_clear_affiliation_for(account: &AccountIdFor<T>) -> DispatchResult {
-			Affiliatees::<T, I>::take(account)
+			let result = Affiliatees::<T, I>::take(account)
 				.and_then(|mut affiliate_chain| {
 					if affiliate_chain.is_empty() {
 						None
@@ -258,7 +400,11 @@ pub mod pallet {
 							Ok(())
 						})
 					},
-				)
+				);
+
+			Self::deposit_event(Event::AccountUnaffiliated { account: account.clone() });
+
+			result
 		}
 
 		fn force_set_affiliatee_chain_for(
