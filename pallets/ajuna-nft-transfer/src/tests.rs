@@ -125,7 +125,7 @@ mod store_prepared_as_nft {
 			.balances(&[(ALICE, initial_balance)])
 			.build()
 			.execute_with(|| {
-				// preparation
+				// setup
 				MockAccountManager::set_organizer(ALICE);
 				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
@@ -145,11 +145,13 @@ mod store_prepared_as_nft {
 					ipfs_url
 				));
 
+				// test
 				assert_ok!(NftTransfer::store_prepared_as_nft(
 					RuntimeOrigin::signed(ALICE),
 					asset_id
 				));
 
+				// assert
 				System::assert_last_event(mock::RuntimeEvent::NftTransfer(
 					crate::Event::ItemStored { collection_id, item_id: asset_id, owner: ALICE },
 				));
@@ -206,7 +208,7 @@ mod recover_asset_from_nft {
 			.balances(&[(ALICE, initial_balance)])
 			.build()
 			.execute_with(|| {
-				// setup phase
+				// setup
 				MockAccountManager::set_organizer(ALICE);
 				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
