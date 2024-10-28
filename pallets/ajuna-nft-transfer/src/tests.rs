@@ -279,6 +279,7 @@ mod unprepare_asset {
 
 mod prepare_ipfs {
 	use super::*;
+	use sp_runtime::DispatchError::BadOrigin;
 
 	#[test]
 	fn prepare_ipfs_works() {
@@ -300,6 +301,7 @@ mod prepare_ipfs {
 				crate::Event::PreparedIpfsUrl { url: ipfs_url },
 			));
 
+			// ensure overwriting existing url works
 			let ipfs_url = b"ipfs://123".to_vec();
 			let ipfs_url = IpfsUrl::try_from(ipfs_url).unwrap();
 			assert_ok!(NftTransfer::prepare_ipfs(
@@ -315,15 +317,48 @@ mod prepare_ipfs {
 	}
 
 	#[test]
+	fn prepare_ipfs_rejects_when_closed() {
+		ExtBuilder::default().build().execute_with(|| {
+			MockAssetManager::set_nft_transfer_open(false);
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+
+			assert_noop!(
+				NftTransfer::prepare_ipfs(
+					RuntimeOrigin::signed(ALICE),
+					asset_id,
+					IpfsUrl::default()
+				),
+				Error::<Test>::NftTransferClosed
+			);
+		});
+	}
+
+	#[test]
+	fn prepare_ipfs_rejects_unprepared_asset() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+			assert_noop!(
+				NftTransfer::prepare_ipfs(RuntimeOrigin::signed(BOB), asset_id, IpfsUrl::default()),
+				BadOrigin
+			);
+		});
+	}
+
+	#[test]
 	fn prepare_ipfs_rejects_empty_url() {
 		ExtBuilder::default().build().execute_with(|| {
 			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 			assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
-			ServiceAccount::<Test>::put(BOB);
 
 			assert_noop!(
-				NftTransfer::prepare_ipfs(RuntimeOrigin::signed(BOB), asset_id, IpfsUrl::default()),
+				NftTransfer::prepare_ipfs(
+					RuntimeOrigin::signed(ALICE),
+					asset_id,
+					IpfsUrl::default()
+				),
 				Error::<Test>::EmptyIpfsUrl
 			);
 		});
