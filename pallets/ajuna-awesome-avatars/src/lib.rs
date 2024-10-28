@@ -83,9 +83,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use pallet_ajuna_affiliates::traits::{
-	AffiliateInspector, AffiliateMutator, RuleInspector, RuleMutator,
-};
+use pallet_ajuna_affiliates::traits::{AffiliateInspector, AffiliateMutator, RuleInspector};
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
 	traits::{TournamentClaimer, TournamentInspector, TournamentMutator, TournamentRanker},
@@ -149,7 +147,6 @@ pub mod pallet {
 		type AffiliateHandler: AffiliateInspector<AccountIdFor<Self>>
 			+ AffiliateMutator<AccountIdFor<Self>>
 			+ RuleInspector<AffiliateMethods, FeePropagationOf<Self>>
-			+ RuleMutator<AffiliateMethods, FeePropagationOf<Self>>
 			+ RuleExecutor<AffiliateMethods, FeePropagationOf<Self>>;
 
 		type TournamentHandler: TournamentInspector<SeasonId, BlockNumberFor<Self>, BalanceOf<Self>, AccountIdFor<Self>>

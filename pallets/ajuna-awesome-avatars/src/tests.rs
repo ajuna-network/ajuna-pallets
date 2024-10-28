@@ -3758,7 +3758,6 @@ mod affiliates {
 	use pallet_ajuna_affiliates::traits::*;
 	use sp_runtime::bounded_vec;
 
-	#[ignore]
 	#[test]
 	fn enable_account_for_affiliation_free() {
 		let initial_balance = 1_000_000;

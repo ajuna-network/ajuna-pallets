@@ -1,4 +1,5 @@
 use crate::*;
+use frame_support::traits::ExistenceRequirement;
 use pallet_ajuna_affiliates::traits::AffiliateUnlockRules;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
@@ -21,21 +22,19 @@ impl<T: Config> AffiliateUnlockRules for Pallet<T> {
 		match target {
 			UnlockTarget::OneselfFree => {
 				// Check criteria
-				if let Some(UnlockConfigs { affiliate_unlock: Some(unlock_vec), .. }) =
-					SeasonUnlocks::<T>::get(season_id)
-				{
-					let player_stats = SeasonStats::<T>::get(season_id, account);
+				let affiliate_unlock = SeasonUnlocks::<T>::get(season_id)
+					.map(|config| config.affiliate_unlock.unwrap_or_default())
+					.ok_or::<DispatchError>(Error::<T>::FeatureLockedInSeason.into())?;
 
-					if Self::evaluate_unlock_state(&unlock_vec, &player_stats) {
-						PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
-							config.locks.affiliate = true;
-						});
-						Ok(account.clone())
-					} else {
-						Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
-					}
+				let player_stats = SeasonStats::<T>::get(season_id, account);
+
+				if Self::evaluate_unlock_state(&affiliate_unlock, &player_stats) {
+					PlayerSeasonConfigs::<T>::mutate(account, season_id, |config| {
+						config.locks.affiliate = true;
+					});
+					Ok(account.clone())
 				} else {
-					Err(Error::<T>::FeatureLockedInSeason.into())
+					Err(Error::<T>::UnlockCriteriaNotFulfilled.into())
 				}
 			},
 			UnlockTarget::OneselfPaying => {
@@ -51,7 +50,7 @@ impl<T: Config> AffiliateUnlockRules for Pallet<T> {
 							account,
 							&Self::treasury_account_id(),
 							affiliate_config.affiliator_enable_fee,
-							AllowDeath,
+							ExistenceRequirement::KeepAlive,
 						)?;
 						config.locks.affiliate = true;
 					}
@@ -71,7 +70,7 @@ impl<T: Config> AffiliateUnlockRules for Pallet<T> {
 							account,
 							&Self::treasury_account_id(),
 							affiliate_config.affiliator_enable_fee,
-							AllowDeath,
+							ExistenceRequirement::KeepAlive,
 						)?;
 						config.locks.affiliate = true;
 					}
