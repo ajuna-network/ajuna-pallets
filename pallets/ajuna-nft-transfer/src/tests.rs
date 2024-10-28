@@ -111,6 +111,89 @@ mod set_service_account {
 	}
 }
 
+// This tests the ext
+mod store_prepared_as_nft {
+	use super::*;
+
+	#[test]
+	fn store_prepared_as_nft_works() {
+		let prepare_fee = 999;
+		let initial_balance =
+			prepare_fee + MockExistentialDeposit::get() + CollectionDeposit::get();
+
+		ExtBuilder::default()
+			.balances(&[(ALICE, initial_balance)])
+			.build()
+			.execute_with(|| {
+				// preparation
+				MockAccountManager::set_organizer(ALICE);
+				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
+
+				let collection_id = create_collection(ALICE);
+				assert_ok!(NftTransfer::set_collection_id(
+					RuntimeOrigin::signed(ALICE),
+					collection_id
+				));
+
+				assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
+
+				let ipfs_url = IpfsUrl::try_from(b"ipfs://123".to_vec()).unwrap();
+				assert_ok!(NftTransfer::prepare_ipfs(
+					RuntimeOrigin::signed(ALICE),
+					asset_id,
+					ipfs_url
+				));
+
+				assert_ok!(NftTransfer::store_prepared_as_nft(
+					RuntimeOrigin::signed(ALICE),
+					asset_id
+				));
+
+				System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+					crate::Event::ItemStored { collection_id, item_id: asset_id, owner: ALICE },
+				));
+			});
+	}
+
+	#[test]
+	fn store_prepared_as_nft_rejects_unowned_assets() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_noop!(
+				NftTransfer::store_prepared_as_nft(RuntimeOrigin::signed(BOB), asset_id),
+				DispatchError::Other(NOT_OWNER_ERR)
+			);
+		});
+	}
+
+	#[test]
+	fn store_prepared_as_nft_rejects_if_no_collection_id_set() {
+		ExtBuilder::default().build().execute_with(|| {
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_noop!(
+				NftTransfer::store_prepared_as_nft(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::CollectionIdNotSet
+			);
+		});
+	}
+
+	#[test]
+	fn store_prepared_as_nft_rejects_unprepared_asset() {
+		ExtBuilder::default().build().execute_with(|| {
+			let collection_id = 369;
+			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			assert_ok!(NftTransfer::set_collection_id(RuntimeOrigin::signed(ALICE), collection_id));
+			assert_noop!(
+				NftTransfer::store_prepared_as_nft(RuntimeOrigin::signed(ALICE), asset_id),
+				Error::<Test>::AssetUnprepared
+			);
+		});
+	}
+}
+
+mod recover_asset_from_nft {}
+
 mod prepare_asset {
 	use super::*;
 	use ajuna_primitives::asset_manager::AssetManager;
