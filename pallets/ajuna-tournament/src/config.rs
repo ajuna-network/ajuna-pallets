@@ -50,10 +50,10 @@ pub struct TournamentConfig<BlockNumber, Balance, Ranker> {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
-pub enum TournamentScheduledAction<SeasonId> {
-	StartActivePhase(SeasonId, TournamentId),
-	SwitchToClaimPhase(SeasonId, TournamentId),
-	EndClaimPhase(SeasonId, TournamentId),
+pub enum TournamentScheduledAction<CategoryId> {
+	StartActivePhase(CategoryId, TournamentId),
+	SwitchToClaimPhase(CategoryId, TournamentId),
+	EndClaimPhase(CategoryId, TournamentId),
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]

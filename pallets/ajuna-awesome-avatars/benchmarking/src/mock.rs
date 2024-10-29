@@ -26,7 +26,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_ajuna_affiliates::{traits::AffiliateUnlockRules, BenchmarkHelper};
 use pallet_ajuna_awesome_avatars::{
 	types::{AffiliateMethods, Avatar, SeasonId},
-	FeePropagationOf,
+	AvatarRankerFor, FeePropagationOf,
 };
 use sp_runtime::{
 	testing::H256,
@@ -204,9 +204,12 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type PalletId = TournamentPalletId1;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type SeasonId = SeasonId;
+	type TournamentCategoryId = SeasonId;
 	type EntityId = crate::AvatarIdOf<Runtime>;
 	type RankedEntity = Avatar<BlockNumberFor<Runtime>>;
+	type EntityRanker = AvatarRankerFor<Runtime>;
+	type AccountManager = AAvatars;
+	type AssetManager = AAvatars;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 }
 

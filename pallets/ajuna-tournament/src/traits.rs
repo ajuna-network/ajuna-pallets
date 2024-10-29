@@ -13,55 +13,52 @@ pub trait EntityRank {
 		other: (&Self::EntityId, &Self::Entity),
 	) -> sp_std::cmp::Ordering;
 }
-pub trait TournamentInspector<SeasonId, BlockNumber, Balance, AccountId> {
+pub trait TournamentInspector<CategoryId, BlockNumber, Balance, AccountId, Ranker> {
 	fn get_active_tournament_config_for(
-		season_id: &SeasonId,
-	) -> Option<(TournamentId, TournamentConfig<BlockNumber, Balance>)>;
+		category_id: &CategoryId,
+	) -> Option<(TournamentId, TournamentConfig<BlockNumber, Balance, Ranker>)>;
 
-	fn get_active_tournament_state_for(season_id: &SeasonId) -> TournamentState<Balance>;
+	fn get_active_tournament_state_for(category_id: &CategoryId) -> TournamentState<Balance>;
 
-	fn is_golden_duck_enabled_for(season_id: &SeasonId) -> bool;
+	fn is_golden_duck_enabled_for(category_id: &CategoryId) -> bool;
 
-	fn get_treasury_account_for(season_id: &SeasonId) -> AccountId;
+	fn get_treasury_account_for(category_id: &CategoryId) -> AccountId;
 }
 
-pub trait TournamentMutator<AccountId, SeasonId, BlockNumber, Balance> {
+pub trait TournamentMutator<AccountId, CategoryId, BlockNumber, Balance, Ranker> {
 	fn try_create_new_tournament_for(
 		creator: &AccountId,
-		season_id: &SeasonId,
-		config: TournamentConfig<BlockNumber, Balance>,
+		category_id: &CategoryId,
+		config: TournamentConfig<BlockNumber, Balance, Ranker>,
 	) -> Result<TournamentId, DispatchError>;
 
-	fn try_remove_latest_tournament_for(season_id: &SeasonId) -> DispatchResult;
+	fn try_remove_latest_tournament_for(category_id: &CategoryId) -> DispatchResult;
 }
 
-pub trait TournamentRanker<SeasonId, Entity, EntityId> {
-	fn try_rank_entity_in_tournament_for<R>(
-		season_id: &SeasonId,
+pub trait TournamentRanker<CategoryId, Entity, EntityId> {
+	fn try_rank_entity_in_tournament_for(
+		category_id: &CategoryId,
 		entity_id: &EntityId,
 		entity: &Entity,
-		ranker: &R,
-	) -> DispatchResult
-	where
-		R: EntityRank<EntityId = EntityId, Entity = Entity>;
+	) -> DispatchResult;
 
 	fn try_rank_entity_for_golden_duck(
-		season_id: &SeasonId,
+		category_id: &CategoryId,
 		entity_id: &EntityId,
 	) -> DispatchResult
 	where
 		EntityId: Member + PartialOrd + Ord;
 }
 
-pub trait TournamentClaimer<SeasonId, AccountId, EntityId> {
+pub trait TournamentClaimer<CategoryId, AccountId, EntityId> {
 	fn try_claim_tournament_reward_for(
-		season_id: &SeasonId,
+		category_id: &CategoryId,
 		account: &AccountId,
 		entity_id: &EntityId,
 	) -> DispatchResult;
 
 	fn try_claim_golden_duck_for(
-		season_id: &SeasonId,
+		category_id: &CategoryId,
 		account: &AccountId,
 		entity_id: &EntityId,
 	) -> DispatchResult;

@@ -3988,6 +3988,11 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MinSoulPoints,
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -3999,20 +4004,15 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
-				};
-
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::MinSoulPoints,
-					_marker: Default::default(),
+					ranker,
 				};
 
 				run_to_block(13);
 
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -4193,6 +4193,11 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MinSoulPoints,
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -4204,18 +4209,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
+					ranker,
 				};
 
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::MinSoulPoints,
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -4256,7 +4256,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -4279,7 +4278,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -4307,6 +4305,12 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker_force = Force::Empathy;
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MinSoulPointsWithForce(ranker_force.clone()),
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -4318,19 +4322,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
+					ranker,
 				};
 
-				let ranker_force = Force::Empathy;
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::MinSoulPointsWithForce(ranker_force.clone()),
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -4380,7 +4378,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -4410,7 +4407,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -4438,6 +4434,11 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MaxSoulPoints,
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -4449,18 +4450,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
+					ranker,
 				};
 
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::MaxSoulPoints,
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -4507,7 +4503,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -4536,7 +4531,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -4564,6 +4558,12 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker_force = Force::Dream;
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MaxSoulPointsWithForce(ranker_force.clone()),
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -4575,19 +4575,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
+					ranker,
 				};
 
-				let ranker_force = Force::Dream;
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::MaxSoulPointsWithForce(ranker_force.clone()),
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -4639,7 +4633,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -4669,7 +4662,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -4697,6 +4689,11 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::DnaAscending,
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -4708,18 +4705,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
+					ranker,
 				};
 
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::DnaAscending,
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -4768,7 +4760,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -4798,7 +4789,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -4826,6 +4816,11 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::DnaDescending,
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -4837,18 +4832,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
+					ranker,
 				};
 
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::DnaDescending,
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -4897,7 +4887,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -4927,7 +4916,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -4955,6 +4943,13 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MintedAtModulo(
+						NonZeroU32::new(2).expect("Create modulo"),
+					),
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -4966,20 +4961,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 5,
+					ranker,
 				};
 
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::MintedAtModulo(
-						NonZeroU32::new(2).expect("Create modulo"),
-					),
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -5022,7 +5010,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -5046,7 +5033,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -5074,6 +5060,11 @@ mod tournament {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
+				let ranker = AvatarRankerFor::<Test> {
+					category: AvatarRankingCategory::MaxSoulPoints,
+					_marker: Default::default(),
+				};
+
 				let tournament_config = TournamentConfigFor::<Test> {
 					start: 20,
 					active_end: 350,
@@ -5085,18 +5076,13 @@ mod tournament {
 						.expect("Created distribution table"),
 					golden_duck_config: GoldenDuckConfig::Enabled(25),
 					max_players: 2,
+					ranker,
 				};
 
-				let ranker = AvatarRankerFor::<Test> {
-					category: AvatarRankingCategory::MaxSoulPoints,
-					_marker: Default::default(),
-				};
-
-				assert_ok!(AAvatars::create_tournament(
+				assert_ok!(Tournament::create_tournament(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID,
 					tournament_config,
-					ranker.clone()
 				));
 
 				assert_eq!(
@@ -5138,7 +5124,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
 				));
 
 				assert!(
@@ -5162,7 +5147,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_2,
 					&leader_2,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -5192,7 +5176,6 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_3,
 					&leader_3,
-					&ranker
 				));
 
 				let rankings = pallet_ajuna_tournament::TournamentRankings::<
@@ -5225,7 +5208,27 @@ mod tournament {
 					_marker: Default::default(),
 				};
 
-				run_to_block(20);
+				let tournament_config = TournamentConfigFor::<Test> {
+					start: 20,
+					active_end: 350,
+					claim_end: 450,
+					initial_reward: Some(1_000),
+					max_reward: None,
+					take_fee_percentage: Some(50),
+					reward_distribution: RewardDistributionTable::try_from(vec![30, 20, 10, 4, 1])
+						.expect("Created distribution table"),
+					golden_duck_config: GoldenDuckConfig::Enabled(25),
+					max_players: 2,
+					ranker,
+				};
+
+				assert_ok!(Tournament::create_tournament(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID,
+					tournament_config,
+				));
+
+				run_to_block(10);
 
 				let leader_id_1 = AvatarIdOf::<Test>::from_slice(&[
 					0x21, 0x1B, 0xA9, 0x0F, 0xBF, 0x5A, 0x7D, 0xD4, 0x8E, 0x9F, 0xBE, 0x96, 0x7E,
@@ -5240,8 +5243,7 @@ mod tournament {
 					&SEASON_ID,
 					&leader_id_1,
 					&leader_1,
-					&ranker
-				), pallet_ajuna_tournament::Error::<Test, TournamentInstance1>::NoActiveTournamentForSeason);
+				), pallet_ajuna_tournament::Error::<Test, TournamentInstance1>::NoActiveTournamentForCategory);
 			});
 	}
 }
