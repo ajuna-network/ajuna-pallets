@@ -20,16 +20,19 @@ use ajuna_primitives::{
 	asset_manager::{AssetManager, Lock},
 };
 use frame_support::{
-	pallet_prelude::Hooks,
 	parameter_types,
 	traits::{ConstU16, ConstU64, LockIdentifier},
 	PalletId,
+	__private::bounded_vec,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+#[cfg(test)]
+use sp_runtime::BuildStorage;
+
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
+	MultiSignature,
 };
 use sp_std::{
 	cell::RefCell,
@@ -44,15 +47,6 @@ pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 pub type MockBlockNumber = BlockNumberFor<Test>;
 
-pub const ALICE: MockAccountId = MockAccountId::new([1; 32]);
-pub const BOB: MockAccountId = MockAccountId::new([2; 32]);
-pub const CHARLIE: MockAccountId = MockAccountId::new([3; 32]);
-pub const DAVE: MockAccountId = MockAccountId::new([4; 32]);
-pub const EDWARD: MockAccountId = MockAccountId::new([5; 32]);
-
-pub const CATEGORY_ID_1: MockCategoryId = 1;
-pub const CATEGORY_ID_2: MockCategoryId = 2;
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
@@ -60,6 +54,8 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances = 1,
 		TournamentAlpha: pallet_ajuna_tournament::<Instance1> = 2,
 		TournamentBeta: pallet_ajuna_tournament::<Instance2> = 3,
+		#[cfg(feature = "runtime-benchmarks")]
+		TournamentBench: pallet_ajuna_tournament = 4,
 	}
 );
 
@@ -284,6 +280,38 @@ parameter_types! {
 	pub const MinimumTournamentPhaseDuration: MockBlockNumber = 2;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct TournamentBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<MockCategoryId, MockEntityId, MockBlockNumber, MockBalance, MockRanker>
+	for TournamentBenchmarkHelper
+{
+	fn create_category_id(id: u32) -> MockCategoryId {
+		id
+	}
+
+	fn create_entity_id(id: u32) -> MockEntityId {
+		H256::from_slice(&[id as u8; 32])
+	}
+
+	fn create_default_tournament_config(
+	) -> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
+		TournamentConfig {
+			start: 20_u64,
+			active_end: 50_u64,
+			claim_end: 70_u64,
+			initial_reward: Some(10),
+			max_reward: None,
+			take_fee_percentage: None,
+			reward_distribution: bounded_vec![50, 30, 10],
+			golden_duck_config: Default::default(),
+			max_players: 4,
+			ranker: MockRanker,
+		}
+	}
+}
+
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
@@ -296,6 +324,9 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type AccountManager = MockAccountManager;
 	type AssetManager = MockAssetManager;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
@@ -310,26 +341,32 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type AccountManager = MockAccountManager;
 	type AssetManager = MockAssetManager;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
+#[cfg(test)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
 }
 
+#[cfg(test)]
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			balances: vec![
-				(ALICE, 1_000),
-				(BOB, 1_000),
-				(CHARLIE, 1_000),
-				(EDWARD, 1_000),
-				(DAVE, 1_000),
+				(crate::tests::ALICE, 1_000),
+				(crate::tests::BOB, 1_000),
+				(crate::tests::CHARLIE, 1_000),
+				(crate::tests::EDWARD, 1_000),
+				(crate::tests::DAVE, 1_000),
 			],
 		}
 	}
 }
 
+#[cfg(test)]
 impl ExtBuilder {
 	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
 		self.balances = balances.to_vec();
@@ -348,6 +385,7 @@ impl ExtBuilder {
 	}
 }
 
+#[cfg(test)]
 pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		if System::block_number() > 1 {

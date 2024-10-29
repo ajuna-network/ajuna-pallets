@@ -2,6 +2,15 @@ use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::{bounded_vec, testing::H256};
 
+pub(crate) const CATEGORY_ID_1: MockCategoryId = 1;
+pub(crate) const CATEGORY_ID_2: MockCategoryId = 2;
+
+pub(crate) const ALICE: MockAccountId = MockAccountId::new([1; 32]);
+pub(crate) const BOB: MockAccountId = MockAccountId::new([2; 32]);
+pub(crate) const CHARLIE: MockAccountId = MockAccountId::new([3; 32]);
+pub(crate) const DAVE: MockAccountId = MockAccountId::new([4; 32]);
+pub(crate) const EDWARD: MockAccountId = MockAccountId::new([5; 32]);
+
 impl Default for TournamentConfig<BlockNumberFor<Test>, MockBalance, MockRanker> {
 	fn default() -> Self {
 		Self {

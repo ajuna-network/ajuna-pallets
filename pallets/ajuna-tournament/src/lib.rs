@@ -18,18 +18,22 @@
 
 pub use pallet::*;
 
-#[cfg(test)]
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+#[cfg(any(test, feature = "runtime-benchmarks"))]
 mod mock;
-
 #[cfg(test)]
 mod tests;
 
 pub mod account;
 pub mod config;
 pub mod traits;
+pub mod weights;
 
 use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
+
+use crate::weights::WeightInfo;
 
 use account::*;
 pub use config::*;
@@ -68,6 +72,48 @@ pub mod pallet {
 	pub(crate) type RewardClaimStateFor<T> = RewardClaimState<AccountIdFor<T>>;
 	pub(crate) type TournamentStateFor<T, I> = TournamentState<BalanceOf<T, I>>;
 	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<CategoryId, EntityId, BlockNumber, Balance, Ranker> {
+		fn create_category_id(id: u32) -> CategoryId;
+
+		fn create_entity_id(id: u32) -> EntityId;
+
+		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker>;
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<
+			CategoryId: From<u32>,
+			EntityId: From<u32>,
+			BlockNumber: From<u64>,
+			Balance: From<u64>,
+			Ranker: Default,
+		> BenchmarkHelper<CategoryId, EntityId, BlockNumber, Balance, Ranker> for ()
+	{
+		fn create_category_id(id: u32) -> CategoryId {
+			id.into()
+		}
+
+		fn create_entity_id(id: u32) -> EntityId {
+			id.into()
+		}
+
+		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker> {
+			TournamentConfig {
+				start: 20_u64.into(),
+				active_end: 40_u64.into(),
+				claim_end: 50_u64.into(),
+				initial_reward: None,
+				max_reward: None,
+				take_fee_percentage: None,
+				reward_distribution: Default::default(),
+				golden_duck_config: Default::default(),
+				max_players: 0,
+				ranker: Ranker::default(),
+			}
+		}
+	}
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -112,6 +158,17 @@ pub mod pallet {
 		/// Minimum duration of the tournament active and claim periods in blocks.
 		#[pallet::constant]
 		type MinimumTournamentPhaseDuration: Get<BlockNumberFor<Self>>;
+
+		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type BenchmarkHelper: BenchmarkHelper<
+			Self::TournamentCategoryId,
+			Self::EntityId,
+			BlockNumberFor<Self>,
+			BalanceOf<Self, I>,
+			Self::EntityRanker,
+		>;
 	}
 
 	#[pallet::storage]
@@ -302,7 +359,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		#[pallet::call_index(0)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::create_tournament())]
 		pub fn create_tournament(
 			origin: OriginFor<T>,
 			category_id: TournamentCategoryIdFor<T, I>,
@@ -317,7 +374,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::remove_latest_tournament())]
 		pub fn remove_latest_tournament(
 			origin: OriginFor<T>,
 			category_id: TournamentCategoryIdFor<T, I>,
@@ -329,7 +386,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::claim_tournament_reward_for())]
 		pub fn claim_tournament_reward_for(
 			origin: OriginFor<T>,
 			category_id: TournamentCategoryIdFor<T, I>,
@@ -342,7 +399,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(3)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::claim_golden_duck_for())]
 		pub fn claim_golden_duck_for(
 			origin: OriginFor<T>,
 			category_id: TournamentCategoryIdFor<T, I>,
