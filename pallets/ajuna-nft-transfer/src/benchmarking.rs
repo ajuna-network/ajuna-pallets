@@ -98,7 +98,7 @@ benchmarks! {
 		enable_fee_payment::<T>(&player);
 	}: _(RawOrigin::Signed(player), asset_id)
 	verify {
-		assert_last_event::<T>(Event::<T>::PreparedAvatar { asset_id })
+		assert_last_event::<T>(Event::<T>::PreparedAsset { asset_id })
 	}
 
 	unprepare_asset {
@@ -108,7 +108,7 @@ benchmarks! {
 		let _ = create_service_account_and_prepare_avatar::<T>(player.clone(), asset_id)?;
 	}: _(RawOrigin::Signed(player), asset_id)
 	verify {
-		assert_last_event::<T>(Event::<T>::UnpreparedAvatar { asset_id })
+		assert_last_event::<T>(Event::<T>::UnpreparedAsset { asset_id })
 	}
 
 	prepare_ipfs {
