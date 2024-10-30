@@ -1,6 +1,6 @@
 //! Generic example transition.
 //!
-//! The pattern here follows the generic style of frame, and is the easiest to integrate
+//! The pattern here follows the generic style of frame, and therefore is the easiest to integrate
 //! within frame. However, it is a bit harder to understand for downstream implementors.
 
 use crate::types::{consume_asset, Asset, AssetId, ExampleTransitionId};

@@ -149,6 +149,9 @@ impl SageApi for SageMock {
 
 	fn handle_fees(_balance: Self::Balance) -> Result<(), sage_api::Error> {
 		// this would be a call to our fee handler implementation
+		// This call will probably have more arguments, or there are multiple
+		// handle fee variants depending on what we will come up with in the
+		// fee manager.
 		todo!()
 	}
 }
