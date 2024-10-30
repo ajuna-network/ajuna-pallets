@@ -98,16 +98,17 @@ impl pallet_balances::Config for Test {
 	type RuntimeFreezeReason = ();
 }
 
+use example_transition::{
+	generic::ExampleTransitionGeneric,
+	types::{Asset, AssetId},
+};
+
+pub type ExampleTransitionSageCore = SageCore<MockAccountId, MockBalance, AssetId, Asset>;
+
 pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
-	type SageGameTransition =
-		example_transition::ExampleTransitionGeneric<MockAccountId, MockBalance>;
-	type SageApi = SageCore<
-		MockAccountId,
-		MockBalance,
-		example_transition::AssetId,
-		example_transition::Asset,
-	>;
+	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance>;
+	type SageApi = ExampleTransitionSageCore;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

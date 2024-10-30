@@ -61,22 +61,22 @@ impl<Balance, AccountId, AssetId, Asset: AssetT> SageApi
 	type Balance = Balance;
 	type AccountId = AccountId;
 
-	fn ensure_ownership(account: &Self::AccountId, asset: &Self::AssetId) -> Result<(), Error> {
+	fn ensure_ownership(_account: &Self::AccountId, _asset: &Self::AssetId) -> Result<(), Error> {
 		todo!()
 	}
 
 	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, Error>>(
-		asset: &Self::AssetId,
-		f: F,
+		_asset: &Self::AssetId,
+		_f: F,
 	) -> Result<R, Error> {
 		todo!()
 	}
 
-	fn transfer_ownership(asset: Self::AssetId, to: Self::AccountId) -> Result<(), Error> {
+	fn transfer_ownership(_asset: Self::AssetId, _to: Self::AccountId) -> Result<(), Error> {
 		todo!()
 	}
 
-	fn handle_fees(balance: Self::Balance) -> Result<(), Error> {
+	fn handle_fees(_balance: Self::Balance) -> Result<(), Error> {
 		todo!()
 	}
 }
