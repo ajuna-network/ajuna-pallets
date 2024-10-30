@@ -3,24 +3,27 @@
 //! These should be expanded to really showcase the power of the SageApi design.
 
 use crate::types::{consume_asset, Asset, AssetId, ExampleTransitionId};
-use sage_api::{rules::ensure_asset_length, traits::SageCore, SageApi, SageGameTransition};
+use sage_api::{rules::ensure_asset_length, traits::AccountIdOf, SageApi, SageGameTransition};
 use std::marker::PhantomData;
 
-pub struct ExampleTransitionGeneric<Balance, AccountId> {
-	phantom_data: PhantomData<(Balance, AccountId)>,
+pub struct ExampleTransitionGeneric<Balance, AccountId, SageApi> {
+	phantom_data: PhantomData<(Balance, AccountId, SageApi)>,
 }
 
-impl<Balance, AccountId> SageGameTransition for ExampleTransitionGeneric<Balance, AccountId> {
+impl<Balance, AccountId, Sage: SageApi<AssetId = AssetId, Asset = Asset>> SageGameTransition
+	for ExampleTransitionGeneric<Balance, AccountId, Sage>
+{
 	type AssetId = AssetId;
 	type Asset = Asset;
-	type SageApi = SageCore<Balance, AccountId, AssetId, Asset>;
+
+	type SageApi = Sage;
 
 	type TransitionId = ExampleTransitionId;
 	type Extra = ();
 
 	fn verify_rule(
 		transition_id: Self::TransitionId,
-		account: &AccountId,
+		account: &AccountIdOf<Self>,
 		asset_ids: &[Self::AssetId],
 		_extra: &Self::Extra,
 	) -> Result<(), sage_api::Error> {
@@ -29,7 +32,7 @@ impl<Balance, AccountId> SageGameTransition for ExampleTransitionGeneric<Balance
 
 	fn do_transition(
 		transition_id: Self::TransitionId,
-		account: AccountId,
+		account: AccountIdOf<Self>,
 		asset_ids: Vec<Self::AssetId>,
 		_extra: Self::Extra,
 	) -> Result<(), sage_api::Error> {

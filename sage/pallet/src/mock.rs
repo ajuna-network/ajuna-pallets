@@ -107,7 +107,8 @@ pub type ExampleTransitionSageCore = SageCore<MockAccountId, MockBalance, AssetI
 
 pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
-	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance>;
+	type SageGameTransition =
+		ExampleTransitionGeneric<MockAccountId, MockBalance, ExampleTransitionSageCore>;
 	type SageApi = ExampleTransitionSageCore;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
