@@ -11,8 +11,10 @@ pub struct ExampleTransitionGeneric<Balance, AccountId, SageApi> {
 	phantom_data: PhantomData<(Balance, AccountId, SageApi)>,
 }
 
-impl<Balance, AccountId, Sage: SageApi<AssetId = AssetId, Asset = Asset>> SageGameTransition
+impl<Balance, AccountId, Sage> SageGameTransition
 	for ExampleTransitionGeneric<Balance, AccountId, Sage>
+where
+	Sage: SageApi<AssetId = AssetId, Asset = Asset, Balance = Balance, AccountId = AccountId>,
 {
 	type AssetId = AssetId;
 	type Asset = Asset;
