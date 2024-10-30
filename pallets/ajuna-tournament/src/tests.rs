@@ -80,6 +80,306 @@ impl TournamentConfig<BlockNumberFor<Test>, MockBalance, MockRanker> {
 
 mod extrinsic {
 	use super::*;
+
+	#[test]
+	fn create_tournament_works() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30);
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			let expected_tournament_id = 0;
+			assert_ok!(TournamentAlpha::create_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				tournament_config.clone()
+			));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentCreated {
+					category_id: CATEGORY_ID_1,
+					tournament_id: expected_tournament_id,
+				},
+			));
+
+			assert_eq!(
+				Tournaments::<Test, Instance1>::get(CATEGORY_ID_1, expected_tournament_id),
+				Some(tournament_config)
+			);
+		});
+	}
+
+	#[test]
+	fn create_tournament_not_allowed_from_non_organizer() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30);
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			assert_noop!(
+				TournamentAlpha::create_tournament(
+					RuntimeOrigin::signed(BOB),
+					CATEGORY_ID_1,
+					tournament_config.clone()
+				),
+				DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
+			);
+		});
+	}
+
+	#[test]
+	fn remove_tournament_works() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30);
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			let expected_tournament_id = 0;
+			assert_ok!(TournamentAlpha::create_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				tournament_config.clone()
+			));
+
+			assert_eq!(
+				Tournaments::<Test, Instance1>::get(CATEGORY_ID_1, expected_tournament_id),
+				Some(tournament_config)
+			);
+
+			assert_ok!(TournamentAlpha::remove_latest_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+			));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::TournamentRemoved {
+					category_id: CATEGORY_ID_1,
+					tournament_id: expected_tournament_id,
+				},
+			));
+
+			assert_eq!(
+				Tournaments::<Test, Instance1>::get(CATEGORY_ID_1, expected_tournament_id),
+				None
+			);
+		});
+	}
+
+	#[test]
+	fn remove_tournament_not_allowed_from_non_organizer() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30);
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			let expected_tournament_id = 0;
+			assert_ok!(TournamentAlpha::create_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				tournament_config.clone()
+			));
+
+			assert_eq!(
+				Tournaments::<Test, Instance1>::get(CATEGORY_ID_1, expected_tournament_id),
+				Some(tournament_config)
+			);
+
+			assert_noop!(
+				TournamentAlpha::remove_latest_tournament(
+					RuntimeOrigin::signed(BOB),
+					CATEGORY_ID_1,
+				),
+				DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
+			);
+		});
+	}
+
+	#[test]
+	fn claim_tournament_reward_works() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30);
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			let expected_tournament_id = 0;
+			assert_ok!(TournamentAlpha::create_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				tournament_config.clone()
+			));
+
+			run_to_block(15);
+
+			let entity_id = H256::from_low_u64_be(7);
+			let entity = 10_u32;
+
+			MockAssetManager::add_asset(ALICE, entity_id, entity);
+
+			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+				&CATEGORY_ID_1,
+				&entity_id,
+				&entity,
+			));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::EntityEnteredRanking {
+					category_id: CATEGORY_ID_1,
+					tournament_id: expected_tournament_id,
+					entity_id,
+					rank: 0_u32,
+				},
+			));
+
+			run_to_block(20);
+
+			assert_ok!(TournamentAlpha::claim_tournament_reward_for(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				entity_id,
+			));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::RankingRewardClaimed {
+					category_id: CATEGORY_ID_1,
+					tournament_id: expected_tournament_id,
+					entity_id: H256::from_low_u64_be(7),
+					account: ALICE,
+				},
+			));
+		});
+	}
+
+	#[test]
+	fn claim_tournament_reward_fails_for_non_owned_entity() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30);
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			assert_ok!(TournamentAlpha::create_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				tournament_config.clone()
+			));
+
+			run_to_block(15);
+
+			let entity_id = H256::from_low_u64_be(7);
+			let entity = 10_u32;
+
+			MockAssetManager::add_asset(ALICE, entity_id, entity);
+
+			assert_ok!(TournamentAlpha::try_rank_entity_in_tournament_for(
+				&CATEGORY_ID_1,
+				&entity_id,
+				&entity,
+			));
+
+			run_to_block(20);
+
+			assert_noop!(
+				TournamentAlpha::claim_tournament_reward_for(
+					RuntimeOrigin::signed(BOB),
+					CATEGORY_ID_1,
+					entity_id,
+				),
+				DispatchError::Other(NOT_OWNER_ERR)
+			);
+		});
+	}
+
+	#[test]
+	fn claim_tournament_golden_duck_reward_works() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30)
+			.golden_duck_config(GoldenDuckConfig::Enabled(10));
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			let expected_tournament_id = 0;
+			assert_ok!(TournamentAlpha::create_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				tournament_config.clone()
+			));
+
+			run_to_block(15);
+
+			let entity_id = H256::from_low_u64_be(7);
+			let entity = 10_u32;
+
+			MockAssetManager::add_asset(ALICE, entity_id, entity);
+
+			assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+				&CATEGORY_ID_1,
+				&entity_id,
+			));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::EntityBecameGoldenDuck {
+					category_id: CATEGORY_ID_1,
+					tournament_id: expected_tournament_id,
+					entity_id,
+				},
+			));
+
+			run_to_block(20);
+
+			assert_ok!(TournamentAlpha::claim_golden_duck_for(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				entity_id,
+			));
+
+			System::assert_last_event(mock::RuntimeEvent::TournamentAlpha(
+				crate::Event::GoldenDuckRewardClaimed {
+					category_id: CATEGORY_ID_1,
+					tournament_id: expected_tournament_id,
+					entity_id: H256::from_low_u64_be(7),
+					account: ALICE,
+				},
+			));
+		});
+	}
+
+	#[test]
+	fn claim_tournament_golden_duck_reward_fails_for_non_owned_entity() {
+		let tournament_config = TournamentConfigFor::<Test, Instance1>::default()
+			.start(10)
+			.active_end(20)
+			.claim_end(30)
+			.golden_duck_config(GoldenDuckConfig::Enabled(10));
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			assert_ok!(TournamentAlpha::create_tournament(
+				RuntimeOrigin::signed(ALICE),
+				CATEGORY_ID_1,
+				tournament_config.clone()
+			));
+
+			run_to_block(15);
+
+			let entity_id = H256::from_low_u64_be(7);
+			let entity = 10_u32;
+
+			MockAssetManager::add_asset(ALICE, entity_id, entity);
+
+			assert_ok!(TournamentAlpha::try_rank_entity_for_golden_duck(
+				&CATEGORY_ID_1,
+				&entity_id,
+			));
+
+			run_to_block(20);
+
+			assert_noop!(
+				TournamentAlpha::claim_tournament_reward_for(
+					RuntimeOrigin::signed(BOB),
+					CATEGORY_ID_1,
+					entity_id,
+				),
+				DispatchError::Other(NOT_OWNER_ERR)
+			);
+		});
+	}
 }
 
 mod tournament_inspector {

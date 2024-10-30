@@ -74,28 +74,17 @@ pub mod pallet {
 	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<CategoryId, EntityId, BlockNumber, Balance, Ranker> {
+	pub trait BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker> {
 		fn create_category_id(id: u32) -> CategoryId;
-
-		fn create_entity_id(id: u32) -> EntityId;
 
 		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker>;
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	impl<
-			CategoryId: From<u32>,
-			EntityId: From<u32>,
-			BlockNumber: From<u64>,
-			Balance: From<u64>,
-			Ranker: Default,
-		> BenchmarkHelper<CategoryId, EntityId, BlockNumber, Balance, Ranker> for ()
+	impl<CategoryId: From<u32>, BlockNumber: From<u64>, Balance: From<u64>, Ranker: Default>
+		BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker> for ()
 	{
 		fn create_category_id(id: u32) -> CategoryId {
-			id.into()
-		}
-
-		fn create_entity_id(id: u32) -> EntityId {
 			id.into()
 		}
 
@@ -164,7 +153,6 @@ pub mod pallet {
 		#[cfg(feature = "runtime-benchmarks")]
 		type BenchmarkHelper: BenchmarkHelper<
 			Self::TournamentCategoryId,
-			Self::EntityId,
 			BlockNumberFor<Self>,
 			BalanceOf<Self, I>,
 			Self::EntityRanker,

@@ -90,12 +90,18 @@ impl<T: Config> AssetManager for Pallet<T> {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
+	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
 		benchmark_helper::create_avatars::<T>(owner.clone(), count).unwrap();
 
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_ids = Owners::<T>::get(owner, season_id);
+		let mut avatars = Vec::with_capacity(avatar_ids.len());
 
-		avatar_ids.into()
+		for avatar_id in avatar_ids.iter() {
+			let (_, avatar) = Avatars::<T>::get(avatar_id).unwrap();
+			avatars.push(avatar);
+		}
+
+		avatar_ids.into_iter().zip(avatars).collect()
 	}
 }

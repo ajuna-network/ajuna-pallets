@@ -19,13 +19,13 @@
 
 use crate::{
 	mock::{
-		Balances, MinimumTournamentPhaseDuration, MockAccountManager, MockAssetManager,
-		MockBalance, MockBlockNumber, MockCategoryId, MockEntity, MockEntityId, MockRanker,
-		RuntimeEvent, RuntimeOrigin, System, Test, TournamentBenchmarkHelper, TournamentPalletId1,
+		run_to_block, Balances, MinimumTournamentPhaseDuration, MockAccountManager,
+		MockAssetManager, MockCategoryId, MockEntity, MockEntityId, MockRanker, RuntimeEvent,
+		RuntimeOrigin, System, Test, TournamentBenchmarkHelper, TournamentPalletId1,
 	},
 	Pallet as Tournament, *,
 };
-use ajuna_primitives::account_manager::AccountManager;
+use ajuna_primitives::asset_manager::AssetManager;
 use frame_benchmarking::benchmarks_instance_pallet;
 use frame_system::RawOrigin;
 use sp_runtime::BuildStorage;
@@ -45,10 +45,14 @@ impl Config for Test {
 	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
-type MockTournamentConfig = TournamentConfig<MockBlockNumber, MockBalance, MockRanker>;
-
 const ACC_1: &str = "acc_1";
-const ACC_2: &str = "acc_2";
+
+fn create_owned_entity<T: Config<I>, I: 'static>(
+	account: T::AccountId,
+) -> (T::EntityId, T::RankedEntity) {
+	let mut assets = T::AssetManager::create_assets(account, 1);
+	assets.pop().unwrap()
+}
 
 fn account<T: Config<I>, I: 'static>(name: &'static str) -> T::AccountId {
 	let index = 0;
@@ -66,7 +70,7 @@ benchmarks_instance_pallet! {
 		let acc_1 = account::<T, I>(ACC_1);
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
-	}: _(RawOrigin::Signed(acc_1), category_id.clone(), tournament_config)
+	}: _(RawOrigin::Signed(acc_1), category_id, tournament_config)
 	verify {
 		assert_last_event::<T, I>(Event::TournamentCreated { category_id, tournament_id: 0 })
 	}
@@ -75,10 +79,42 @@ benchmarks_instance_pallet! {
 		let acc_1 = account::<T, I>(ACC_1);
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
-		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id.clone(), tournament_config)?;
-	}: _(RawOrigin::Signed(acc_1), category_id.clone())
+		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
+	}: _(RawOrigin::Signed(acc_1), category_id)
 	verify {
 		assert_last_event::<T, I>(Event::TournamentRemoved { category_id, tournament_id: 0 })
+	}
+
+	claim_tournament_reward_for {
+		let acc_1 = account::<T, I>(ACC_1);
+		let category_id = T::BenchmarkHelper::create_category_id(1);
+		let (entity_id, entity) = create_owned_entity::<T, I>(acc_1.clone());
+		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
+		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
+		run_to_block(20);
+		<Tournament<T, I> as TournamentRanker<T::TournamentCategoryId, T::RankedEntity, T::EntityId>>::try_rank_entity_in_tournament_for(
+			&category_id, &entity_id, &entity
+		)?;
+		run_to_block(60);
+	}: _(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone())
+	verify {
+		assert_last_event::<T, I>(Event::RankingRewardClaimed { category_id, tournament_id: 0, entity_id ,account: acc_1 })
+	}
+
+	claim_golden_duck_for {
+		let acc_1 = account::<T, I>(ACC_1);
+		let category_id = T::BenchmarkHelper::create_category_id(1);
+		let (entity_id, _) = create_owned_entity::<T, I>(acc_1.clone());
+		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
+		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
+		run_to_block(20);
+		<Tournament<T, I> as TournamentRanker<T::TournamentCategoryId, T::RankedEntity, T::EntityId>>::try_rank_entity_for_golden_duck(
+			&category_id, &entity_id
+		)?;
+		run_to_block(60);
+	}: _(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone())
+	verify {
+		assert_last_event::<T, I>(Event::GoldenDuckRewardClaimed { category_id, tournament_id: 0, entity_id ,account: acc_1 })
 	}
 
 	impl_benchmark_test_suite!(

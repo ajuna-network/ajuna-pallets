@@ -275,15 +275,18 @@ thread_local! {
 pub struct MockAssetManager;
 
 impl MockAssetManager {
-	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<ItemId> {
+	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<(ItemId, MockItem)> {
 		let mut ids = Vec::with_capacity(count as usize);
+		let mut items = Vec::with_capacity(count as usize);
 		for i in 0..count {
 			let id = ItemId::repeat_byte(i as u8);
+			let item = MockItem::new_with_field2(i);
 			ids.push(id);
-			Self::add_asset(owner, id, MockItem::new_with_field2(i))
+			items.push(item.clone());
+			Self::add_asset(owner, id, item)
 		}
 
-		ids
+		ids.into_iter().zip(items).collect()
 	}
 
 	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
@@ -392,7 +395,7 @@ impl AssetManager for MockAssetManager {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<Self::AssetId> {
+	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
 		Self::create_assets(owner, count)
 	}
 }

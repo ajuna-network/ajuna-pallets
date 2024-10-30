@@ -217,6 +217,26 @@ impl AccountManager for MockAccountManager {
 /// Hence, we implement our own little asset manager here.
 pub struct MockAssetManager;
 
+impl MockAssetManager {
+	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<(MockEntityId, MockEntity)> {
+		let mut ids = Vec::with_capacity(count as usize);
+		let mut items = Vec::with_capacity(count as usize);
+		for i in 0..count {
+			let id = MockEntityId::repeat_byte(i as u8);
+			ids.push(id);
+			items.push(i);
+			Self::add_asset(owner.clone(), id, i)
+		}
+
+		ids.into_iter().zip(items).collect()
+	}
+
+	pub fn add_asset(owner: MockAccountId, asset_id: MockEntityId, asset: MockEntity) {
+		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id));
+		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));
+	}
+}
+
 pub const NOT_OWNER_ERR: &str = "NOT_OWNER";
 
 impl AssetManager for MockAssetManager {
@@ -269,8 +289,8 @@ impl AssetManager for MockAssetManager {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(_owner: Self::AccountId, _count: u32) -> Vec<Self::AssetId> {
-		unimplemented!()
+	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
+		Self::create_assets(owner, count)
 	}
 }
 
@@ -284,15 +304,11 @@ parameter_types! {
 pub struct TournamentBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<MockCategoryId, MockEntityId, MockBlockNumber, MockBalance, MockRanker>
+impl BenchmarkHelper<MockCategoryId, MockBlockNumber, MockBalance, MockRanker>
 	for TournamentBenchmarkHelper
 {
 	fn create_category_id(id: u32) -> MockCategoryId {
 		id
-	}
-
-	fn create_entity_id(id: u32) -> MockEntityId {
-		H256::from_slice(&[id as u8; 32])
 	}
 
 	fn create_default_tournament_config(
@@ -304,8 +320,8 @@ impl BenchmarkHelper<MockCategoryId, MockEntityId, MockBlockNumber, MockBalance,
 			initial_reward: Some(10),
 			max_reward: None,
 			take_fee_percentage: None,
-			reward_distribution: bounded_vec![50, 30, 10],
-			golden_duck_config: Default::default(),
+			reward_distribution: bounded_vec![40, 30, 10],
+			golden_duck_config: GoldenDuckConfig::Enabled(10),
 			max_players: 4,
 			ranker: MockRanker,
 		}
@@ -349,6 +365,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 #[cfg(test)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
+	organizer: Option<MockAccountId>,
 }
 
 #[cfg(test)]
@@ -362,6 +379,7 @@ impl Default for ExtBuilder {
 				(crate::tests::EDWARD, 1_000),
 				(crate::tests::DAVE, 1_000),
 			],
+			organizer: None,
 		}
 	}
 }
@@ -373,6 +391,11 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn organizer(mut self, organizer: MockAccountId) -> Self {
+		self.organizer = Some(organizer);
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
@@ -381,21 +404,29 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			if let Some(account) = self.organizer {
+				MockAccountManager::set_organizer(account);
+			}
+		});
 		ext
 	}
 }
 
-#[cfg(test)]
 pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		if System::block_number() > 1 {
 			System::on_finalize(System::block_number());
 			TournamentAlpha::on_finalize(System::block_number());
 			TournamentBeta::on_finalize(System::block_number());
+			#[cfg(feature = "runtime-benchmarks")]
+			TournamentBench::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		TournamentAlpha::on_initialize(System::block_number());
 		TournamentBeta::on_initialize(System::block_number());
+		#[cfg(feature = "runtime-benchmarks")]
+		TournamentBench::on_initialize(System::block_number());
 	}
 }

@@ -20,6 +20,8 @@ use frame_support::{
 	traits::{ConstU16, ConstU64, Hooks},
 	PalletId,
 };
+use pallet_ajuna_tournament::{BenchmarkHelper, GoldenDuckConfig};
+use sp_core::bounded_vec;
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
 	testing::TestSignature,
@@ -172,6 +174,34 @@ parameter_types! {
 	pub const MinimumTournamentPhaseDuration: MockBlockNumber = 100;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct TournamentBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<SeasonId, MockBlockNumber, MockBalance, AvatarRankerFor<Test>>
+	for TournamentBenchmarkHelper
+{
+	fn create_category_id(id: u32) -> SeasonId {
+		id as SeasonId
+	}
+
+	fn create_default_tournament_config(
+	) -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
+		TournamentConfig {
+			start: 20_u64,
+			active_end: 50_u64,
+			claim_end: 70_u64,
+			initial_reward: Some(10),
+			max_reward: None,
+			take_fee_percentage: None,
+			reward_distribution: bounded_vec![40, 30, 10],
+			golden_duck_config: GoldenDuckConfig::Enabled(10),
+			max_players: 4,
+			ranker: AvatarRankerFor::<Test>::default(),
+		}
+	}
+}
+
 pub(crate) type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
@@ -184,6 +214,9 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type AccountManager = AAvatars;
 	type AssetManager = AAvatars;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
 pub struct ExtBuilder {
