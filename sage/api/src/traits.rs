@@ -1,10 +1,7 @@
-use crate::Error;
-use ajuna_primitives::runtime_types::{AccountId, Balance};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::traits::Member;
 use sp_std::vec::Vec;
-use std::marker::PhantomData;
 
 /// The aggregated trait that the `SageEngine` implements such that it can access all features of
 /// our pallets.
@@ -30,55 +27,6 @@ pub trait SageApi {
 	) -> Result<R, crate::Error>;
 	fn transfer_ownership(asset: Self::AssetId, to: Self::AccountId) -> Result<(), crate::Error>;
 	fn handle_fees(balance: Self::Balance) -> Result<(), crate::Error>;
-}
-
-pub trait SageApiConcrete {
-	type AssetId;
-
-	type Asset: AssetT;
-
-	fn ensure_ownership(account: AccountId, asset: &Self::AssetId) -> Result<(), crate::Error>;
-
-	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, crate::Error>>(
-		asset: &Self::AssetId,
-		f: F,
-	) -> Result<R, crate::Error>;
-	fn transfer_ownership(asset: Self::AssetId, to: AccountId) -> Result<(), crate::Error>;
-	fn handle_fees(balance: Balance) -> Result<(), crate::Error>;
-}
-
-pub type AjunaSageCore<AssetId, Asset> = SageCore<Balance, AccountId, AssetId, Asset>;
-
-pub struct SageCore<Balance, AccountId, AssetId, Asset> {
-	_phantom: PhantomData<(Balance, AccountId, AssetId, Asset)>,
-}
-
-impl<Balance, AccountId, AssetId, Asset: AssetT> SageApi
-	for SageCore<Balance, AccountId, AssetId, Asset>
-{
-	type AssetId = AssetId;
-	type Asset = Asset;
-	type Balance = Balance;
-	type AccountId = AccountId;
-
-	fn ensure_ownership(_account: &Self::AccountId, _asset: &Self::AssetId) -> Result<(), Error> {
-		todo!()
-	}
-
-	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, Error>>(
-		_asset: &Self::AssetId,
-		_f: F,
-	) -> Result<R, Error> {
-		todo!()
-	}
-
-	fn transfer_ownership(_asset: Self::AssetId, _to: Self::AccountId) -> Result<(), Error> {
-		todo!()
-	}
-
-	fn handle_fees(_balance: Self::Balance) -> Result<(), Error> {
-		todo!()
-	}
 }
 
 pub trait AssetT {

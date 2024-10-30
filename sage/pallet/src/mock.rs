@@ -19,7 +19,6 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-use sage_api::traits::SageCore;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -102,14 +101,62 @@ use example_transition::{
 	generic::ExampleTransitionGeneric,
 	types::{Asset, AssetId},
 };
+use sage_api::SageApi;
 
-pub type ExampleTransitionSageCore = SageCore<MockAccountId, MockBalance, AssetId, Asset>;
+pub struct SageMock;
+
+/// For now we implement this manually for every game so that we can delegate the
+/// call to the instance of the account manager etc. corresponding to the game this is
+/// implemented for.
+///
+/// Later we can hopefully do a blanket implementation for a struct that will automatically
+/// implement the sage api that looks like this:
+///
+/// ```rust
+/// pub type ExampleGameSage = SageCore<AssetManager, FeeManager>;
+/// ```
+/// `ExampleGameSage` will then automatically implement `SageApi` if the `AssetManager` and
+/// `FeeManager` implement their corresponding traits.
+impl SageApi for SageMock {
+	type AssetId = AssetId;
+	type Asset = Asset;
+	type Balance = MockBalance;
+	type AccountId = MockAccountId;
+
+	fn ensure_ownership(
+		_account: &Self::AccountId,
+		_asset: &Self::AssetId,
+	) -> Result<(), sage_api::Error> {
+		// this would be a call to our asset manager implementation
+		todo!()
+	}
+
+	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, sage_api::Error>>(
+		_asset: &Self::AssetId,
+		_f: F,
+	) -> Result<R, sage_api::Error> {
+		// this would be a call to our asset manager implementation
+		todo!()
+	}
+
+	fn transfer_ownership(
+		_asset: Self::AssetId,
+		_to: Self::AccountId,
+	) -> Result<(), sage_api::Error> {
+		// this would be a call to our asset manager implementation
+		todo!()
+	}
+
+	fn handle_fees(_balance: Self::Balance) -> Result<(), sage_api::Error> {
+		// this would be a call to our fee handler implementation
+		todo!()
+	}
+}
 
 pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
-	type SageGameTransition =
-		ExampleTransitionGeneric<MockAccountId, MockBalance, ExampleTransitionSageCore>;
-	type SageApi = ExampleTransitionSageCore;
+	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance, SageMock>;
+	type SageApi = SageMock;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
