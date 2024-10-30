@@ -1,6 +1,7 @@
-//! Some example transitions.
+//! Generic example transition.
 //!
-//! These should be expanded to really showcase the power of the SageApi design.
+//! The pattern here follows the generic style of frame, and is the easiest to integrate
+//! within frame. However, it is a bit harder to understand for downstream implementors.
 
 use crate::types::{consume_asset, Asset, AssetId, ExampleTransitionId};
 use sage_api::{rules::ensure_asset_length, traits::AccountIdOf, SageApi, SageGameTransition};

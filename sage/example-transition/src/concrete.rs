@@ -1,6 +1,8 @@
-//! Some example transitions.
+//! An example transition that uses the concrete types of our Ajuna runtime.
 //!
-//! These should be expanded to really showcase the power of the SageApi design.
+//! This is done to make the life of our downstream implementors a bit easier.
+//!
+//! However, this forces us to use the same types in our mock runtimes for tests.
 
 use crate::types::{consume_asset, Asset, AssetId, ExampleTransitionId};
 use sage_api::{rules::ensure_asset_length, AccountId, Balance, SageApi, SageGameTransition};
