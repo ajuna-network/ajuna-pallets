@@ -20,7 +20,6 @@ use frame_support::{
 	traits::{ConstU16, ConstU64, Hooks},
 	PalletId,
 };
-use pallet_ajuna_tournament::{BenchmarkHelper, GoldenDuckConfig};
 use sp_core::bounded_vec;
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
@@ -178,8 +177,13 @@ parameter_types! {
 pub struct TournamentBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<SeasonId, MockBlockNumber, MockBalance, AvatarRankerFor<Test>>
-	for TournamentBenchmarkHelper
+impl
+	pallet_ajuna_tournament::BenchmarkHelper<
+		SeasonId,
+		MockBlockNumber,
+		MockBalance,
+		AvatarRankerFor<Test>,
+	> for TournamentBenchmarkHelper
 {
 	fn create_category_id(id: u32) -> SeasonId {
 		id as SeasonId
@@ -195,7 +199,7 @@ impl BenchmarkHelper<SeasonId, MockBlockNumber, MockBalance, AvatarRankerFor<Tes
 			max_reward: None,
 			take_fee_percentage: None,
 			reward_distribution: bounded_vec![40, 30, 10],
-			golden_duck_config: GoldenDuckConfig::Enabled(10),
+			golden_duck_config: pallet_ajuna_tournament::GoldenDuckConfig::Enabled(10),
 			max_players: 4,
 			ranker: AvatarRankerFor::<Test>::default(),
 		}
