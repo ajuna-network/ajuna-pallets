@@ -4,7 +4,11 @@
 
 use frame_support::sp_runtime::testing::H256;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sage_api::{rules::ensure_asset_length, AssetT, SageApi, SageGameTransition};
+use sage_api::{
+	rules::ensure_asset_length,
+	traits::{AccountIdOf, AjunaSageCore, SageCore},
+	AccountId, AssetT, Balance, SageApi, SageGameTransition,
+};
 use scale_info::TypeInfo;
 use std::marker::PhantomData;
 
@@ -77,49 +81,64 @@ pub enum ExampleTransitionId {
 	ConsumeAsset,
 }
 
-pub struct ExampleTransition<AccountId, Balance> {
-	_phantom: PhantomData<(Balance, AccountId)>,
+pub struct ExampleTransitionGeneric<Balance, AccountId> {
+	phantom_data: PhantomData<(Balance, AccountId)>,
 }
 
-impl<AccountId, Balance> SageGameTransition for ExampleTransition<AccountId, Balance> {
+impl<Balance, AccountId> SageGameTransition for ExampleTransitionGeneric<Balance, AccountId> {
 	type AssetId = AssetId;
 	type Asset = Asset;
-	type AccountId = AccountId;
-	type Balance = Balance;
+	type SageApi = SageCore<Balance, AccountId, AssetId, Asset>;
 
 	type TransitionId = ExampleTransitionId;
 	type Extra = ();
 
-	fn verify_rule<
-		Sage: SageApi<
-			AssetId = Self::AssetId,
-			Asset = Self::Asset,
-			AccountId = Self::AccountId,
-			Balance = Self::Balance,
-		>,
-	>(
+	fn verify_rule(
 		transition_id: Self::TransitionId,
-		account: &Self::AccountId,
+		account: &AccountId,
 		asset_ids: &[Self::AssetId],
 		_extra: &Self::Extra,
 	) -> Result<(), sage_api::Error> {
-		verify_transition_rule::<Sage>(transition_id, account, asset_ids)
+		verify_transition_rule::<Self::SageApi>(transition_id, account, asset_ids)
 	}
 
-	fn do_transition<
-		Sage: SageApi<
-			AssetId = Self::AssetId,
-			Asset = Self::Asset,
-			AccountId = Self::AccountId,
-			Balance = Self::Balance,
-		>,
-	>(
+	fn do_transition(
 		transition_id: Self::TransitionId,
-		account: Self::AccountId,
+		account: AccountId,
 		asset_ids: Vec<Self::AssetId>,
 		_extra: Self::Extra,
 	) -> Result<(), sage_api::Error> {
-		transition::<Sage>(transition_id, account, asset_ids)
+		transition::<Self::SageApi>(transition_id, account, asset_ids)
+	}
+}
+
+pub struct ExampleTransition;
+pub type ExampleTransitionSageCore = AjunaSageCore<AssetId, Asset>;
+
+impl SageGameTransition for ExampleTransition {
+	type AssetId = AssetId;
+	type Asset = Asset;
+	type SageApi = ExampleTransitionSageCore;
+
+	type TransitionId = ExampleTransitionId;
+	type Extra = ();
+
+	fn verify_rule(
+		transition_id: Self::TransitionId,
+		account: &AccountId,
+		asset_ids: &[Self::AssetId],
+		_extra: &Self::Extra,
+	) -> Result<(), sage_api::Error> {
+		verify_transition_rule::<Self::SageApi>(transition_id, account, asset_ids)
+	}
+
+	fn do_transition(
+		transition_id: Self::TransitionId,
+		account: AccountId,
+		asset_ids: Vec<Self::AssetId>,
+		_extra: Self::Extra,
+	) -> Result<(), sage_api::Error> {
+		transition::<Self::SageApi>(transition_id, account, asset_ids)
 	}
 }
 

@@ -47,10 +47,10 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-		type SageGameTransition: SageGameTransition<
-			AccountId = AccountIdOf<Self>,
-			Balance = BalanceOf<Self, I>,
-		>;
+		type SageGameTransition: SageGameTransition<SageApi = Self::SageApi>;
+
+		// This associated type mostly exists to constraint the SageApi's associated types.
+		type SageApi: SageApi<Balance = BalanceOf<Self, I>, AccountId = AccountIdOf<Self>>;
 
 		type Currency: Currency<AccountIdOf<Self>>;
 
@@ -96,15 +96,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			T::SageGameTransition::verify_rule::<Self>(
-				transition_id.clone(),
-				&sender,
-				&asset_ids,
-				&extra,
-			)
-			.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
+			T::SageGameTransition::verify_rule(transition_id.clone(), &sender, &asset_ids, &extra)
+				.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
 
-			T::SageGameTransition::do_transition::<Self>(
+			T::SageGameTransition::do_transition(
 				transition_id.clone(),
 				sender.clone(),
 				asset_ids,

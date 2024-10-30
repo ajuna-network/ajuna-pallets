@@ -12,7 +12,7 @@ parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len
 scale-info         = { workspace = true, features = [ "derive" ] }
 
 # Substrate frame
-frame-support = { workspace = true}
+frame-support = { workspace = true }
 
 [features]
 std = [

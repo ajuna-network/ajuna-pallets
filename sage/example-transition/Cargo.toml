@@ -18,6 +18,7 @@ scale-info         = { workspace = true, features = [ "derive" ] }
 sage-api = { workspace = true}
 
 [features]
+default = ["std"]
 std = [
     "frame-support/std",
     "sp-std/std",

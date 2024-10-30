@@ -19,6 +19,7 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
+use sage_api::traits::SageCore;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -99,7 +100,14 @@ impl pallet_balances::Config for Test {
 
 pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
-	type SageGameTransition = example_transition::ExampleTransition<MockAccountId, MockBalance>;
+	type SageGameTransition =
+		example_transition::ExampleTransitionGeneric<MockAccountId, MockBalance>;
+	type SageApi = SageCore<
+		MockAccountId,
+		MockBalance,
+		example_transition::AssetId,
+		example_transition::Asset,
+	>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

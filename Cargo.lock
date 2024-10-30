@@ -2486,6 +2486,7 @@ dependencies = [
 name = "sage-api"
 version = "0.13.0"
 dependencies = [
+ "ajuna-primitives",
  "frame-support",
  "parity-scale-codec",
  "scale-info",
