@@ -26,7 +26,7 @@ pub enum GoldenDuckConfig {
 
 /// Describes the configuration of a given tournament
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
-pub struct TournamentConfig<BlockNumber, Balance> {
+pub struct TournamentConfig<BlockNumber, Balance, Ranker> {
 	/// Block in which the tournament starts.
 	pub start: BlockNumber,
 	/// Block in which the tournament finishes.
@@ -46,13 +46,14 @@ pub struct TournamentConfig<BlockNumber, Balance> {
 	pub golden_duck_config: GoldenDuckConfig,
 	/// Maximum amount of players that can be ranked in the tournament
 	pub max_players: u32,
+	pub ranker: Ranker,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
-pub enum TournamentScheduledAction<SeasonId> {
-	StartActivePhase(SeasonId, TournamentId),
-	SwitchToClaimPhase(SeasonId, TournamentId),
-	EndClaimPhase(SeasonId, TournamentId),
+pub enum TournamentScheduledAction<CategoryId> {
+	StartActivePhase(CategoryId, TournamentId),
+	SwitchToClaimPhase(CategoryId, TournamentId),
+	EndClaimPhase(CategoryId, TournamentId),
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]

@@ -127,7 +127,7 @@ mod store_prepared_as_nft {
 			.execute_with(|| {
 				// setup
 				MockAccountManager::set_organizer(ALICE);
-				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 
 				let collection_id = create_collection(ALICE);
@@ -161,7 +161,7 @@ mod store_prepared_as_nft {
 	#[test]
 	fn store_prepared_as_nft_rejects_unowned_assets() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				NftTransfer::store_prepared_as_nft(RuntimeOrigin::signed(BOB), asset_id),
 				DispatchError::Other(NOT_OWNER_ERR)
@@ -172,7 +172,7 @@ mod store_prepared_as_nft {
 	#[test]
 	fn store_prepared_as_nft_rejects_if_no_collection_id_set() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				NftTransfer::store_prepared_as_nft(RuntimeOrigin::signed(ALICE), asset_id),
 				Error::<Test>::CollectionIdNotSet
@@ -184,7 +184,7 @@ mod store_prepared_as_nft {
 	fn store_prepared_as_nft_rejects_unprepared_asset() {
 		ExtBuilder::default().build().execute_with(|| {
 			let collection_id = 369;
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_ok!(NftTransfer::set_collection_id(RuntimeOrigin::signed(ALICE), collection_id));
 			assert_noop!(
 				NftTransfer::store_prepared_as_nft(RuntimeOrigin::signed(ALICE), asset_id),
@@ -210,7 +210,7 @@ mod recover_asset_from_nft {
 			.execute_with(|| {
 				// setup
 				MockAccountManager::set_organizer(ALICE);
-				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 
 				let collection_id = create_collection(ALICE);
@@ -257,7 +257,7 @@ mod recover_asset_from_nft {
 			.build()
 			.execute_with(|| {
 				// preparation
-				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 
 				assert_noop!(
 					NftTransfer::recover_asset_from_nft(RuntimeOrigin::signed(ALICE), asset_id),
@@ -281,7 +281,7 @@ mod prepare_asset {
 			.balances(&[(ALICE, initial_balance)])
 			.build()
 			.execute_with(|| {
-				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_eq!(Balances::free_balance(ALICE), initial_balance);
 				assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
@@ -296,7 +296,7 @@ mod prepare_asset {
 	#[test]
 	fn prepare_asset_rejects_unsigned_calls() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				NftTransfer::prepare_asset(RuntimeOrigin::none(), asset_id),
 				DispatchError::BadOrigin
@@ -307,7 +307,7 @@ mod prepare_asset {
 	#[test]
 	fn prepare_asset_rejects_unowned_assets() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				NftTransfer::prepare_asset(RuntimeOrigin::signed(BOB), asset_id),
 				DispatchError::Other(NOT_OWNER_ERR)
@@ -318,7 +318,7 @@ mod prepare_asset {
 	#[test]
 	fn prepare_asset_rejects_when_closed() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			MockAssetManager::set_nft_transfer_open(false);
 			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
 			assert_noop!(
@@ -331,7 +331,7 @@ mod prepare_asset {
 	#[test]
 	fn prepare_asset_rejects_locked_assets() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			MockAssetManager::lock_asset(<Test as Config>::PalletId::get().0, ALICE, asset_id)
 				.unwrap();
 			assert_noop!(
@@ -344,7 +344,7 @@ mod prepare_asset {
 	#[test]
 	fn prepare_asset_rejects_already_prepared_assets() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			let ipfs_url = IpfsUrl::try_from(Vec::new()).unwrap();
 			Preparation::<Test>::insert(asset_id, ipfs_url);
 			assert_noop!(
@@ -360,7 +360,7 @@ mod prepare_asset {
 			.balances(&[(ALICE, MockExistentialDeposit::get()), (BOB, 999_999)])
 			.build()
 			.execute_with(|| {
-				let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+				let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_noop!(
 					NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
@@ -377,7 +377,7 @@ mod unprepare_asset {
 	#[test]
 	fn unprepare_asset_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 			assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
 			assert_ok!(NftTransfer::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
@@ -401,7 +401,7 @@ mod unprepare_asset {
 	#[test]
 	fn unprepare_asset_rejects_unowned_assets() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				NftTransfer::unprepare_asset(RuntimeOrigin::signed(BOB), asset_id),
 				DispatchError::Other(NOT_OWNER_ERR)
@@ -412,7 +412,7 @@ mod unprepare_asset {
 	#[test]
 	fn unprepare_asset_rejects_when_closed() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			MockAssetManager::set_nft_transfer_open(false);
 			assert_noop!(
 				NftTransfer::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
@@ -424,7 +424,7 @@ mod unprepare_asset {
 	#[test]
 	fn unprepare_asset_rejects_unprepared_assets() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_noop!(
 				NftTransfer::unprepare_asset(RuntimeOrigin::signed(ALICE), asset_id),
 				Error::<Test>::AssetUnprepared
@@ -440,7 +440,7 @@ mod prepare_ipfs {
 	#[test]
 	fn prepare_ipfs_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 			assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
 			ServiceAccount::<Test>::put(BOB);
@@ -476,7 +476,7 @@ mod prepare_ipfs {
 	fn prepare_ipfs_rejects_when_closed() {
 		ExtBuilder::default().build().execute_with(|| {
 			MockAssetManager::set_nft_transfer_open(false);
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 
 			assert_noop!(
@@ -493,7 +493,7 @@ mod prepare_ipfs {
 	#[test]
 	fn prepare_ipfs_rejects_unprepared_asset() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 			assert_noop!(
 				NftTransfer::prepare_ipfs(RuntimeOrigin::signed(BOB), asset_id, IpfsUrl::default()),
@@ -505,7 +505,7 @@ mod prepare_ipfs {
 	#[test]
 	fn prepare_ipfs_rejects_empty_url() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = MockAssetManager::create_assets(ALICE, 1)[0];
+			let (asset_id, _) = MockAssetManager::create_assets(ALICE, 1)[0];
 			assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), ALICE));
 			assert_ok!(NftTransfer::prepare_asset(RuntimeOrigin::signed(ALICE), asset_id));
 

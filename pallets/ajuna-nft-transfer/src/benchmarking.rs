@@ -45,6 +45,9 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 
 fn create_assets<T: Config>(owner: T::AccountId, count: u32) -> Vec<ItemIdOf<T>> {
 	T::AssetManager::create_assets(owner, count)
+		.into_iter()
+		.map(|(asset_id, _)| asset_id)
+		.collect()
 }
 
 fn create_service_account<T: Config>() -> T::AccountId {

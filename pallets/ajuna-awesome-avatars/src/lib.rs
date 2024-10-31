@@ -86,7 +86,7 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{AffiliateInspector, AffiliateMutator, RuleInspector};
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
-	traits::{TournamentClaimer, TournamentInspector, TournamentMutator, TournamentRanker},
+	traits::{TournamentInspector, TournamentRanker},
 };
 use sp_runtime::{
 	traits::{
@@ -101,7 +101,7 @@ use sp_std::prelude::*;
 pub mod pallet {
 	use super::*;
 	use pallet_ajuna_affiliates::traits::RuleExecutor;
-	use pallet_ajuna_tournament::{Percentage, TournamentId};
+	use pallet_ajuna_tournament::Percentage;
 	use sp_std::collections::vec_deque::VecDeque;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -114,7 +114,8 @@ pub mod pallet {
 	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>, BalanceOf<T>>;
 	pub type FeePropagationOf<T> = FeePropagation<<T as Config>::FeeChainMaxLength>;
 	pub type AvatarRankerFor<T> = AvatarRanker<AvatarIdOf<T>, BlockNumberFor<T>>;
-	pub type TournamentConfigFor<T> = TournamentConfig<BlockNumberFor<T>, BalanceOf<T>>;
+	pub type TournamentConfigFor<T> =
+		TournamentConfig<BlockNumberFor<T>, BalanceOf<T>, AvatarRankerFor<T>>;
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
@@ -149,10 +150,13 @@ pub mod pallet {
 			+ RuleInspector<AffiliateMethods, FeePropagationOf<Self>>
 			+ RuleExecutor<AffiliateMethods, FeePropagationOf<Self>>;
 
-		type TournamentHandler: TournamentInspector<SeasonId, BlockNumberFor<Self>, BalanceOf<Self>, AccountIdFor<Self>>
-			+ TournamentMutator<AccountIdFor<Self>, SeasonId, BlockNumberFor<Self>, BalanceOf<Self>>
-			+ TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>
-			+ TournamentClaimer<SeasonId, AccountIdFor<Self>, AvatarIdOf<Self>>;
+		type TournamentHandler: TournamentInspector<
+				SeasonId,
+				BlockNumberFor<Self>,
+				BalanceOf<Self>,
+				AccountIdFor<Self>,
+				AvatarRankerFor<Self>,
+			> + TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -249,18 +253,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Trade<T: Config> =
 		StorageDoubleMap<_, Identity, SeasonId, Identity, AvatarIdOf<T>, BalanceOf<T>, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn rankers)]
-	pub type TournamentRankers<T: Config> = StorageDoubleMap<
-		_,
-		Identity,
-		SeasonId,
-		Identity,
-		TournamentId,
-		AvatarRankerFor<T>,
-		OptionQuery,
-	>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -1225,60 +1217,6 @@ pub mod pallet {
 			Self::deposit_event(Event::UpdatedUnlockConfigs { season_id, unlock_configs });
 			Ok(())
 		}
-
-		#[pallet::call_index(21)]
-		#[pallet::weight({10_000})]
-		pub fn create_tournament(
-			origin: OriginFor<T>,
-			season_id: SeasonId,
-			config: TournamentConfigFor<T>,
-			with_ranker: AvatarRankerFor<T>,
-		) -> DispatchResult {
-			let organizer = Self::ensure_organizer(origin)?;
-			let tournament_id = T::TournamentHandler::try_create_new_tournament_for(
-				&organizer, &season_id, config,
-			)?;
-
-			TournamentRankers::<T>::insert(season_id, tournament_id, with_ranker);
-
-			Ok(())
-		}
-
-		#[pallet::call_index(22)]
-		#[pallet::weight({10_000})]
-		pub fn remove_latest_tournament(
-			origin: OriginFor<T>,
-			season_id: SeasonId,
-		) -> DispatchResult {
-			let _ = Self::ensure_organizer(origin)?;
-			T::TournamentHandler::try_remove_latest_tournament_for(&season_id)
-		}
-
-		#[pallet::call_index(23)]
-		#[pallet::weight({10_000})]
-		pub fn claim_tournament_reward_for(
-			origin: OriginFor<T>,
-			season_id: SeasonId,
-			avatar_id: AvatarIdOf<T>,
-		) -> DispatchResult {
-			let account = ensure_signed(origin)?;
-			Self::ensure_ownership(&account, &avatar_id)?;
-
-			T::TournamentHandler::try_claim_tournament_reward_for(&season_id, &account, &avatar_id)
-		}
-
-		#[pallet::call_index(24)]
-		#[pallet::weight({10_000})]
-		pub fn claim_golden_duck_for(
-			origin: OriginFor<T>,
-			season_id: SeasonId,
-			avatar_id: AvatarIdOf<T>,
-		) -> DispatchResult {
-			let account = ensure_signed(origin)?;
-			Self::ensure_ownership(&account, &avatar_id)?;
-
-			T::TournamentHandler::try_claim_golden_duck_for(&season_id, &account, &avatar_id)
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1702,7 +1640,7 @@ pub mod pallet {
 						// If the leader avatar has turned into a Legendary avatar and
 						// the tournament is in its active phase then we try to rank it
 						if is_tournament_in_active_period {
-							if let Some((tournament_id, config)) =
+							if let Some((_, config)) =
 								T::TournamentHandler::get_active_tournament_config_for(season_id)
 							{
 								let sacrifices_are_in_bounds =
@@ -1715,12 +1653,8 @@ pub mod pallet {
 									input_leader.1.minted_at <= config.active_end;
 
 								if sacrifices_are_in_bounds && leader_in_bounds {
-									let ranker =
-										TournamentRankers::<T>::get(season_id, tournament_id)
-											.ok_or(Error::<T>::TournamentRankerNotFound)?;
-
 									T::TournamentHandler::try_rank_entity_in_tournament_for(
-										season_id, &leader_id, &leader, &ranker,
+										season_id, &leader_id, &leader,
 									)?;
 								}
 							}

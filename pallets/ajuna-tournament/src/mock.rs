@@ -15,19 +15,30 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_tournament, *};
+use ajuna_primitives::{
+	account_manager::{AccountManager, WhitelistKey},
+	asset_manager::{AssetManager, Lock},
+};
 use frame_support::{
-	pallet_prelude::Hooks,
 	parameter_types,
-	traits::{ConstU16, ConstU64},
+	traits::{ConstU16, ConstU64, LockIdentifier},
 	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+#[cfg(test)]
+use sp_runtime::BuildStorage;
+
 use sp_runtime::{
+	bounded_vec,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
+	MultiSignature,
 };
-use std::cmp::Ordering;
+use sp_std::{
+	cell::RefCell,
+	cmp::Ordering,
+	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+};
 
 pub type MockSignature = MultiSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -36,15 +47,6 @@ pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 pub type MockBlockNumber = BlockNumberFor<Test>;
 
-pub const ALICE: MockAccountId = MockAccountId::new([1; 32]);
-pub const BOB: MockAccountId = MockAccountId::new([2; 32]);
-pub const CHARLIE: MockAccountId = MockAccountId::new([3; 32]);
-pub const DAVE: MockAccountId = MockAccountId::new([4; 32]);
-pub const EDWARD: MockAccountId = MockAccountId::new([5; 32]);
-
-pub const SEASON_ID_1: MockSeasonId = 1;
-pub const SEASON_ID_2: MockSeasonId = 2;
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
@@ -52,6 +54,8 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances = 1,
 		TournamentAlpha: pallet_ajuna_tournament::<Instance1> = 2,
 		TournamentBeta: pallet_ajuna_tournament::<Instance2> = 3,
+		#[cfg(feature = "runtime-benchmarks")]
+		TournamentBench: pallet_ajuna_tournament = 4,
 	}
 );
 
@@ -107,10 +111,11 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 }
 
-pub type MockSeasonId = u32;
+pub type MockCategoryId = u32;
 pub type MockEntityId = H256;
 pub type MockEntity = u32;
 
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
 pub struct MockRanker;
 
 impl EntityRank for MockRanker {
@@ -134,10 +139,193 @@ impl EntityRank for MockRanker {
 	}
 }
 
+thread_local! {
+	pub static WHITELISTED_ACCOUNTS: RefCell<BTreeMap<WhitelistKey ,BTreeSet<MockAccountId>>> = RefCell::new(BTreeMap::new());
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
+	pub static ASSETS: RefCell<BTreeMap<MockEntityId, MockEntity>> = RefCell::new(BTreeMap::new());
+	pub static OWNERS: RefCell<BTreeMap<MockAccountId, MockEntityId>> = RefCell::new(BTreeMap::new());
+}
+
+pub struct MockAccountManager;
+
+pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
+pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
+
+impl MockAccountManager {
+	pub(crate) fn try_add_to_whitelist(
+		identifier: &WhitelistKey,
+		account: &MockAccountId,
+	) -> Result<(), DispatchError> {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.insert(account.clone());
+				Ok(())
+			} else {
+				Err(DispatchError::Other("No account set for identifier"))
+			}
+		})
+	}
+
+	pub(crate) fn set_organizer(owner: MockAccountId) {
+		ORGANIZER.with(|maybe_account| {
+			*maybe_account.borrow_mut() = Some(owner);
+		});
+	}
+}
+
+impl AccountManager for MockAccountManager {
+	type AccountId = MockAccountId;
+
+	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		ORGANIZER.with(|maybe_account| {
+			if let Some(organizer) = maybe_account.borrow().as_ref() {
+				ensure!(organizer == account, DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER));
+				Ok(())
+			} else {
+				Err(DispatchError::Other(NO_ORGANIZER_SET))
+			}
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(owner: Self::AccountId) {
+		MockAccountManager::set_organizer(owner);
+	}
+
+	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.contains(account)
+			} else {
+				false
+			}
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_set_whitelisted_for(
+		identifier: &WhitelistKey,
+		account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		Self::try_add_to_whitelist(identifier, account)
+	}
+}
+
+/// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this
+/// pallet is too loaded and requires many dependencies.
+///
+/// Hence, we implement our own little asset manager here.
+pub struct MockAssetManager;
+
+impl MockAssetManager {
+	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<(MockEntityId, MockEntity)> {
+		let mut ids = Vec::with_capacity(count as usize);
+		let mut items = Vec::with_capacity(count as usize);
+		for i in 0..count {
+			let id = MockEntityId::repeat_byte(i as u8);
+			ids.push(id);
+			items.push(i);
+			Self::add_asset(owner.clone(), id, i)
+		}
+
+		ids.into_iter().zip(items).collect()
+	}
+
+	pub fn add_asset(owner: MockAccountId, asset_id: MockEntityId, asset: MockEntity) {
+		OWNERS.with(|owners| owners.borrow_mut().insert(owner, asset_id));
+		ASSETS.with(|assets| assets.borrow_mut().insert(asset_id, asset));
+	}
+}
+
+pub const NOT_OWNER_ERR: &str = "NOT_OWNER";
+
+impl AssetManager for MockAssetManager {
+	type AccountId = MockAccountId;
+	type AssetId = MockEntityId;
+	type Asset = MockEntity;
+
+	fn ensure_ownership(
+		owner: &Self::AccountId,
+		_asset_id: &Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		let id = OWNERS
+			.with(|owners| owners.borrow().get(owner).cloned())
+			.ok_or(DispatchError::Other(NOT_OWNER_ERR))?;
+		ASSETS
+			.with(|assets| assets.borrow().get(&id).cloned())
+			.ok_or(DispatchError::Other(NOT_OWNER_ERR))
+	}
+
+	fn lock_asset(
+		_lock_id: LockIdentifier,
+		_owner: Self::AccountId,
+		_asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		unimplemented!()
+	}
+
+	fn unlock_asset(
+		_lock_id: LockIdentifier,
+		_owner: Self::AccountId,
+		_asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		unimplemented!()
+	}
+
+	fn is_locked(_asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
+		unimplemented!()
+	}
+
+	fn nft_transfer_open() -> bool {
+		unimplemented!()
+	}
+
+	fn handle_asset_prepare_fee(
+		_asset: &Self::Asset,
+		_from: &Self::AccountId,
+		_fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		unimplemented!()
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
+		Self::create_assets(owner, count)
+	}
+}
+
 parameter_types! {
 	pub const TournamentPalletId1: PalletId = PalletId(*b"aj/trmt1");
 	pub const TournamentPalletId2: PalletId = PalletId(*b"aj/trmt2");
 	pub const MinimumTournamentPhaseDuration: MockBlockNumber = 2;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct TournamentBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<MockCategoryId, MockBlockNumber, MockBalance, MockRanker>
+	for TournamentBenchmarkHelper
+{
+	fn create_category_id(id: u32) -> MockCategoryId {
+		id
+	}
+
+	fn create_default_tournament_config(
+	) -> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
+		TournamentConfig {
+			start: 20_u64,
+			active_end: 50_u64,
+			claim_end: 70_u64,
+			initial_reward: Some(10),
+			max_reward: None,
+			take_fee_percentage: None,
+			reward_distribution: bounded_vec![40, 30, 10],
+			golden_duck_config: GoldenDuckConfig::Enabled(10),
+			max_players: 4,
+			ranker: MockRanker,
+		}
+	}
 }
 
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
@@ -145,10 +333,16 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type SeasonId = MockSeasonId;
+	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
+	type EntityRanker = MockRanker;
+	type AccountManager = MockAccountManager;
+	type AssetManager = MockAssetManager;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
@@ -156,33 +350,49 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type PalletId = TournamentPalletId2;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type SeasonId = MockSeasonId;
+	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;
 	type RankedEntity = MockEntity;
+	type EntityRanker = MockRanker;
+	type AccountManager = MockAccountManager;
+	type AssetManager = MockAssetManager;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
+#[cfg(test)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
+	organizer: Option<MockAccountId>,
 }
 
+#[cfg(test)]
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			balances: vec![
-				(ALICE, 1_000),
-				(BOB, 1_000),
-				(CHARLIE, 1_000),
-				(EDWARD, 1_000),
-				(DAVE, 1_000),
+				(crate::tests::ALICE, 1_000),
+				(crate::tests::BOB, 1_000),
+				(crate::tests::CHARLIE, 1_000),
+				(crate::tests::EDWARD, 1_000),
+				(crate::tests::DAVE, 1_000),
 			],
+			organizer: None,
 		}
 	}
 }
 
+#[cfg(test)]
 impl ExtBuilder {
 	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
 		self.balances = balances.to_vec();
+		self
+	}
+
+	pub fn organizer(mut self, organizer: MockAccountId) -> Self {
+		self.organizer = Some(organizer);
 		self
 	}
 
@@ -194,6 +404,11 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			if let Some(account) = self.organizer {
+				MockAccountManager::set_organizer(account);
+			}
+		});
 		ext
 	}
 }
@@ -204,10 +419,14 @@ pub fn run_to_block(n: u64) {
 			System::on_finalize(System::block_number());
 			TournamentAlpha::on_finalize(System::block_number());
 			TournamentBeta::on_finalize(System::block_number());
+			#[cfg(feature = "runtime-benchmarks")]
+			TournamentBench::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		TournamentAlpha::on_initialize(System::block_number());
 		TournamentBeta::on_initialize(System::block_number());
+		#[cfg(feature = "runtime-benchmarks")]
+		TournamentBench::on_initialize(System::block_number());
 	}
 }

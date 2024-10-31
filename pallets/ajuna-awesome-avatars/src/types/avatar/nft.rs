@@ -106,12 +106,9 @@ mod tests {
 		},
 		Avatar, DnaEncoding, Force, RarityTier,
 	};
-	use frame_support::{
-		__private::Get,
-		pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
-	};
+	use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 	use pallet_ajuna_nft_transfer::traits::NftConvertible;
-	use sp_core::bounded_vec;
+	use sp_core::{bounded_vec, Get};
 
 	type TestAvatar = Avatar<u64>;
 
