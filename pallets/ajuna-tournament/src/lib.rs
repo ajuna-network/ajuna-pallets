@@ -295,6 +295,8 @@ pub mod pallet {
 	pub enum Error<T, I = ()> {
 		/// There's no active tournament for the selected category.
 		NoActiveTournamentForCategory,
+		/// The current tournament is active, so it cannot be removed.
+		CannotRemoveActiveTournament,
 		/// The current tournament is not in its reward claim period.
 		TournamentNotInClaimPeriod,
 		/// The latest tournament for the selected category identifier already started,
@@ -818,7 +820,7 @@ pub mod pallet {
 							Err(Error::<T, I>::TournamentNotFound.into())
 						}
 					}),
-				_ => Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
+				_ => Err(Error::<T, I>::CannotRemoveActiveTournament.into()),
 			}
 		}
 	}
