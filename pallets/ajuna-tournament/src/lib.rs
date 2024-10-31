@@ -930,17 +930,7 @@ pub mod pallet {
 			account: &AccountIdFor<T>,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
-			ensure!(
-				matches!(
-					Self::get_active_tournament_state_for(category_id),
-					TournamentState::ClaimPeriod(_, _)
-				),
-				Error::<T, I>::TournamentNotInClaimPeriod
-			);
-
 			match ActiveTournaments::<T, I>::get(category_id) {
-				TournamentState::ActivePeriod(_) =>
-					Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 				TournamentState::ClaimPeriod(tournament_id, reward_pot) => {
 					let index = TournamentRankings::<T, I>::get(category_id, tournament_id)
 						.iter()
@@ -994,7 +984,7 @@ pub mod pallet {
 						},
 					)
 				},
-				_ => Err(Error::<T, I>::NoActiveTournamentForCategory.into()),
+				_ => Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 			}
 		}
 
@@ -1003,17 +993,7 @@ pub mod pallet {
 			account: &AccountIdFor<T>,
 			entity_id: &T::EntityId,
 		) -> DispatchResult {
-			ensure!(
-				matches!(
-					Self::get_active_tournament_state_for(category_id),
-					TournamentState::ClaimPeriod(_, _)
-				),
-				Error::<T, I>::TournamentNotInClaimPeriod
-			);
-
 			match ActiveTournaments::<T, I>::get(category_id) {
-				TournamentState::ActivePeriod(_) =>
-					Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 				TournamentState::ClaimPeriod(tournament_id, reward_pot) =>
 					match GoldenDucks::<T, I>::get(category_id, tournament_id) {
 						GoldenDuckState::Enabled(payout_percentage, Some(ref winner_id))
@@ -1056,7 +1036,7 @@ pub mod pallet {
 							),
 						_ => Err(Error::<T, I>::GoldenDuckCandidateNotWinner.into()),
 					},
-				_ => Err(Error::<T, I>::NoActiveTournamentForCategory.into()),
+				_ => Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 			}
 		}
 	}
