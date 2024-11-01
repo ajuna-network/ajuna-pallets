@@ -76,6 +76,7 @@ use crate::{types::*, weights::WeightInfo};
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
+	fee_handler::FeeHandler,
 };
 use frame_support::{
 	pallet_prelude::*,
@@ -117,6 +118,10 @@ pub mod pallet {
 	pub type TournamentConfigFor<T> =
 		TournamentConfig<BlockNumberFor<T>, BalanceOf<T>, AvatarRankerFor<T>>;
 
+	pub(crate) type AffiliateFeeBalanceOf<T> = BalanceOf<T>;
+	pub(crate) type TournamentFeeBalanceOf<T> = BalanceOf<T>;
+	pub(crate) type FeeHandlerBalanceOf<T> = (AffiliateFeeBalanceOf<T>, TournamentFeeBalanceOf<T>);
+
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
@@ -157,6 +162,12 @@ pub mod pallet {
 				AccountIdFor<Self>,
 				AvatarRankerFor<Self>,
 			> + TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>;
+
+		type FeeHandler: FeeHandler<
+			AccountId = AccountIdFor<Self>,
+			FeeIdentifier = (AffiliateMethods, SeasonId),
+			FeeCurrency = FeeHandlerBalanceOf<Self>,
+		>;
 
 		type WeightInfo: WeightInfo;
 	}

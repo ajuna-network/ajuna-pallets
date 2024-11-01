@@ -19,9 +19,9 @@
 
 use crate::{
 	mock::{
-		AffiliateBenchmarkHelper, AffiliateMaxLevel, AffiliateWhitelistKey, MockAccountManager,
-		MockAffiliateRules, MockRuleId, MockRuntimeRule, MockUnlockParameter, RuntimeEvent, System,
-		Test,
+		AffiliateBenchmarkHelper, AffiliateMaxLevel, AffiliateWhitelistKey, Balances,
+		MockAccountManager, MockAffiliateRules, MockRuleId, MockRuntimeRule, MockUnlockParameter,
+		RuntimeEvent, System, Test,
 	},
 	Pallet as Affiliates, *,
 };
@@ -32,6 +32,7 @@ use sp_runtime::BuildStorage;
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;

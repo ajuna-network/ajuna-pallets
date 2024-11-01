@@ -120,6 +120,7 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
+	type FeeHandler = (Affiliates, Tournament);
 	type WeightInfo = ();
 }
 
@@ -156,6 +157,7 @@ impl
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = AAvatars;
 	type RuleIdentifier = AffiliateMethods;

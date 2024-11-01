@@ -26,6 +26,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
+pub mod impls;
 pub mod traits;
 pub mod weights;
 
@@ -40,8 +41,12 @@ use traits::*;
 pub mod pallet {
 	use super::*;
 	use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
+	use frame_support::traits::Currency;
 	use sp_runtime::ArithmeticError;
 	use sp_std::vec::Vec;
+
+	pub(crate) type BalanceOf<T, I> =
+		<<T as Config<I>>::Currency as Currency<AccountIdFor<T>>>::Balance;
 
 	pub type AffiliatedAccountsOf<T, I> =
 		BoundedVec<<T as frame_system::Config>::AccountId, <T as Config<I>>::AffiliateMaxLevel>;
@@ -87,6 +92,8 @@ pub mod pallet {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self, I>>
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		type Currency: Currency<Self::AccountId>;
 
 		#[pallet::constant]
 		type WhitelistKey: Get<WhitelistKey>;
