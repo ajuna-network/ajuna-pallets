@@ -825,7 +825,7 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "example-transition"
-version = "0.13.0"
+version = "0.15.0"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -2007,7 +2007,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-sage"
-version = "0.13.0"
+version = "0.15.0"
 dependencies = [
  "example-transition",
  "frame-support",
@@ -2484,7 +2484,7 @@ dependencies = [
 
 [[package]]
 name = "sage-api"
-version = "0.13.0"
+version = "0.15.0"
 dependencies = [
  "ajuna-primitives",
  "frame-support",
