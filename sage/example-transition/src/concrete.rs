@@ -12,9 +12,15 @@ pub struct ExampleTransition<SageApi> {
 	_phantom: PhantomData<SageApi>,
 }
 
+// Constrain the generic Sage Api to our concrete types
+pub trait ExampleTransitionSage:
+	SageApi<Balance = Balance, AccountId = AccountId, AssetId = AssetId, Asset = Asset>
+{
+}
+
 impl<Sage> SageGameTransition for ExampleTransition<Sage>
 where
-	Sage: SageApi<Balance = Balance, AccountId = AccountId, AssetId = AssetId, Asset = Asset>,
+	Sage: ExampleTransitionSage,
 {
 	type AssetId = AssetId;
 	type Asset = Asset;
@@ -44,9 +50,7 @@ where
 }
 
 /// Verifies a transition rule with a given transition id.
-pub fn verify_transition_rule<
-	Sage: SageApi<Balance = Balance, AccountId = AccountId, AssetId = AssetId, Asset = Asset>,
->(
+pub fn verify_transition_rule<Sage: ExampleTransitionSage>(
 	transition_id: ExampleTransitionId,
 	account: &AccountId,
 	assets: &[AssetId],
@@ -66,9 +70,7 @@ pub fn verify_transition_rule<
 }
 
 /// Executes a transition with a given transition id.
-pub fn transition<
-	Sage: SageApi<Balance = Balance, AccountId = AccountId, AssetId = AssetId, Asset = Asset>,
->(
+pub fn transition<Sage: ExampleTransitionSage>(
 	transition_id: ExampleTransitionId,
 	_account: AccountId,
 	asset_ids: Vec<AssetId>,
