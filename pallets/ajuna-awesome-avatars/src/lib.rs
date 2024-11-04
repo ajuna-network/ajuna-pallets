@@ -742,7 +742,11 @@ pub mod pallet {
 				);
 
 				if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
-					Self::try_propagate_chain_fee(AffiliateMethods::Buy, &buyer, base_fee)?
+					T::FeeHandler::try_propagate_chain_fee(
+						base_fee,
+						&buyer,
+						&AffiliateMethods::Buy,
+					)?
 				} else {
 					base_fee
 				}
@@ -806,10 +810,10 @@ pub mod pallet {
 				if affiliate_config.mode == AffiliateMode::Open &&
 					affiliate_config.enabled_in_upgrade
 				{
-					Self::try_propagate_chain_fee(
-						AffiliateMethods::UpgradeStorage,
-						&caller,
+					T::FeeHandler::try_propagate_chain_fee(
 						base_fee,
+						&caller,
+						&AffiliateMethods::UpgradeStorage,
 					)?
 				} else {
 					base_fee
@@ -1312,27 +1316,21 @@ pub mod pallet {
 					let mint_fee = {
 						let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
 
-						let updated_fee =
-							match T::TournamentHandler::get_active_tournament_config_for(&season_id)
-							{
-								Some((
-									_,
-									TournamentConfig {
-										take_fee_percentage: Some(fee_perc), ..
-									},
-								)) if is_tournament_in_active_period => Self::try_propagate_tournament_fee(
-									&season_id, player, fee_perc, base_fee,
-								)?,
-								_ => base_fee,
-							};
+						let updated_fee = if is_tournament_in_active_period {
+							T::FeeHandler::try_propagate_tournament_fee(
+								base_fee, player, &season_id,
+							)?
+						} else {
+							base_fee
+						};
 
 						if affiliate_config.mode == AffiliateMode::Open &&
 							affiliate_config.enabled_in_mint
 						{
-							Self::try_propagate_chain_fee(
-								AffiliateMethods::Mint,
-								player,
+							T::FeeHandler::try_propagate_chain_fee(
 								updated_fee,
+								player,
+								&AffiliateMethods::Mint,
 							)?
 						} else {
 							updated_fee
@@ -1890,58 +1888,6 @@ pub mod pallet {
 			let season_schedule =
 				SeasonSchedules::<T>::get(season_id).ok_or(Error::<T>::UnknownSeason)?;
 			Ok(season_schedule)
-		}
-
-		fn try_propagate_tournament_fee(
-			season_id: &SeasonId,
-			account: &T::AccountId,
-			percentage: Percentage,
-			base_fee: BalanceOf<T>,
-		) -> Result<BalanceOf<T>, DispatchError> {
-			let tournament_fee = base_fee
-				.saturating_mul(percentage.into())
-				.checked_div(&100_u32.into())
-				.unwrap_or_default();
-
-			if tournament_fee > 0_u32.into() {
-				let tournament_account = T::TournamentHandler::get_treasury_account_for(season_id);
-
-				T::Currency::transfer(account, &tournament_account, tournament_fee, AllowDeath)?;
-				Ok(base_fee.saturating_sub(tournament_fee))
-			} else {
-				Ok(base_fee)
-			}
-		}
-
-		fn try_propagate_chain_fee(
-			rule_id: AffiliateMethods,
-			account: &T::AccountId,
-			base_fee: BalanceOf<T>,
-		) -> Result<BalanceOf<T>, DispatchError> {
-			let final_fee = if let Some(chain) =
-				T::AffiliateHandler::get_affiliator_chain_for(account)
-			{
-				T::AffiliateHandler::try_execute_rule_for(rule_id, |rule| {
-					let mut final_fee = base_fee;
-					for (rule_perc, chain_acc) in rule.into_iter().zip(chain.clone()) {
-						let transfer_fee = base_fee
-							.saturating_mul(rule_perc.into())
-							.checked_div(&100_u32.into())
-							.unwrap_or_default();
-
-						if transfer_fee > 0_u32.into() {
-							T::Currency::transfer(account, &chain_acc, transfer_fee, AllowDeath)?;
-							final_fee = final_fee.saturating_sub(transfer_fee);
-						}
-					}
-
-					Ok(final_fee)
-				})?
-			} else {
-				base_fee
-			};
-
-			Ok(final_fee)
 		}
 
 		pub(crate) fn evaluate_unlock_state(
