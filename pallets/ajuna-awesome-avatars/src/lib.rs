@@ -113,14 +113,9 @@ pub mod pallet {
 	pub type AvatarOf<T> = Avatar<BlockNumberFor<T>>;
 	pub(crate) type BoundedAvatarIdsOf<T> = BoundedVec<AvatarIdOf<T>, MaxAvatarsPerPlayer>;
 	pub(crate) type GlobalConfigOf<T> = GlobalConfig<BlockNumberFor<T>, BalanceOf<T>>;
-	pub type FeePropagationOf<T> = FeePropagation<<T as Config>::FeeChainMaxLength>;
 	pub type AvatarRankerFor<T> = AvatarRanker<AvatarIdOf<T>, BlockNumberFor<T>>;
 	pub type TournamentConfigFor<T> =
 		TournamentConfig<BlockNumberFor<T>, BalanceOf<T>, AvatarRankerFor<T>>;
-
-	pub(crate) type AffiliateFeeBalanceOf<T> = BalanceOf<T>;
-	pub(crate) type TournamentFeeBalanceOf<T> = BalanceOf<T>;
-	pub(crate) type FeeHandlerBalanceOf<T> = (AffiliateFeeBalanceOf<T>, TournamentFeeBalanceOf<T>);
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
@@ -152,8 +147,8 @@ pub mod pallet {
 
 		type AffiliateHandler: AffiliateInspector<AccountIdFor<Self>>
 			+ AffiliateMutator<AccountIdFor<Self>>
-			+ RuleInspector<AffiliateMethods, FeePropagationOf<Self>>
-			+ RuleExecutor<AffiliateMethods, FeePropagationOf<Self>>;
+			+ RuleInspector<AffiliateMethods, Self::FeeChainMaxLength>
+			+ RuleExecutor<AffiliateMethods, Self::FeeChainMaxLength>;
 
 		type TournamentHandler: TournamentInspector<
 				SeasonId,
@@ -165,8 +160,9 @@ pub mod pallet {
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
-			FeeIdentifier = (AffiliateMethods, SeasonId),
-			FeeCurrency = FeeHandlerBalanceOf<Self>,
+			FeeCurrency = BalanceOf<Self>,
+			AffiliateFeeIdentifier = AffiliateMethods,
+			TournamentFeeIdentifier = SeasonId,
 		>;
 
 		type WeightInfo: WeightInfo;

@@ -20,8 +20,8 @@
 use crate::{
 	mock::{
 		AffiliateBenchmarkHelper, AffiliateMaxLevel, AffiliateWhitelistKey, Balances,
-		MockAccountManager, MockAffiliateRules, MockRuleId, MockRuntimeRule, MockUnlockParameter,
-		RuntimeEvent, System, Test,
+		MockAccountManager, MockAffiliateRules, MockRuleId, MockUnlockParameter, RuntimeEvent,
+		System, Test,
 	},
 	Pallet as Affiliates, *,
 };
@@ -36,7 +36,6 @@ impl Config for Test {
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 	type UnlockParameters = MockUnlockParameter;
 	type AffiliatesUnlockRules = MockAffiliateRules;
@@ -121,7 +120,7 @@ benchmarks_instance_pallet! {
 	set_rule_for {
 		let acc_1 = account::<T, I>(ACC_1);
 		let rule_id = T::BenchmarkHelper::create_rule_id(1);
-		let rule = T::BenchmarkHelper::create_rule(1);
+		let rule = FeePropagationOf::<T,I>::try_from(vec![60, 20]).expect("Should create fee propagation");
 	}: _(RawOrigin::Signed(acc_1.clone()), rule_id.clone(), rule)
 	verify {
 		assert_last_event::<T, I>(Event::RuleAdded { rule_id })
@@ -130,8 +129,8 @@ benchmarks_instance_pallet! {
 	clear_rule_for {
 		let acc_1 = account::<T, I>(ACC_1);
 		let rule_id = T::BenchmarkHelper::create_rule_id(1);
-		let rule = T::BenchmarkHelper::create_rule(1);
-		<Affiliates<T, I> as RuleMutator<RuleIdentifierFor<T, I>, RuntimeRuleFor<T, I>>>::try_add_rule_for(
+		let rule = FeePropagationOf::<T,I>::try_from(vec![70, 15]).expect("Should create fee propagation");
+		<Affiliates<T, I> as RuleMutator<RuleIdentifierFor<T, I>, T::AffiliateMaxLevel>>::try_add_rule_for(
 			rule_id.clone(), rule
 		).expect("Should be able to add rule");
 	}: _(RawOrigin::Signed(acc_1.clone()), rule_id.clone())

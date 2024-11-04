@@ -192,8 +192,8 @@ mod extrinsic {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
-				let rule =
-					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				let rule = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+					.expect("Should create fee propagation");
 				assert_ok!(AffiliatesAlpha::set_rule_for(
 					RuntimeOrigin::signed(ALICE),
 					0,
@@ -216,8 +216,8 @@ mod extrinsic {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
-				let rule =
-					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				let rule = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+					.expect("Should create fee propagation");
 				assert_noop!(
 					AffiliatesAlpha::set_rule_for(RuntimeOrigin::signed(BOB), 0, rule.clone()),
 					DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
@@ -233,8 +233,8 @@ mod extrinsic {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
-				let rule =
-					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				let rule = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+					.expect("Should create fee propagation");
 				assert_ok!(AffiliatesAlpha::set_rule_for(
 					RuntimeOrigin::signed(ALICE),
 					1,
@@ -257,8 +257,8 @@ mod extrinsic {
 			.organizer(ALICE)
 			.build()
 			.execute_with(|| {
-				let rule =
-					MockRuntimeRule::try_from(vec![10, 20]).expect("Should create fee propagation");
+				let rule = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+					.expect("Should create fee propagation");
 				assert_ok!(AffiliatesAlpha::set_rule_for(
 					RuntimeOrigin::signed(ALICE),
 					1,
@@ -280,10 +280,11 @@ mod add_rule {
 	fn add_rule_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
 			let rule_id = 0;
-			let rule = MockRuntimeRule::default();
+			let rule = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+				.expect("Should create fee propagation");
 
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id,
 					rule.clone()
 				)
@@ -301,13 +302,15 @@ mod add_rule {
 	fn add_multiple_rules_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
 			let rule_id_1 = 0;
-			let rule_1 = MockRuntimeRule::try_from(vec![1, 1]).expect("Create MockRuntimeRule");
+			let rule_1 = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+				.expect("Should create fee propagation");
 
 			let rule_id_2 = 1;
-			let rule_2 = MockRuntimeRule::try_from(vec![2, 2]).expect("Create MockRuntimeRule");
+			let rule_2 = FeePropagationOf::<Test, Instance1>::try_from(vec![50, 10])
+				.expect("Should create fee propagation");
 
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id_1,
 					rule_1.clone()
 				)
@@ -317,7 +320,7 @@ mod add_rule {
 			));
 
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id_2,
 					rule_2.clone()
 				)
@@ -335,16 +338,18 @@ mod add_rule {
 	fn cannot_add_rule_to_already_marked_extrinsic() {
 		ExtBuilder::default().build().execute_with(|| {
 			let rule_id = 0;
-			let rule = MockRuntimeRule::default();
+			let rule_1 = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+				.expect("Should create fee propagation");
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
-					rule_id, rule
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
+					rule_id, rule_1
 				)
 			);
 
-			let rule_2 = MockRuntimeRule::default();
+			let rule_2 = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+				.expect("Should create fee propagation");
 			assert_noop!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id, rule_2
 				),
 				Error::<Test, Instance1>::ExtrinsicAlreadyHasRule
@@ -360,10 +365,11 @@ mod clear_rule {
 	fn clear_rule_should_work() {
 		ExtBuilder::default().build().execute_with(|| {
 			let rule_id = 0;
-			let rule = MockRuntimeRule::default();
+			let rule = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+				.expect("Should create fee propagation");
 
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id,
 					rule.clone()
 				)
@@ -375,7 +381,9 @@ mod clear_rule {
 
 			assert_eq!(AffiliateRules::<Test, Instance1>::get(rule_id), Some(rule));
 
-			<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::clear_rule_for(rule_id);
+			<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::clear_rule_for(
+				rule_id,
+			);
 
 			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
 				crate::Event::RuleCleared { rule_id },
@@ -390,7 +398,9 @@ mod clear_rule {
 		ExtBuilder::default().build().execute_with(|| {
 			let rule_id = 0;
 
-			<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::clear_rule_for(rule_id);
+			<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::clear_rule_for(
+				rule_id,
+			);
 
 			System::assert_last_event(mock::RuntimeEvent::AffiliatesAlpha(
 				crate::Event::RuleCleared { rule_id },
@@ -404,19 +414,21 @@ mod clear_rule {
 	fn clear_rule_only_affects_selected_rule() {
 		ExtBuilder::default().build().execute_with(|| {
 			let rule_id_1 = 0;
-			let rule_1 = MockRuntimeRule::try_from(vec![1, 1]).expect("Create MockRuntimeRule");
+			let rule_1 = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+				.expect("Should create fee propagation");
 
 			let rule_id_2 = 1;
-			let rule_2 = MockRuntimeRule::try_from(vec![2, 2]).expect("Create MockRuntimeRule");
+			let rule_2 = FeePropagationOf::<Test, Instance1>::try_from(vec![40, 10])
+				.expect("Should create fee propagation");
 
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id_1,
 					rule_1.clone()
 				)
 			);
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id_2,
 					rule_2.clone()
 				)
@@ -425,7 +437,7 @@ mod clear_rule {
 			assert_eq!(AffiliateRules::<Test, Instance1>::get(rule_id_1), Some(rule_1.clone()));
 			assert_eq!(AffiliateRules::<Test, Instance1>::get(rule_id_2), Some(rule_2));
 
-			<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::clear_rule_for(
+			<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::clear_rule_for(
 				rule_id_2,
 			);
 
@@ -986,10 +998,11 @@ mod multi_instance_tests {
 	fn rule_in_one_instance_doesnt_affect_other_instance() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000_000)]).build().execute_with(|| {
 			let rule_id = 0;
-			let rule = MockRuntimeRule::default();
+			let rule = FeePropagationOf::<Test, Instance1>::try_from(vec![30, 20])
+				.expect("Should create fee propagation");
 
 			assert_ok!(
-				<AffiliatesAlpha as RuleMutator<MockRuleId, MockRuntimeRule>>::try_add_rule_for(
+				<AffiliatesAlpha as RuleMutator<MockRuleId, AffiliateMaxLevel>>::try_add_rule_for(
 					rule_id,
 					rule.clone()
 				)
@@ -1004,7 +1017,7 @@ mod multi_instance_tests {
 			// But not on Instance2
 			assert_eq!(AffiliateRules::<Test, Instance2>::get(rule_id), None);
 
-			<AffiliatesBeta as RuleMutator<MockRuleId, MockRuntimeRule>>::clear_rule_for(rule_id);
+			<AffiliatesBeta as RuleMutator<MockRuleId, AffiliateMaxLevel>>::clear_rule_for(rule_id);
 
 			// The rule remains in Instance1
 			assert_eq!(AffiliateRules::<Test, Instance1>::get(rule_id), Some(rule));

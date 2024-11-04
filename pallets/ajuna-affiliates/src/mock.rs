@@ -24,10 +24,9 @@ use frame_support::{
 use sp_runtime::BuildStorage;
 use sp_runtime::{
 	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
-	BoundedVec, DispatchError,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	DispatchError,
 };
-
 use sp_std::{
 	cell::RefCell,
 	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
@@ -182,21 +181,14 @@ impl AccountManager for MockAccountManager {
 }
 
 pub type MockRuleId = u8;
-pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub struct AffiliateBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<MockRuleId, MockRuntimeRule, MockUnlockParameter>
-	for AffiliateBenchmarkHelper
-{
+impl BenchmarkHelper<MockRuleId, MockUnlockParameter> for AffiliateBenchmarkHelper {
 	fn create_rule_id(id: u32) -> MockRuleId {
 		id as u8
-	}
-
-	fn create_rule(id: u32) -> MockRuntimeRule {
-		MockRuntimeRule::try_from(vec![id as u8]).expect("Should convert rule to mock runtime rule")
 	}
 
 	fn create_params(id: u32) -> MockUnlockParameter {
@@ -230,7 +222,6 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 	type UnlockParameters = MockUnlockParameter;
 	type AffiliatesUnlockRules = MockAffiliateRules;
@@ -246,7 +237,6 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
 	type RuleIdentifier = MockRuleId;
-	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 	type UnlockParameters = MockUnlockParameter;
 	type AffiliatesUnlockRules = MockAffiliateRules;

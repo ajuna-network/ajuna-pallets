@@ -1,62 +1,109 @@
+use frame_support::{
+	pallet_prelude::DispatchError,
+	sp_runtime::Saturating,
+	traits::{Currency, ExistenceRequirement::AllowDeath},
+	Parameter,
+};
 use std::marker::PhantomData;
 
-pub trait FeeHandler {
+pub trait FeeProvider {
 	type AccountId;
 	type FeeIdentifier;
 	type FeeCurrency;
+	type FeeOutput;
 
-	fn get_fee(account: &Self::AccountId, identifier: &Self::FeeIdentifier) -> Self::FeeCurrency;
+	fn get_fee_from(
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
+		identifier: &Self::FeeIdentifier,
+	) -> Self::FeeOutput;
 }
 
-impl<AccountId, Currency, T, Tid, U, Uid> FeeHandler for (T, U)
+pub trait FeeHandler {
+	type AccountId;
+	type FeeCurrency;
+	type AffiliateFeeIdentifier;
+	type TournamentFeeIdentifier;
+
+	fn try_propagate_chain_fee(
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
+		identifier: &Self::AffiliateFeeIdentifier,
+	) -> Result<Self::FeeCurrency, DispatchError>;
+
+	fn try_propagate_tournament_fee(
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
+		identifier: &Self::TournamentFeeIdentifier,
+	) -> Result<Self::FeeCurrency, DispatchError>;
+
+	fn deposit_fee_into_treasury(fee: Self::FeeCurrency) -> Result<(), DispatchError>;
+}
+
+pub struct GameFeeHandler<AccountId, Currency, Affiliate, Tournament> {
+	_phantom: PhantomData<(AccountId, Currency, Affiliate, Tournament)>,
+}
+
+impl<AccountId, CurrencyHandler, Affiliate, Aid, Tournament, Tid> FeeHandler
+	for GameFeeHandler<AccountId, CurrencyHandler, Affiliate, Tournament>
 where
-	T: FeeHandler<AccountId = AccountId, FeeIdentifier = Tid, FeeCurrency = Currency>,
-	U: FeeHandler<AccountId = AccountId, FeeIdentifier = Uid, FeeCurrency = Currency>,
+	AccountId: Parameter,
+	CurrencyHandler: Currency<AccountId>,
+	Affiliate: FeeProvider<
+		AccountId = AccountId,
+		FeeIdentifier = Aid,
+		FeeCurrency = CurrencyHandler::Balance,
+		FeeOutput = Vec<(CurrencyHandler::Balance, AccountId)>,
+	>,
+	Aid: Parameter,
+	Tournament: FeeProvider<
+		AccountId = AccountId,
+		FeeIdentifier = Tid,
+		FeeCurrency = CurrencyHandler::Balance,
+		FeeOutput = (CurrencyHandler::Balance, AccountId),
+	>,
+	Tid: Parameter,
 {
 	type AccountId = AccountId;
-	type FeeIdentifier = (Tid, Uid);
-	type FeeCurrency = (Currency, Currency);
+	type FeeCurrency = CurrencyHandler::Balance;
+	type AffiliateFeeIdentifier = Aid;
+	type TournamentFeeIdentifier = Tid;
 
-	fn get_fee(account: &Self::AccountId, identifier: &Self::FeeIdentifier) -> Self::FeeCurrency {
-		(T::get_fee(account, &identifier.0), U::get_fee(account, &identifier.1))
+	fn try_propagate_chain_fee(
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
+		identifier: &Self::AffiliateFeeIdentifier,
+	) -> Result<Self::FeeCurrency, DispatchError> {
+		let mut final_fee = base_fee;
+
+		for (transfer_fee, chain_account) in Affiliate::get_fee_from(base_fee, account, identifier)
+		{
+			if transfer_fee > 0_u32.into() {
+				CurrencyHandler::transfer(account, &chain_account, transfer_fee, AllowDeath)?;
+				final_fee = final_fee.saturating_sub(transfer_fee);
+			}
+		}
+
+		Ok(final_fee)
 	}
-}
 
-impl<AccountId, Currency, T, Tid, U, Uid, V, Vid> FeeHandler for (T, U, V)
-where
-	T: FeeHandler<AccountId = AccountId, FeeIdentifier = Tid, FeeCurrency = Currency>,
-	U: FeeHandler<AccountId = AccountId, FeeIdentifier = Uid, FeeCurrency = Currency>,
-	V: FeeHandler<AccountId = AccountId, FeeIdentifier = Vid, FeeCurrency = Currency>,
-{
-	type AccountId = AccountId;
-	type FeeIdentifier = (Tid, Uid, Vid);
-	type FeeCurrency = (Currency, Currency, Currency);
+	fn try_propagate_tournament_fee(
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
+		identifier: &Self::TournamentFeeIdentifier,
+	) -> Result<Self::FeeCurrency, DispatchError> {
+		let (tournament_fee, tournament_account) =
+			Tournament::get_fee_from(base_fee, account, identifier);
 
-	fn get_fee(account: &Self::AccountId, identifier: &Self::FeeIdentifier) -> Self::FeeCurrency {
-		(
-			T::get_fee(account, &identifier.0),
-			U::get_fee(account, &identifier.1),
-			V::get_fee(account, &identifier.2),
-		)
+		if tournament_fee > 0_u32.into() {
+			CurrencyHandler::transfer(account, &tournament_account, tournament_fee, AllowDeath)?;
+			Ok(base_fee.saturating_sub(tournament_fee))
+		} else {
+			Ok(base_fee)
+		}
 	}
-}
 
-/// Simple FeeHandler that does nothing but return the default value of 'FeeCurrency'
-/// Useful if you need a partial fee setup in your runtime
-pub struct DefaultFeeHandler<AccountId, FeeIdentifier, FeeCurrency: Default> {
-	_phantom: PhantomData<(AccountId, FeeIdentifier, FeeCurrency)>,
-}
-
-impl<AccountId, FeeIdentifier, FeeCurrency> FeeHandler
-	for DefaultFeeHandler<AccountId, FeeIdentifier, FeeCurrency>
-where
-	FeeCurrency: Default,
-{
-	type AccountId = AccountId;
-	type FeeIdentifier = FeeIdentifier;
-	type FeeCurrency = FeeCurrency;
-
-	fn get_fee(_account: &Self::AccountId, _identifier: &Self::FeeIdentifier) -> Self::FeeCurrency {
-		FeeCurrency::default()
+	fn deposit_fee_into_treasury(_fee: Self::FeeCurrency) -> Result<(), DispatchError> {
+		todo!()
 	}
 }

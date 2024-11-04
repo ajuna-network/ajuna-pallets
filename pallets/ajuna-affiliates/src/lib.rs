@@ -53,25 +53,19 @@ pub mod pallet {
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub type RuleIdentifierFor<T, I> = <T as Config<I>>::RuleIdentifier;
-	pub type RuntimeRuleFor<T, I> = <T as Config<I>>::RuntimeRule;
+	pub type FeePropagationOf<T, I> = FeePropagation<<T as Config<I>>::AffiliateMaxLevel>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<RuleIdParameter, RuleParameter, UnlockParams> {
+	pub trait BenchmarkHelper<RuleIdParameter, UnlockParams> {
 		fn create_rule_id(id: u32) -> RuleIdParameter;
-
-		fn create_rule(id: u32) -> RuleParameter;
 
 		fn create_params(id: u32) -> UnlockParams;
 	}
 	#[cfg(feature = "runtime-benchmarks")]
-	impl<RuleIdParameter: From<u32>, RuleParameter: From<u32>, UnlockParams: From<u32>>
-		BenchmarkHelper<RuleIdParameter, RuleParameter, UnlockParams> for ()
+	impl<RuleIdParameter: From<u32>, UnlockParams: From<u32>>
+		BenchmarkHelper<RuleIdParameter, UnlockParams> for ()
 	{
 		fn create_rule_id(id: u32) -> RuleIdParameter {
-			id.into()
-		}
-
-		fn create_rule(id: u32) -> RuleParameter {
 			id.into()
 		}
 
@@ -103,9 +97,6 @@ pub mod pallet {
 		/// The rule identifier type at runtime.
 		type RuleIdentifier: Parameter + MaxEncodedLen;
 
-		/// The rule type at runtime.
-		type RuntimeRule: Parameter + MaxEncodedLen;
-
 		/// The maximum depth of the affiliate relation chain,
 		#[pallet::constant]
 		type AffiliateMaxLevel: Get<u32>;
@@ -120,11 +111,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: BenchmarkHelper<
-			Self::RuleIdentifier,
-			Self::RuntimeRule,
-			Self::UnlockParameters,
-		>;
+		type BenchmarkHelper: BenchmarkHelper<Self::RuleIdentifier, Self::UnlockParameters>;
 	}
 
 	/// Stores the affiliated accounts from the perspectives of the affiliatee
@@ -143,7 +130,7 @@ pub mod pallet {
 	/// Stores the affiliate logic rules
 	#[pallet::storage]
 	pub type AffiliateRules<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Blake2_128Concat, T::RuleIdentifier, T::RuntimeRule, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, T::RuleIdentifier, FeePropagationOf<T, I>, OptionQuery>;
 
 	#[pallet::storage]
 	pub type NextAffiliateId<T: Config<I>, I: 'static = ()> =
@@ -246,7 +233,7 @@ pub mod pallet {
 		pub fn set_rule_for(
 			origin: OriginFor<T>,
 			rule_id: RuleIdentifierFor<T, I>,
-			rule: RuntimeRuleFor<T, I>,
+			rule: FeePropagationOf<T, I>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::AccountManager::is_organizer(&account)?;
@@ -426,14 +413,21 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config<I>, I: 'static> RuleInspector<T::RuleIdentifier, T::RuntimeRule> for Pallet<T, I> {
-		fn get_rule_for(rule_id: T::RuleIdentifier) -> Option<T::RuntimeRule> {
+	impl<T: Config<I>, I: 'static> RuleInspector<T::RuleIdentifier, T::AffiliateMaxLevel>
+		for Pallet<T, I>
+	{
+		fn get_rule_for(rule_id: &T::RuleIdentifier) -> Option<FeePropagationOf<T, I>> {
 			AffiliateRules::<T, I>::get(rule_id)
 		}
 	}
 
-	impl<T: Config<I>, I: 'static> RuleMutator<T::RuleIdentifier, T::RuntimeRule> for Pallet<T, I> {
-		fn try_add_rule_for(rule_id: T::RuleIdentifier, rule: T::RuntimeRule) -> DispatchResult {
+	impl<T: Config<I>, I: 'static> RuleMutator<T::RuleIdentifier, T::AffiliateMaxLevel>
+		for Pallet<T, I>
+	{
+		fn try_add_rule_for(
+			rule_id: T::RuleIdentifier,
+			rule: FeePropagationOf<T, I>,
+		) -> DispatchResult {
 			ensure!(
 				!AffiliateRules::<T, I>::contains_key(rule_id.clone()),
 				Error::<T, I>::ExtrinsicAlreadyHasRule
@@ -451,15 +445,17 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config<I>, I: 'static> RuleExecutor<T::RuleIdentifier, T::RuntimeRule> for Pallet<T, I> {
+	impl<T: Config<I>, I: 'static> RuleExecutor<T::RuleIdentifier, T::AffiliateMaxLevel>
+		for Pallet<T, I>
+	{
 		fn try_execute_rule_for<F, R>(
 			rule_id: T::RuleIdentifier,
 			rule_fn: F,
 		) -> Result<R, DispatchError>
 		where
-			F: Fn(T::RuntimeRule) -> Result<R, DispatchError>,
+			F: Fn(FeePropagationOf<T, I>) -> Result<R, DispatchError>,
 		{
-			if let Some(rule) = Self::get_rule_for(rule_id) {
+			if let Some(rule) = Self::get_rule_for(&rule_id) {
 				rule_fn(rule)
 			} else {
 				Err(Error::<T, I>::ExtrinsicHasNoRule.into())
