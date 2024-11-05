@@ -14,26 +14,33 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::{DispatchError, Member};
-use parity_scale_codec::Codec;
+use crate::*;
 
-pub type WhitelistKey = [u8; 8];
+impl<T: Config> TreasuryManager for Pallet<T> {
+	type AccountId = AccountIdFor<T>;
+	type Currency = BalanceOf<T>;
+	type TreasuryKey = SeasonId;
 
-/// The account manager trait that can be passed around to other pallets that need to works with
-/// Accounts
-pub trait AccountManager {
-	type AccountId: Member + Codec;
+	fn is_treasurer(account: &Self::AccountId) -> Result<(), DispatchError> {
+		if &Self::treasury_account_id() == account {
+			Ok(())
+		} else {
+			Err(Error::<T>::UnknownTreasurer.into())
+		}
+	}
 
-	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
+	fn get_treasurer() -> Result<Self::AccountId, DispatchError> {
+		Ok(Self::treasury_account_id())
+	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(owner: Self::AccountId);
+	fn set_treasurer(_owner: Self::AccountId) {
+		unimplemented!()
+	}
 
-	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool;
+	fn deposit_into(key: Self::TreasuryKey, fee: Self::Currency) -> Result<(), DispatchError> {
+		Self::deposit_into_treasury(&key, fee);
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_set_whitelisted_for(
-		identifier: &WhitelistKey,
-		account: &Self::AccountId,
-	) -> Result<(), DispatchError>;
+		Ok(())
+	}
 }

@@ -137,7 +137,7 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
-	type FeeHandler = GameFeeHandler<MockAccountId, Balances, Affiliates, Tournament>;
+	type FeeHandler = GameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
 	type WeightInfo = ();
 }
 

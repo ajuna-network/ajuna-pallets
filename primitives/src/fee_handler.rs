@@ -1,3 +1,4 @@
+use crate::treasury_manager::TreasuryManager;
 use frame_support::{
 	pallet_prelude::DispatchError,
 	sp_runtime::Saturating,
@@ -24,6 +25,7 @@ pub trait FeeHandler {
 	type FeeCurrency;
 	type AffiliateFeeIdentifier;
 	type TournamentFeeIdentifier;
+	type TreasuryKey;
 
 	fn try_propagate_chain_fee(
 		base_fee: Self::FeeCurrency,
@@ -37,15 +39,18 @@ pub trait FeeHandler {
 		identifier: &Self::TournamentFeeIdentifier,
 	) -> Result<Self::FeeCurrency, DispatchError>;
 
-	fn deposit_fee_into_treasury(fee: Self::FeeCurrency) -> Result<(), DispatchError>;
+	fn deposit_fee_into_treasury(
+		key: Self::TreasuryKey,
+		fee: Self::FeeCurrency,
+	) -> Result<(), DispatchError>;
 }
 
-pub struct GameFeeHandler<AccountId, Currency, Affiliate, Tournament> {
-	_phantom: PhantomData<(AccountId, Currency, Affiliate, Tournament)>,
+pub struct GameFeeHandler<AccountId, Currency, Affiliate, Tournament, Treasury> {
+	_phantom: PhantomData<(AccountId, Currency, Affiliate, Tournament, Treasury)>,
 }
 
-impl<AccountId, CurrencyHandler, Affiliate, Aid, Tournament, Tid> FeeHandler
-	for GameFeeHandler<AccountId, CurrencyHandler, Affiliate, Tournament>
+impl<AccountId, CurrencyHandler, Affiliate, Aid, Tournament, Tid, Treasury> FeeHandler
+	for GameFeeHandler<AccountId, CurrencyHandler, Affiliate, Tournament, Treasury>
 where
 	AccountId: Parameter,
 	CurrencyHandler: Currency<AccountId>,
@@ -63,11 +68,13 @@ where
 		FeeOutput = (CurrencyHandler::Balance, AccountId),
 	>,
 	Tid: Parameter,
+	Treasury: TreasuryManager<AccountId = AccountId, Currency = CurrencyHandler::Balance>,
 {
 	type AccountId = AccountId;
 	type FeeCurrency = CurrencyHandler::Balance;
 	type AffiliateFeeIdentifier = Aid;
 	type TournamentFeeIdentifier = Tid;
+	type TreasuryKey = Treasury::TreasuryKey;
 
 	fn try_propagate_chain_fee(
 		base_fee: Self::FeeCurrency,
@@ -103,7 +110,10 @@ where
 		}
 	}
 
-	fn deposit_fee_into_treasury(_fee: Self::FeeCurrency) -> Result<(), DispatchError> {
-		todo!()
+	fn deposit_fee_into_treasury(
+		key: Self::TreasuryKey,
+		fee: Self::FeeCurrency,
+	) -> Result<(), DispatchError> {
+		Treasury::deposit_into(key, fee)
 	}
 }

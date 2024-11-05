@@ -24,3 +24,4 @@ pub mod account_manager;
 pub mod asset_manager;
 pub mod fee_handler;
 pub mod runtime_types;
+pub mod treasury_manager;

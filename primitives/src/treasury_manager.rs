@@ -14,26 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::{DispatchError, Member};
+use frame_support::{
+	pallet_prelude::{DispatchError, Member},
+	Parameter,
+};
 use parity_scale_codec::Codec;
 
-pub type WhitelistKey = [u8; 8];
-
-/// The account manager trait that can be passed around to other pallets that need to works with
-/// Accounts
-pub trait AccountManager {
+/// The treasury manager trait that can be passed around to other pallets that need to works with
+/// the treasury or its accounts
+pub trait TreasuryManager {
 	type AccountId: Member + Codec;
 
-	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
+	type Currency: Member + Codec;
+
+	type TreasuryKey: Parameter + Member;
+
+	fn is_treasurer(account: &Self::AccountId) -> Result<(), DispatchError>;
+
+	fn get_treasurer() -> Result<Self::AccountId, DispatchError>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(owner: Self::AccountId);
+	fn set_treasurer(owner: Self::AccountId);
 
-	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool;
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_set_whitelisted_for(
-		identifier: &WhitelistKey,
-		account: &Self::AccountId,
-	) -> Result<(), DispatchError>;
+	fn deposit_into(key: Self::TreasuryKey, fee: Self::Currency) -> Result<(), DispatchError>;
 }

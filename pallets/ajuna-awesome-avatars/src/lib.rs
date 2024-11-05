@@ -77,6 +77,7 @@ use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
 	fee_handler::FeeHandler,
+	treasury_manager::TreasuryManager,
 };
 use frame_support::{
 	pallet_prelude::*,
@@ -91,7 +92,7 @@ use pallet_ajuna_tournament::{
 };
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, CheckedDiv, CheckedSub, Hash, Saturating, TrailingZeroInput,
+		AccountIdConversion, CheckedSub, Hash, Saturating, TrailingZeroInput,
 		UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError,
@@ -102,7 +103,6 @@ use sp_std::prelude::*;
 pub mod pallet {
 	use super::*;
 	use pallet_ajuna_affiliates::traits::RuleExecutor;
-	use pallet_ajuna_tournament::Percentage;
 	use sp_std::collections::vec_deque::VecDeque;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
