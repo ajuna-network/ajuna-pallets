@@ -92,8 +92,8 @@ use pallet_ajuna_tournament::{
 };
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, CheckedSub, Hash, Saturating, TrailingZeroInput,
-		UniqueSaturatedInto, Zero,
+		AccountIdConversion, CheckedSub, Hash, Saturating, TrailingZeroInput, UniqueSaturatedInto,
+		Zero,
 	},
 	ArithmeticError,
 };
