@@ -65,18 +65,6 @@ jobs:
     name: Test-Pallets
     runs-on: ubuntu-latest
     continue-on-error: false
-    strategy:
-      matrix:
-        pallet:
-          - pallet-ajuna-awesome-avatars
-          - pallet-ajuna-awesome-avatars-benchmarking
-          - pallet-ajuna-battle-mogs
-          - pallet-ajuna-nft-staking
-          - pallet-ajuna-nft-staking-benchmarking
-          - pallet-ajuna-nft-transfer
-          - pallet-ajuna-affiliates
-          - pallet-ajuna-tournament
-          - pallet-ajuna-wildcard
     steps:
       - uses: actions/checkout@v4
       - run: ./.github/scripts/free_disk_space.sh
@@ -89,10 +77,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-test-${{ matrix.pallet }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-test-${{ matrix.pallet }}-
-      - run: cargo test --all-features --all-targets ${{ env.CARGO_ARGS }} -p ${{ matrix.pallet }}
-
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-test-
+      - run: cargo test --all-features --all-targets ${{ env.CARGO_ARGS }}
   coverage:
     if: ${{ !startsWith(github.head_ref, 'release/') }}
     name: Coverage
