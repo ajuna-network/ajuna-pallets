@@ -16,7 +16,7 @@
 
 #![cfg(test)]
 
-use ajuna_primitives::account_manager::WhitelistKey;
+use ajuna_primitives::{account_manager::WhitelistKey, fee_handler::GameFeeHandler};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
@@ -26,7 +26,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_ajuna_affiliates::{traits::AffiliateUnlockRules, BenchmarkHelper};
 use pallet_ajuna_awesome_avatars::{
 	types::{AffiliateMethods, Avatar, SeasonId},
-	AvatarRankerFor, FeePropagationOf,
+	AvatarRankerFor,
 };
 use pallet_ajuna_tournament::{GoldenDuckConfig, TournamentConfig};
 use sp_runtime::{
@@ -137,6 +137,7 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
+	type FeeHandler = GameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
 	type WeightInfo = ();
 }
 
@@ -149,16 +150,9 @@ parameter_types! {
 pub struct AffiliateBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<AffiliateMethods, FeePropagationOf<Runtime>, MockUnlockParameter>
-	for AffiliateBenchmarkHelper
-{
+impl BenchmarkHelper<AffiliateMethods, MockUnlockParameter> for AffiliateBenchmarkHelper {
 	fn create_rule_id(_id: u32) -> AffiliateMethods {
 		AffiliateMethods::Mint
-	}
-
-	fn create_rule(id: u32) -> FeePropagationOf<Runtime> {
-		FeePropagationOf::<Runtime>::try_from(vec![id as u8])
-			.expect("Should convert rule to mock runtime rule")
 	}
 
 	fn create_params(id: u32) -> MockUnlockParameter {
@@ -184,10 +178,10 @@ impl AffiliateUnlockRules for MockAffiliateRules {
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = AAvatars;
 	type RuleIdentifier = AffiliateMethods;
-	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
 	type UnlockParameters = MockUnlockParameter;
 	type AffiliatesUnlockRules = MockAffiliateRules;

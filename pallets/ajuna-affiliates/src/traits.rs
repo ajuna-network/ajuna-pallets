@@ -3,6 +3,8 @@ use sp_std::vec::Vec;
 
 pub type AffiliateId = u32;
 
+pub type FeePropagation<T> = BoundedVec<u8, T>;
+
 pub trait AffiliateInspector<AccountId> {
 	/// Returns a vector of accounts that 'account' is affiliated to.
 	///
@@ -36,27 +38,27 @@ pub trait AffiliateMutator<AccountId> {
 		-> DispatchResult;
 }
 
-pub trait RuleInspector<RuleId, Rule> {
+pub trait RuleInspector<RuleId, RuleLength> {
 	/// Gets the rule data for a given 'extrinsic_id' mapped rule, or
 	/// None if no rule is associated with the given 'extrinsic_id'
-	fn get_rule_for(rule_id: RuleId) -> Option<Rule>;
+	fn get_rule_for(rule_id: &RuleId) -> Option<FeePropagation<RuleLength>>;
 }
 
-pub trait RuleMutator<RuleId, Rule> {
+pub trait RuleMutator<RuleId, RuleLength> {
 	/// Tries to add a rule for 'extrinsic_id', fails to do so
 	/// if there's already a rule present.
-	fn try_add_rule_for(rule_id: RuleId, rule: Rule) -> DispatchResult;
+	fn try_add_rule_for(rule_id: RuleId, rule: FeePropagation<RuleLength>) -> DispatchResult;
 
 	/// Removes the rule mapping for 'extrinsic_id'
 	fn clear_rule_for(rule_id: RuleId);
 }
 
-pub trait RuleExecutor<RuleId, Rule> {
+pub trait RuleExecutor<RuleId, RuleLength> {
 	/// Tries to retrieve the rule associated with 'rule_id' and passes it to
 	/// the 'rule_fn' parameter, propagating its output to the function caller
 	fn try_execute_rule_for<F, R>(rule_id: RuleId, rule_fn: F) -> Result<R, DispatchError>
 	where
-		F: Fn(Rule) -> Result<R, DispatchError>;
+		F: Fn(FeePropagation<RuleLength>) -> Result<R, DispatchError>;
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]

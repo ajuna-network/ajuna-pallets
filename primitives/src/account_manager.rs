@@ -15,13 +15,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::pallet_prelude::{DispatchError, Member};
+use parity_scale_codec::Codec;
 
 pub type WhitelistKey = [u8; 8];
 
 /// The account manager trait that can be passed around to other pallets that need to works with
 /// Accounts
 pub trait AccountManager {
-	type AccountId: Member + Clone;
+	type AccountId: Member + Codec;
 
 	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
 
