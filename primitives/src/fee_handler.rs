@@ -74,7 +74,7 @@ where
 	type FeeCurrency = CurrencyHandler::Balance;
 	type AffiliateFeeIdentifier = Aid;
 	type TournamentFeeIdentifier = Tid;
-	type TreasuryKey = Treasury::TreasuryKey;
+	type TreasuryKey = Treasury::TreasuryPotKey;
 
 	fn try_propagate_chain_fee(
 		base_fee: Self::FeeCurrency,

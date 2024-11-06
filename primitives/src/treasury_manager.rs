@@ -27,20 +27,20 @@ pub trait TreasuryManager {
 
 	type Currency: Member + Codec;
 
-	type TreasuryKey: Parameter + Member;
+	type TreasuryPotKey: Parameter + Member;
 
 	/// Is the account the assigned holder of the treasury pot for the given key
 	fn is_treasurer_for(
-		key: Self::TreasuryKey,
+		key: Self::TreasuryPotKey,
 		account: &Self::AccountId,
 	) -> Result<(), DispatchError>;
 
 	/// Get the assigned holder of the treasury pot for the given key
-	fn get_treasurer_for(key: Self::TreasuryKey) -> Result<Self::AccountId, DispatchError>;
+	fn get_treasurer_for(key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn set_treasurer_for(key: Self::TreasuryKey, owner: Self::AccountId);
+	fn set_treasurer_for(key: Self::TreasuryPotKey, owner: Self::AccountId);
 
 	/// Deposit the given amount to the treasury pot for the given key
-	fn deposit_into(key: Self::TreasuryKey, fee: Self::Currency) -> Result<(), DispatchError>;
+	fn deposit_into(key: Self::TreasuryPotKey, fee: Self::Currency) -> Result<(), DispatchError>;
 }

@@ -19,10 +19,10 @@ use crate::*;
 impl<T: Config> TreasuryManager for Pallet<T> {
 	type AccountId = AccountIdFor<T>;
 	type Currency = BalanceOf<T>;
-	type TreasuryKey = SeasonId;
+	type TreasuryPotKey = SeasonId;
 
 	fn is_treasurer_for(
-		_key: Self::TreasuryKey,
+		_key: Self::TreasuryPotKey,
 		account: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		if &Self::treasury_account_id() == account {
@@ -32,16 +32,16 @@ impl<T: Config> TreasuryManager for Pallet<T> {
 		}
 	}
 
-	fn get_treasurer_for(_key: Self::TreasuryKey) -> Result<Self::AccountId, DispatchError> {
+	fn get_treasurer_for(_key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError> {
 		Ok(Self::treasury_account_id())
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn set_treasurer_for(_key: Self::TreasuryKey, _owner: Self::AccountId) {
+	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
 		unimplemented!()
 	}
 
-	fn deposit_into(key: Self::TreasuryKey, fee: Self::Currency) -> Result<(), DispatchError> {
+	fn deposit_into(key: Self::TreasuryPotKey, fee: Self::Currency) -> Result<(), DispatchError> {
 		Self::deposit_into_treasury(&key, fee);
 
 		Ok(())
