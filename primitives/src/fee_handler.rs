@@ -1,8 +1,8 @@
 use crate::treasury_manager::TreasuryManager;
 use frame_support::{
 	pallet_prelude::DispatchError,
-	sp_runtime::Saturating,
-	traits::{Currency, ExistenceRequirement::AllowDeath},
+	sp_runtime::{traits::CheckedSub, ArithmeticError},
+	traits::{Currency, ExistenceRequirement::KeepAlive},
 	Parameter,
 };
 use std::marker::PhantomData;
@@ -86,8 +86,10 @@ where
 		for (transfer_fee, chain_account) in Affiliate::get_fee_from(base_fee, account, identifier)
 		{
 			if transfer_fee > 0_u32.into() {
-				CurrencyHandler::transfer(account, &chain_account, transfer_fee, AllowDeath)?;
-				final_fee = final_fee.saturating_sub(transfer_fee);
+				CurrencyHandler::transfer(account, &chain_account, transfer_fee, KeepAlive)?;
+				final_fee = final_fee
+					.checked_sub(&transfer_fee)
+					.ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
 			}
 		}
 
@@ -103,8 +105,10 @@ where
 			Tournament::get_fee_from(base_fee, account, identifier);
 
 		if tournament_fee > 0_u32.into() {
-			CurrencyHandler::transfer(account, &tournament_account, tournament_fee, AllowDeath)?;
-			Ok(base_fee.saturating_sub(tournament_fee))
+			CurrencyHandler::transfer(account, &tournament_account, tournament_fee, KeepAlive)?;
+			base_fee
+				.checked_sub(&tournament_fee)
+				.ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))
 		} else {
 			Ok(base_fee)
 		}

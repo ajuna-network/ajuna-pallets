@@ -21,7 +21,10 @@ impl<T: Config> TreasuryManager for Pallet<T> {
 	type Currency = BalanceOf<T>;
 	type TreasuryKey = SeasonId;
 
-	fn is_treasurer(account: &Self::AccountId) -> Result<(), DispatchError> {
+	fn is_treasurer_for(
+		_key: Self::TreasuryKey,
+		account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
 		if &Self::treasury_account_id() == account {
 			Ok(())
 		} else {
@@ -29,12 +32,12 @@ impl<T: Config> TreasuryManager for Pallet<T> {
 		}
 	}
 
-	fn get_treasurer() -> Result<Self::AccountId, DispatchError> {
+	fn get_treasurer_for(_key: Self::TreasuryKey) -> Result<Self::AccountId, DispatchError> {
 		Ok(Self::treasury_account_id())
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn set_treasurer(_owner: Self::AccountId) {
+	fn set_treasurer_for(_key: Self::TreasuryKey, _owner: Self::AccountId) {
 		unimplemented!()
 	}
 
