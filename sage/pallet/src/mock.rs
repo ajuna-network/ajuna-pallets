@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_sage};
+use ajuna_primitives::season_manager::EmptySeasonManager;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
@@ -160,6 +161,7 @@ pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance, SageMock>;
 	type SageApi = SageMock;
+	type SeasonHandle = EmptySeasonManager<AssetId>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

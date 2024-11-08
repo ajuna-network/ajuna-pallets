@@ -58,6 +58,9 @@ pub trait SageGameTransition {
 	/// Transition Id type, can be a simple u32, or an enum.
 	type TransitionId: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
 
+	/// Transition config type
+	type TransitionConfig: Member + Encode + Decode + MaxEncodedLen + TypeInfo + Default;
+
 	/// An optional extra, which is simply forwarded to the `verify_rule` and `do_transition`
 	/// method. If you don't need custom arguments, you can define that type as `()`.
 	type Extra: Member + Encode + Decode + MaxEncodedLen + TypeInfo;

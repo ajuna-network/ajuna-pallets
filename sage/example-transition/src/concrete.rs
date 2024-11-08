@@ -28,6 +28,7 @@ where
 	type SageApi = Sage;
 
 	type TransitionId = ExampleTransitionId;
+	type TransitionConfig = ();
 	type Extra = ();
 
 	fn verify_rule(
