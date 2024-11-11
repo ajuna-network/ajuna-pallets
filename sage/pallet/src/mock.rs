@@ -161,7 +161,7 @@ pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance, SageMock>;
 	type SageApi = SageMock;
-	type SeasonHandle = EmptySeasonManager<AssetId>;
+	type SeasonHandler = EmptySeasonManager<AssetId>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

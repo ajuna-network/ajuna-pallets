@@ -18,8 +18,7 @@ use frame_support::{
 	pallet_prelude::{DispatchError, Member},
 	Parameter,
 };
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
+use parity_scale_codec::MaxEncodedLen;
 use std::marker::PhantomData;
 
 pub trait SeasonManager {
@@ -27,9 +26,9 @@ pub trait SeasonManager {
 
 	type AssetId: Member + Parameter + MaxEncodedLen;
 
-	fn get_season_for(asset: &Self::AssetId) -> Option<Self::SeasonId>;
+	fn get_season_for(asset: &Self::AssetId) -> Self::SeasonId;
 
-	fn get_current_season() -> Option<Self::SeasonId>;
+	fn get_current_season() -> Self::SeasonId;
 
 	fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError>;
 }
@@ -38,8 +37,6 @@ pub struct EmptySeasonManager<AssetId> {
 	_phantom: PhantomData<AssetId>,
 }
 
-pub const NO_SEASON_AVAILABLE: &str = "NO SEASON AVAILABLE";
-
 impl<AssetId> SeasonManager for EmptySeasonManager<AssetId>
 where
 	AssetId: Member + Parameter + MaxEncodedLen,
@@ -47,15 +44,11 @@ where
 	type SeasonId = ();
 	type AssetId = AssetId;
 
-	fn get_season_for(_asset: &Self::AssetId) -> Option<Self::SeasonId> {
-		None
-	}
+	fn get_season_for(_asset: &Self::AssetId) -> Self::SeasonId {}
 
-	fn get_current_season() -> Option<Self::SeasonId> {
-		None
-	}
+	fn get_current_season() -> Self::SeasonId {}
 
 	fn is_valid_season(_season_id: &Self::SeasonId) -> Result<(), DispatchError> {
-		Err(DispatchError::Other(NO_SEASON_AVAILABLE))
+		Ok(())
 	}
 }

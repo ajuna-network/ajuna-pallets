@@ -11,11 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+mod player;
+
 use frame_support::pallet_prelude::*;
+
+pub(crate) use player::*;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub enum LockableFeature {
-	SellAsset,
+	TradeAsset,
 	TransferAsset,
 }
 
@@ -38,4 +42,11 @@ pub struct GeneralConfig<
 	pub trade: TradeConfig,
 }
 
-pub type UnlockConfig = Option<BoundedVec<u8, ConstU32<5>>>;
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+pub enum UnlockTarget<AccountId> {
+	OneselfFree,
+	OneselfPaying,
+	OtherPaying(AccountId),
+}
+
+pub type UnlockConfig = BoundedVec<u8, ConstU32<5>>;

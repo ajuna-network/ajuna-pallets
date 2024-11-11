@@ -1,4 +1,5 @@
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::Parameter;
+use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_runtime::traits::Member;
 use sp_std::vec::Vec;
@@ -8,7 +9,7 @@ use sp_std::vec::Vec;
 ///
 /// This will be much more elaborate in th actual implementation.
 pub trait SageApi {
-	type AssetId;
+	type AssetId: Member + Parameter + MaxEncodedLen;
 
 	type Asset: AssetT;
 
@@ -50,20 +51,20 @@ pub type AccountIdOf<T> = <<T as SageGameTransition>::SageApi as SageApi>::Accou
 pub type BalanceOf<T> = <<T as SageGameTransition>::SageApi as SageApi>::Balance;
 
 pub trait SageGameTransition {
-	type AssetId: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
-	type Asset: AssetT + Member + Encode + Decode + MaxEncodedLen + TypeInfo;
+	type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
+	type Asset: AssetT + Member + Parameter + MaxEncodedLen + TypeInfo;
 
 	type SageApi: SageApi<AssetId = Self::AssetId, Asset = Self::Asset>;
 
 	/// Transition Id type, can be a simple u32, or an enum.
-	type TransitionId: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
+	type TransitionId: Member + Parameter + MaxEncodedLen + TypeInfo;
 
 	/// Transition config type
-	type TransitionConfig: Member + Encode + Decode + MaxEncodedLen + TypeInfo + Default;
+	type TransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 	/// An optional extra, which is simply forwarded to the `verify_rule` and `do_transition`
 	/// method. If you don't need custom arguments, you can define that type as `()`.
-	type Extra: Member + Encode + Decode + MaxEncodedLen + TypeInfo;
+	type Extra: Member + Parameter + MaxEncodedLen + TypeInfo;
 
 	fn verify_rule(
 		transition_id: Self::TransitionId,
