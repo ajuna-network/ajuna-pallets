@@ -57,11 +57,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let (seller, _) = Self::asset_with_owner(asset_id)?;
 		let season_id = T::SeasonHandler::get_season_for(asset_id);
 		let price = AssetTradePrices::<T, I>::get(season_id, asset_id)
-			.ok_or(Error::<T, I>::UnknownAssetForSale)?;
+			.ok_or(Error::<T, I>::AssetNotInTrade)?;
 		Ok((seller, price))
 	}
 
-	pub(crate) fn ensure_can_be_set_for_trade(asset_id: &AssetIdOf<T, I>) -> DispatchResult {
+	pub(crate) fn ensure_can_be_set_for_trade(_asset_id: &AssetIdOf<T, I>) -> DispatchResult {
 		// TODO: Need to implement this either as TradeManager or something similar
 		// sine we need the concrete Asset type to apply any sort of filtering logic to it
 		// maybe expand the AssetT type

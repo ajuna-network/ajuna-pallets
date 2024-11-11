@@ -19,6 +19,7 @@ use ajuna_primitives::season_manager::EmptySeasonManager;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
+	PalletId,
 };
 use sp_runtime::{
 	testing::{TestSignature, H256},
@@ -157,8 +158,13 @@ impl SageApi for SageMock {
 	}
 }
 
+parameter_types! {
+	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
+}
+
 pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
+	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance, SageMock>;
 	type SageApi = SageMock;
 	type SeasonHandler = EmptySeasonManager<AssetId>;

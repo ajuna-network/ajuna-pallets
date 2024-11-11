@@ -25,7 +25,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		account: &Self::AccountId,
 		asset_id: &Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		/*let (owner, avatar) = Self::avatars(asset_id)?;
+		let (owner, avatar) = Self::asset_with_owner(asset_id)?;
 
 		if account == &owner ||
 			Self::is_locked(asset_id).map(|lock| &lock.locker == account).unwrap_or(false)
@@ -33,8 +33,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 			return Ok(avatar)
 		}
 
-		Err(Error::<T>::Ownership.into())*/
-		todo!()
+		Err(Error::<T, I>::AssetNotOwned.into())
 	}
 
 	fn lock_asset(
@@ -42,17 +41,25 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		owner: Self::AccountId,
 		asset_id: Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		/*let avatar = Self::ensure_ownership(&owner, &asset_id)?;
-		ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T>::AvatarInTrade);
-		ensure!(Self::is_locked(&asset_id).is_none(), Error::<T>::AvatarLocked);
+		let asset = Self::ensure_ownership(&owner, &asset_id)?;
+		ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T, I>::CannotLockAssetInTrade);
+		ensure!(Self::is_locked(&asset_id).is_none(), Error::<T, I>::AssetLocked);
 
-		Self::try_remove_avatar_ownership_from(&owner, &avatar.season_id, &asset_id)?;
+		let asset_season_id = T::SeasonHandler::get_season_for(&asset_id);
+		AssetOwners::<T, I>::mutate(&owner, &asset_season_id, |asset_ids| {
+			asset_ids.retain(|id| id != &asset_id);
+		});
 
-		LockedAvatars::<T>::insert(asset_id, Lock::new(lock_id, owner));
-		Self::deposit_event(Event::AvatarLocked { avatar_id: asset_id });
+		Assets::<T, I>::try_mutate(&asset_id, |maybe_asset| -> DispatchResult {
+			let (from_owner, _) = maybe_asset.as_mut().ok_or(Error::<T, I>::UnknownAsset)?;
+			*from_owner = Self::technical_account_id();
+			Ok(())
+		})?;
 
-		Ok(avatar)*/
-		todo!()
+		LockedAssets::<T, I>::insert(&asset_id, Lock::new(lock_id, owner));
+		Self::deposit_event(Event::AssetLocked { asset_id });
+
+		Ok(asset)
 	}
 
 	fn unlock_asset(
@@ -60,24 +67,39 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		owner: Self::AccountId,
 		asset_id: Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		/*let avatar = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
+		let asset = Self::ensure_ownership(&Self::technical_account_id(), &asset_id)?;
+		let lock = Self::is_locked(&asset_id).ok_or(Error::<T, I>::AssetNotLocked)?;
+		ensure!(lock.id == lock_id, Error::<T, I>::AssetLockedByOtherApplication);
+		ensure!(lock.locker == owner, Error::<T, I>::AssetNotOwned);
 
-		let lock = Self::is_locked(&asset_id).ok_or(Error::<T>::AvatarNotLocked)?;
-		ensure!(lock.id == lock_id, Error::<T>::AvatarLockedByOtherApplication);
-		ensure!(lock.locker == owner, Error::<T>::Ownership);
+		let asset_season_id = T::SeasonHandler::get_season_for(&asset_id);
+		AssetOwners::<T, I>::try_mutate(&owner, &asset_season_id, |asset_ids| {
+			asset_ids
+				.try_push(asset_id.clone())
+				.map_err(|_| Error::<T, I>::MaxOwnershipReached)?;
+			ensure!(
+				asset_ids.len() <=
+					PlayerSeasonConfigs::<T, I>::get(&owner, &asset_season_id).storage_tier
+						as usize,
+				Error::<T, I>::MaxOwnershipReached
+			);
+			Ok::<_, DispatchError>(())
+		})?;
 
-		Self::try_restore_avatar_ownership_to(&owner, &avatar.season_id, &asset_id)?;
+		Assets::<T, I>::try_mutate(&asset_id, |maybe_asset| -> DispatchResult {
+			let (from_owner, _) = maybe_asset.as_mut().ok_or(Error::<T, I>::UnknownAsset)?;
+			*from_owner = owner.clone();
+			Ok(())
+		})?;
 
-		LockedAvatars::<T>::remove(asset_id);
-		Self::deposit_event(Event::AvatarUnlocked { avatar_id: asset_id });
+		LockedAssets::<T, I>::remove(&asset_id);
+		Self::deposit_event(Event::AssetUnlocked { asset_id });
 
-		Ok(avatar)*/
-		todo!()
+		Ok(asset)
 	}
 
 	fn is_locked(asset_id: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
-		//LockedAvatars::<T>::get(asset_id)
-		todo!()
+		LockedAssets::<T, I>::get(asset_id)
 	}
 
 	fn nft_transfer_open() -> bool {

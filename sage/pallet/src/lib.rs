@@ -28,14 +28,17 @@ pub mod mock;
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	fee_handler::FeeHandler,
 	season_manager::SeasonManager,
-	treasury_manager::TreasuryManager,
 };
 use sage_api::{AsErrorCode, Error as SageApiError, SageApi, SageGameTransition};
 
-use frame_support::{pallet_prelude::*, traits::Currency};
+use frame_support::{
+	pallet_prelude::*,
+	traits::{Currency, ExistenceRequirement::AllowDeath},
+	PalletId,
+};
 use frame_system::pallet_prelude::*;
+use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
 
 use weights::WeightInfo;
@@ -48,8 +51,6 @@ pub const SAGE_LOCK_ID: &[u8; 8] = b"sagelock";
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use ajuna_primitives::fee_handler::FeeProvider;
-	use frame_support::traits::{ExistenceRequirement::AllowDeath, WithdrawReasons};
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
@@ -73,6 +74,8 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 		type SageGameTransition: SageGameTransition<SageApi = Self::SageApi>;
 
 		// This associated type mostly exists to constraint the SageApi's associated types.
@@ -174,6 +177,8 @@ pub mod pallet {
 			feature: LockableFeature,
 			updated_config: UnlockConfig,
 		},
+		/// Storage tier has been upgraded.
+		StorageTierUpgraded { account: AccountIdOf<T>, season_id: SeasonIdOf<T, I> },
 		/// Asset transferred.
 		AssetTransferred { from: AccountIdOf<T>, to: AccountIdOf<T>, asset_id: AssetIdOf<T, I> },
 		/// Asset has price set for trade.
@@ -205,137 +210,36 @@ pub mod pallet {
 	pub enum Error<T, I = ()> {
 		/// There is no account set as the organizer
 		OrganizerNotSet,
-		/// The season starts before the previous season has ended.
-		EarlyStartTooEarly,
-		/// The season season start later than its early access
-		EarlyStartTooLate,
-		/// The season start date is newer than its end date.
-		SeasonStartTooLate,
-		/// The season ends after the new season has started.
-		SeasonEndTooLate,
-		/// The season's per period and periods configuration overflows.
-		PeriodConfigOverflow,
-		/// The season's periods configuration is indivisible by max variation.
-		PeriodsIndivisible,
-		/// The season doesn't exist.
-		UnknownSeason,
 		/// The asset doesn't exist.
 		UnknownAsset,
-		/// The asset for sale doesn't exist.
-		UnknownAssetForSale,
-		/// The tier doesn't exist.
-		UnknownTier,
-		/// The treasurer doesn't exist.
-		UnknownTreasurer,
-		/// The preparation doesn't exist.
-		UnknownPreparation,
-		/// The season ID of a season to create is not sequential.
-		NonSequentialSeasonId,
-		/// The sum of the given single mint probabilities overflows.
-		SingleMintProbsOverflow,
-		/// The sum of the given batch mint probabilities overflows.
-		BatchMintProbsOverflow,
-		/// Rarity percentages don't add up to 100
-		IncorrectRarityPercentages,
-		/// Max tier is achievable through forging only. Therefore the number of rarity percentages
-		/// must be less than that of tiers for a season.
-		TooManyRarityPercentages,
-		/// The given base probability is too high. It must be less than 100.
-		BaseProbTooHigh,
-		/// Some rarity tier are duplicated.
-		DuplicatedRarityTier,
-		/// Minting is not available at the moment.
-		MintClosed,
-		/// Forging is not available at the moment.
-		ForgeClosed,
 		/// Transfer is not available at the moment.
 		TransferClosed,
 		/// Trading is not available at the moment.
 		TradeClosed,
-		/// Free mint transfer is not available at the moment.
-		FreeMintTransferClosed,
-		/// Attempt to mint or forge outside of an active season.
-		SeasonClosed,
-		/// Attempt to mint when the season has ended prematurely.
-		PrematureSeasonEnd,
-		/// Max ownership reached.
+		/// Max asset ownership reached.
 		MaxOwnershipReached,
-		/// Max storage tier reached.
+		/// Max asset storage tier reached.
 		MaxStorageTierReached,
 		/// Asset belongs to someone else.
 		AssetNotOwned,
-		/// Attempt to buy his or her own asset.
+		/// Attempt to buy already owned asset.
 		AlreadyOwned,
-		/// Incorrect DNA.
-		IncorrectDna,
-		/// Incorrect data.
-		IncorrectData,
-		/// Incorrect Asset ID.
-		IncorrectAssetId,
-		/// Incorrect season ID.
-		IncorrectSeasonId,
-		/// The player must wait cooldown period.
-		MintCooldown,
-		/// The season's max components value is less than the minimum allowed (1).
-		MaxComponentsTooLow,
-		/// The season's max components value is more than the maximum allowed (random byte: 32).
-		MaxComponentsTooHigh,
-		/// The season's max variations value is less than the minimum allowed (1).
-		MaxVariationsTooLow,
-		/// The season's max variations value is more than the maximum allowed (15).
-		MaxVariationsTooHigh,
-		/// The player has not enough free mints available.
-		InsufficientFreeMints,
-		/// The player has not enough balance available.
-		InsufficientBalance,
-		/// Attempt to transfer, issue or withdraw free mints lower than the minimum allowed.
-		TooLowFreeMints,
-		/// Less than minimum allowed sacrifices are used for forging.
-		TooFewSacrifices,
-		/// More than maximum allowed sacrifices are used for forging.
-		TooManySacrifices,
-		/// Leader is being sacrificed.
-		LeaderSacrificed,
-		/// This asset cannot be used in trades.
+		/// This asset cannot be used in trade.
 		AssetCannotBeTraded,
-		/// An asset listed for trade is used to forge.
-		AssetInTrade,
+		/// An asset selected for buying is not actually in sale.
+		AssetNotInTrade,
+		/// An asset listed for trade cannot be transferred to another account.
+		CannotTransferAssetInTrade,
+		/// An asset in trade cannot be locked.
+		CannotLockAssetInTrade,
 		/// The asset is currently locked and cannot be used.
 		AssetLocked,
 		/// The asset is locked by another application.
 		AssetLockedByOtherApplication,
 		/// The asset is not currently locked and cannot be unlocked.
 		AssetNotLocked,
-		/// Tried to forge assets from different seasons.
-		IncorrectAssetSeason,
-		/// Tried to forge assets with different DNA versions.
-		IncompatibleAssetVersions,
-		/// There's not enough space to hold the forging results
-		InsufficientStorageForForging,
 		/// Tried transferring to his or her own account.
 		CannotTransferToSelf,
-		/// Tried transferring while the account still hasn't minted and forged anything.
-		CannotTransferFromInactiveAccount,
-		/// Tried claiming treasury during a season.
-		CannotClaimDuringSeason,
-		/// Tried claiming treasury which is zero.
-		CannotClaimZero,
-		/// The components tried to mint were not compatible.
-		IncompatibleMintComponents,
-		/// The components tried to forge were not compatible.
-		IncompatibleForgeComponents,
-		/// The amount of sacrifices is not sufficient for forging.
-		InsufficientSacrifices,
-		/// The amount of sacrifices is too much for forging.
-		ExcessiveSacrifices,
-		/// Tried to prepare an IPFS URL for an asset with an empty URL.
-		EmptyIpfsUrl,
-		/// The account trying to be whitelisted is already in the whitelist
-		AccountAlreadyInWhitelist,
-		/// Cannot add more accounts to the whitelist.
-		WhitelistedAccountsLimitReached,
-		/// No account matches the provided affiliator identifier
-		AffiliatorNotFound,
 		/// The feature is locked for the current player
 		FeatureLocked,
 		/// The feature trying to be unlocked is not available for the selected season
@@ -345,10 +249,6 @@ pub mod pallet {
 		/// The feature trying to be unlocked has missing requirements to be fulfilled by
 		/// the account trying to unlock it
 		UnlockCriteriaNotFulfilled,
-		/// Couldn't find a tournament ranker for the active tournament; qed
-		TournamentRankerNotFound,
-		/// Only whitelisted accounts can affiliate for others
-		AffiliateOthersOnlyWhiteListed,
 		/// The rule for a given transition was not satisfied.
 		RuleNotSatisfied { code: u8 },
 		/// An error occurred during the state transition.
@@ -409,23 +309,29 @@ pub mod pallet {
 			in_season: Option<SeasonIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
-			let season_id = T::SeasonHandler::get_current_season();
 			// TODO: Define a way to obtain the fee from the SeasonHandler
-			let fee = 0;
-
 			/*let (season_id, Season { fee, .. }) = {
 				if let Some(season_id) = in_season {
 					(season_id, Self::seasons(&season_id)?)
 				} else {
 					Self::current_season_with_id()?
 				}
+			};*/
+
+			let season_id = if let Some(season_id) = in_season {
+				season_id
+			} else {
+				T::SeasonHandler::get_current_season()
 			};
+
 			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller.clone());
 
 			let storage_tier =
-				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, season_id).storage_tier;
+				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).storage_tier;
 			ensure!(storage_tier != StorageTier::Max, Error::<T, I>::MaxStorageTierReached);
 
+			// TODO: This should be handled by the FeeHandler or similar
+			/*
 			let upgrade_fee = {
 				let base_fee = fee.upgrade_storage;
 				let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T, I>::get();
@@ -444,15 +350,15 @@ pub mod pallet {
 			};
 
 			T::Currency::withdraw(&caller, upgrade_fee, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&season_id, upgrade_fee);
+			Self::deposit_into_treasury(&season_id, upgrade_fee);*/
 
-			PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, season_id, |account| {
+			PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, &season_id, |account| {
 				account.storage_tier = storage_tier.upgrade()
 			});
 			Self::deposit_event(Event::StorageTierUpgraded {
 				account: account_to_upgrade,
 				season_id,
-			});*/
+			});
 			Ok(())
 		}
 
@@ -472,7 +378,10 @@ pub mod pallet {
 				},
 			};
 			ensure!(from != to, Error::<T, I>::CannotTransferToSelf);
-			ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T, I>::AssetInTrade);
+			ensure!(
+				Self::ensure_for_trade(&asset_id).is_err(),
+				Error::<T, I>::CannotTransferAssetInTrade
+			);
 			Self::ensure_unlocked(&asset_id)?;
 
 			let _ = Self::ensure_ownership(&from, &asset_id)?;
@@ -546,7 +455,7 @@ pub mod pallet {
 
 			let _ = Self::ensure_ownership(&seller, &asset_id)?;
 			let asset_season_id = T::SeasonHandler::get_season_for(&asset_id);
-			/// TODO: This section should be handled by the FeeHandler or similar
+			// TODO: This section should be handled by the FeeHandler or similar
 			/*let (current_season_id, Season { fee, .. }) = Self::current_season_with_id()?;
 
 			let trade_fee = {
@@ -649,6 +558,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		pub fn technical_account_id() -> T::AccountId {
+			T::PalletId::get().into_sub_account_truncating(b"technical")
+		}
+
 		pub(crate) fn asset_with_owner(
 			asset_id: &AssetIdOf<T, I>,
 		) -> Result<(AccountIdOf<T>, AssetOf<T, I>), DispatchError> {
