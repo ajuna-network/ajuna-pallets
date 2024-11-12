@@ -103,8 +103,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	}
 
 	fn nft_transfer_open() -> bool {
-		// TODO
-		true
+		todo!()
 	}
 
 	fn handle_asset_prepare_fee(
@@ -112,13 +111,12 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		_player: &Self::AccountId,
 		_fee_recipient: &Self::AccountId,
 	) -> Result<(), DispatchError> {
-		// TODO
-		Ok(())
+		todo!()
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_assets(_owner: Self::AccountId, _count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		// TODO
+		// TODO: Decide how to implement this
 		Vec::with_capacity(0)
 	}
 }

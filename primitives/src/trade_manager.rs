@@ -14,11 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use frame_support::{pallet_prelude::Member, Parameter};
+use parity_scale_codec::MaxEncodedLen;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq)]
-pub enum AffiliateMethods {
-	StateTransition,
-	UpgradeAssetInventory,
-	TradeAsset,
+pub trait TradeManager {
+	type TradeFilter: Member + Parameter + Default + MaxEncodedLen;
+
+	type Asset: Member + Parameter + MaxEncodedLen;
+
+	fn is_tradeable_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool;
 }

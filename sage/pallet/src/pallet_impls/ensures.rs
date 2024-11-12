@@ -16,9 +16,9 @@
 
 use crate::{
 	AccountIdOf, AssetIdOf, AssetOf, AssetTradePrices, BalanceOf, Config, Error, LockedAssets,
-	Organizer, Pallet,
+	Organizer, Pallet, SeasonTradeFilters,
 };
-use ajuna_primitives::season_manager::SeasonManager;
+use ajuna_primitives::{season_manager::SeasonManager, trade_manager::TradeManager};
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 
@@ -61,14 +61,18 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		Ok((seller, price))
 	}
 
-	pub(crate) fn ensure_can_be_set_for_trade(_asset_id: &AssetIdOf<T, I>) -> DispatchResult {
-		// TODO: Need to implement this either as TradeManager or something similar
-		// sine we need the concrete Asset type to apply any sort of filtering logic to it
-		// maybe expand the AssetT type
+	pub(crate) fn ensure_can_be_set_for_trade(
+		asset_id: &AssetIdOf<T, I>,
+		asset: &AssetOf<T, I>,
+	) -> DispatchResult {
+		let asset_season_id = T::SeasonHandler::get_season_id_for(asset_id);
+		let trade_filter = SeasonTradeFilters::<T, I>::get(&asset_season_id);
 
-		/*let trade_filters = SeasonTradeFilters::<T>::get(Asset.season_id)
-			.ok_or::<DispatchError>(Error::<T, I>::UnknownSeason.into())?;
-		ensure!(trade_filters.is_tradable(Asset), Error::<T, I>::AssetCannotBeTraded);*/
+		ensure!(
+			T::TradeHandler::is_tradeable_using(asset, &trade_filter),
+			Error::<T, I>::AssetCannotBeTraded
+		);
+
 		Ok(())
 	}
 }

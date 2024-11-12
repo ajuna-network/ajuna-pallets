@@ -31,8 +31,7 @@ impl<T: Config> AccountManager for Pallet<T> {
 	}
 
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
-		// TODO
-		true
+		todo!()
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -40,7 +39,6 @@ impl<T: Config> AccountManager for Pallet<T> {
 		_identifier: &WhitelistKey,
 		_account: &Self::AccountId,
 	) -> Result<(), DispatchError> {
-		// TODO
-		Ok(())
+		todo!()
 	}
 }

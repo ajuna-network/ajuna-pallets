@@ -28,13 +28,18 @@ pub mod mock;
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
+	fee_handler::FeeHandler,
+	season_manager::{SeasonConfig, SeasonManager},
+	trade_manager::TradeManager,
 };
 use sage_api::{AsErrorCode, Error as SageApiError, SageApi, SageGameTransition};
 
 use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
 use frame_system::pallet_prelude::*;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{
+	traits::{AccountIdConversion, UniqueSaturatedInto},
+	Saturating,
+};
 use sp_std::prelude::*;
 
 use weights::WeightInfo;
@@ -47,8 +52,6 @@ pub const SAGE_LOCK_ID: &[u8; 8] = b"sagelock";
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use ajuna_primitives::fee_handler::FeeHandler;
-	use sp_runtime::{traits::UniqueSaturatedInto, Saturating};
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
@@ -71,7 +74,9 @@ pub mod pallet {
 	pub(crate) type BoundedAssetIdsOf<T, I> = BoundedVec<AssetIdOf<T, I>, MaxAssetsPerPlayer>;
 
 	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>>;
-	pub(crate) type SeasonFeeConfigOf<T, I> = SeasonFeeConfig<BalanceOf<T, I>>;
+
+	pub(crate) type TradeFilterOf<T, I> =
+		<<T as Config<I>>::TradeHandler as TradeManager>::TradeFilter;
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
@@ -96,6 +101,8 @@ pub mod pallet {
 			// value
 			TreasuryKey = SeasonIdOf<Self, I>,
 		>;
+
+		type TradeHandler: TradeManager<Asset = AssetOf<Self, I>>;
 
 		type Currency: Currency<AccountIdOf<Self>>;
 
@@ -164,6 +171,10 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
+	pub type SeasonTradeFilters<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, SeasonIdOf<T, I>, TradeFilterOf<T, I>, ValueQuery>;
+
+	#[pallet::storage]
 	pub type AssetTradePrices<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
 		Identity,
@@ -195,6 +206,8 @@ pub mod pallet {
 		StorageTierUpgraded { account: AccountIdOf<T>, season_id: SeasonIdOf<T, I> },
 		/// Asset transferred.
 		AssetTransferred { from: AccountIdOf<T>, to: AccountIdOf<T>, asset_id: AssetIdOf<T, I> },
+		/// Trade filter has been updated
+		UpdatedTradeFilter { season_id: SeasonIdOf<T, I>, filter: TradeFilterOf<T, I> },
 		/// Asset has price set for trade.
 		AssetPriceSet { asset_id: AssetIdOf<T, I>, price: BalanceOf<T, I> },
 		/// Asset has price removed for trade.
@@ -339,12 +352,14 @@ pub mod pallet {
 				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).storage_tier;
 			ensure!(storage_tier != StorageTier::Max, Error::<T, I>::MaxStorageTierReached);
 
-			let base_fee = fee.upgrade_asset_inventory;
-			let upgrade_fee = T::FeeHandler::try_propagate_chain_fee(
-				base_fee,
-				&caller,
-				&AffiliateMethods::UpgradeAssetInventory,
-			)?;
+			let upgrade_fee = {
+				let base_fee = fee.upgrade_asset_inventory;
+				T::FeeHandler::try_propagate_chain_fee(
+					base_fee,
+					&caller,
+					&AffiliateMethods::UpgradeAssetInventory,
+				)?
+			};
 			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
 
 			PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, &season_id, |account| {
@@ -395,8 +410,24 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Set the price of a given asset, putting it on sale for others to buy.
 		#[pallet::call_index(5)]
+		#[pallet::weight({10_000})]
+		pub fn update_trade_filter(
+			origin: OriginFor<T>,
+			season_id: SeasonIdOf<T, I>,
+			trade_filter: TradeFilterOf<T, I>,
+		) -> DispatchResult {
+			Self::ensure_organizer(origin)?;
+
+			SeasonTradeFilters::<T, I>::insert(&season_id, trade_filter.clone());
+
+			Self::deposit_event(Event::UpdatedTradeFilter { season_id, filter: trade_filter });
+
+			Ok(())
+		}
+
+		/// Set the price of a given asset, putting it on sale for others to buy.
+		#[pallet::call_index(6)]
 		#[pallet::weight({10_000})]
 		pub fn set_asset_price(
 			origin: OriginFor<T>,
@@ -405,21 +436,21 @@ pub mod pallet {
 		) -> DispatchResult {
 			let seller = ensure_signed(origin)?;
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
-			let _ = Self::ensure_ownership(&seller, &asset_id)?;
+			let asset = Self::ensure_ownership(&seller, &asset_id)?;
 			let season_id = T::SeasonHandler::get_season_id_for(&asset_id);
 			ensure!(
 				PlayerSeasonConfigs::<T, I>::get(&seller, &season_id).locks.asset_trade,
 				Error::<T, I>::FeatureLocked
 			);
 			Self::ensure_unlocked(&asset_id)?;
-			Self::ensure_can_be_set_for_trade(&asset_id)?;
+			Self::ensure_can_be_set_for_trade(&asset_id, &asset)?;
 			AssetTradePrices::<T, I>::insert(&season_id, &asset_id, price);
 			Self::deposit_event(Event::AssetPriceSet { asset_id, price });
 			Ok(())
 		}
 
 		/// Remove the price of an asset set on sale previously.
-		#[pallet::call_index(6)]
+		#[pallet::call_index(7)]
 		#[pallet::weight({10_000})]
 		pub fn remove_asset_price(
 			origin: OriginFor<T>,
@@ -436,7 +467,7 @@ pub mod pallet {
 		}
 
 		/// Attempt to buy the selected asset
-		#[pallet::call_index(7)]
+		#[pallet::call_index(8)]
 		#[pallet::weight({10_000})]
 		pub fn buy_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
@@ -483,7 +514,7 @@ pub mod pallet {
 		}
 
 		/// Locks an asset, making it unavailable for use.
-		#[pallet::call_index(8)]
+		#[pallet::call_index(9)]
 		#[pallet::weight({10_000})]
 		pub fn lock_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -492,7 +523,7 @@ pub mod pallet {
 		}
 
 		/// Unlocks an asset, making it available for use again.
-		#[pallet::call_index(9)]
+		#[pallet::call_index(10)]
 		#[pallet::weight({10_000})]
 		pub fn unlock_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -501,7 +532,7 @@ pub mod pallet {
 		}
 
 		/// Attempts to unlock the selected feature for the given player
-		#[pallet::call_index(10)]
+		#[pallet::call_index(11)]
 		#[pallet::weight({10_000})]
 		pub fn unlock_feature(
 			origin: OriginFor<T>,
@@ -522,7 +553,7 @@ pub mod pallet {
 
 		/// Entry point for the custom state transition.
 		#[pallet::weight(T::WeightInfo::state_transition())]
-		#[pallet::call_index(11)]
+		#[pallet::call_index(12)]
 		pub fn state_transition(
 			origin: OriginFor<T>,
 			transition_id: TransitionIdOf<T, I>,
@@ -554,13 +585,11 @@ pub mod pallet {
 					&sender,
 					&current_season_id,
 				)?;
-				let final_fee = T::FeeHandler::try_propagate_chain_fee(
+				T::FeeHandler::try_propagate_chain_fee(
 					updated_fee,
 					&sender,
 					&AffiliateMethods::StateTransition,
-				)?;
-
-				final_fee
+				)?
 			};
 			T::FeeHandler::deposit_fee_into_treasury(&sender, &current_season_id, transition_fee)?;
 

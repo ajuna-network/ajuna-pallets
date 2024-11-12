@@ -18,6 +18,7 @@ use crate::{self as pallet_sage, AffiliateMethods};
 use ajuna_primitives::{
 	fee_handler::{FeeProvider, GameFeeHandler},
 	season_manager::{SeasonConfig, SeasonManager},
+	trade_manager::TradeManager,
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
@@ -255,6 +256,19 @@ impl TreasuryManager for MockTreasuryManager {
 	}
 }
 
+pub struct MockTradeHandler;
+
+pub type MockTradeFilter = u8;
+
+impl TradeManager for MockTradeHandler {
+	type TradeFilter = MockTradeFilter;
+	type Asset = Asset;
+
+	fn is_tradeable_using(_asset: &Self::Asset, _filter: &Self::TradeFilter) -> bool {
+		todo!()
+	}
+}
+
 pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
 	type PalletId = ExamplePalletId;
@@ -268,6 +282,7 @@ impl crate::Config<SageExampleTransitionInstance> for Test {
 		MockTournamentFeeProvider,
 		MockTreasuryManager,
 	>;
+	type TradeHandler = MockTradeHandler;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
