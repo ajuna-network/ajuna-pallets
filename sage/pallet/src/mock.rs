@@ -14,8 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_sage};
-use ajuna_primitives::season_manager::EmptySeasonManager;
+use crate::{self as pallet_sage, AffiliateMethods};
+use ajuna_primitives::{
+	fee_handler::{FeeProvider, GameFeeHandler},
+	season_manager::{SeasonConfig, SeasonManager},
+	treasury_manager::TreasuryManager,
+};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
@@ -24,7 +28,7 @@ use frame_support::{
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
+	BuildStorage, DispatchError,
 };
 
 pub type MockSignature = TestSignature;
@@ -162,12 +166,108 @@ parameter_types! {
 	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
 }
 
+pub struct MockSeasonManager;
+
+pub type MockSeasonId = ();
+
+impl SeasonManager for MockSeasonManager {
+	type SeasonId = MockSeasonId;
+	type AssetId = AssetId;
+	type Balance = MockBalance;
+
+	fn get_season_id_for(_asset: &Self::AssetId) -> Self::SeasonId {}
+
+	fn get_current_season_id() -> Self::SeasonId {}
+
+	fn is_valid_season(_season_id: &Self::SeasonId) -> Result<(), DispatchError> {
+		Ok(())
+	}
+
+	fn get_season_config_for(
+		_season_id: &Self::SeasonId,
+	) -> Result<SeasonConfig<Self::Balance>, DispatchError> {
+		Ok(SeasonConfig::<Self::Balance>::default())
+	}
+}
+
+pub struct MockAffiliatesFeeProvider;
+
+impl FeeProvider for MockAffiliatesFeeProvider {
+	type AccountId = MockAccountId;
+	type FeeIdentifier = AffiliateMethods;
+	type FeeCurrency = MockBalance;
+	type FeeOutput = Vec<(MockBalance, MockAccountId)>;
+
+	fn get_fee_from(
+		_base_fee: Self::FeeCurrency,
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Self::FeeOutput {
+		todo!()
+	}
+}
+
+pub struct MockTournamentFeeProvider;
+
+impl FeeProvider for MockTournamentFeeProvider {
+	type AccountId = MockAccountId;
+	type FeeIdentifier = MockSeasonId;
+	type FeeCurrency = MockBalance;
+	type FeeOutput = (MockBalance, MockAccountId);
+
+	fn get_fee_from(
+		_base_fee: Self::FeeCurrency,
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Self::FeeOutput {
+		todo!()
+	}
+}
+
+pub struct MockTreasuryManager;
+
+impl TreasuryManager for MockTreasuryManager {
+	type AccountId = MockAccountId;
+	type Currency = MockBalance;
+	type TreasuryPotKey = ();
+
+	fn is_treasurer_for(
+		_key: Self::TreasuryPotKey,
+		_account: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		todo!()
+	}
+
+	fn get_treasurer_for(_key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError> {
+		todo!()
+	}
+
+	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
+		todo!()
+	}
+
+	fn deposit_into(
+		_depository: &Self::AccountId,
+		_key: &Self::TreasuryPotKey,
+		_fee: Self::Currency,
+	) -> Result<(), DispatchError> {
+		todo!()
+	}
+}
+
 pub type SageExampleTransitionInstance = pallet_sage::Instance1;
 impl crate::Config<SageExampleTransitionInstance> for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance, SageMock>;
 	type SageApi = SageMock;
-	type SeasonHandler = EmptySeasonManager<AssetId>;
+	type SeasonHandler = MockSeasonManager;
+	type FeeHandler = GameFeeHandler<
+		MockAccountId,
+		Balances,
+		MockAffiliatesFeeProvider,
+		MockTournamentFeeProvider,
+		MockTreasuryManager,
+	>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

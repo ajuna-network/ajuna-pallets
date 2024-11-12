@@ -28,15 +28,11 @@ pub mod mock;
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	season_manager::SeasonManager,
+	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 };
 use sage_api::{AsErrorCode, Error as SageApiError, SageApi, SageGameTransition};
 
-use frame_support::{
-	pallet_prelude::*,
-	traits::{Currency, ExistenceRequirement::AllowDeath},
-	PalletId,
-};
+use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
@@ -51,6 +47,8 @@ pub const SAGE_LOCK_ID: &[u8; 8] = b"sagelock";
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use ajuna_primitives::fee_handler::FeeHandler;
+	use sp_runtime::{traits::UniqueSaturatedInto, Saturating};
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
@@ -72,6 +70,9 @@ pub mod pallet {
 
 	pub(crate) type BoundedAssetIdsOf<T, I> = BoundedVec<AssetIdOf<T, I>, MaxAssetsPerPlayer>;
 
+	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>>;
+	pub(crate) type SeasonFeeConfigOf<T, I> = SeasonFeeConfig<BalanceOf<T, I>>;
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		#[pallet::constant]
@@ -81,7 +82,20 @@ pub mod pallet {
 		// This associated type mostly exists to constraint the SageApi's associated types.
 		type SageApi: SageApi<Balance = BalanceOf<Self, I>, AccountId = AccountIdOf<Self>>;
 
-		type SeasonHandler: SeasonManager<AssetId = AssetIdOf<Self, I>>;
+		type SeasonHandler: SeasonManager<
+			AssetId = AssetIdOf<Self, I>,
+			Balance = BalanceOf<Self, I>,
+		>;
+
+		type FeeHandler: FeeHandler<
+			AccountId = AccountIdOf<Self>,
+			FeeCurrency = BalanceOf<Self, I>,
+			AffiliateFeeIdentifier = AffiliateMethods,
+			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
+			// TODO: Define if we want this as a configurable parameter or some different fixed
+			// value
+			TreasuryKey = SeasonIdOf<Self, I>,
+		>;
 
 		type Currency: Currency<AccountIdOf<Self>>;
 
@@ -309,19 +323,14 @@ pub mod pallet {
 			in_season: Option<SeasonIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
-			// TODO: Define a way to obtain the fee from the SeasonHandler
-			/*let (season_id, Season { fee, .. }) = {
-				if let Some(season_id) = in_season {
-					(season_id, Self::seasons(&season_id)?)
-				} else {
-					Self::current_season_with_id()?
-				}
-			};*/
-
-			let season_id = if let Some(season_id) = in_season {
-				season_id
+			let (season_id, SeasonConfigOf::<T, I> { fee, .. }) = if let Some(season_id) = in_season
+			{
+				let season_config = T::SeasonHandler::get_season_config_for(&season_id)?;
+				(season_id, season_config)
 			} else {
-				T::SeasonHandler::get_current_season()
+				let current_season_id = T::SeasonHandler::get_current_season_id();
+				let season_config = T::SeasonHandler::get_season_config_for(&current_season_id)?;
+				(current_season_id, season_config)
 			};
 
 			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller.clone());
@@ -330,27 +339,13 @@ pub mod pallet {
 				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).storage_tier;
 			ensure!(storage_tier != StorageTier::Max, Error::<T, I>::MaxStorageTierReached);
 
-			// TODO: This should be handled by the FeeHandler or similar
-			/*
-			let upgrade_fee = {
-				let base_fee = fee.upgrade_storage;
-				let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T, I>::get();
-
-				if affiliate_config.mode == AffiliateMode::Open &&
-					affiliate_config.enabled_in_upgrade
-				{
-					T::FeeHandler::try_propagate_chain_fee(
-						base_fee,
-						&caller,
-						&AffiliateMethods::UpgradeStorage,
-					)?
-				} else {
-					base_fee
-				}
-			};
-
-			T::Currency::withdraw(&caller, upgrade_fee, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&season_id, upgrade_fee);*/
+			let base_fee = fee.upgrade_asset_inventory;
+			let upgrade_fee = T::FeeHandler::try_propagate_chain_fee(
+				base_fee,
+				&caller,
+				&AffiliateMethods::UpgradeAssetInventory,
+			)?;
+			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
 
 			PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, &season_id, |account| {
 				account.storage_tier = storage_tier.upgrade()
@@ -385,16 +380,15 @@ pub mod pallet {
 			Self::ensure_unlocked(&asset_id)?;
 
 			let _ = Self::ensure_ownership(&from, &asset_id)?;
-			let season_id = T::SeasonHandler::get_current_season();
+			let season_id = T::SeasonHandler::get_current_season_id();
 			ensure!(
 				PlayerSeasonConfigs::<T, I>::get(&from, &season_id).locks.asset_transfer,
 				Error::<T, I>::FeatureLocked
 			);
 
-			// TODO: Should be done by the FeeHandler
-			/* let Season { fee, .. } = Self::seasons(&asset.season_id)?;
-			T::Currency::withdraw(&from, fee.transfer_asset, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&asset.season_id, fee.transfer_asset); */
+			let SeasonConfigOf::<T, I> { fee, .. } =
+				T::SeasonHandler::get_season_config_for(&season_id)?;
+			T::FeeHandler::deposit_fee_into_treasury(&from, &season_id, fee.transfer_asset)?;
 
 			Self::do_transfer_asset(&from, &to, &season_id, &asset_id)?;
 			Self::deposit_event(Event::AssetTransferred { from, to, asset_id });
@@ -412,7 +406,7 @@ pub mod pallet {
 			let seller = ensure_signed(origin)?;
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
 			let _ = Self::ensure_ownership(&seller, &asset_id)?;
-			let season_id = T::SeasonHandler::get_season_for(&asset_id);
+			let season_id = T::SeasonHandler::get_season_id_for(&asset_id);
 			ensure!(
 				PlayerSeasonConfigs::<T, I>::get(&seller, &season_id).locks.asset_trade,
 				Error::<T, I>::FeatureLocked
@@ -435,7 +429,7 @@ pub mod pallet {
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
 			Self::ensure_for_trade(&asset_id)?;
 			let _ = Self::ensure_ownership(&seller, &asset_id)?;
-			let season_id = T::SeasonHandler::get_season_for(&asset_id);
+			let season_id = T::SeasonHandler::get_season_id_for(&asset_id);
 			AssetTradePrices::<T, I>::remove(&season_id, &asset_id);
 			Self::deposit_event(Event::AssetPriceUnset { asset_id });
 			Ok(())
@@ -451,35 +445,32 @@ pub mod pallet {
 
 			let (seller, price) = Self::ensure_for_trade(&asset_id)?;
 			ensure!(buyer != seller, Error::<T, I>::AlreadyOwned);
-			T::Currency::transfer(&buyer, &seller, price, AllowDeath)?;
+			// TODO: Should this segment be handled by the FeeHandler?
+			// T::Currency::transfer(&buyer, &seller, price, KeepAlive)?;
 
-			let _ = Self::ensure_ownership(&seller, &asset_id)?;
-			let asset_season_id = T::SeasonHandler::get_season_for(&asset_id);
-			// TODO: This section should be handled by the FeeHandler or similar
-			/*let (current_season_id, Season { fee, .. }) = Self::current_season_with_id()?;
+			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id);
+			let current_season_id = T::SeasonHandler::get_current_season_id();
+			let SeasonConfigOf::<T, I> { fee, .. } =
+				T::SeasonHandler::get_season_config_for(&current_season_id)?;
 
 			let trade_fee = {
-				let base_fee = fee.buy_minimum.max(
-					price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
-						MAX_PERCENTAGE.unique_saturated_into(),
-				);
+				let min_buy_fee = fee.buy_asset_min;
+				let percentage_fee = price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
+					MAX_PERCENTAGE.unique_saturated_into();
+				let base_fee = sp_std::cmp::max(min_buy_fee, percentage_fee);
 
-				if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
-					T::FeeHandler::try_propagate_chain_fee(
-						base_fee,
-						&buyer,
-						&AffiliateMethods::Buy,
-					)?
-				} else {
-					base_fee
-				}
+				T::FeeHandler::try_propagate_chain_fee(
+					base_fee,
+					&buyer,
+					&AffiliateMethods::TradeAsset,
+				)?
 			};
-			T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&asset.season_id, trade_fee);*/
+			T::FeeHandler::deposit_fee_into_treasury(&buyer, &asset_season_id, trade_fee)?;
+
 			Self::do_transfer_asset(&seller, &buyer, &asset_season_id, &asset_id)?;
 			AssetTradePrices::<T, I>::remove(&asset_season_id, &asset_id);
 
-			let current_season_id = T::SeasonHandler::get_current_season();
+			let current_season_id = T::SeasonHandler::get_current_season_id();
 			PlayerSeasonStats::<T, I>::mutate(&buyer, &current_season_id, |stats| {
 				stats.bought_amount = stats.bought_amount.saturating_add(1);
 			});
@@ -550,6 +541,28 @@ pub mod pallet {
 				extra,
 			)
 			.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
+
+			// TODO: Review the logic in this section
+			let current_season_id = T::SeasonHandler::get_current_season_id();
+			let transition_fee = {
+				let SeasonConfigOf::<T, I> { fee, .. } =
+					T::SeasonHandler::get_season_config_for(&current_season_id)?;
+
+				let base_fee = fee.state_transition;
+				let updated_fee = T::FeeHandler::try_propagate_tournament_fee(
+					base_fee,
+					&sender,
+					&current_season_id,
+				)?;
+				let final_fee = T::FeeHandler::try_propagate_chain_fee(
+					updated_fee,
+					&sender,
+					&AffiliateMethods::StateTransition,
+				)?;
+
+				final_fee
+			};
+			T::FeeHandler::deposit_fee_into_treasury(&sender, &current_season_id, transition_fee)?;
 
 			Self::deposit_event(Event::TransitionExecuted { account: sender, id: transition_id });
 

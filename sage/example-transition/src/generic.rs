@@ -4,8 +4,8 @@
 //! within frame. However, it is a bit harder to understand for downstream implementors.
 
 use crate::types::{consume_asset, Asset, AssetId, ExampleTransitionId};
+use core::marker::PhantomData;
 use sage_api::{rules::ensure_asset_length, traits::AccountIdOf, SageApi, SageGameTransition};
-use std::marker::PhantomData;
 
 pub struct ExampleTransitionGeneric<Balance, AccountId, SageApi> {
 	phantom_data: PhantomData<(Balance, AccountId, SageApi)>,

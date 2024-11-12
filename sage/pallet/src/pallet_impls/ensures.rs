@@ -55,7 +55,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		asset_id: &AssetIdOf<T, I>,
 	) -> Result<(AccountIdOf<T>, BalanceOf<T, I>), DispatchError> {
 		let (seller, _) = Self::asset_with_owner(asset_id)?;
-		let season_id = T::SeasonHandler::get_season_for(asset_id);
+		let season_id = T::SeasonHandler::get_season_id_for(asset_id);
 		let price = AssetTradePrices::<T, I>::get(season_id, asset_id)
 			.ok_or(Error::<T, I>::AssetNotInTrade)?;
 		Ok((seller, price))

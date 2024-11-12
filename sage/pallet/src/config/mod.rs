@@ -11,11 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+mod affiliates;
 mod player;
 
 use frame_support::pallet_prelude::*;
 
+pub use affiliates::AffiliateMethods;
 pub(crate) use player::*;
+
+pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub enum LockableFeature {

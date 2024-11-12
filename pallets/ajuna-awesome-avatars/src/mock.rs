@@ -340,6 +340,10 @@ impl ExtBuilder {
 					PlayerSeasonConfigs::<Test>::insert(account, season_id, config);
 				}
 			}
+
+			// Add funds to the treasury account so that it is created
+			let treasury_account = Pallet::<Test>::treasury_account_id();
+			let _ = Balances::deposit_creating(&treasury_account, MockExistentialDeposit::get());
 		});
 		ext
 	}

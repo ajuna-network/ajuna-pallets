@@ -1,11 +1,11 @@
 use crate::treasury_manager::TreasuryManager;
+use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
 	sp_runtime::{traits::CheckedSub, ArithmeticError},
 	traits::{Currency, ExistenceRequirement::KeepAlive},
 	Parameter,
 };
-use std::marker::PhantomData;
 
 pub trait FeeProvider {
 	type AccountId;
@@ -40,7 +40,8 @@ pub trait FeeHandler {
 	) -> Result<Self::FeeCurrency, DispatchError>;
 
 	fn deposit_fee_into_treasury(
-		key: Self::TreasuryKey,
+		depositor: &Self::AccountId,
+		key: &Self::TreasuryKey,
 		fee: Self::FeeCurrency,
 	) -> Result<(), DispatchError>;
 }
@@ -115,9 +116,10 @@ where
 	}
 
 	fn deposit_fee_into_treasury(
-		key: Self::TreasuryKey,
+		depositor: &Self::AccountId,
+		key: &Self::TreasuryKey,
 		fee: Self::FeeCurrency,
 	) -> Result<(), DispatchError> {
-		Treasury::deposit_into(key, fee)
+		Treasury::deposit_into(depositor, key, fee)
 	}
 }

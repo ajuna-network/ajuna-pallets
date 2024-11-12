@@ -15,40 +15,51 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::{
-	pallet_prelude::{DispatchError, Member},
+	pallet_prelude::{Decode, DispatchError, Encode, Member, TypeInfo},
 	Parameter,
 };
 use parity_scale_codec::MaxEncodedLen;
-use std::marker::PhantomData;
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub struct SeasonFeeConfig<Balance> {
+	/// Fee that will be deposited in the treasury when transferring an asset
+	pub transfer_asset: Balance,
+	/// Minimum fee that will be deposited in the treasury when buying an asset
+	pub buy_asset_min: Balance,
+	/// Percentage of the sell price that will be additionally deposited as fee
+	/// in the treasury, if computed fee is lower than 'buy_asset' value
+	/// then 'buy_asset' will be instead used as fee.
+	pub buy_percent: u8,
+	/// Fee that will be deposited in the treasury when upgrading an account's
+	/// asset inventory
+	pub upgrade_asset_inventory: Balance,
+	/// Price of unlocking the `LockableFeatures::TradeAsset`
+	pub unlock_trade_asset: Balance,
+	/// Price of unlocking the `LockableFeatures::TransferAsset`
+	pub unlock_transfer_asset: Balance,
+	/// Price of executing an asset/s state transition
+	pub state_transition: Balance,
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+pub struct SeasonConfig<Balance> {
+	pub fee: SeasonFeeConfig<Balance>,
+}
 
 pub trait SeasonManager {
 	type SeasonId: Member + Parameter + MaxEncodedLen;
 
 	type AssetId: Member + Parameter + MaxEncodedLen;
 
-	fn get_season_for(asset: &Self::AssetId) -> Self::SeasonId;
+	type Balance;
 
-	fn get_current_season() -> Self::SeasonId;
+	fn get_season_id_for(asset: &Self::AssetId) -> Self::SeasonId;
+
+	fn get_current_season_id() -> Self::SeasonId;
 
 	fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError>;
-}
 
-pub struct EmptySeasonManager<AssetId> {
-	_phantom: PhantomData<AssetId>,
-}
-
-impl<AssetId> SeasonManager for EmptySeasonManager<AssetId>
-where
-	AssetId: Member + Parameter + MaxEncodedLen,
-{
-	type SeasonId = ();
-	type AssetId = AssetId;
-
-	fn get_season_for(_asset: &Self::AssetId) -> Self::SeasonId {}
-
-	fn get_current_season() -> Self::SeasonId {}
-
-	fn is_valid_season(_season_id: &Self::SeasonId) -> Result<(), DispatchError> {
-		Ok(())
-	}
+	fn get_season_config_for(
+		season_id: &Self::SeasonId,
+	) -> Result<SeasonConfig<Self::Balance>, DispatchError>;
 }

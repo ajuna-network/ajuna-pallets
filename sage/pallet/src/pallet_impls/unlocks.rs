@@ -15,10 +15,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	pallet::PlayerStatsOf, AccountIdOf, Config, Error, LockableFeature, Pallet,
-	PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockConfig, UnlockTarget,
+	pallet::{PlayerStatsOf, SeasonConfigOf},
+	AccountIdOf, Config, Error, LockableFeature, Pallet, PlayerSeasonConfigs, PlayerSeasonStats,
+	SeasonIdOf, SeasonUnlocks, UnlockConfig, UnlockTarget,
 };
-use frame_support::pallet_prelude::*;
+use ajuna_primitives::season_manager::SeasonManager;
+use frame_support::{
+	pallet_prelude::*,
+	traits::{Currency, ExistenceRequirement::KeepAlive},
+};
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	pub(crate) fn unlock_asset_trading_for(
@@ -34,7 +39,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
 					if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-						PlayerSeasonConfigs::<T, I>::mutate(account, season_id, |config| {
+						PlayerSeasonConfigs::<T, I>::mutate(&account, &season_id, |config| {
 							config.locks.asset_trade = true;
 						});
 
@@ -47,19 +52,17 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				}
 			},
 			UnlockTarget::OneselfPaying => {
-				PlayerSeasonConfigs::<T, I>::try_mutate(&account, season_id, |config| {
+				PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
 					if !config.locks.asset_trade {
+						let SeasonConfigOf::<T, I> { fee, .. } =
+							T::SeasonHandler::get_season_config_for(&season_id)?;
 						// TODO: Should be handled by FeeHandler
-						/*let Season { fee, .. } = Self::seasons(&season_id)?;
-						ensure!(
-							fee.set_price_unlock > 0_u32.into(),
-							Error::<T, I>::FeatureLockedThroughPayment
-						);
-						T::Currency::transfer(
+
+						/*T::Currency::transfer(
 							&account,
 							&Self::treasury_account_id(),
-							fee.set_price_unlock,
-							AllowDeath,
+							fee.unlock_trade_asset,
+							KeepAlive,
 						)?;*/
 						config.locks.asset_trade = true;
 					}
@@ -67,19 +70,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				})
 			},
 			UnlockTarget::OtherPaying(other) => {
-				PlayerSeasonConfigs::<T, I>::try_mutate(&other, season_id, |config| {
+				PlayerSeasonConfigs::<T, I>::try_mutate(&other, &season_id, |config| {
 					if !config.locks.asset_trade {
+						let SeasonConfigOf::<T, I> { fee, .. } =
+							T::SeasonHandler::get_season_config_for(&season_id)?;
 						// TODO: Should be handled by FeeHandler
-						/*let Season { fee, .. } = Self::seasons(&season_id)?;
-						ensure!(
-							fee.set_price_unlock > 0_u32.into(),
-							Error::<T, I>::FeatureLockedThroughPayment
-						);
-						T::Currency::transfer(
+						/*T::Currency::transfer(
 							&account,
 							&Self::treasury_account_id(),
-							fee.set_price_unlock,
-							AllowDeath,
+							fee.unlock_trade_asset,
+							KeepAlive,
 						)?;*/
 						config.locks.asset_trade = true;
 					}
@@ -102,7 +102,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
 					if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-						PlayerSeasonConfigs::<T, I>::mutate(account, season_id, |config| {
+						PlayerSeasonConfigs::<T, I>::mutate(&account, &season_id, |config| {
 							config.locks.asset_transfer = true;
 						});
 
@@ -115,18 +115,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				}
 			},
 			UnlockTarget::OneselfPaying => {
-				PlayerSeasonConfigs::<T, I>::try_mutate(&account, season_id, |config| {
+				PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
 					if !config.locks.asset_trade {
 						// TODO: Should be handled by FeeHandler
-						/*let Season { fee, .. } = Self::seasons(&season_id)?;
-						ensure!(
-								fee.avatar_transfer_unlock > 0_u32.into(),
-								Error::<T, I>::FeatureLockedThroughPayment
-							);
-						T::Currency::transfer(
+						let SeasonConfigOf::<T, I> { fee, .. } =
+							T::SeasonHandler::get_season_config_for(&season_id)?;
+						// TODO: Should be handled by FeeHandler
+						/*T::Currency::transfer(
 							&account,
 							&Self::treasury_account_id(),
-							fee.avatar_transfer_unlock,
+							fee.unlock_transfer_asset,
 							AllowDeath,
 						)?;*/
 						config.locks.asset_transfer = true;
@@ -135,18 +133,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				})
 			},
 			UnlockTarget::OtherPaying(other) => {
-				PlayerSeasonConfigs::<T, I>::try_mutate(&other, season_id, |config| {
+				PlayerSeasonConfigs::<T, I>::try_mutate(&other, &season_id, |config| {
 					if !config.locks.asset_trade {
+						let SeasonConfigOf::<T, I> { fee, .. } =
+							T::SeasonHandler::get_season_config_for(&season_id)?;
 						// TODO: Should be handled by FeeHandler
-						/*let Season { fee, .. } = Self::seasons(&season_id)?;
-						ensure!(
-								fee.avatar_transfer_unlock > 0_u32.into(),
-								Error::<T, I>::FeatureLockedThroughPayment
-							);
-						T::Currency::transfer(
+						/*T::Currency::transfer(
 							&account,
 							&Self::treasury_account_id(),
-							fee.avatar_transfer_unlock,
+							fee.unlock_transfer_asset,
 							AllowDeath,
 						)?;*/
 						config.locks.asset_transfer = true;

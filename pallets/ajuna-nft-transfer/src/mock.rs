@@ -39,7 +39,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
 	DispatchError, RuntimeAppPublic,
 };
-use std::{cell::RefCell, collections::BTreeMap};
+use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -333,7 +333,7 @@ impl AssetManager for MockAssetManager {
 		let asset = Self::ensure_ownership(&owner, &asset_id)?;
 
 		LOCKED_ASSETS.with(|locked| {
-			use std::collections::btree_map::Entry;
+			use sp_std::collections::btree_map::Entry;
 
 			let mut borrowed = locked.borrow_mut();
 

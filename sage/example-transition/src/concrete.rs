@@ -5,8 +5,8 @@
 //! However, this forces us to use the same types in our mock runtimes for tests.
 
 use crate::types::{consume_asset, Asset, AssetId, ExampleTransitionId};
+use core::marker::PhantomData;
 use sage_api::{rules::ensure_asset_length, AccountId, Balance, SageApi, SageGameTransition};
-use std::marker::PhantomData;
 
 pub struct ExampleTransition<SageApi> {
 	_phantom: PhantomData<SageApi>,
