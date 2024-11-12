@@ -243,6 +243,7 @@ impl TreasuryManager for MockTreasuryManager {
 		todo!()
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
 	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
 		todo!()
 	}
