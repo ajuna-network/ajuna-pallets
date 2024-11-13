@@ -131,6 +131,7 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 
 	fn state_transition(n: u32, ) -> Weight {
 		Weight::from_parts(0, 0)
+			.saturating_mul(n as u64)
 			.saturating_add(T::DbWeight::get().writes(1))
     }
 }
@@ -198,6 +199,7 @@ impl WeightInfo for () {
 
 	fn state_transition(n: u32, ) -> Weight {
 		Weight::from_parts(0, 0)
+			.saturating_mul(n as u64)
 			.saturating_add(RocksDbWeight::get().writes(1))
     }
 }

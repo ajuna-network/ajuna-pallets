@@ -24,6 +24,8 @@ mod trait_impls;
 
 #[cfg(test)]
 pub mod mock;
+#[cfg(test)]
+mod tests;
 
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},

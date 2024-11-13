@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_sage, AffiliateMethods};
+use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	fee_handler::{FeeProvider, GameFeeHandler},
 	season_manager::{SeasonConfig, SeasonManager},
@@ -41,14 +41,15 @@ pub type MockCollectionId = u32;
 
 pub const ALICE: MockAccountId = 1;
 pub const BOB: MockAccountId = 2;
+pub const CHARLIE: MockAccountId = 3;
+pub const DAVE: MockAccountId = 4;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		// pub type SageExampleTransitionInstance = pallet_sage::<Instance1>;
-		SageExampleTransition: pallet_sage::<Instance1> = 2,
+		Sage: pallet_sage::<Instance1> = 2,
 	}
 );
 
@@ -270,8 +271,8 @@ impl TradeManager for MockTradeHandler {
 	}
 }
 
-pub type SageExampleTransitionInstance = pallet_sage::Instance1;
-impl crate::Config<SageExampleTransitionInstance> for Test {
+pub type SageInstance1 = pallet_sage::Instance1;
+impl crate::Config<SageInstance1> for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance, SageMock>;
 	type SageApi = SageMock;
@@ -292,11 +293,17 @@ impl crate::Config<SageExampleTransitionInstance> for Test {
 #[derive(Default)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
+	organizer: Option<MockAccountId>,
 }
 
 impl ExtBuilder {
 	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
 		self.balances = balances.to_vec();
+		self
+	}
+
+	pub fn organizer(mut self, organizer: MockAccountId) -> Self {
+		self.organizer = Some(organizer);
 		self
 	}
 
@@ -308,6 +315,11 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			if let Some(organizer) = self.organizer {
+				Organizer::<Test, Instance1>::put(organizer);
+			}
+		});
 		ext
 	}
 }
