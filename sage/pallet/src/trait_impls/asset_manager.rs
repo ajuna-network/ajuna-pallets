@@ -79,7 +79,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 				.map_err(|_| Error::<T, I>::MaxOwnershipReached)?;
 			ensure!(
 				asset_ids.len() <=
-					PlayerSeasonConfigs::<T, I>::get(&owner, &asset_season_id).storage_tier
+					PlayerSeasonConfigs::<T, I>::get(&owner, &asset_season_id).inventory_tier
 						as usize,
 				Error::<T, I>::MaxOwnershipReached
 			);

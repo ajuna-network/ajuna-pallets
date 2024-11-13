@@ -196,8 +196,8 @@ pub mod pallet {
 	pub enum Event<T: Config<I>, I: 'static = ()> {
 		/// An organizer has been set.
 		OrganizerSet { organizer: AccountIdOf<T> },
-		/// Global configuration updated.
-		UpdatedGlobalConfig { updated_config: GeneralConfigOf<T, I> },
+		/// General configuration updated.
+		UpdatedGeneralConfig { updated_config: GeneralConfigOf<T, I> },
 		/// Unlock configuration updated for feature.
 		UpdatedUnlockRule {
 			season_id: SeasonIdOf<T, I>,
@@ -205,7 +205,11 @@ pub mod pallet {
 			updated_rule: UnlockRule,
 		},
 		/// Storage tier has been upgraded.
-		StorageTierUpgraded { account: AccountIdOf<T>, season_id: SeasonIdOf<T, I> },
+		InventoryTierUpgraded {
+			account: AccountIdOf<T>,
+			season_id: SeasonIdOf<T, I>,
+			new_tier: InventoryTier,
+		},
 		/// Asset transferred.
 		AssetTransferred { from: AccountIdOf<T>, to: AccountIdOf<T>, asset_id: AssetIdOf<T, I> },
 		/// Trade filter has been updated
@@ -305,7 +309,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			Self::ensure_organizer(origin)?;
 			GeneralConfigStore::<T, I>::put(&new_config);
-			Self::deposit_event(Event::UpdatedGlobalConfig { updated_config: new_config });
+			Self::deposit_event(Event::UpdatedGeneralConfig { updated_config: new_config });
 			Ok(())
 		}
 
@@ -318,7 +322,7 @@ pub mod pallet {
 			unlock_rule: UnlockRule,
 		) -> DispatchResult {
 			Self::ensure_organizer(origin)?;
-			SeasonUnlocks::<T, I>::mutate(&season_id, &feature, |config| {
+			SeasonUnlocks::<T, I>::mutate(&season_id, feature, |config| {
 				*config = Some(unlock_rule.clone());
 			});
 			Self::deposit_event(Event::UpdatedUnlockRule {
@@ -350,9 +354,9 @@ pub mod pallet {
 
 			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller.clone());
 
-			let storage_tier =
-				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).storage_tier;
-			ensure!(storage_tier != StorageTier::Max, Error::<T, I>::MaxStorageTierReached);
+			let inventory_tier =
+				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).inventory_tier;
+			ensure!(inventory_tier != InventoryTier::Max, Error::<T, I>::MaxStorageTierReached);
 
 			let upgrade_fee = {
 				let base_fee = fee.upgrade_asset_inventory;
@@ -364,19 +368,23 @@ pub mod pallet {
 			};
 			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
 
-			PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, &season_id, |account| {
-				account.storage_tier = storage_tier.upgrade()
-			});
-			Self::deposit_event(Event::StorageTierUpgraded {
+			let upgraded_tier =
+				PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, &season_id, |account| {
+					let upgraded_tier = inventory_tier.upgrade();
+					account.inventory_tier = upgraded_tier;
+					upgraded_tier
+				});
+			Self::deposit_event(Event::InventoryTierUpgraded {
 				account: account_to_upgrade,
 				season_id,
+				new_tier: upgraded_tier,
 			});
 			Ok(())
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::transfer_asset_to())]
-		pub fn transfer_asset_to(
+		#[pallet::weight(T::WeightInfo::transfer_asset())]
+		pub fn transfer_asset(
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
@@ -639,7 +647,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T, I>::MaxOwnershipReached)?;
 			ensure!(
 				to_asset_ids.len() <=
-					PlayerSeasonConfigs::<T, I>::get(to, season_id).storage_tier as usize,
+					PlayerSeasonConfigs::<T, I>::get(to, season_id).inventory_tier as usize,
 				Error::<T, I>::MaxOwnershipReached
 			);
 

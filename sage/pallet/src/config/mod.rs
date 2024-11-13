@@ -21,7 +21,7 @@ pub(crate) use player::*;
 
 pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
 pub enum LockableFeature {
 	TradeAsset,
 	TransferAsset,

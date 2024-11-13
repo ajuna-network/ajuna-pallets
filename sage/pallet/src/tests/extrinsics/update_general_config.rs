@@ -16,9 +16,28 @@
 
 use super::*;
 
-mod set_organizer;
-mod transfer_asset;
-mod update_general_config;
-mod update_trade_filter;
-mod update_unlock_rule;
-mod upgrade_asset_inventory;
+// TODO: Add more tests
+
+#[test]
+fn update_general_config_should_work() {
+	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+		let config = GeneralConfigOf::<Test, Instance1>::default();
+		assert_ok!(Sage::update_general_config(RuntimeOrigin::signed(ALICE), config.clone()));
+		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedGeneralConfig {
+			updated_config: config,
+		}));
+	});
+}
+
+#[test]
+fn update_general_config_should_reject_non_organizer_calls() {
+	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+		assert_noop!(
+			Sage::update_general_config(
+				RuntimeOrigin::signed(BOB),
+				GeneralConfigOf::<Test, Instance1>::default()
+			),
+			DispatchError::BadOrigin
+		);
+	});
+}

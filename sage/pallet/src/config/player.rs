@@ -17,8 +17,8 @@
 use frame_support::pallet_prelude::*;
 use sp_runtime::traits::Get;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
-pub enum StorageTier {
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, PartialEq)]
+pub enum InventoryTier {
 	#[default]
 	One = 25,
 	Two = 50,
@@ -28,7 +28,7 @@ pub enum StorageTier {
 	Max = 200,
 }
 
-impl StorageTier {
+impl InventoryTier {
 	pub(crate) fn upgrade(self) -> Self {
 		match self {
 			Self::One => Self::Two,
@@ -39,19 +39,16 @@ impl StorageTier {
 			Self::Max => Self::Max,
 		}
 	}
+
+	pub(crate) fn get_asset_slots(&self) -> u8 {
+		*self as u8
+	}
 }
 
 pub struct MaxAssetsPerPlayer;
 impl Get<u32> for MaxAssetsPerPlayer {
 	fn get() -> u32 {
-		StorageTier::Max as u32
-	}
-}
-
-pub struct MaxSeasons;
-impl Get<u32> for MaxSeasons {
-	fn get() -> u32 {
-		1_000
+		InventoryTier::Max as u32
 	}
 }
 
@@ -69,7 +66,7 @@ impl Locks {
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
 pub struct PlayerConfig {
-	pub storage_tier: StorageTier,
+	pub inventory_tier: InventoryTier,
 	pub locks: Locks,
 }
 

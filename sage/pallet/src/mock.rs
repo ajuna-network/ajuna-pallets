@@ -17,13 +17,13 @@
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	fee_handler::{FeeProvider, GameFeeHandler},
-	season_manager::{SeasonConfig, SeasonManager},
+	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 	trade_manager::TradeManager,
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
 	parameter_types,
-	traits::{ConstU16, ConstU64},
+	traits::{ConstU16, ConstU64, ExistenceRequirement},
 	PalletId,
 };
 use sp_runtime::{
@@ -43,6 +43,11 @@ pub const ALICE: MockAccountId = 1;
 pub const BOB: MockAccountId = 2;
 pub const CHARLIE: MockAccountId = 3;
 pub const DAVE: MockAccountId = 4;
+
+pub const TREASURER: MockAccountId = 431;
+
+pub const SEASON_ID_0: MockSeasonId = 0;
+pub const SEASON_ID_1: MockSeasonId = 1;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -170,16 +175,20 @@ parameter_types! {
 
 pub struct MockSeasonManager;
 
-pub type MockSeasonId = ();
+pub type MockSeasonId = u8;
 
 impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
 	type AssetId = AssetId;
 	type Balance = MockBalance;
 
-	fn get_season_id_for(_asset: &Self::AssetId) -> Self::SeasonId {}
+	fn get_season_id_for(_asset: &Self::AssetId) -> Self::SeasonId {
+		MockSeasonId::default()
+	}
 
-	fn get_current_season_id() -> Self::SeasonId {}
+	fn get_current_season_id() -> Self::SeasonId {
+		MockSeasonId::default()
+	}
 
 	fn is_valid_season(_season_id: &Self::SeasonId) -> Result<(), DispatchError> {
 		Ok(())
@@ -188,7 +197,17 @@ impl SeasonManager for MockSeasonManager {
 	fn get_season_config_for(
 		_season_id: &Self::SeasonId,
 	) -> Result<SeasonConfig<Self::Balance>, DispatchError> {
-		Ok(SeasonConfig::<Self::Balance>::default())
+		Ok(SeasonConfig::<Self::Balance> {
+			fee: SeasonFeeConfig::<Self::Balance> {
+				transfer_asset: MockExistentialDeposit::get(),
+				buy_asset_min: MockExistentialDeposit::get(),
+				buy_percent: 1,
+				upgrade_asset_inventory: MockExistentialDeposit::get(),
+				unlock_trade_asset: MockExistentialDeposit::get(),
+				unlock_transfer_asset: MockExistentialDeposit::get(),
+				state_transition: MockExistentialDeposit::get(),
+			},
+		})
 	}
 }
 
@@ -205,7 +224,7 @@ impl FeeProvider for MockAffiliatesFeeProvider {
 		_account: &Self::AccountId,
 		_identifier: &Self::FeeIdentifier,
 	) -> Self::FeeOutput {
-		todo!()
+		Vec::with_capacity(0)
 	}
 }
 
@@ -218,11 +237,11 @@ impl FeeProvider for MockTournamentFeeProvider {
 	type FeeOutput = (MockBalance, MockAccountId);
 
 	fn get_fee_from(
-		_base_fee: Self::FeeCurrency,
-		_account: &Self::AccountId,
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
 		_identifier: &Self::FeeIdentifier,
 	) -> Self::FeeOutput {
-		todo!()
+		(base_fee, *account)
 	}
 }
 
@@ -231,17 +250,18 @@ pub struct MockTreasuryManager;
 impl TreasuryManager for MockTreasuryManager {
 	type AccountId = MockAccountId;
 	type Currency = MockBalance;
-	type TreasuryPotKey = ();
+	type TreasuryPotKey = MockSeasonId;
 
 	fn is_treasurer_for(
 		_key: Self::TreasuryPotKey,
-		_account: &Self::AccountId,
+		account: &Self::AccountId,
 	) -> Result<(), DispatchError> {
-		todo!()
+		ensure!(account == &TREASURER, DispatchError::BadOrigin);
+		Ok(())
 	}
 
 	fn get_treasurer_for(_key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError> {
-		todo!()
+		Ok(TREASURER)
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -250,11 +270,11 @@ impl TreasuryManager for MockTreasuryManager {
 	}
 
 	fn deposit_into(
-		_depository: &Self::AccountId,
+		depository: &Self::AccountId,
 		_key: &Self::TreasuryPotKey,
-		_fee: Self::Currency,
+		fee: Self::Currency,
 	) -> Result<(), DispatchError> {
-		todo!()
+		Balances::transfer(depository, &TREASURER, fee, ExistenceRequirement::KeepAlive)
 	}
 }
 
@@ -316,6 +336,8 @@ impl ExtBuilder {
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext.execute_with(|| {
+			let _ = Balances::deposit_creating(&TREASURER, MockExistentialDeposit::get());
+
 			if let Some(organizer) = self.organizer {
 				Organizer::<Test, Instance1>::put(organizer);
 			}
