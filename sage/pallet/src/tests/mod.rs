@@ -18,4 +18,43 @@ mod extrinsics;
 mod pallet_impls;
 
 use crate::{mock::*, *};
+use example_transition::types::{Asset, AssetId, Level};
+
 use frame_support::{assert_noop, assert_ok};
+
+pub(crate) fn create_assets<I: 'static>(
+	season_id: MockSeasonId,
+	account: MockAccountId,
+	n: u8,
+) -> Vec<AssetIdOf<Test, I>>
+where
+	Test: Config<I>,
+	AssetIdOf<Test, I>: From<[u8; 32]>,
+	AssetOf<Test, I>: From<Asset>,
+	SeasonIdOf<Test, I>: From<MockSeasonId>,
+{
+	(0..n)
+		.map(|i| {
+			let asset_id = AssetId::random();
+			ASSET_SEASONS.with(|store| {
+				store.borrow_mut().insert(asset_id, season_id);
+			});
+
+			let asset_id = AssetIdOf::<Test, I>::from(asset_id.0);
+			let asset = AssetOf::<Test, I>::from(Asset {
+				collection_id: 0,
+				asset_type: 0,
+				asset_sub_type: 0,
+				dna: [i; 32],
+				minted_at: 0,
+				level: Level::One,
+				consumed: false,
+			});
+			let season_id = SeasonIdOf::<Test, I>::from(season_id);
+			Assets::<Test, I>::insert(&asset_id, (account, asset));
+			AssetOwners::<Test, I>::try_append(account, season_id.clone(), asset_id.clone())
+				.unwrap();
+			asset_id
+		})
+		.collect()
+}

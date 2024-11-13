@@ -405,17 +405,17 @@ pub mod pallet {
 			Self::ensure_unlocked(&asset_id)?;
 
 			let _ = Self::ensure_ownership(&from, &asset_id)?;
-			let season_id = T::SeasonHandler::get_current_season_id();
+			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			ensure!(
-				PlayerSeasonConfigs::<T, I>::get(&from, &season_id).locks.asset_transfer,
+				PlayerSeasonConfigs::<T, I>::get(&from, &asset_season_id).locks.asset_transfer,
 				Error::<T, I>::FeatureLocked
 			);
 
 			let SeasonConfigOf::<T, I> { fee, .. } =
-				T::SeasonHandler::get_season_config_for(&season_id)?;
-			T::FeeHandler::deposit_fee_into_treasury(&from, &season_id, fee.transfer_asset)?;
+				T::SeasonHandler::get_season_config_for(&asset_season_id)?;
+			T::FeeHandler::deposit_fee_into_treasury(&from, &asset_season_id, fee.transfer_asset)?;
 
-			Self::do_transfer_asset(&from, &to, &season_id, &asset_id)?;
+			Self::do_transfer_asset(&from, &to, &asset_season_id, &asset_id)?;
 			Self::deposit_event(Event::AssetTransferred { from, to, asset_id });
 			Ok(())
 		}
@@ -447,7 +447,7 @@ pub mod pallet {
 			let seller = ensure_signed(origin)?;
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
 			let asset = Self::ensure_ownership(&seller, &asset_id)?;
-			let season_id = T::SeasonHandler::get_season_id_for(&asset_id);
+			let season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			ensure!(
 				PlayerSeasonConfigs::<T, I>::get(&seller, &season_id).locks.asset_trade,
 				Error::<T, I>::FeatureLocked
@@ -470,7 +470,7 @@ pub mod pallet {
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
 			Self::ensure_for_trade(&asset_id)?;
 			let _ = Self::ensure_ownership(&seller, &asset_id)?;
-			let season_id = T::SeasonHandler::get_season_id_for(&asset_id);
+			let season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			AssetTradePrices::<T, I>::remove(&season_id, &asset_id);
 			Self::deposit_event(Event::AssetPriceUnset { asset_id });
 			Ok(())
@@ -494,7 +494,7 @@ pub mod pallet {
 				frame_support::traits::ExistenceRequirement::KeepAlive,
 			)?;
 
-			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id);
+			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id();
 			let SeasonConfigOf::<T, I> { fee, .. } =
 				T::SeasonHandler::get_season_config_for(&current_season_id)?;

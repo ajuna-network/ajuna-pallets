@@ -53,7 +53,7 @@ pub trait SeasonManager {
 
 	type Balance;
 
-	fn get_season_id_for(asset: &Self::AssetId) -> Self::SeasonId;
+	fn get_season_id_for(asset_id: &Self::AssetId) -> Result<Self::SeasonId, DispatchError>;
 
 	fn get_current_season_id() -> Self::SeasonId;
 

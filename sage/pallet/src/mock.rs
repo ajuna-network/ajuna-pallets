@@ -21,6 +21,7 @@ use ajuna_primitives::{
 	trade_manager::TradeManager,
 	treasury_manager::TreasuryManager,
 };
+
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, ExistenceRequirement},
@@ -31,6 +32,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, DispatchError,
 };
+use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -173,6 +175,11 @@ parameter_types! {
 	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
 }
 
+thread_local! {
+	pub static ASSET_SEASONS: RefCell<BTreeMap<AssetId, MockSeasonId>> = RefCell::new(BTreeMap::new());
+	pub static CURRENT_SEASON: RefCell<MockSeasonId> = RefCell::new(SEASON_ID_0)
+}
+
 pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
@@ -182,16 +189,25 @@ impl SeasonManager for MockSeasonManager {
 	type AssetId = AssetId;
 	type Balance = MockBalance;
 
-	fn get_season_id_for(_asset: &Self::AssetId) -> Self::SeasonId {
-		MockSeasonId::default()
+	fn get_season_id_for(asset_id: &Self::AssetId) -> Result<Self::SeasonId, DispatchError> {
+		ASSET_SEASONS.with(|store| {
+			store
+				.borrow()
+				.get(asset_id)
+				.cloned()
+				.ok_or(DispatchError::Other("Unknown asset"))
+		})
 	}
 
 	fn get_current_season_id() -> Self::SeasonId {
-		MockSeasonId::default()
+		CURRENT_SEASON.with(|season_id| *season_id.borrow())
 	}
 
-	fn is_valid_season(_season_id: &Self::SeasonId) -> Result<(), DispatchError> {
-		Ok(())
+	fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError> {
+		match season_id {
+			&SEASON_ID_0 | &SEASON_ID_1 => Ok(()),
+			_ => Err(DispatchError::Other("Invalid season")),
+		}
 	}
 
 	fn get_season_config_for(
@@ -287,7 +303,7 @@ impl TradeManager for MockTradeHandler {
 	type Asset = Asset;
 
 	fn is_tradeable_using(_asset: &Self::Asset, _filter: &Self::TradeFilter) -> bool {
-		todo!()
+		true
 	}
 }
 
@@ -312,18 +328,24 @@ impl crate::Config<SageInstance1> for Test {
 
 #[derive(Default)]
 pub struct ExtBuilder {
-	balances: Vec<(MockAccountId, MockBalance)>,
 	organizer: Option<MockAccountId>,
+	locks: Vec<(MockAccountId, MockSeasonId, Locks)>,
+	balances: Vec<(MockAccountId, MockBalance)>,
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
-		self.balances = balances.to_vec();
+	pub fn organizer(mut self, organizer: MockAccountId) -> Self {
+		self.organizer = Some(organizer);
 		self
 	}
 
-	pub fn organizer(mut self, organizer: MockAccountId) -> Self {
-		self.organizer = Some(organizer);
+	pub fn locks(mut self, locks: &[(MockAccountId, MockSeasonId, Locks)]) -> Self {
+		self.locks = locks.to_vec();
+		self
+	}
+
+	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
+		self.balances = balances.to_vec();
 		self
 	}
 
@@ -341,6 +363,21 @@ impl ExtBuilder {
 			if let Some(organizer) = self.organizer {
 				Organizer::<Test, Instance1>::put(organizer);
 			}
+
+			if !self.locks.is_empty() {
+				for (account, season_id, lock) in self.locks {
+					let config = PlayerConfig { inventory_tier: InventoryTier::One, locks: lock };
+					PlayerSeasonConfigs::<Test, Instance1>::insert(account, season_id, config);
+				}
+			}
+
+			// Setting initial general config for tests
+			let config = GeneralConfig {
+				transition: (),
+				transfer: TransferConfig { open: true },
+				trade: TradeConfig { open: true },
+			};
+			GeneralConfigStore::<Test, Instance1>::put(config);
 		});
 		ext
 	}

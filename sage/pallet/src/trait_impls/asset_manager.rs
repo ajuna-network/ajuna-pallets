@@ -45,7 +45,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		ensure!(Self::ensure_for_trade(&asset_id).is_err(), Error::<T, I>::CannotLockAssetInTrade);
 		ensure!(Self::is_locked(&asset_id).is_none(), Error::<T, I>::AssetLocked);
 
-		let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id);
+		let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 		AssetOwners::<T, I>::mutate(&owner, &asset_season_id, |asset_ids| {
 			asset_ids.retain(|id| id != &asset_id);
 		});
@@ -72,7 +72,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		ensure!(lock.id == lock_id, Error::<T, I>::AssetLockedByOtherApplication);
 		ensure!(lock.locker == owner, Error::<T, I>::AssetNotOwned);
 
-		let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id);
+		let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 		AssetOwners::<T, I>::try_mutate(&owner, &asset_season_id, |asset_ids| {
 			asset_ids
 				.try_push(asset_id.clone())
