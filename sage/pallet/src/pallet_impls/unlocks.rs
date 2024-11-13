@@ -17,7 +17,7 @@
 use crate::{
 	pallet::{PlayerStatsOf, SeasonConfigOf},
 	AccountIdOf, Config, Error, LockableFeature, Pallet, PlayerSeasonConfigs, PlayerSeasonStats,
-	SeasonIdOf, SeasonUnlocks, UnlockConfig, UnlockTarget,
+	SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget,
 };
 use ajuna_primitives::{fee_handler::FeeHandler, season_manager::SeasonManager};
 use frame_support::pallet_prelude::*;
@@ -135,7 +135,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		}
 	}
 
-	fn evaluate_unlock_state(config: &UnlockConfig, account_stats: &PlayerStatsOf<T>) -> bool {
+	fn evaluate_unlock_state(config: &UnlockRule, account_stats: &PlayerStatsOf<T>) -> bool {
 		let minted = u8::try_from(account_stats.minted_amount).unwrap_or(u8::MAX);
 		//let free_minted = u8::try_from(account_stats.free_minted).unwrap_or(u8::MAX);
 		let forged = u8::try_from(account_stats.forged_amount).unwrap_or(u8::MAX);

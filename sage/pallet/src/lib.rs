@@ -129,7 +129,7 @@ pub mod pallet {
 		SeasonIdOf<T, I>,
 		Identity,
 		LockableFeature,
-		UnlockConfig,
+		UnlockRule,
 		OptionQuery,
 	>;
 
@@ -197,10 +197,10 @@ pub mod pallet {
 		/// Global configuration updated.
 		UpdatedGlobalConfig { updated_config: GeneralConfigOf<T, I> },
 		/// Unlock configuration updated for feature.
-		UpdatedUnlockConfig {
+		UpdatedUnlockRule {
 			season_id: SeasonIdOf<T, I>,
 			feature: LockableFeature,
-			updated_config: UnlockConfig,
+			updated_rule: UnlockRule,
 		},
 		/// Storage tier has been upgraded.
 		StorageTierUpgraded { account: AccountIdOf<T>, season_id: SeasonIdOf<T, I> },
@@ -286,7 +286,7 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Set game organizer.
 		#[pallet::call_index(0)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::set_organizer())]
 		pub fn set_organizer(origin: OriginFor<T>, organizer: AccountIdOf<T>) -> DispatchResult {
 			ensure_root(origin)?;
 			Organizer::<T, I>::put(&organizer);
@@ -296,7 +296,7 @@ pub mod pallet {
 
 		/// Update general configuration.
 		#[pallet::call_index(1)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::update_general_config())]
 		pub fn update_general_config(
 			origin: OriginFor<T>,
 			new_config: GeneralConfigOf<T, I>,
@@ -308,28 +308,28 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight({1000})]
-		pub fn update_unlock_rules_for(
+		#[pallet::weight(T::WeightInfo::update_unlock_rule())]
+		pub fn update_unlock_rule(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
 			feature: LockableFeature,
-			unlock_config: UnlockConfig,
+			unlock_rule: UnlockRule,
 		) -> DispatchResult {
 			Self::ensure_organizer(origin)?;
 			SeasonUnlocks::<T, I>::mutate(&season_id, &feature, |config| {
-				*config = Some(unlock_config.clone());
+				*config = Some(unlock_rule.clone());
 			});
-			Self::deposit_event(Event::UpdatedUnlockConfig {
+			Self::deposit_event(Event::UpdatedUnlockRule {
 				season_id,
 				feature,
-				updated_config: unlock_config,
+				updated_rule: unlock_rule,
 			});
 			Ok(())
 		}
 
 		/// Upgrade the asset inventory space.
 		#[pallet::call_index(3)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::upgrade_asset_inventory())]
 		pub fn upgrade_asset_inventory(
 			origin: OriginFor<T>,
 			beneficiary: Option<AccountIdOf<T>>,
@@ -373,7 +373,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::transfer_asset_to())]
 		pub fn transfer_asset_to(
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
@@ -411,7 +411,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::update_trade_filter())]
 		pub fn update_trade_filter(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
@@ -428,7 +428,7 @@ pub mod pallet {
 
 		/// Set the price of a given asset, putting it on sale for others to buy.
 		#[pallet::call_index(6)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::set_asset_price())]
 		pub fn set_asset_price(
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T, I>,
@@ -451,7 +451,7 @@ pub mod pallet {
 
 		/// Remove the price of an asset set on sale previously.
 		#[pallet::call_index(7)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::remove_asset_price())]
 		pub fn remove_asset_price(
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T, I>,
@@ -468,7 +468,7 @@ pub mod pallet {
 
 		/// Attempt to buy the selected asset
 		#[pallet::call_index(8)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::buy_asset())]
 		pub fn buy_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			let GeneralConfig { trade, .. } = GeneralConfigStore::<T, I>::get();
@@ -477,7 +477,12 @@ pub mod pallet {
 			let (seller, price) = Self::ensure_for_trade(&asset_id)?;
 			ensure!(buyer != seller, Error::<T, I>::AlreadyOwned);
 			// TODO: Should this segment be handled by the FeeHandler?
-			// T::Currency::transfer(&buyer, &seller, price, KeepAlive)?;
+			T::Currency::transfer(
+				&buyer,
+				&seller,
+				price,
+				frame_support::traits::ExistenceRequirement::KeepAlive,
+			)?;
 
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id);
 			let current_season_id = T::SeasonHandler::get_current_season_id();
@@ -515,7 +520,7 @@ pub mod pallet {
 
 		/// Locks an asset, making it unavailable for use.
 		#[pallet::call_index(9)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::lock_asset())]
 		pub fn lock_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 			<Self as AssetManager>::lock_asset(*SAGE_LOCK_ID, player, asset_id)?;
@@ -524,7 +529,7 @@ pub mod pallet {
 
 		/// Unlocks an asset, making it available for use again.
 		#[pallet::call_index(10)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::unlock_asset())]
 		pub fn unlock_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 			<Self as AssetManager>::unlock_asset(*SAGE_LOCK_ID, player, asset_id)?;
@@ -533,7 +538,7 @@ pub mod pallet {
 
 		/// Attempts to unlock the selected feature for the given player
 		#[pallet::call_index(11)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::unlock_feature())]
 		pub fn unlock_feature(
 			origin: OriginFor<T>,
 			target: UnlockTarget<AccountIdOf<T>>,
@@ -552,14 +557,15 @@ pub mod pallet {
 		}
 
 		/// Entry point for the custom state transition.
-		#[pallet::weight(T::WeightInfo::state_transition())]
 		#[pallet::call_index(12)]
+		#[pallet::weight(T::WeightInfo::state_transition(6))]
 		pub fn state_transition(
 			origin: OriginFor<T>,
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
 		) -> DispatchResult {
+			// TODO: Maybe we should limit the maximum amount of asset_ids?
 			let sender = ensure_signed(origin)?;
 
 			T::SageGameTransition::verify_rule(transition_id.clone(), &sender, &asset_ids, &extra)
