@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	AccountIdOf, AssetIdOf, AssetOf, AssetTradePrices, BalanceOf, Config, Error, LockedAssets,
-	Organizer, Pallet, SeasonTradeFilters,
+	AccountIdOf, AssetIdOf, AssetOf, AssetTradePrices, Assets, BalanceOf, Config, Error,
+	LockedAssets, Organizer, Pallet, SeasonTradeFilters,
 };
 use ajuna_primitives::{season_manager::SeasonManager, trade_manager::TradeManager};
 use frame_support::pallet_prelude::*;
@@ -35,15 +35,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		account: &AccountIdOf<T>,
 		asset_id: &AssetIdOf<T, I>,
 	) -> Result<AssetOf<T, I>, DispatchError> {
-		let (owner, asset) = Self::asset_with_owner(asset_id)?;
-
-		if account == &owner ||
-			Self::is_locked(asset_id).map(|lock| &lock.locker == account).unwrap_or(false)
-		{
-			return Ok(asset)
+		if let Some((ref owner, asset)) = Assets::<T, I>::get(asset_id) {
+			ensure!(owner == account, Error::<T, I>::AssetNotOwned);
+			Ok(asset)
+		} else {
+			Err(Error::<T, I>::UnknownAsset.into())
 		}
-
-		Err(Error::<T, I>::AssetNotOwned.into())
 	}
 
 	pub(crate) fn ensure_unlocked(asset_id: &AssetIdOf<T, I>) -> DispatchResult {

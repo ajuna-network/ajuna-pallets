@@ -404,7 +404,7 @@ pub mod pallet {
 			);
 			Self::ensure_unlocked(&asset_id)?;
 
-			let _ = Self::ensure_ownership(&from, &asset_id)?;
+			Self::ensure_ownership(&from, &asset_id)?;
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			ensure!(
 				PlayerSeasonConfigs::<T, I>::get(&from, &asset_season_id).locks.asset_transfer,
@@ -446,12 +446,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let seller = ensure_signed(origin)?;
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
-			let asset = Self::ensure_ownership(&seller, &asset_id)?;
+			let (owner, asset) = Self::asset_with_owner(&asset_id)?;
+			ensure!(owner == seller, Error::<T, I>::AssetNotOwned);
 			let season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
-			ensure!(
-				PlayerSeasonConfigs::<T, I>::get(&seller, &season_id).locks.asset_trade,
-				Error::<T, I>::FeatureLocked
-			);
+			let config = PlayerSeasonConfigs::<T, I>::get(&seller, &season_id);
+			ensure!(config.locks.asset_trade, Error::<T, I>::FeatureLocked);
 			Self::ensure_unlocked(&asset_id)?;
 			Self::ensure_can_be_set_for_trade(&asset_id, &asset)?;
 			AssetTradePrices::<T, I>::insert(&season_id, &asset_id, price);
@@ -469,7 +468,7 @@ pub mod pallet {
 			let seller = ensure_signed(origin)?;
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
 			Self::ensure_for_trade(&asset_id)?;
-			let _ = Self::ensure_ownership(&seller, &asset_id)?;
+			Self::ensure_ownership(&seller, &asset_id)?;
 			let season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			AssetTradePrices::<T, I>::remove(&season_id, &asset_id);
 			Self::deposit_event(Event::AssetPriceUnset { asset_id });
@@ -575,8 +574,13 @@ pub mod pallet {
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
 		) -> DispatchResult {
-			// TODO: Maybe we should limit the maximum amount of asset_ids?
 			let sender = ensure_signed(origin)?;
+
+			// TODO: Maybe we should limit the maximum amount of asset_ids?
+			for asset_id in asset_ids.iter() {
+				Self::ensure_ownership(&sender, asset_id)?;
+				Self::ensure_unlocked(asset_id)?;
+			}
 
 			T::SageGameTransition::verify_rule(transition_id.clone(), &sender, &asset_ids, &extra)
 				.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
