@@ -16,8 +16,15 @@
 
 use super::*;
 
+mod buy_asset;
+mod lock_asset;
+mod remove_asset_price;
+mod set_asset_price;
 mod set_organizer;
+mod state_transition;
 mod transfer_asset;
+mod unlock_asset;
+mod unlock_feature;
 mod update_general_config;
 mod update_trade_filter;
 mod update_unlock_rule;

@@ -40,6 +40,7 @@ impl InventoryTier {
 		}
 	}
 
+	#[allow(unused)]
 	pub(crate) fn get_asset_slots(&self) -> u8 {
 		*self as u8
 	}

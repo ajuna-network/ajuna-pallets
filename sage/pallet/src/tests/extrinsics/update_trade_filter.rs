@@ -21,7 +21,7 @@ use super::*;
 #[test]
 fn update_trade_filter_should_work() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let filter = MockTradeFilter::from(13);
+		let filter = MockTradeFilter::from(13_u32);
 
 		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), 0);
 
@@ -42,7 +42,7 @@ fn update_trade_filter_should_reject_non_organizer_calls() {
 			Sage::update_trade_filter(
 				RuntimeOrigin::signed(BOB),
 				SEASON_ID_0,
-				MockTradeFilter::from(22),
+				MockTradeFilter::from(22_u32),
 			),
 			DispatchError::BadOrigin
 		);

@@ -296,14 +296,14 @@ impl TreasuryManager for MockTreasuryManager {
 
 pub struct MockTradeHandler;
 
-pub type MockTradeFilter = u8;
+pub type MockTradeFilter = u32;
 
 impl TradeManager for MockTradeHandler {
 	type TradeFilter = MockTradeFilter;
 	type Asset = Asset;
 
-	fn is_tradeable_using(_asset: &Self::Asset, _filter: &Self::TradeFilter) -> bool {
-		true
+	fn is_tradeable_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
+		asset.asset_type == *filter
 	}
 }
 

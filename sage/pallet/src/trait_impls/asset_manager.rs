@@ -25,12 +25,12 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		account: &Self::AccountId,
 		asset_id: &Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		let (owner, avatar) = Self::asset_with_owner(asset_id)?;
+		let (owner, asset) = Self::asset_with_owner(asset_id)?;
 
 		if account == &owner ||
 			Self::is_locked(asset_id).map(|lock| &lock.locker == account).unwrap_or(false)
 		{
-			return Ok(avatar)
+			return Ok(asset)
 		}
 
 		Err(Error::<T, I>::AssetNotOwned.into())
