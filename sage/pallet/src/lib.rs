@@ -226,9 +226,9 @@ pub mod pallet {
 			price: BalanceOf<T, I>,
 		},
 		/// Asset locked.
-		AssetLocked { asset_id: AssetIdOf<T, I> },
+		AssetLocked { asset_id: AssetIdOf<T, I>, lock: Lock<AccountIdOf<T>> },
 		/// Asset unlocked.
-		AssetUnlocked { asset_id: AssetIdOf<T, I> },
+		AssetUnlocked { asset_id: AssetIdOf<T, I>, lock: Lock<AccountIdOf<T>> },
 		/// A feature has been unlocked
 		FeatureUnlocked {
 			feature: LockableFeature,
@@ -605,6 +605,7 @@ pub mod pallet {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
 
+				// TODO: This fee should be parametrized based on transition id
 				let base_fee = fee.state_transition;
 				let updated_fee = T::FeeHandler::try_propagate_tournament_fee(
 					base_fee,

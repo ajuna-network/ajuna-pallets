@@ -16,18 +16,18 @@
 
 use super::*;
 
-impl<T: Config> AccountManager for Pallet<T> {
+impl<T: Config<I>, I: 'static> AccountManager for Pallet<T, I> {
 	type AccountId = AccountIdOf<T>;
 
 	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError> {
-		let existing_organizer = Organizer::<T>::get().ok_or(Error::<T>::OrganizerNotSet)?;
+		let existing_organizer = Organizer::<T, I>::get().ok_or(Error::<T, I>::OrganizerNotSet)?;
 		ensure!(account == &existing_organizer, DispatchError::BadOrigin);
 		Ok(())
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(organizer: Self::AccountId) {
-		Organizer::<T>::put(organizer)
+		Organizer::<T, I>::put(organizer)
 	}
 
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {

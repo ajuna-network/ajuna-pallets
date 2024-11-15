@@ -17,49 +17,22 @@
 use super::*;
 
 #[test]
-fn can_unlock_asset_successfully() {
+fn can_unlock_asset_successfully_with_sage_lock_id() {
 	ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
 		let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
 		let asset_id = asset_ids[0];
+		let expected_lock = Lock { id: *SAGE_LOCK_ID, locker: ALICE };
+
 		assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(ALICE), asset_id));
 		assert_eq!(
 			LockedAssets::<Test, Instance1>::get(asset_id),
 			Some(Lock { id: *SAGE_LOCK_ID, locker: ALICE })
 		);
 		assert_ok!(Sage::unlock_asset(RuntimeOrigin::signed(ALICE), asset_id));
+		System::assert_has_event(RuntimeEvent::Sage(Event::AssetUnlocked {
+			asset_id,
+			lock: expected_lock,
+		}));
 		assert_eq!(LockedAssets::<Test, Instance1>::get(asset_id), None);
-		System::assert_has_event(RuntimeEvent::Sage(Event::AssetUnlocked { asset_id }));
-	});
-}
-
-#[test]
-fn cannot_unlock_non_owned_asset() {
-	ExtBuilder::default()
-		.balances(&[(ALICE, 1_000), (BOB, 5_000)])
-		.build()
-		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
-			let asset_id = asset_ids[0];
-			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(BOB), asset_id));
-			assert_noop!(
-				Sage::unlock_asset(RuntimeOrigin::signed(ALICE), asset_id),
-				Error::<Test, Instance1>::AssetNotOwned
-			);
-		});
-}
-
-#[test]
-fn cannot_unlock_asset_locked_by_other_application() {
-	ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-		let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
-		let asset_id = asset_ids[0];
-
-		let other_lock_id = b"otherapp";
-		assert_ok!(<Sage as AssetManager>::lock_asset(*other_lock_id, ALICE, asset_id));
-
-		assert_noop!(
-			Sage::unlock_asset(RuntimeOrigin::signed(ALICE), asset_id),
-			crate::Error::<Test, Instance1>::AssetLockedByOtherApplication
-		);
 	});
 }

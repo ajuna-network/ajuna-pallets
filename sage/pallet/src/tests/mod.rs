@@ -16,6 +16,7 @@
 
 mod extrinsics;
 mod pallet_impls;
+mod trait_impls;
 
 use crate::{mock::*, *};
 use example_transition::types::{Asset, AssetId, Level};

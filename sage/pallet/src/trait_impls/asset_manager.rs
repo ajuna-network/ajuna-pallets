@@ -25,15 +25,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		account: &Self::AccountId,
 		asset_id: &Self::AssetId,
 	) -> Result<Self::Asset, DispatchError> {
-		let (owner, asset) = Self::asset_with_owner(asset_id)?;
-
-		if account == &owner ||
-			Self::is_locked(asset_id).map(|lock| &lock.locker == account).unwrap_or(false)
-		{
-			return Ok(asset)
-		}
-
-		Err(Error::<T, I>::AssetNotOwned.into())
+		Pallet::<T, I>::ensure_ownership(account, asset_id)
 	}
 
 	fn lock_asset(
@@ -56,8 +48,9 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 			Ok(())
 		})?;
 
-		LockedAssets::<T, I>::insert(&asset_id, Lock::new(lock_id, owner));
-		Self::deposit_event(Event::AssetLocked { asset_id });
+		let lock = Lock::new(lock_id, owner);
+		LockedAssets::<T, I>::insert(&asset_id, lock.clone());
+		Self::deposit_event(Event::AssetLocked { asset_id, lock });
 
 		Ok(asset)
 	}
@@ -93,7 +86,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		})?;
 
 		LockedAssets::<T, I>::remove(&asset_id);
-		Self::deposit_event(Event::AssetUnlocked { asset_id });
+		Self::deposit_event(Event::AssetUnlocked { asset_id, lock });
 
 		Ok(asset)
 	}

@@ -18,7 +18,7 @@ use super::*;
 use example_transition::types::ExampleTransitionId;
 
 #[test]
-fn can_lock_asset_successfully() {
+fn can_lock_asset_successfully_with_sage_lock_id() {
 	ExtBuilder::default()
 		.balances(&[(ALICE, 1_000_000)])
 		.locks(&[
@@ -30,10 +30,14 @@ fn can_lock_asset_successfully() {
 		.execute_with(|| {
 			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
 			let asset_id = asset_ids[0];
+			let expected_lock = Lock { id: *SAGE_LOCK_ID, locker: ALICE };
 
 			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(ALICE), asset_id));
 			assert!(LockedAssets::<Test, Instance1>::contains_key(asset_id));
-			System::assert_has_event(RuntimeEvent::Sage(Event::AssetLocked { asset_id }));
+			System::assert_has_event(RuntimeEvent::Sage(Event::AssetLocked {
+				asset_id,
+				lock: expected_lock,
+			}));
 
 			// Ensure ownership transferred to technical account
 			let technical_account = Sage::technical_account_id();
@@ -56,49 +60,4 @@ fn can_lock_asset_successfully() {
 				assert_noop!(extrinsic, Error::<Test, Instance1>::AssetLocked);
 			}
 		});
-}
-
-#[test]
-fn cannot_lock_unowned_asset() {
-	ExtBuilder::default()
-		.balances(&[(ALICE, 1_000), (BOB, 1_000)])
-		.build()
-		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
-			let asset_id = asset_ids[0];
-			assert_noop!(
-				Sage::lock_asset(RuntimeOrigin::signed(ALICE), asset_id),
-				Error::<Test, Instance1>::AssetNotOwned
-			);
-		});
-}
-
-#[test]
-fn cannot_lock_asset_on_trade() {
-	ExtBuilder::default()
-		.balances(&[(ALICE, 1_000)])
-		.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
-		.build()
-		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, CHARLIE, 1);
-			let asset_id = asset_ids[0];
-			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 1_000));
-			assert_noop!(
-				Sage::lock_asset(RuntimeOrigin::signed(CHARLIE), asset_id),
-				Error::<Test, Instance1>::CannotLockAssetInTrade
-			);
-		});
-}
-
-#[test]
-fn cannot_lock_already_locked_asset() {
-	ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-		let asset_ids = create_assets::<Instance1>(SEASON_ID_0, DAVE, 1);
-		let asset_id = asset_ids[0];
-		assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(DAVE), asset_id));
-		assert_noop!(
-			Sage::lock_asset(RuntimeOrigin::signed(Sage::technical_account_id()), asset_id),
-			Error::<Test, Instance1>::AssetLocked
-		);
-	});
 }
