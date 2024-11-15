@@ -36,18 +36,22 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
 					PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
-						if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-							config.locks.asset_trade = true;
+						if !config.locks.asset_trade {
+							if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
+								config.locks.asset_trade = true;
 
-							Self::deposit_event(Event::FeatureUnlocked {
-								feature: LockableFeature::TradeAsset,
-								season_id: season_id.clone(),
-								account: account.clone(),
-							});
+								Self::deposit_event(Event::FeatureUnlocked {
+									feature: LockableFeature::TradeAsset,
+									season_id: season_id.clone(),
+									account: account.clone(),
+								});
 
-							Ok(())
+								Ok(())
+							} else {
+								Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+							}
 						} else {
-							Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+							Ok(())
 						}
 					})
 				} else {
@@ -111,18 +115,22 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
 					PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
-						if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-							config.locks.asset_transfer = true;
+						if !config.locks.asset_transfer {
+							if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
+								config.locks.asset_transfer = true;
 
-							Self::deposit_event(Event::FeatureUnlocked {
-								feature: LockableFeature::TransferAsset,
-								season_id: season_id.clone(),
-								account: account.clone(),
-							});
+								Self::deposit_event(Event::FeatureUnlocked {
+									feature: LockableFeature::TransferAsset,
+									season_id: season_id.clone(),
+									account: account.clone(),
+								});
 
-							Ok(())
+								Ok(())
+							} else {
+								Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+							}
 						} else {
-							Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+							Ok(())
 						}
 					})
 				} else {
@@ -132,7 +140,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			},
 			UnlockTarget::OneselfPaying =>
 				PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
-					if !config.locks.asset_trade {
+					if !config.locks.asset_transfer {
 						let SeasonConfigOf::<T, I> { fee, .. } =
 							T::SeasonHandler::get_season_config_for(&season_id)?;
 						T::FeeHandler::deposit_fee_into_treasury(
@@ -152,7 +160,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				}),
 			UnlockTarget::OtherPaying(other) =>
 				PlayerSeasonConfigs::<T, I>::try_mutate(&other, &season_id, |config| {
-					if !config.locks.asset_trade {
+					if !config.locks.asset_transfer {
 						let SeasonConfigOf::<T, I> { fee, .. } =
 							T::SeasonHandler::get_season_config_for(&season_id)?;
 						T::FeeHandler::deposit_fee_into_treasury(
