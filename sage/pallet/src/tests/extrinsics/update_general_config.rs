@@ -16,8 +16,6 @@
 
 use super::*;
 
-// TODO: Add more tests
-
 #[test]
 fn update_general_config_should_work() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {

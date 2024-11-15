@@ -16,8 +16,6 @@
 
 use super::*;
 
-// TODO: Add more tests
-
 #[test]
 fn buy_should_work() {
 	let initial_balance = 1_000_000;

@@ -16,8 +16,6 @@
 
 use super::*;
 
-// TODO: Add more tests
-
 #[test]
 fn transfer_asset_works() {
 	let alice_initial_balance = MockExistentialDeposit::get() * 100;
