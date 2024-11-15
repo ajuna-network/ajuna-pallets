@@ -139,19 +139,21 @@ impl SageApi for SageMock {
 	type AccountId = MockAccountId;
 
 	fn ensure_ownership(
-		_account: &Self::AccountId,
-		_asset: &Self::AssetId,
+		account: &Self::AccountId,
+		asset: &Self::AssetId,
 	) -> Result<(), sage_api::Error> {
 		// this would be a call to our asset manager implementation
-		todo!()
+		Sage::ensure_ownership(account, asset)
+			.map(|_| ())
+			.map_err(|_| sage_api::Error::Transition { error: 0 })
 	}
 
-	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, sage_api::Error>>(
+	fn try_mutate_asset<F: FnOnce(&mut Self::Asset) -> Result<(), sage_api::Error>>(
 		_asset: &Self::AssetId,
 		_f: F,
-	) -> Result<R, sage_api::Error> {
+	) -> Result<(), sage_api::Error> {
 		// this would be a call to our asset manager implementation
-		todo!()
+		Ok(())
 	}
 
 	fn transfer_ownership(
@@ -253,11 +255,11 @@ impl FeeProvider for MockTournamentFeeProvider {
 	type FeeOutput = (MockBalance, MockAccountId);
 
 	fn get_fee_from(
-		base_fee: Self::FeeCurrency,
+		_base_fee: Self::FeeCurrency,
 		account: &Self::AccountId,
 		_identifier: &Self::FeeIdentifier,
 	) -> Self::FeeOutput {
-		(base_fee, *account)
+		(0, *account)
 	}
 }
 

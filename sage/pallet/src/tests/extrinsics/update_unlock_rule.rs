@@ -27,7 +27,7 @@ fn update_unlock_rule_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			SEASON_ID_0,
 			feature,
-			rule.clone()
+			rule
 		));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedUnlockRule {
 			season_id: SEASON_ID_0,

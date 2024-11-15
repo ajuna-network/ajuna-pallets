@@ -16,8 +16,8 @@
 
 use crate::{
 	pallet::{PlayerStatsOf, SeasonConfigOf},
-	AccountIdOf, Config, Error, LockableFeature, Pallet, PlayerSeasonConfigs, PlayerSeasonStats,
-	SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget,
+	AccountIdOf, Config, Error, Event, LockableFeature, Pallet, PlayerSeasonConfigs,
+	PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget,
 };
 use ajuna_primitives::{fee_handler::FeeHandler, season_manager::SeasonManager};
 use frame_support::pallet_prelude::*;
@@ -35,16 +35,23 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				{
 					let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
-					if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-						PlayerSeasonConfigs::<T, I>::mutate(&account, &season_id, |config| {
+					PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
+						if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
 							config.locks.asset_trade = true;
-						});
 
-						Ok(())
-					} else {
-						Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
-					}
+							Self::deposit_event(Event::FeatureUnlocked {
+								feature: LockableFeature::TradeAsset,
+								season_id: season_id.clone(),
+								account: account.clone(),
+							});
+
+							Ok(())
+						} else {
+							Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+						}
+					})
 				} else {
+					// TODO: Is this naming correct?
 					Err(Error::<T, I>::FeatureLockedInSeason.into())
 				}
 			},
@@ -59,6 +66,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							fee.unlock_trade_asset,
 						)?;
 						config.locks.asset_trade = true;
+
+						Self::deposit_event(Event::FeatureUnlocked {
+							feature: LockableFeature::TradeAsset,
+							season_id: season_id.clone(),
+							account: account.clone(),
+						});
 					}
 					Ok(())
 				}),
@@ -73,6 +86,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							fee.unlock_trade_asset,
 						)?;
 						config.locks.asset_trade = true;
+
+						Self::deposit_event(Event::FeatureUnlocked {
+							feature: LockableFeature::TradeAsset,
+							season_id: season_id.clone(),
+							account: other.clone(),
+						});
 					}
 					Ok(())
 				}),
@@ -91,16 +110,23 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				{
 					let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
-					if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-						PlayerSeasonConfigs::<T, I>::mutate(&account, &season_id, |config| {
+					PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
+						if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
 							config.locks.asset_transfer = true;
-						});
 
-						Ok(())
-					} else {
-						Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
-					}
+							Self::deposit_event(Event::FeatureUnlocked {
+								feature: LockableFeature::TransferAsset,
+								season_id: season_id.clone(),
+								account: account.clone(),
+							});
+
+							Ok(())
+						} else {
+							Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+						}
+					})
 				} else {
+					// TODO: Is this naming correct?
 					Err(Error::<T, I>::FeatureLockedInSeason.into())
 				}
 			},
@@ -115,6 +141,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							fee.unlock_transfer_asset,
 						)?;
 						config.locks.asset_transfer = true;
+
+						Self::deposit_event(Event::FeatureUnlocked {
+							feature: LockableFeature::TransferAsset,
+							season_id: season_id.clone(),
+							account: account.clone(),
+						});
 					}
 					Ok(())
 				}),
@@ -129,6 +161,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							fee.unlock_transfer_asset,
 						)?;
 						config.locks.asset_transfer = true;
+
+						Self::deposit_event(Event::FeatureUnlocked {
+							feature: LockableFeature::TransferAsset,
+							season_id: season_id.clone(),
+							account: other.clone(),
+						});
 					}
 					Ok(())
 				}),

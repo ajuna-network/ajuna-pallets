@@ -229,6 +229,12 @@ pub mod pallet {
 		AssetLocked { asset_id: AssetIdOf<T, I> },
 		/// Asset unlocked.
 		AssetUnlocked { asset_id: AssetIdOf<T, I> },
+		/// A feature has been unlocked
+		FeatureUnlocked {
+			feature: LockableFeature,
+			season_id: SeasonIdOf<T, I>,
+			account: AccountIdOf<T>,
+		},
 		/// A transition has been executed.
 		TransitionExecuted {
 			/// Account who initiated execution.
@@ -323,7 +329,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			Self::ensure_organizer(origin)?;
 			SeasonUnlocks::<T, I>::mutate(&season_id, feature, |config| {
-				*config = Some(unlock_rule.clone());
+				*config = Some(unlock_rule);
 			});
 			Self::deposit_event(Event::UpdatedUnlockRule {
 				season_id,

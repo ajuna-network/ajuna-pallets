@@ -28,10 +28,10 @@ impl<T: Config<I>, I: 'static> SageApi for Pallet<T, I> {
 		todo!()
 	}
 
-	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, SageApiError>>(
+	fn try_mutate_asset<F: FnOnce(&mut Self::Asset) -> Result<(), SageApiError>>(
 		_asset: &Self::AssetId,
 		_f: F,
-	) -> Result<R, SageApiError> {
+	) -> Result<(), SageApiError> {
 		todo!()
 	}
 

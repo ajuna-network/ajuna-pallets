@@ -22,10 +22,10 @@ pub trait SageApi {
 		asset: &Self::AssetId,
 	) -> Result<(), crate::Error>;
 
-	fn try_mutate_asset<R, F: FnOnce(&mut Self::Asset) -> Result<R, crate::Error>>(
+	fn try_mutate_asset<F: FnOnce(&mut Self::Asset) -> Result<(), crate::Error>>(
 		asset: &Self::AssetId,
 		f: F,
-	) -> Result<R, crate::Error>;
+	) -> Result<(), crate::Error>;
 	fn transfer_ownership(asset: Self::AssetId, to: Self::AccountId) -> Result<(), crate::Error>;
 	fn handle_fees(balance: Self::Balance) -> Result<(), crate::Error>;
 }

@@ -53,4 +53,4 @@ pub enum UnlockTarget<AccountId> {
 	OtherPaying(AccountId),
 }
 
-pub type UnlockRule = BoundedVec<u8, ConstU32<5>>;
+pub type UnlockRule = [u8; 5];
