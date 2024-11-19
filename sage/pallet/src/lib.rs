@@ -359,7 +359,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
-			let season_id = in_season.unwrap_or_else(|| T::SeasonHandler::get_current_season_id());
+			let season_id = in_season.unwrap_or_else(T::SeasonHandler::get_current_season_id);
 			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
 
 			let upgrade_fee = {
@@ -372,7 +372,7 @@ pub mod pallet {
 			};
 			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
 
-			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller);
+			let account_to_upgrade = beneficiary.unwrap_or(caller);
 
 			let inventory_tier =
 				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).inventory_tier;
