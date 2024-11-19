@@ -14,16 +14,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Ajuna primitives crate.
-//!
-//! It intends to implement things that are shared over various pallets.
+use super::*;
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#[test]
+fn update_general_config_should_work() {
+	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+		let config = GeneralConfigOf::<Test, Instance1>::default();
+		assert_ok!(Sage::update_general_config(RuntimeOrigin::signed(ALICE), config.clone()));
+		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedGeneralConfig {
+			updated_config: config,
+		}));
+	});
+}
 
-pub mod account_manager;
-pub mod asset_manager;
-pub mod fee_handler;
-pub mod runtime_types;
-pub mod season_manager;
-pub mod trade_manager;
-pub mod treasury_manager;
+#[test]
+fn update_general_config_should_reject_non_organizer_calls() {
+	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+		assert_noop!(
+			Sage::update_general_config(
+				RuntimeOrigin::signed(BOB),
+				GeneralConfigOf::<Test, Instance1>::default()
+			),
+			DispatchError::BadOrigin
+		);
+	});
+}

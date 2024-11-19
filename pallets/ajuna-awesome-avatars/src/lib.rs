@@ -81,7 +81,7 @@ use ajuna_primitives::{
 };
 use frame_support::{
 	pallet_prelude::*,
-	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness, WithdrawReasons},
+	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness},
 	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
@@ -590,8 +590,7 @@ pub mod pallet {
 				Error::<T>::FeatureLocked
 			);
 			let Season { fee, .. } = Self::seasons(&avatar.season_id)?;
-			T::Currency::withdraw(&from, fee.transfer_avatar, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&avatar.season_id, fee.transfer_avatar);
+			Self::deposit_into_treasury(&from, &avatar.season_id, fee.transfer_avatar)?;
 
 			Self::do_transfer_avatar(&from, &to, &avatar.season_id, &avatar_id)?;
 			Self::deposit_event(Event::AvatarTransferred { from, to, avatar_id });
@@ -751,8 +750,7 @@ pub mod pallet {
 					base_fee
 				}
 			};
-			T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&avatar.season_id, trade_fee);
+			Self::deposit_into_treasury(&buyer, &avatar.season_id, trade_fee)?;
 
 			Self::do_transfer_avatar(&seller, &buyer, &avatar.season_id, &avatar_id)?;
 			Trade::<T>::remove(avatar.season_id, avatar_id);
@@ -820,8 +818,7 @@ pub mod pallet {
 				}
 			};
 
-			T::Currency::withdraw(&caller, upgrade_fee, WithdrawReasons::FEE, AllowDeath)?;
-			Self::deposit_into_treasury(&season_id, upgrade_fee);
+			Self::deposit_into_treasury(&caller, &season_id, upgrade_fee)?;
 
 			PlayerSeasonConfigs::<T>::mutate(&account_to_upgrade, season_id, |account| {
 				account.storage_tier = storage_tier.upgrade()
@@ -1241,9 +1238,15 @@ pub mod pallet {
 			T::PalletId::get().into_sub_account_truncating(b"technical")
 		}
 
-		pub(crate) fn deposit_into_treasury(season_id: &SeasonId, amount: BalanceOf<T>) {
+		pub(crate) fn deposit_into_treasury(
+			who: &AccountIdFor<T>,
+			season_id: &SeasonId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// This will fail if the treasury account is not previously funded and alive
+			T::Currency::transfer(who, &Self::treasury_account_id(), amount, AllowDeath)?;
 			Treasury::<T>::mutate(season_id, |bal| bal.saturating_accrue(amount));
-			T::Currency::deposit_creating(&Self::treasury_account_id(), amount);
+			Ok(())
 		}
 
 		/// Check that the origin is an organizer account.
@@ -1337,8 +1340,7 @@ pub mod pallet {
 						}
 					};
 
-					T::Currency::withdraw(player, mint_fee, WithdrawReasons::FEE, AllowDeath)?;
-					Self::deposit_into_treasury(&season_id, mint_fee);
+					Self::deposit_into_treasury(player, &season_id, mint_fee)?;
 				},
 				MintPayment::Free => {
 					let mint_fee = (mint_option.pack_size.as_mint_count())

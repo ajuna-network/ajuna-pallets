@@ -45,24 +45,162 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_ajuna_nft_staking.
 pub trait WeightInfo {
-    fn state_transition() -> Weight;
+	fn set_organizer() -> Weight;
+	fn update_general_config() -> Weight;
+	fn update_unlock_rule() -> Weight;
+	fn upgrade_asset_inventory() -> Weight;
+	fn transfer_asset() -> Weight;
+	fn update_trade_filter() -> Weight;
+	fn set_asset_price() -> Weight;
+	fn remove_asset_price() -> Weight;
+	fn buy_asset() -> Weight;
+	fn lock_asset() -> Weight;
+	fn unlock_asset() -> Weight;
+	fn unlock_feature() -> Weight;
+    fn state_transition(n: u32, ) -> Weight;
 }
 
 /// Weights for pallet_ajuna_nft_staking using the Substrate node and recommended hardware.
 pub struct AjunaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
-    fn state_transition() -> Weight {
-        // Minimum execution time: 26_582 nanoseconds.
-        Weight::from_parts(0, 0)
-            .saturating_add(T::DbWeight::get().writes(1 as u64))
+	fn set_organizer() -> Weight {
+				// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn update_general_config() -> Weight {
+				// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn update_unlock_rule() -> Weight {
+				// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn upgrade_asset_inventory() -> Weight {
+				// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn transfer_asset() -> Weight {
+				// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn update_trade_filter() -> Weight {
+				// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn set_asset_price() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn remove_asset_price() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn buy_asset() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn lock_asset() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn unlock_asset() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn unlock_feature() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn state_transition(n: u32, ) -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_mul(n as u64)
+			.saturating_add(T::DbWeight::get().writes(1))
     }
 }
 
 impl WeightInfo for () {
-    fn state_transition() -> Weight {
-        // Minimum execution time: 26_582 nanoseconds.
-        Weight::from_parts(0, 0)
-            .saturating_add(RocksDbWeight::get().writes(1 as u64))
+	fn set_organizer() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn update_general_config() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn update_unlock_rule() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn upgrade_asset_inventory() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn transfer_asset() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn update_trade_filter() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn set_asset_price() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn remove_asset_price() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn buy_asset() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn lock_asset() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn unlock_asset() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn unlock_feature() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn state_transition(n: u32, ) -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_mul(n as u64)
+			.saturating_add(RocksDbWeight::get().writes(1))
     }
 }
 

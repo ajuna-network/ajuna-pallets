@@ -14,16 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Ajuna primitives crate.
-//!
-//! It intends to implement things that are shared over various pallets.
+use super::*;
 
-#![cfg_attr(not(feature = "std"), no_std)]
+mod is_organizer {
+	use super::*;
 
-pub mod account_manager;
-pub mod asset_manager;
-pub mod fee_handler;
-pub mod runtime_types;
-pub mod season_manager;
-pub mod trade_manager;
-pub mod treasury_manager;
+	#[test]
+	fn is_organizer_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				<Sage as AccountManager>::is_organizer(&CHARLIE),
+				Error::<Test, Instance1>::OrganizerNotSet
+			);
+
+			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), ALICE));
+
+			assert_ok!(<Sage as AccountManager>::is_organizer(&ALICE));
+
+			assert_noop!(
+				<Sage as AccountManager>::is_organizer(&CHARLIE),
+				DispatchError::BadOrigin
+			);
+		});
+	}
+}

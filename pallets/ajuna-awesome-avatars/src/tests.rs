@@ -171,8 +171,9 @@ mod treasury {
 	fn claim_treasury_works() {
 		let season_1 = Season::default().mint_fee(MintFees { one: 12, three: 34, six: 56 });
 		let season_1_schedule = SeasonSchedule::default().early_start(5).start(10).end(15);
+		let treasury_initial_balance = MockExistentialDeposit::get();
 		let initial_balance = MockExistentialDeposit::get() + 999_999;
-		let total_supply = initial_balance;
+		let total_supply = initial_balance + treasury_initial_balance;
 		ExtBuilder::default()
 			.seasons(&[(SEASON_ID, season_1.clone())])
 			.schedules(&[(SEASON_ID, season_1_schedule.clone())])
@@ -183,12 +184,15 @@ mod treasury {
 				Treasurer::<Test>::insert(SEASON_ID, BOB);
 				assert_eq!(Treasury::<Test>::get(SEASON_ID), 0);
 				assert_eq!(Balances::total_balance(&BOB), initial_balance);
-				assert_eq!(Balances::free_balance(treasury_account), 0);
+				assert_eq!(Balances::free_balance(treasury_account), treasury_initial_balance);
 				assert_eq!(Balances::total_issuance(), total_supply);
 
 				deposit_into_treasury(SEASON_ID, 333);
 				assert_eq!(Treasury::<Test>::get(SEASON_ID), 333);
-				assert_eq!(Balances::free_balance(treasury_account), 333);
+				assert_eq!(
+					Balances::free_balance(treasury_account),
+					333 + treasury_initial_balance
+				);
 				assert_noop!(
 					AAvatars::claim_treasury(RuntimeOrigin::signed(BOB), SEASON_ID),
 					Error::<Test>::CannotClaimDuringSeason
@@ -198,7 +202,7 @@ mod treasury {
 				assert_ok!(AAvatars::claim_treasury(RuntimeOrigin::signed(BOB), SEASON_ID));
 				assert_eq!(Treasury::<Test>::get(SEASON_ID), 0);
 				assert_eq!(Balances::total_balance(&BOB), initial_balance + 333);
-				assert_eq!(Balances::free_balance(treasury_account), 0);
+				assert_eq!(Balances::free_balance(treasury_account), treasury_initial_balance);
 				assert_eq!(Balances::total_issuance(), total_supply + 333); // total supply increases from injection
 				System::assert_last_event(mock::RuntimeEvent::AAvatars(
 					crate::Event::TreasuryClaimed {
@@ -2775,8 +2779,9 @@ mod transferring {
 		let avatar_transfer_fee_1 = 888;
 		let avatar_transfer_fee_2 = 369;
 
+		let treasury_initial_balance = MockExistentialDeposit::get();
 		let initial_balance = MockExistentialDeposit::get() + avatar_transfer_fee_1;
-		let total_supply = initial_balance;
+		let total_supply = initial_balance + treasury_initial_balance;
 
 		ExtBuilder::default()
 			.seasons(&[
@@ -2793,7 +2798,7 @@ mod transferring {
 			.build()
 			.execute_with(|| {
 				let treasury_account = &AAvatars::treasury_account_id();
-				let treasury_balance = 0;
+				let treasury_balance = treasury_initial_balance;
 				assert_eq!(Balances::free_balance(treasury_account), treasury_balance);
 				assert_eq!(Balances::total_issuance(), total_supply);
 
@@ -3359,7 +3364,7 @@ mod account {
 		let upgrade_fee = 12_345 as MockBalance;
 		let num_storage_tiers = 6;
 		let alice_balance = num_storage_tiers as MockBalance * upgrade_fee;
-		let mut treasury_balance = 0;
+		let mut treasury_balance = MockExistentialDeposit::get();
 		let total_supply = treasury_balance + alice_balance;
 		let season = Season::default().upgrade_storage_fee(upgrade_fee);
 
@@ -3532,7 +3537,7 @@ mod account {
 			.execute_with(|| {
 				assert_noop!(
 					AAvatars::upgrade_storage(RuntimeOrigin::signed(ALICE), None, None),
-					pallet_balances::Error::<Test>::InsufficientBalance
+					sp_runtime::TokenError::FundsUnavailable,
 				);
 			});
 	}
@@ -3805,7 +3810,7 @@ mod affiliates {
 				assert_eq!(<Test as Config>::Currency::free_balance(ALICE), initial_balance);
 				assert_eq!(
 					<Test as Config>::Currency::free_balance(AAvatars::treasury_account_id()),
-					0
+					MockExistentialDeposit::get()
 				);
 
 				System::assert_last_event(mock::RuntimeEvent::Affiliates(
@@ -3857,7 +3862,7 @@ mod affiliates {
 				);
 				assert_eq!(
 					<Test as Config>::Currency::free_balance(AAvatars::treasury_account_id()),
-					affiliator_enable_fee
+					affiliator_enable_fee + MockExistentialDeposit::get()
 				);
 
 				System::assert_last_event(mock::RuntimeEvent::Affiliates(
@@ -3913,7 +3918,7 @@ mod affiliates {
 				);
 				assert_eq!(
 					<Test as Config>::Currency::free_balance(AAvatars::treasury_account_id()),
-					affiliator_enable_fee
+					affiliator_enable_fee + MockExistentialDeposit::get()
 				);
 
 				System::assert_last_event(mock::RuntimeEvent::Affiliates(
@@ -3954,8 +3959,8 @@ mod affiliates {
 
 mod tournament {
 	use super::*;
+	use core::num::NonZeroU32;
 	use pallet_ajuna_tournament::{GoldenDuckConfig, RankingTable, RewardDistributionTable};
-	use std::num::NonZeroU32;
 
 	fn create_dummy_legendary_avatar_v3(
 		season_id: SeasonId,
@@ -5305,7 +5310,9 @@ mod asset_manager {
 		let avatar_prepare_fee_1 = 888;
 
 		let initial_balance = MockExistentialDeposit::get() + avatar_prepare_fee_1;
-		let total_supply = initial_balance + MockExistentialDeposit::get();
+		let initial_treasury_balance = MockExistentialDeposit::get();
+		let total_supply =
+			initial_balance + MockExistentialDeposit::get() + initial_treasury_balance;
 
 		ExtBuilder::default()
 			.seasons(&[(season_id_1, Season::default().prepare_avatar_fee(avatar_prepare_fee_1))])

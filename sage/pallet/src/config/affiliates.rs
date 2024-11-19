@@ -14,16 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Ajuna primitives crate.
-//!
-//! It intends to implement things that are shared over various pallets.
+use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-pub mod account_manager;
-pub mod asset_manager;
-pub mod fee_handler;
-pub mod runtime_types;
-pub mod season_manager;
-pub mod trade_manager;
-pub mod treasury_manager;
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq)]
+pub enum AffiliateMethods<TransitionId> {
+	UpgradeAssetInventory,
+	TradeAsset,
+	StateTransition(TransitionId),
+}

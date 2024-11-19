@@ -41,9 +41,11 @@ impl<T: Config> TreasuryManager for Pallet<T> {
 		unimplemented!()
 	}
 
-	fn deposit_into(key: Self::TreasuryPotKey, fee: Self::Currency) -> Result<(), DispatchError> {
-		Self::deposit_into_treasury(&key, fee);
-
-		Ok(())
+	fn deposit_into(
+		depositor: &Self::AccountId,
+		key: &Self::TreasuryPotKey,
+		fee: Self::Currency,
+	) -> Result<(), DispatchError> {
+		Self::deposit_into_treasury(depositor, key, fee)
 	}
 }
