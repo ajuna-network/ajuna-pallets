@@ -63,24 +63,19 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
-		PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
+		if !Self::evaluate_unlock_state(&unlock_config, &player_stats) {
+			return Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+		}
+
+		PlayerSeasonConfigs::<T, I>::mutate(&account, &season_id, |config| {
 			let feature_lock = match feature {
 				LockableFeature::TradeAsset => &mut config.locks.asset_trade,
 				LockableFeature::TransferAsset => &mut config.locks.asset_transfer,
 			};
 
-			if *feature_lock {
-				// early return if already unlocked
-				return Ok::<(), DispatchError>(());
-			}
-
-			if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-				*feature_lock = true;
-				Ok(())
-			} else {
-				Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
-			}
-		})?;
+			// evaluated unlock state above, so we can just set it to true.
+			*feature_lock = true;
+		});
 
 		Self::deposit_event(Event::FeatureUnlocked { feature, season_id, account });
 		Ok(())
@@ -92,28 +87,23 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		season_id: SeasonIdOf<T, I>,
 		feature: LockableFeature,
 	) -> DispatchResult {
-		PlayerSeasonConfigs::<T, I>::try_mutate(&target, &season_id, |config| {
+		// first we pay
+		let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
+		let feature_fee = match feature {
+			LockableFeature::TradeAsset => fee.unlock_trade_asset,
+			LockableFeature::TransferAsset => fee.unlock_transfer_asset,
+		};
+		T::FeeHandler::deposit_fee_into_treasury(&payer, &season_id, feature_fee)?;
+
+		PlayerSeasonConfigs::<T, I>::mutate(&target, &season_id, |config| {
 			let feature_lock = match feature {
 				LockableFeature::TradeAsset => &mut config.locks.asset_trade,
 				LockableFeature::TransferAsset => &mut config.locks.asset_transfer,
 			};
 
-			if *feature_lock {
-				// early return if already unlocked
-				return Ok(());
-			}
-
-			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
-			let feature_fee = match feature {
-				LockableFeature::TradeAsset => fee.unlock_trade_asset,
-				LockableFeature::TransferAsset => fee.unlock_transfer_asset,
-			};
-
-			T::FeeHandler::deposit_fee_into_treasury(&payer, &season_id, feature_fee)?;
+			// we already paid above, so we can just set it to true
 			*feature_lock = true;
-
-			Ok::<(), DispatchError>(())
-		})?;
+		});
 
 		Self::deposit_event(Event::FeatureUnlocked { feature, season_id, account: target });
 		Ok(())
