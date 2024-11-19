@@ -320,7 +320,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			new_config: GeneralConfigOf<T, I>,
 		) -> DispatchResult {
-			Self::ensure_organizer(origin)?;
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
+
 			GeneralConfigStore::<T, I>::put(&new_config);
 			Self::deposit_event(Event::UpdatedGeneralConfig { updated_config: new_config });
 			Ok(())
@@ -334,7 +336,8 @@ pub mod pallet {
 			feature: LockableFeature,
 			unlock_rule: UnlockRule,
 		) -> DispatchResult {
-			Self::ensure_organizer(origin)?;
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
 			SeasonUnlocks::<T, I>::mutate(&season_id, feature, |config| {
 				*config = Some(unlock_rule);
 			});
@@ -355,21 +358,9 @@ pub mod pallet {
 			in_season: Option<SeasonIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
-			let (season_id, SeasonConfigOf::<T, I> { fee, .. }) = if let Some(season_id) = in_season
-			{
-				let season_config = T::SeasonHandler::get_season_config_for(&season_id)?;
-				(season_id, season_config)
-			} else {
-				let current_season_id = T::SeasonHandler::get_current_season_id();
-				let season_config = T::SeasonHandler::get_season_config_for(&current_season_id)?;
-				(current_season_id, season_config)
-			};
 
-			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller.clone());
-
-			let inventory_tier =
-				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).inventory_tier;
-			ensure!(inventory_tier != InventoryTier::Max, Error::<T, I>::MaxStorageTierReached);
+			let season_id = in_season.unwrap_or_else(|| T::SeasonHandler::get_current_season_id());
+			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
 
 			let upgrade_fee = {
 				let base_fee = fee.upgrade_asset_inventory;
@@ -380,6 +371,12 @@ pub mod pallet {
 				)?
 			};
 			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
+
+			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller);
+
+			let inventory_tier =
+				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).inventory_tier;
+			ensure!(inventory_tier != InventoryTier::Max, Error::<T, I>::MaxStorageTierReached);
 
 			let upgraded_tier =
 				PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, &season_id, |account| {
@@ -402,14 +399,14 @@ pub mod pallet {
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
 		) -> DispatchResult {
+			let from = ensure_signed(origin)?;
+
 			let GeneralConfig { transfer, .. } = GeneralConfigStore::<T, I>::get();
-			let from = match Self::ensure_organizer(origin.clone()) {
-				Ok(organizer) => organizer,
-				_ => {
-					ensure!(transfer.open, Error::<T, I>::TransferClosed);
-					ensure_signed(origin)?
-				},
-			};
+			ensure!(
+				transfer.open || Self::ensure_organizer(&from).is_ok(),
+				Error::<T, I>::TransferClosed
+			);
+
 			ensure!(from != to, Error::<T, I>::CannotTransferToSelf);
 			ensure!(
 				Self::ensure_for_trade(&asset_id).is_err(),
@@ -424,8 +421,7 @@ pub mod pallet {
 				Error::<T, I>::FeatureLocked
 			);
 
-			let SeasonConfigOf::<T, I> { fee, .. } =
-				T::SeasonHandler::get_season_config_for(&asset_season_id)?;
+			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::deposit_fee_into_treasury(&from, &asset_season_id, fee.transfer_asset)?;
 
 			Self::do_transfer_asset(&from, &to, &asset_season_id, &asset_id)?;
@@ -440,7 +436,8 @@ pub mod pallet {
 			season_id: SeasonIdOf<T, I>,
 			trade_filter: TradeFilterOf<T, I>,
 		) -> DispatchResult {
-			Self::ensure_organizer(origin)?;
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
 
 			SeasonTradeFilters::<T, I>::insert(&season_id, &trade_filter);
 
@@ -459,13 +456,17 @@ pub mod pallet {
 		) -> DispatchResult {
 			let seller = ensure_signed(origin)?;
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
+
 			let (owner, asset) = Self::asset_with_owner(&asset_id)?;
 			ensure!(owner == seller, Error::<T, I>::AssetNotOwned);
+
 			let season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			let config = PlayerSeasonConfigs::<T, I>::get(&seller, &season_id);
 			ensure!(config.locks.asset_trade, Error::<T, I>::FeatureLocked);
+
 			Self::ensure_unlocked(&asset_id)?;
 			Self::ensure_can_be_set_for_trade(&asset_id, &asset)?;
+
 			AssetTradePrices::<T, I>::insert(&season_id, &asset_id, price);
 			Self::deposit_event(Event::AssetPriceSet { asset_id, price });
 			Ok(())
@@ -507,8 +508,7 @@ pub mod pallet {
 
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id();
-			let SeasonConfigOf::<T, I> { fee, .. } =
-				T::SeasonHandler::get_season_config_for(&current_season_id)?;
+			let fee = T::SeasonHandler::get_season_config_for(&current_season_id)?.fee;
 
 			let trade_fee = {
 				let min_buy_fee = fee.buy_asset_min;
@@ -529,10 +529,10 @@ pub mod pallet {
 
 			let current_season_id = T::SeasonHandler::get_current_season_id();
 			PlayerSeasonStats::<T, I>::mutate(&buyer, &current_season_id, |stats| {
-				stats.bought_amount = stats.bought_amount.saturating_add(1);
+				stats.bought_amount.saturating_inc();
 			});
 			PlayerSeasonStats::<T, I>::mutate(&seller, &current_season_id, |stats| {
-				stats.sold_amount = stats.sold_amount.saturating_add(1);
+				stats.sold_amount.saturating_inc();
 			});
 
 			Self::deposit_event(Event::AssetTraded { asset_id, from: seller, to: buyer, price });

@@ -220,14 +220,19 @@ fn upgrade_asset_inventory_should_reject_insufficient_balance() {
 
 #[test]
 fn upgrade_asset_inventory_should_reject_fully_upgraded_storage() {
-	ExtBuilder::default().build().execute_with(|| {
-		PlayerSeasonConfigs::<Test, Instance1>::mutate(ALICE, SEASON_ID_0, |config| {
-			config.inventory_tier = InventoryTier::Max
-		});
+	let alice_initial_balance = MockExistentialDeposit::get() * 10;
 
-		assert_noop!(
-			Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None),
-			Error::<Test, Instance1>::MaxStorageTierReached
-		);
-	});
+	ExtBuilder::default()
+		.balances(&[(ALICE, alice_initial_balance)])
+		.build()
+		.execute_with(|| {
+			PlayerSeasonConfigs::<Test, Instance1>::mutate(ALICE, SEASON_ID_0, |config| {
+				config.inventory_tier = InventoryTier::Max
+			});
+
+			assert_noop!(
+				Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None),
+				Error::<Test, Instance1>::MaxStorageTierReached
+			);
+		});
 }
