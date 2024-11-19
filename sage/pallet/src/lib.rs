@@ -348,21 +348,9 @@ pub mod pallet {
 			in_season: Option<SeasonIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
-			let (season_id, SeasonConfigOf::<T, I> { fee, .. }) = if let Some(season_id) = in_season
-			{
-				let season_config = T::SeasonHandler::get_season_config_for(&season_id)?;
-				(season_id, season_config)
-			} else {
-				let current_season_id = T::SeasonHandler::get_current_season_id();
-				let season_config = T::SeasonHandler::get_season_config_for(&current_season_id)?;
-				(current_season_id, season_config)
-			};
 
-			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller.clone());
-
-			let inventory_tier =
-				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).inventory_tier;
-			ensure!(inventory_tier != InventoryTier::Max, Error::<T, I>::MaxStorageTierReached);
+			let season_id = in_season.unwrap_or_else(|| T::SeasonHandler::get_current_season_id());
+			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
 
 			let upgrade_fee = {
 				let base_fee = fee.upgrade_asset_inventory;
@@ -373,6 +361,12 @@ pub mod pallet {
 				)?
 			};
 			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
+
+			let account_to_upgrade = beneficiary.unwrap_or_else(|| caller);
+
+			let inventory_tier =
+				PlayerSeasonConfigs::<T, I>::get(&account_to_upgrade, &season_id).inventory_tier;
+			ensure!(inventory_tier != InventoryTier::Max, Error::<T, I>::MaxStorageTierReached);
 
 			let upgraded_tier =
 				PlayerSeasonConfigs::<T, I>::mutate(&account_to_upgrade, &season_id, |account| {
