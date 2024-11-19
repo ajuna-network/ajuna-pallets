@@ -27,18 +27,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
 	) -> DispatchResult {
-		match target {
-			UnlockTarget::OneselfFree =>
-				Self::unlock_free(account, season_id, LockableFeature::TradeAsset),
-			UnlockTarget::OneselfPaying => Self::unlock_paying(
-				account.clone(),
-				account,
-				season_id,
-				LockableFeature::TradeAsset,
-			),
-			UnlockTarget::OtherPaying(other) =>
-				Self::unlock_paying(account, other, season_id, LockableFeature::TradeAsset),
-		}
+		Self::unlock(account, target, season_id, LockableFeature::TradeAsset)
 	}
 
 	pub(crate) fn unlock_asset_transfer_for(
@@ -46,17 +35,21 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
 	) -> DispatchResult {
+		Self::unlock(account, target, season_id, LockableFeature::TransferAsset)
+	}
+
+	fn unlock(
+		account: AccountIdOf<T>,
+		target: UnlockTarget<AccountIdOf<T>>,
+		season_id: SeasonIdOf<T, I>,
+		feature: LockableFeature,
+	) -> DispatchResult {
 		match target {
-			UnlockTarget::OneselfFree =>
-				Self::unlock_free(account, season_id, LockableFeature::TransferAsset),
-			UnlockTarget::OneselfPaying => Self::unlock_paying(
-				account.clone(),
-				account,
-				season_id,
-				LockableFeature::TransferAsset,
-			),
+			UnlockTarget::OneselfFree => Self::unlock_free(account, season_id, feature),
+			UnlockTarget::OneselfPaying =>
+				Self::unlock_paying(account.clone(), account, season_id, feature),
 			UnlockTarget::OtherPaying(other) =>
-				Self::unlock_paying(account, other, season_id, LockableFeature::TransferAsset),
+				Self::unlock_paying(account, other, season_id, feature),
 		}
 	}
 
