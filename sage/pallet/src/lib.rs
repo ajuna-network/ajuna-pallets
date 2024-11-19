@@ -414,8 +414,7 @@ pub mod pallet {
 				Error::<T, I>::FeatureLocked
 			);
 
-			let SeasonConfigOf::<T, I> { fee, .. } =
-				T::SeasonHandler::get_season_config_for(&asset_season_id)?;
+			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::deposit_fee_into_treasury(&from, &asset_season_id, fee.transfer_asset)?;
 
 			Self::do_transfer_asset(&from, &to, &asset_season_id, &asset_id)?;
@@ -433,7 +432,7 @@ pub mod pallet {
 			let signer = ensure_signed(origin)?;
 			Self::ensure_organizer(&signer)?;
 
-			SeasonTradeFilters::<T, I>::insert(&season_id, trade_filter.clone());
+			SeasonTradeFilters::<T, I>::insert(&season_id, &trade_filter);
 
 			Self::deposit_event(Event::UpdatedTradeFilter { season_id, filter: trade_filter });
 
