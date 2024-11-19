@@ -157,7 +157,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		PlayerSeasonConfigs::<T, I>::try_mutate(&target, &season_id, |config| {
 			let feature_lock = match feature {
 				LockableFeature::TradeAsset => &mut config.locks.asset_trade,
-				LockableFeature::TransferAsset => &mut config.locks.asset_trade,
+				LockableFeature::TransferAsset => &mut config.locks.asset_transfer,
 			};
 
 			if *feature_lock {
