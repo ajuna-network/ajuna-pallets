@@ -30,34 +30,33 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	) -> DispatchResult {
 		match target {
 			UnlockTarget::OneselfFree => {
-				if let Some(unlock_config) =
+				// TODO: Is this naming correct?
+				let unlock_config =
 					SeasonUnlocks::<T, I>::get(&season_id, LockableFeature::TradeAsset)
-				{
-					let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
+						.ok_or(Error::<T, I>::FeatureLockedInSeason)?;
 
-					PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
-						if !config.locks.asset_trade {
-							if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
-								config.locks.asset_trade = true;
+				let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 
-								Self::deposit_event(Event::FeatureUnlocked {
-									feature: LockableFeature::TradeAsset,
-									season_id: season_id.clone(),
-									account: account.clone(),
-								});
+				PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
+					if config.locks.asset_trade {
+						// early return if already unlocked
+						return Ok(());
+					}
 
-								Ok(())
-							} else {
-								Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
-							}
-						} else {
-							Ok(())
-						}
-					})
-				} else {
-					// TODO: Is this naming correct?
-					Err(Error::<T, I>::FeatureLockedInSeason.into())
-				}
+					if Self::evaluate_unlock_state(&unlock_config, &player_stats) {
+						config.locks.asset_trade = true;
+
+						Self::deposit_event(Event::FeatureUnlocked {
+							feature: LockableFeature::TradeAsset,
+							season_id: season_id.clone(),
+							account: account.clone(),
+						});
+
+						Ok(())
+					} else {
+						Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
+					}
+				})
 			},
 			UnlockTarget::OneselfPaying =>
 				PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
