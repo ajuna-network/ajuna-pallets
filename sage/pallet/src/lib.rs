@@ -449,13 +449,17 @@ pub mod pallet {
 		) -> DispatchResult {
 			let seller = ensure_signed(origin)?;
 			ensure!(GeneralConfigStore::<T, I>::get().trade.open, Error::<T, I>::TradeClosed);
+
 			let (owner, asset) = Self::asset_with_owner(&asset_id)?;
 			ensure!(owner == seller, Error::<T, I>::AssetNotOwned);
+
 			let season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			let config = PlayerSeasonConfigs::<T, I>::get(&seller, &season_id);
 			ensure!(config.locks.asset_trade, Error::<T, I>::FeatureLocked);
+
 			Self::ensure_unlocked(&asset_id)?;
 			Self::ensure_can_be_set_for_trade(&asset_id, &asset)?;
+
 			AssetTradePrices::<T, I>::insert(&season_id, &asset_id, price);
 			Self::deposit_event(Event::AssetPriceSet { asset_id, price });
 			Ok(())
