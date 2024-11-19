@@ -60,42 +60,46 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			},
 			UnlockTarget::OneselfPaying =>
 				PlayerSeasonConfigs::<T, I>::try_mutate(&account, &season_id, |config| {
-					if !config.locks.asset_trade {
-						let SeasonConfigOf::<T, I> { fee, .. } =
-							T::SeasonHandler::get_season_config_for(&season_id)?;
-						T::FeeHandler::deposit_fee_into_treasury(
-							&account,
-							&season_id,
-							fee.unlock_trade_asset,
-						)?;
-						config.locks.asset_trade = true;
-
-						Self::deposit_event(Event::FeatureUnlocked {
-							feature: LockableFeature::TradeAsset,
-							season_id: season_id.clone(),
-							account: account.clone(),
-						});
+					if config.locks.asset_trade {
+						// early return if already unlocked
+						return Ok(());
 					}
+
+					let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
+					T::FeeHandler::deposit_fee_into_treasury(
+						&account,
+						&season_id,
+						fee.unlock_trade_asset,
+					)?;
+					config.locks.asset_trade = true;
+
+					Self::deposit_event(Event::FeatureUnlocked {
+						feature: LockableFeature::TradeAsset,
+						season_id: season_id.clone(),
+						account: account.clone(),
+					});
 					Ok(())
 				}),
 			UnlockTarget::OtherPaying(other) =>
 				PlayerSeasonConfigs::<T, I>::try_mutate(&other, &season_id, |config| {
-					if !config.locks.asset_trade {
-						let SeasonConfigOf::<T, I> { fee, .. } =
-							T::SeasonHandler::get_season_config_for(&season_id)?;
-						T::FeeHandler::deposit_fee_into_treasury(
-							&account,
-							&season_id,
-							fee.unlock_trade_asset,
-						)?;
-						config.locks.asset_trade = true;
-
-						Self::deposit_event(Event::FeatureUnlocked {
-							feature: LockableFeature::TradeAsset,
-							season_id: season_id.clone(),
-							account: other.clone(),
-						});
+					if config.locks.asset_trade {
+						// early return if already unlocked
+						return Ok(());
 					}
+
+					let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
+					T::FeeHandler::deposit_fee_into_treasury(
+						&account,
+						&season_id,
+						fee.unlock_trade_asset,
+					)?;
+					config.locks.asset_trade = true;
+
+					Self::deposit_event(Event::FeatureUnlocked {
+						feature: LockableFeature::TradeAsset,
+						season_id: season_id.clone(),
+						account: other.clone(),
+					});
 					Ok(())
 				}),
 		}
