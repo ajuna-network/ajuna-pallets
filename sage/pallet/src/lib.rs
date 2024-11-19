@@ -34,7 +34,7 @@ use ajuna_primitives::{
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::TradeManager,
 };
-use sage_api::{AsErrorCode, SageApi, SageGameTransition};
+use sage_api::{traits::TransitionOutput, AsErrorCode, SageGameTransition};
 
 use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
 use frame_system::pallet_prelude::*;
@@ -70,8 +70,8 @@ pub mod pallet {
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
 	pub type ExtraOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Extra;
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub type TransitionConfigOf<T, I> =
-		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionConfig;
+	pub type TransitionConfigOf<T, I> = <T as Config<I>>::SageTransitionConfig;
+	pub(crate) type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
 	pub type GeneralConfigOf<T, I> = GeneralConfig<TransitionConfigOf<T, I>>;
 
 	pub(crate) type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
@@ -88,10 +88,9 @@ pub mod pallet {
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-		type SageGameTransition: SageGameTransition<SageApi = Self::SageApi>;
+		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
 
-		// This associated type mostly exists to constraint the SageApi's associated types.
-		type SageApi: SageApi<Balance = BalanceOf<Self, I>, AccountId = AccountIdOf<Self>>;
+		type SageTransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 		type SeasonHandler: SeasonManager<
 			TransitionIdOf<Self, I>,
@@ -158,7 +157,7 @@ pub mod pallet {
 		AccountIdOf<T>,
 		Identity,
 		SeasonIdOf<T, I>,
-		PlayerStats<BlockNumberFor<T>>,
+		PlayerStatsOf<T>,
 		ValueQuery,
 	>;
 
@@ -598,19 +597,16 @@ pub mod pallet {
 				Self::ensure_unlocked(asset_id)?;
 			}
 
-			T::SageGameTransition::verify_rule(transition_id.clone(), &sender, &asset_ids, &extra)
+			T::SageGameTransition::verify_rule(&transition_id, &sender, &asset_ids, &extra)
 				.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
 
-			T::SageGameTransition::do_transition(
-				transition_id.clone(),
-				sender.clone(),
-				asset_ids,
-				extra,
-			)
-			.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
+			let transition_results =
+				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
+					.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
+			let current_season_id = T::SeasonHandler::get_current_season_id();
+			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 
 			// TODO: Review the logic in this section
-			let current_season_id = T::SeasonHandler::get_current_season_id();
 			let transition_fee = {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
@@ -678,6 +674,48 @@ pub mod pallet {
 				*from_owner = to.clone();
 				Ok(())
 			})
+		}
+
+		fn process_transition_results(
+			player: &AccountIdOf<T>,
+			season_id: &SeasonIdOf<T, I>,
+			transition_results: Vec<TransitionOutputOf<T, I>>,
+		) -> DispatchResult {
+			let mut minted_amount = 0 as Stat;
+			let mut mutated_amount = 0 as Stat;
+
+			for output in transition_results {
+				match output {
+					TransitionOutput::Minted(_asset) => {
+						minted_amount = minted_amount.saturating_add(1);
+						// TODO: Need a way to create new asset_id generically
+					},
+					TransitionOutput::Mutated(asset_id, asset) => {
+						mutated_amount = mutated_amount.saturating_add(1);
+						Assets::<T, I>::mutate(asset_id, |maybe_asset| {
+							if let Some((_, old_asset)) = maybe_asset {
+								*old_asset = asset;
+							}
+						});
+					},
+					TransitionOutput::Consumed(asset_id) => Assets::<T, I>::remove(asset_id),
+				}
+			}
+
+			PlayerSeasonStats::<T, I>::mutate(player, season_id, |stats| {
+				stats.minted_amount = stats.minted_amount.saturating_add(minted_amount);
+				stats.forged_amount = stats.forged_amount.saturating_add(mutated_amount);
+
+				if stats.first_mint.is_none() && minted_amount > 0 {
+					stats.first_mint = Some(<frame_system::Pallet<T>>::block_number())
+				}
+
+				if stats.first_forge.is_none() && mutated_amount > 0 {
+					stats.first_forge = Some(<frame_system::Pallet<T>>::block_number())
+				}
+			});
+
+			Ok(())
 		}
 	}
 }

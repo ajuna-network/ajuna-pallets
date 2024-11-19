@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use ajuna_primitives::asset_manager::AssetInspector;
 
 impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	type AccountId = AccountIdOf<T>;
@@ -111,5 +112,16 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	fn create_assets(_owner: Self::AccountId, _count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
 		// TODO: Decide how to implement this
 		Vec::with_capacity(0)
+	}
+}
+
+impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {
+	type AssetId = AssetIdOf<T, I>;
+	type Asset = AssetOf<T, I>;
+
+	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError> {
+		Assets::<T, I>::get(asset_id)
+			.map(|(_, asset)| asset)
+			.ok_or(Error::<T, I>::UnknownAsset.into())
 	}
 }

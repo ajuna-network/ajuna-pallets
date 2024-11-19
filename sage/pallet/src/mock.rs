@@ -16,6 +16,7 @@
 
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
+	asset_manager::AssetInspector,
 	fee_handler::{FeeProvider, GameFeeHandler},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 	trade_manager::TradeManager,
@@ -116,62 +117,6 @@ use example_transition::{
 	generic::ExampleTransitionGeneric,
 	types::{Asset, AssetId, ExampleTransitionId},
 };
-use sage_api::SageApi;
-
-pub struct SageMock;
-
-/// For now we implement this manually for every game so that we can delegate the
-/// call to the instance of the account manager etc. corresponding to the game this is
-/// implemented for.
-///
-/// Later we can hopefully do a blanket implementation for a struct that will automatically
-/// implement the sage api that looks like this:
-///
-/// ```rust
-/// pub type ExampleGameSage = SageCore<AssetManager, FeeManager>;
-/// ```
-/// `ExampleGameSage` will then automatically implement `SageApi` if the `AssetManager` and
-/// `FeeManager` implement their corresponding traits.
-impl SageApi for SageMock {
-	type AssetId = AssetId;
-	type Asset = Asset;
-	type Balance = MockBalance;
-	type AccountId = MockAccountId;
-
-	fn ensure_ownership(
-		account: &Self::AccountId,
-		asset: &Self::AssetId,
-	) -> Result<(), sage_api::Error> {
-		// this would be a call to our asset manager implementation
-		Sage::ensure_ownership(account, asset)
-			.map(|_| ())
-			.map_err(|_| sage_api::Error::Transition { error: 0 })
-	}
-
-	fn try_mutate_asset<F: FnOnce(&mut Self::Asset) -> Result<(), sage_api::Error>>(
-		_asset: &Self::AssetId,
-		_f: F,
-	) -> Result<(), sage_api::Error> {
-		// this would be a call to our asset manager implementation
-		Ok(())
-	}
-
-	fn transfer_ownership(
-		_asset: Self::AssetId,
-		_to: Self::AccountId,
-	) -> Result<(), sage_api::Error> {
-		// this would be a call to our asset manager implementation
-		todo!()
-	}
-
-	fn handle_fees(_balance: Self::Balance) -> Result<(), sage_api::Error> {
-		// this would be a call to our fee handler implementation
-		// This call will probably have more arguments, or there are multiple
-		// handle fee variants depending on what we will come up with in the
-		// fee manager.
-		todo!()
-	}
-}
 
 parameter_types! {
 	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
@@ -314,11 +259,72 @@ impl TradeManager for MockTradeHandler {
 	}
 }
 
+pub struct MockAssetMediator;
+
+impl AssetManager for MockAssetMediator {
+	type AccountId = MockAccountId;
+	type AssetId = AssetId;
+	type Asset = Asset;
+
+	fn ensure_ownership(
+		owner: &Self::AccountId,
+		asset_id: &Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		<Sage as AssetManager>::ensure_ownership(owner, asset_id)
+	}
+
+	fn lock_asset(
+		lock_id: LockIdentifier,
+		owner: Self::AccountId,
+		asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		<Sage as AssetManager>::lock_asset(lock_id, owner, asset_id)
+	}
+
+	fn unlock_asset(
+		lock_id: LockIdentifier,
+		owner: Self::AccountId,
+		asset_id: Self::AssetId,
+	) -> Result<Self::Asset, DispatchError> {
+		<Sage as AssetManager>::unlock_asset(lock_id, owner, asset_id)
+	}
+
+	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
+		<Sage as AssetManager>::is_locked(asset)
+	}
+
+	fn nft_transfer_open() -> bool {
+		<Sage as AssetManager>::nft_transfer_open()
+	}
+
+	fn handle_asset_prepare_fee(
+		asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		<Sage as AssetManager>::handle_asset_prepare_fee(asset, from, fees_recipient)
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
+		<Sage as AssetManager>::create_assets(owner, count)
+	}
+}
+
+impl AssetInspector for MockAssetMediator {
+	type AssetId = AssetId;
+	type Asset = Asset;
+
+	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError> {
+		<Sage as AssetInspector>::get_asset(asset_id)
+	}
+}
+
 pub type SageInstance1 = pallet_sage::Instance1;
 impl crate::Config<SageInstance1> for Test {
 	type PalletId = ExamplePalletId;
-	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockBalance, SageMock>;
-	type SageApi = SageMock;
+	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
+	type SageTransitionConfig = ();
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = GameFeeHandler<
 		MockAccountId,

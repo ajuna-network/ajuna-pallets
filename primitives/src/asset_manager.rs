@@ -82,3 +82,11 @@ pub trait AssetManager {
 	#[cfg(feature = "runtime-benchmarks")]
 	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)>;
 }
+
+pub trait AssetInspector {
+	type AssetId: Member + Codec;
+
+	type Asset: Member + Codec;
+
+	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError>;
+}

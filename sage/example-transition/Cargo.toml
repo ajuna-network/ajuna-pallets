@@ -13,6 +13,8 @@ sp-std             = { workspace = true }
 # Substrate - SCALE codec
 parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
 scale-info         = { workspace = true, features = [ "derive" ] }
+# Ajuna
+ajuna-primitives = { workspace = true }
 
 # Sage
 sage-api = { workspace = true}
@@ -26,4 +28,6 @@ std = [
     "scale-info/std",
     # Sage
     "sage-api/std",
+    # Ajuna
+    "ajuna-primitives/std",
 ]

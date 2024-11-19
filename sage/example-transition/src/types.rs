@@ -4,7 +4,6 @@
 
 use frame_support::sp_runtime::testing::H256;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sage_api::AssetT;
 use scale_info::TypeInfo;
 
 pub type AssetId = H256;
@@ -52,27 +51,7 @@ impl Level {
 	}
 }
 
-impl AssetT for Asset {
-	fn collection_id(&self) -> u32 {
-		self.collection_id
-	}
-
-	fn asset_type(&self) -> u32 {
-		self.asset_type
-	}
-
-	fn dna(&self) -> [u8; 32] {
-		self.dna
-	}
-
-	fn minted_at(&self) -> u32 {
-		self.minted_at
-	}
-}
-
-#[derive(
-	Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, MaxEncodedLen, TypeInfo,
-)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum ExampleTransitionId {
 	UpgradeAsset,
 	ConsumeAsset,
