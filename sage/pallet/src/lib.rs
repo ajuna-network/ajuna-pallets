@@ -502,8 +502,7 @@ pub mod pallet {
 
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id();
-			let SeasonConfigOf::<T, I> { fee, .. } =
-				T::SeasonHandler::get_season_config_for(&current_season_id)?;
+			let fee = T::SeasonHandler::get_season_config_for(&current_season_id)?.fee;
 
 			let trade_fee = {
 				let min_buy_fee = fee.buy_asset_min;
