@@ -523,10 +523,10 @@ pub mod pallet {
 
 			let current_season_id = T::SeasonHandler::get_current_season_id();
 			PlayerSeasonStats::<T, I>::mutate(&buyer, &current_season_id, |stats| {
-				stats.bought_amount = stats.bought_amount.saturating_add(1);
+				stats.bought_amount.saturating_inc();
 			});
 			PlayerSeasonStats::<T, I>::mutate(&seller, &current_season_id, |stats| {
-				stats.sold_amount = stats.sold_amount.saturating_add(1);
+				stats.sold_amount.saturating_inc();
 			});
 
 			Self::deposit_event(Event::AssetTraded { asset_id, from: seller, to: buyer, price });
