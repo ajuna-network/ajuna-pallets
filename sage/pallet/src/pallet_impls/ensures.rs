@@ -20,15 +20,13 @@ use crate::{
 };
 use ajuna_primitives::{season_manager::SeasonManager, trade_manager::TradeManager};
 use frame_support::pallet_prelude::*;
-use frame_system::pallet_prelude::*;
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	/// Check if origin is the current organizer account
-	pub(crate) fn ensure_organizer(origin: OriginFor<T>) -> Result<AccountIdOf<T>, DispatchError> {
-		let maybe_organizer = ensure_signed(origin)?;
+	pub(crate) fn ensure_organizer(maybe_organizer: &AccountIdOf<T>) -> Result<(), DispatchError> {
 		let existing_organizer = Organizer::<T, I>::get().ok_or(Error::<T, I>::OrganizerNotSet)?;
-		ensure!(maybe_organizer == existing_organizer, DispatchError::BadOrigin);
-		Ok(maybe_organizer)
+		ensure!(maybe_organizer == &existing_organizer, DispatchError::BadOrigin);
+		Ok(())
 	}
 
 	pub(crate) fn ensure_ownership(

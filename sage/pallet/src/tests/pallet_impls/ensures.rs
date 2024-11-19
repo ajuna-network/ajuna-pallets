@@ -25,7 +25,7 @@ mod ensure_organizer {
 			assert_eq!(Organizer::<Test, Instance1>::get(), None);
 			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), DAVE));
 			assert_eq!(Organizer::<Test, Instance1>::get(), Some(DAVE));
-			assert_ok!(Sage::ensure_organizer(RuntimeOrigin::signed(DAVE)));
+			assert_ok!(Sage::ensure_organizer(&DAVE));
 		});
 	}
 
@@ -33,27 +33,21 @@ mod ensure_organizer {
 	fn ensure_organizer_should_reject_when_no_organizer_is_set() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_eq!(Organizer::<Test, Instance1>::get(), None);
-			assert_noop!(
-				Sage::ensure_organizer(RuntimeOrigin::signed(DAVE)),
-				Error::<Test, Instance1>::OrganizerNotSet
-			);
+			assert_noop!(Sage::ensure_organizer(&DAVE), Error::<Test, Instance1>::OrganizerNotSet);
 		});
 	}
 
 	#[test]
 	fn ensure_organizer_should_reject_non_organizer_calls() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-			assert_noop!(
-				Sage::ensure_organizer(RuntimeOrigin::signed(DAVE)),
-				DispatchError::BadOrigin
-			);
+			assert_noop!(Sage::ensure_organizer(&DAVE), DispatchError::BadOrigin);
 		});
 	}
 
 	#[test]
 	fn ensure_organizer_should_validate_newly_set_organizer() {
 		ExtBuilder::default().organizer(CHARLIE).build().execute_with(|| {
-			assert_ok!(Sage::ensure_organizer(RuntimeOrigin::signed(CHARLIE)));
+			assert_ok!(Sage::ensure_organizer(&CHARLIE));
 		});
 	}
 }

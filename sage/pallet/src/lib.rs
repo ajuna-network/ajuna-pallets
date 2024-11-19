@@ -313,7 +313,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			new_config: GeneralConfigOf<T, I>,
 		) -> DispatchResult {
-			Self::ensure_organizer(origin)?;
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
+
 			GeneralConfigStore::<T, I>::put(&new_config);
 			Self::deposit_event(Event::UpdatedGeneralConfig { updated_config: new_config });
 			Ok(())
@@ -327,7 +329,8 @@ pub mod pallet {
 			feature: LockableFeature,
 			unlock_rule: UnlockRule,
 		) -> DispatchResult {
-			Self::ensure_organizer(origin)?;
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
 			SeasonUnlocks::<T, I>::mutate(&season_id, feature, |config| {
 				*config = Some(unlock_rule);
 			});
@@ -389,14 +392,14 @@ pub mod pallet {
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
 		) -> DispatchResult {
+			let from = ensure_signed(origin)?;
+
 			let GeneralConfig { transfer, .. } = GeneralConfigStore::<T, I>::get();
-			let from = match Self::ensure_organizer(origin.clone()) {
-				Ok(organizer) => organizer,
-				_ => {
-					ensure!(transfer.open, Error::<T, I>::TransferClosed);
-					ensure_signed(origin)?
-				},
-			};
+			ensure!(
+				Self::ensure_organizer(&from).is_ok() || transfer.open,
+				Error::<T, I>::TransferClosed
+			);
+
 			ensure!(from != to, Error::<T, I>::CannotTransferToSelf);
 			ensure!(
 				Self::ensure_for_trade(&asset_id).is_err(),
@@ -427,7 +430,8 @@ pub mod pallet {
 			season_id: SeasonIdOf<T, I>,
 			trade_filter: TradeFilterOf<T, I>,
 		) -> DispatchResult {
-			Self::ensure_organizer(origin)?;
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
 
 			SeasonTradeFilters::<T, I>::insert(&season_id, trade_filter.clone());
 
