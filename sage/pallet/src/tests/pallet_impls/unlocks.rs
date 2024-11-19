@@ -24,7 +24,7 @@ mod unlock_asset_trading_for {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
 				Sage::unlock_asset_trading_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
-				Error::<Test, Instance1>::FeatureLockedInSeason
+				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 		});
 	}
@@ -74,7 +74,7 @@ mod unlock_asset_trading_for {
 			);
 			assert_noop!(
 				Sage::unlock_asset_trading_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
-				Error::<Test, Instance1>::FeatureLockedInSeason
+				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 
 			let player_config = PlayerSeasonConfigs::<Test, Instance1>::get(DAVE, SEASON_ID_0);
@@ -108,7 +108,7 @@ mod unlock_asset_transfer_for {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
 				Sage::unlock_asset_transfer_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
-				Error::<Test, Instance1>::FeatureLockedInSeason
+				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 		});
 	}
@@ -158,7 +158,7 @@ mod unlock_asset_transfer_for {
 			);
 			assert_noop!(
 				Sage::unlock_asset_transfer_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
-				Error::<Test, Instance1>::FeatureLockedInSeason
+				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 
 			let player_config = PlayerSeasonConfigs::<Test, Instance1>::get(DAVE, SEASON_ID_0);

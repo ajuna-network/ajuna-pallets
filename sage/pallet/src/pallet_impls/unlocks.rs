@@ -58,9 +58,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		season_id: SeasonIdOf<T, I>,
 		feature: LockableFeature,
 	) -> DispatchResult {
-		// TODO: Is this naming correct?
 		let unlock_config = SeasonUnlocks::<T, I>::get(&season_id, feature)
-			.ok_or(Error::<T, I>::FeatureLockedInSeason)?;
+			.ok_or(Error::<T, I>::FeatureUnavailableInSeason)?;
 
 		let player_stats = PlayerSeasonStats::<T, I>::get(&account, &season_id);
 

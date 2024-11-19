@@ -286,7 +286,7 @@ pub mod pallet {
 		/// The feature is locked for the current player
 		FeatureLocked,
 		/// The feature trying to be unlocked is not available for the selected season
-		FeatureLockedInSeason,
+		FeatureUnavailableInSeason,
 		/// The feature trying to be unlocked cannot be unlocked with payment
 		FeatureLockedThroughPayment,
 		/// The feature trying to be unlocked has missing requirements to be fulfilled by
