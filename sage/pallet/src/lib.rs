@@ -34,7 +34,7 @@ use ajuna_primitives::{
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::TradeManager,
 };
-use sage_api::{AsErrorCode, Error as SageApiError, SageApi, SageGameTransition};
+use sage_api::{AsErrorCode, SageApi, SageGameTransition};
 
 use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
 use frame_system::pallet_prelude::*;
@@ -51,6 +51,8 @@ pub use pallet::*;
 
 pub const SAGE_LOCK_ID: &[u8; 8] = b"sagelock";
 
+pub const MAX_ASSETS_IN_TRANSITION: usize = 10;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -61,7 +63,8 @@ pub mod pallet {
 	pub type AssetIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
 	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
-	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
+	pub type SeasonIdOf<T, I> =
+		<<T as Config<I>>::SeasonHandler as SeasonManager<TransitionIdOf<T, I>>>::SeasonId;
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 	pub type TransitionIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
@@ -75,10 +78,11 @@ pub mod pallet {
 
 	pub(crate) type BoundedAssetIdsOf<T, I> = BoundedVec<AssetIdOf<T, I>, MaxAssetsPerPlayer>;
 
-	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>>;
+	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, TransitionIdOf<T, I>>;
 
 	pub(crate) type TradeFilterOf<T, I> =
 		<<T as Config<I>>::TradeHandler as TradeManager>::TradeFilter;
+	pub(crate) type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
@@ -90,6 +94,7 @@ pub mod pallet {
 		type SageApi: SageApi<Balance = BalanceOf<Self, I>, AccountId = AccountIdOf<Self>>;
 
 		type SeasonHandler: SeasonManager<
+			TransitionIdOf<Self, I>,
 			AssetId = AssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 		>;
@@ -97,7 +102,7 @@ pub mod pallet {
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
 			FeeCurrency = BalanceOf<Self, I>,
-			AffiliateFeeIdentifier = AffiliateMethods,
+			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
 			// TODO: Define if we want this as a configurable parameter or some different fixed
 			// value
@@ -290,6 +295,8 @@ pub mod pallet {
 		UnlockCriteriaNotFulfilled,
 		/// The rule for a given transition was not satisfied.
 		RuleNotSatisfied { code: u8 },
+		/// The amount of input assets in the transition is greater than 'MAX_ASSETS_IN_TRANSITION'
+		TooManyAssetsInTransition,
 		/// An error occurred during the state transition.
 		Transition { code: u8 },
 	}
@@ -435,7 +442,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			Self::ensure_organizer(origin)?;
 
-			SeasonTradeFilters::<T, I>::insert(&season_id, trade_filter.clone());
+			SeasonTradeFilters::<T, I>::insert(&season_id, &trade_filter);
 
 			Self::deposit_event(Event::UpdatedTradeFilter { season_id, filter: trade_filter });
 
@@ -491,7 +498,6 @@ pub mod pallet {
 
 			let (seller, price) = Self::ensure_for_trade(&asset_id)?;
 			ensure!(buyer != seller, Error::<T, I>::AlreadyOwned);
-			// TODO: Should this segment be handled by the FeeHandler?
 			T::Currency::transfer(
 				&buyer,
 				&seller,
@@ -582,7 +588,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			// TODO: Maybe we should limit the maximum amount of asset_ids?
+			ensure!(
+				asset_ids.len() <= MAX_ASSETS_IN_TRANSITION,
+				Error::<T, I>::TooManyAssetsInTransition
+			);
+
 			for asset_id in asset_ids.iter() {
 				Self::ensure_ownership(&sender, asset_id)?;
 				Self::ensure_unlocked(asset_id)?;
@@ -605,8 +615,7 @@ pub mod pallet {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
 
-				// TODO: This fee should be parametrized based on transition id
-				let base_fee = fee.state_transition;
+				let base_fee = fee.get_transition_fee_for(&transition_id);
 				let updated_fee = T::FeeHandler::try_propagate_tournament_fee(
 					base_fee,
 					&sender,
@@ -615,7 +624,7 @@ pub mod pallet {
 				T::FeeHandler::try_propagate_chain_fee(
 					updated_fee,
 					&sender,
-					&AffiliateMethods::StateTransition,
+					&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
 				)?
 			};
 			T::FeeHandler::deposit_fee_into_treasury(&sender, &current_season_id, transition_fee)?;

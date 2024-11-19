@@ -49,7 +49,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		})?;
 
 		let lock = Lock::new(lock_id, owner);
-		LockedAssets::<T, I>::insert(&asset_id, lock.clone());
+		LockedAssets::<T, I>::insert(&asset_id, &lock);
 		Self::deposit_event(Event::AssetLocked { asset_id, lock });
 
 		Ok(asset)

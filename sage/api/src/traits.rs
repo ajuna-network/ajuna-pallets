@@ -57,7 +57,7 @@ pub trait SageGameTransition {
 	type SageApi: SageApi<AssetId = Self::AssetId, Asset = Self::Asset>;
 
 	/// Transition Id type, can be a simple u32, or an enum.
-	type TransitionId: Member + Parameter + MaxEncodedLen + TypeInfo;
+	type TransitionId: Member + Parameter + Ord + PartialOrd + MaxEncodedLen + TypeInfo;
 
 	/// Transition config type
 	type TransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;

@@ -1243,8 +1243,8 @@ pub mod pallet {
 			season_id: &SeasonId,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
+			// This will fail if the treasury account is not previously funded and alive
 			T::Currency::transfer(who, &Self::treasury_account_id(), amount, AllowDeath)?;
-			// Deal with the fact the account may not receive enough funds to be created
 			Treasury::<T>::mutate(season_id, |bal| bal.saturating_accrue(amount));
 			Ok(())
 		}

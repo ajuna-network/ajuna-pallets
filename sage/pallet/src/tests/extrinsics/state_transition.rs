@@ -42,10 +42,8 @@ fn state_transition_works() {
 				account: ALICE,
 				id: transition_id,
 			}));
-			assert_eq!(
-				Balances::free_balance(ALICE),
-				initial_balance - season_config.fee.state_transition
-			);
+			let transition_fee = season_config.fee.get_transition_fee_for(&transition_id);
+			assert_eq!(Balances::free_balance(ALICE), initial_balance - transition_fee);
 		});
 }
 
@@ -110,6 +108,27 @@ fn state_transition_should_reject_rule_verification_failure() {
 				Error::<Test, Instance1>::RuleNotSatisfied {
 					code: sage_api::Error::InvalidAssetLength.as_error_code()
 				}
+			);
+		})
+}
+
+#[test]
+fn state_transition_should_reject_too_many_input_assets() {
+	let initial_balance = 100_000;
+	ExtBuilder::default()
+		.balances(&[(ALICE, initial_balance)])
+		.build()
+		.execute_with(|| {
+			let asset_ids = create_assets::<Instance1>(
+				SEASON_ID_0,
+				ALICE,
+				(MAX_ASSETS_IN_TRANSITION + 1) as u8,
+			);
+			let transition_id = ExampleTransitionId::UpgradeAsset;
+
+			assert_noop!(
+				Sage::state_transition(RuntimeOrigin::signed(ALICE), transition_id, asset_ids, ()),
+				Error::<Test, Instance1>::TooManyAssetsInTransition
 			);
 		})
 }

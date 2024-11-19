@@ -114,7 +114,7 @@ impl pallet_balances::Config for Test {
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
-	types::{Asset, AssetId},
+	types::{Asset, AssetId, ExampleTransitionId},
 };
 use sage_api::SageApi;
 
@@ -186,7 +186,7 @@ pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
 
-impl SeasonManager for MockSeasonManager {
+impl SeasonManager<ExampleTransitionId> for MockSeasonManager {
 	type SeasonId = MockSeasonId;
 	type AssetId = AssetId;
 	type Balance = MockBalance;
@@ -214,16 +214,21 @@ impl SeasonManager for MockSeasonManager {
 
 	fn get_season_config_for(
 		_season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance>, DispatchError> {
-		Ok(SeasonConfig::<Self::Balance> {
-			fee: SeasonFeeConfig::<Self::Balance> {
+	) -> Result<SeasonConfig<Self::Balance, ExampleTransitionId>, DispatchError> {
+		Ok(SeasonConfig::<Self::Balance, ExampleTransitionId> {
+			fee: SeasonFeeConfig::<Self::Balance, ExampleTransitionId> {
 				transfer_asset: MockExistentialDeposit::get(),
 				buy_asset_min: MockExistentialDeposit::get(),
 				buy_percent: 1,
 				upgrade_asset_inventory: MockExistentialDeposit::get(),
 				unlock_trade_asset: MockExistentialDeposit::get(),
 				unlock_transfer_asset: MockExistentialDeposit::get(),
-				state_transition: MockExistentialDeposit::get(),
+				state_transition: {
+					let mut map = BTreeMap::new();
+					map.insert(ExampleTransitionId::UpgradeAsset, MockExistentialDeposit::get());
+					map.insert(ExampleTransitionId::ConsumeAsset, MockExistentialDeposit::get());
+					map
+				},
 			},
 		})
 	}
@@ -233,7 +238,7 @@ pub struct MockAffiliatesFeeProvider;
 
 impl FeeProvider for MockAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
-	type FeeIdentifier = AffiliateMethods;
+	type FeeIdentifier = AffiliateMethodsOf<Test, Instance1>;
 	type FeeCurrency = MockBalance;
 	type FeeOutput = Vec<(MockBalance, MockAccountId)>;
 

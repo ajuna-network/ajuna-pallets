@@ -188,6 +188,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let bought = u8::try_from(account_stats.bought_amount).unwrap_or(u8::MAX);
 		let sold = u8::try_from(account_stats.sold_amount).unwrap_or(u8::MAX);
 
+		if config.len() != 5 {
+			return false
+		}
+
 		config[0] <= minted &&
 			//config[1] <= free_minted &&
 			config[2] <= forged &&

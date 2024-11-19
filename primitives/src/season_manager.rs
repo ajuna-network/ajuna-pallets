@@ -16,12 +16,14 @@
 
 use frame_support::{
 	pallet_prelude::{Decode, DispatchError, Encode, Member, TypeInfo},
+	sp_runtime::traits::AtLeast32BitUnsigned,
 	Parameter,
 };
 use parity_scale_codec::MaxEncodedLen;
+use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct SeasonFeeConfig<Balance> {
+pub struct SeasonFeeConfig<Balance, TransitionId> {
 	/// Fee that will be deposited in the treasury when transferring an asset
 	pub transfer_asset: Balance,
 	/// Minimum fee that will be deposited in the treasury when buying an asset
@@ -38,15 +40,25 @@ pub struct SeasonFeeConfig<Balance> {
 	/// Price of unlocking the `LockableFeatures::TransferAsset`
 	pub unlock_transfer_asset: Balance,
 	/// Price of executing an asset/s state transition
-	pub state_transition: Balance,
+	pub state_transition: BTreeMap<TransitionId, Balance>,
+}
+
+impl<Balance, TransitionId> SeasonFeeConfig<Balance, TransitionId>
+where
+	TransitionId: PartialOrd + Ord,
+	Balance: AtLeast32BitUnsigned,
+{
+	pub fn get_transition_fee_for(&self, transition_id: &TransitionId) -> Balance {
+		self.state_transition.get(transition_id).cloned().unwrap_or(0_u32.into())
+	}
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct SeasonConfig<Balance> {
-	pub fee: SeasonFeeConfig<Balance>,
+pub struct SeasonConfig<Balance, TransitionId> {
+	pub fee: SeasonFeeConfig<Balance, TransitionId>,
 }
 
-pub trait SeasonManager {
+pub trait SeasonManager<TransitionId> {
 	type SeasonId: Member + Parameter + MaxEncodedLen;
 
 	type AssetId: Member + Parameter + MaxEncodedLen;
@@ -61,5 +73,5 @@ pub trait SeasonManager {
 
 	fn get_season_config_for(
 		season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance>, DispatchError>;
+	) -> Result<SeasonConfig<Self::Balance, TransitionId>, DispatchError>;
 }
