@@ -67,15 +67,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			return Err(Error::<T, I>::UnlockCriteriaNotFulfilled.into())
 		}
 
-		PlayerSeasonConfigs::<T, I>::mutate(&account, &season_id, |config| {
-			let feature_lock = match feature {
-				LockableFeature::TradeAsset => &mut config.locks.asset_trade,
-				LockableFeature::TransferAsset => &mut config.locks.asset_transfer,
-			};
-
-			// evaluated unlock state above, so we can just set it to true.
-			*feature_lock = true;
-		});
+		// after evaluating, we can enable the feature
+		Self::enable_feature_in_config(&account, &season_id, feature);
 
 		Self::deposit_event(Event::FeatureUnlocked { feature, season_id, account });
 		Ok(())
@@ -95,18 +88,26 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		};
 		T::FeeHandler::deposit_fee_into_treasury(&payer, &season_id, feature_fee)?;
 
-		PlayerSeasonConfigs::<T, I>::mutate(&target, &season_id, |config| {
+		// after payment, we can enable the feature
+		Self::enable_feature_in_config(&target, &season_id, feature);
+
+		Self::deposit_event(Event::FeatureUnlocked { feature, season_id, account: target });
+		Ok(())
+	}
+
+	fn enable_feature_in_config(
+		account: &AccountIdOf<T>,
+		season_id: &SeasonIdOf<T, I>,
+		feature: LockableFeature,
+	) {
+		PlayerSeasonConfigs::<T, I>::mutate(account, season_id, |config| {
 			let feature_lock = match feature {
 				LockableFeature::TradeAsset => &mut config.locks.asset_trade,
 				LockableFeature::TransferAsset => &mut config.locks.asset_transfer,
 			};
 
-			// we already paid above, so we can just set it to true
 			*feature_lock = true;
 		});
-
-		Self::deposit_event(Event::FeatureUnlocked { feature, season_id, account: target });
-		Ok(())
 	}
 
 	fn evaluate_unlock_state(config: &UnlockRule, account_stats: &PlayerStatsOf<T>) -> bool {
