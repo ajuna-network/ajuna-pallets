@@ -51,7 +51,9 @@ impl Level {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, MaxEncodedLen, TypeInfo,
+)]
 pub enum ExampleTransitionId {
 	UpgradeAsset,
 	ConsumeAsset,
