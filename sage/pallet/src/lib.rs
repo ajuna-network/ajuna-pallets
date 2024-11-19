@@ -396,7 +396,7 @@ pub mod pallet {
 
 			let GeneralConfig { transfer, .. } = GeneralConfigStore::<T, I>::get();
 			ensure!(
-				Self::ensure_organizer(&from).is_ok() || transfer.open,
+				transfer.open || Self::ensure_organizer(&from).is_ok(),
 				Error::<T, I>::TransferClosed
 			);
 
