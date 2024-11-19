@@ -47,21 +47,43 @@ fn transfer_asset_works() {
 
 			// Asset transferred from Alice.
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0).len(),
+				AssetOwners::<Test, Instance1>::iter_prefix(ALICE).count(),
 				alice_asset_ids.len() - 1
 			);
-			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0).to_vec(),
-				alice_asset_ids[1..]
-			);
+			let alice_current_assets = {
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix(ALICE)
+					.map(|(asset_id, _)| asset_id)
+					.collect::<Vec<_>>();
+
+				assets.sort();
+				assets
+			};
+			let alice_expected_assets = {
+				let mut assets = alice_asset_ids[1..].to_vec();
+				assets.sort();
+				assets
+			};
+			assert_eq!(alice_current_assets, alice_expected_assets);
 
 			// Asset transferred to Bob.
-			assert_eq!(AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_0).len(), 1);
+			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix(BOB).count(), 7);
 			assert_eq!(Assets::<Test, Instance1>::get(asset_id).unwrap().0, BOB);
 
-			// Bob's original assets are safe.
-			assert_eq!(AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_1).len(), 6);
-			assert_eq!(AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_1), bob_asset_ids);
+			let bob_current_assets = {
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix(BOB)
+					.map(|(asset_id, _)| asset_id)
+					.collect::<Vec<_>>();
+
+				assets.sort();
+				assets
+			};
+			let bob_expected_assets = {
+				let mut assets =
+					bob_asset_ids.iter().cloned().chain(vec![asset_id]).collect::<Vec<_>>();
+				assets.sort();
+				assets
+			};
+			assert_eq!(bob_current_assets, bob_expected_assets);
 
 			// balance checks
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - transfer_fee);
@@ -73,10 +95,10 @@ fn transfer_asset_works() {
 			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, bob_asset_ids[0]));
 			assert_eq!(Balances::free_balance(BOB), MockExistentialDeposit::get());
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_1).len(),
-				bob_asset_ids.len() - 1
+				AssetOwners::<Test, Instance1>::iter_prefix(BOB).count(),
+				bob_current_assets.len() - 1
 			);
-			assert_eq!(AssetOwners::<Test, Instance1>::get(CHARLIE, SEASON_ID_1).len(), 1);
+			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix(CHARLIE).count(), 1);
 		});
 }
 

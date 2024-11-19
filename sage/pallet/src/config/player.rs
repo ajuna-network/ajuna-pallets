@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::pallet_prelude::*;
-use sp_runtime::traits::Get;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, PartialEq)]
 pub enum InventoryTier {
@@ -43,13 +42,6 @@ impl InventoryTier {
 	#[allow(unused)]
 	pub(crate) fn get_asset_slots(&self) -> u8 {
 		*self as u8
-	}
-}
-
-pub struct MaxAssetsPerPlayer;
-impl Get<u32> for MaxAssetsPerPlayer {
-	fn get() -> u32 {
-		InventoryTier::Max as u32
 	}
 }
 

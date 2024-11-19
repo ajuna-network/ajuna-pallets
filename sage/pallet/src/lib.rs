@@ -76,8 +76,6 @@ pub mod pallet {
 
 	pub(crate) type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
-	pub(crate) type BoundedAssetIdsOf<T, I> = BoundedVec<AssetIdOf<T, I>, MaxAssetsPerPlayer>;
-
 	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, TransitionIdOf<T, I>>;
 
 	pub(crate) type TradeFilterOf<T, I> =
@@ -166,15 +164,12 @@ pub mod pallet {
 		StorageMap<_, Identity, AssetIdOf<T, I>, (AccountIdOf<T>, AssetOf<T, I>)>;
 
 	#[pallet::storage]
-	pub type AssetOwners<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
-		_,
-		Identity,
-		AccountIdOf<T>,
-		Identity,
-		SeasonIdOf<T, I>,
-		BoundedAssetIdsOf<T, I>,
-		ValueQuery,
-	>;
+	pub type AssetOwners<T: Config<I>, I: 'static = ()> =
+		StorageDoubleMap<_, Identity, AccountIdOf<T>, Identity, AssetIdOf<T, I>, (), ValueQuery>;
+
+	#[pallet::storage]
+	pub type AmountAssetsOwned<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, AccountIdOf<T>, u8, ValueQuery>;
 
 	#[pallet::storage]
 	pub type SeasonTradeFilters<T: Config<I>, I: 'static = ()> =
@@ -648,27 +643,40 @@ pub mod pallet {
 			LockedAssets::<T, I>::get(asset_id)
 		}
 
-		fn do_transfer_asset(
+		pub(crate) fn do_transfer_asset(
 			from: &AccountIdOf<T>,
 			to: &AccountIdOf<T>,
-			season_id: &SeasonIdOf<T, I>,
+			asset_season_id: &SeasonIdOf<T, I>,
 			asset_id: &AssetIdOf<T, I>,
 		) -> DispatchResult {
-			let mut from_asset_ids = AssetOwners::<T, I>::get(from, season_id);
-			from_asset_ids.retain(|owned_asset_id| owned_asset_id != asset_id);
+			let technical_account = Self::technical_account_id();
 
-			let mut to_asset_ids = AssetOwners::<T, I>::get(to, season_id);
-			to_asset_ids
-				.try_push(asset_id.clone())
-				.map_err(|_| Error::<T, I>::MaxOwnershipReached)?;
-			ensure!(
-				to_asset_ids.len() <=
-					PlayerSeasonConfigs::<T, I>::get(to, season_id).inventory_tier as usize,
-				Error::<T, I>::MaxOwnershipReached
-			);
+			if from != &technical_account {
+				// The technical account doesn't keep track of the assets transferred to it
+				// so these storage entries are only populated if the the asset is being
+				// transferred from a player account
+				AssetOwners::<T, I>::remove(from, asset_id);
+				AmountAssetsOwned::<T, I>::mutate(from, |owned_count| owned_count.saturating_dec());
+			}
 
-			AssetOwners::<T, I>::mutate(from, season_id, |asset_ids| *asset_ids = from_asset_ids);
-			AssetOwners::<T, I>::mutate(to, season_id, |asset_ids| *asset_ids = to_asset_ids);
+			if to != &Self::technical_account_id() {
+				// The technical account doesn't keep track of the assets transferred to it
+				// so these storage entries only need to be populated if the destination
+				// to which the asset is transferred to is a player account
+				AssetOwners::<T, I>::insert(to, asset_id, ());
+				AmountAssetsOwned::<T, I>::try_mutate(to, |owned_count| {
+					owned_count.saturating_inc();
+					ensure!(
+						*owned_count <=
+							PlayerSeasonConfigs::<T, I>::get(to, asset_season_id)
+								.inventory_tier
+								.get_asset_slots(),
+						Error::<T, I>::MaxOwnershipReached
+					);
+					Ok::<_, DispatchError>(())
+				})?;
+			}
+
 			Assets::<T, I>::try_mutate(asset_id, |maybe_asset| -> DispatchResult {
 				let (from_owner, _) = maybe_asset.as_mut().ok_or(Error::<T, I>::UnknownAsset)?;
 				*from_owner = to.clone();

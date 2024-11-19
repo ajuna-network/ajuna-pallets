@@ -34,6 +34,9 @@ where
 	AssetOf<Test, I>: From<Asset>,
 	SeasonIdOf<Test, I>: From<MockSeasonId>,
 {
+	AmountAssetsOwned::<Test, I>::mutate(account, |asset_count| {
+		*asset_count = asset_count.saturating_add(n);
+	});
 	(0..n)
 		.map(|i| {
 			let asset_id = AssetId::random();
@@ -51,10 +54,8 @@ where
 				level: Level::One,
 				consumed: false,
 			});
-			let season_id = SeasonIdOf::<Test, I>::from(season_id);
 			Assets::<Test, I>::insert(&asset_id, (account, asset));
-			AssetOwners::<Test, I>::try_append(account, season_id.clone(), asset_id.clone())
-				.unwrap();
+			AssetOwners::<Test, I>::insert(account, &asset_id, ());
 			asset_id
 		})
 		.collect()
