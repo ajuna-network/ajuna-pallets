@@ -17,30 +17,49 @@
 use super::*;
 
 #[test]
-fn update_trade_filter_should_work() {
+fn update_asset_filter_should_work_for_trade_filter() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let filter = MockTradeFilter::from(13_u32);
+		let filter_core = MockFilter::from(13_u32);
+		let filter = AssetFilter::Trade(filter_core);
 
 		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), 0);
 
-		assert_ok!(Sage::update_trade_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter,));
+		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTradeFilter {
 			season_id: SEASON_ID_0,
-			filter,
+			filter: filter_core,
 		}));
 
-		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), filter);
+		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), filter_core);
 	});
 }
 
 #[test]
-fn update_trade_filter_should_reject_non_organizer_calls() {
+fn update_asset_filter_should_work_for_transfer_filter() {
+	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+		let filter_core = MockFilter::from(13_u32);
+		let filter = AssetFilter::Transfer(filter_core);
+
+		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), 0);
+
+		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
+		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransferFilter {
+			season_id: SEASON_ID_0,
+			filter: filter_core,
+		}));
+
+		assert_eq!(SeasonTransferFilters::<Test, Instance1>::get(SEASON_ID_0), filter_core);
+	});
+}
+
+#[test]
+fn update_asset_filter_should_reject_non_organizer_calls() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 		assert_noop!(
-			Sage::update_trade_filter(
+			Sage::update_asset_filter(
 				RuntimeOrigin::signed(BOB),
 				SEASON_ID_0,
-				MockTradeFilter::from(22_u32),
+				AssetFilter::Trade(MockFilter::from(22_u32)),
 			),
 			DispatchError::BadOrigin
 		);

@@ -24,3 +24,11 @@ pub trait TradeManager {
 
 	fn is_tradeable_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool;
 }
+
+pub trait TransferManager {
+	type TransferFilter: Member + Parameter + Default + MaxEncodedLen;
+
+	type Asset: Member + Parameter + MaxEncodedLen;
+
+	fn is_transferable_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool;
+}

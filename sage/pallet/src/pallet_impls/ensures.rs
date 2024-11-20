@@ -16,9 +16,9 @@
 
 use crate::{
 	AccountIdOf, AssetIdOf, AssetOf, AssetTradePrices, Assets, BalanceOf, Config, Error,
-	LockedAssets, Organizer, Pallet, SeasonTradeFilters,
+	LockedAssets, Organizer, Pallet,
 };
-use ajuna_primitives::{season_manager::SeasonManager, trade_manager::TradeManager};
+use ajuna_primitives::season_manager::SeasonManager;
 use frame_support::pallet_prelude::*;
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {
@@ -54,20 +54,5 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let price = AssetTradePrices::<T, I>::get(season_id, asset_id)
 			.ok_or(Error::<T, I>::AssetNotInTrade)?;
 		Ok((seller, price))
-	}
-
-	pub(crate) fn ensure_can_be_set_for_trade(
-		asset_id: &AssetIdOf<T, I>,
-		asset: &AssetOf<T, I>,
-	) -> DispatchResult {
-		let asset_season_id = T::SeasonHandler::get_season_id_for(asset_id)?;
-		let trade_filter = SeasonTradeFilters::<T, I>::get(&asset_season_id);
-
-		ensure!(
-			T::TradeHandler::is_tradeable_using(asset, &trade_filter),
-			Error::<T, I>::AssetCannotBeTraded
-		);
-
-		Ok(())
 	}
 }

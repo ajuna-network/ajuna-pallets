@@ -27,6 +27,12 @@ pub enum LockableFeature {
 	TransferAsset,
 }
 
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
+pub enum AssetFilter<TradeFilter, TransferFilter> {
+	Trade(TradeFilter),
+	Transfer(TransferFilter),
+}
+
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub struct TransferConfig {
 	pub open: bool,

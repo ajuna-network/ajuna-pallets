@@ -205,3 +205,43 @@ fn transfer_asset_rejects_on_full_asset_inventory_of_recipient() {
 			);
 		});
 }
+
+#[test]
+fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
+	// This test relies on the implementation of `MockFilterHandler` to work
+	ExtBuilder::default()
+		.organizer(ALICE)
+		.balances(&[(BOB, 1_000)])
+		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
+		.build()
+		.execute_with(|| {
+			let transfer_filter = MockFilter::from(2_u32);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				AssetFilter::Transfer(transfer_filter)
+			));
+
+			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 2);
+			let asset_id_1 = asset_ids[0];
+			let asset_id_2 = asset_ids[1];
+
+			// Since asset_id_1 doest have its type match the filter we cannot set price to it
+			let (_, asset_1) =
+				Assets::<Test, Instance1>::get(asset_id_1).expect("Should get asset");
+			assert_eq!(asset_1.asset_type, 0);
+			assert_noop!(
+				Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_1),
+				Error::<Test, Instance1>::AssetCannotBeTransfered
+			);
+
+			// We change asset_id_2 type so that it matches the filter, allowing us to put it on
+			// sale
+			Assets::<Test, Instance1>::mutate(asset_id_2, |maybe_asset| {
+				if let Some((_, ref mut asset)) = maybe_asset {
+					asset.asset_type = transfer_filter;
+				}
+			});
+			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_2));
+		});
+}

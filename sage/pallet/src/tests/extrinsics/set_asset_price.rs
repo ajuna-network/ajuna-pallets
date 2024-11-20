@@ -76,17 +76,17 @@ fn set_price_should_reject_setting_price_to_a_non_owned_asset() {
 
 #[test]
 fn set_price_should_reject_asset_not_matching_trade_filters() {
-	// This test relies on the implementation of `MockTradeHandler` to work
+	// This test relies on the implementation of `MockFilterHandler` to work
 	ExtBuilder::default()
 		.organizer(ALICE)
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let trade_filter = MockTradeFilter::from(2_u32);
-			assert_ok!(Sage::update_trade_filter(
+			let trade_filter = MockFilter::from(2_u32);
+			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,
-				trade_filter
+				AssetFilter::Trade(trade_filter)
 			));
 
 			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 2);
