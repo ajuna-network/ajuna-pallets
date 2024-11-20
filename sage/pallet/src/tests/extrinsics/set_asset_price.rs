@@ -93,7 +93,7 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 			let asset_id_1 = asset_ids[0];
 			let asset_id_2 = asset_ids[1];
 
-			// Since asset_id_1 doest have its type match the filter we cannot set price to it
+			// Since asset_id_1 doest have its type match the filter we cannot set price for it
 			let (_, asset_1) =
 				Assets::<Test, Instance1>::get(asset_id_1).expect("Should get asset");
 			assert_eq!(asset_1.asset_type, 0);

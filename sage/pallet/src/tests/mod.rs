@@ -34,9 +34,11 @@ where
 	AssetOf<Test, I>: From<Asset>,
 	SeasonIdOf<Test, I>: From<MockSeasonId>,
 {
-	AmountAssetsOwned::<Test, I>::mutate(account, |asset_count| {
+	let casted_season_id = SeasonIdOf::<Test, I>::from(season_id);
+	AssetsOwnedCount::<Test, I>::mutate(account, &casted_season_id, |asset_count| {
 		*asset_count = asset_count.saturating_add(n);
 	});
+
 	(0..n)
 		.map(|i| {
 			let asset_id = AssetId::random();
@@ -55,7 +57,7 @@ where
 				consumed: false,
 			});
 			Assets::<Test, I>::insert(&asset_id, (account, asset));
-			AssetOwners::<Test, I>::insert(account, &asset_id, ());
+			AssetOwners::<Test, I>::insert((account, &casted_season_id, &asset_id), ());
 			asset_id
 		})
 		.collect()

@@ -168,12 +168,20 @@ pub mod pallet {
 		StorageMap<_, Identity, AssetIdOf<T, I>, (AccountIdOf<T>, AssetOf<T, I>)>;
 
 	#[pallet::storage]
-	pub type AssetOwners<T: Config<I>, I: 'static = ()> =
-		StorageDoubleMap<_, Identity, AccountIdOf<T>, Identity, AssetIdOf<T, I>, (), ValueQuery>;
+	pub type AssetOwners<T: Config<I>, I: 'static = ()> = StorageNMap<
+		_,
+		(
+			NMapKey<Identity, AccountIdOf<T>>,
+			NMapKey<Identity, SeasonIdOf<T, I>>,
+			NMapKey<Identity, AssetIdOf<T, I>>,
+		),
+		(),
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
-	pub type AmountAssetsOwned<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Identity, AccountIdOf<T>, u8, ValueQuery>;
+	pub type AssetsOwnedCount<T: Config<I>, I: 'static = ()> =
+		StorageDoubleMap<_, Identity, AccountIdOf<T>, Identity, SeasonIdOf<T, I>, u8, ValueQuery>;
 
 	#[pallet::storage]
 	pub type SeasonTradeFilters<T: Config<I>, I: 'static = ()> =
@@ -683,18 +691,20 @@ pub mod pallet {
 
 			if from != &technical_account {
 				// The technical account doesn't keep track of the assets transferred to it
-				// so these storage entries are only populated if the the asset is being
+				// so these storage entries are only populated if the asset is being
 				// transferred from a player account
-				AssetOwners::<T, I>::remove(from, asset_id);
-				AmountAssetsOwned::<T, I>::mutate(from, |owned_count| owned_count.saturating_dec());
+				AssetOwners::<T, I>::remove((from, asset_season_id, asset_id));
+				AssetsOwnedCount::<T, I>::mutate(from, asset_season_id, |owned_count| {
+					owned_count.saturating_dec()
+				});
 			}
 
 			if to != &Self::technical_account_id() {
 				// The technical account doesn't keep track of the assets transferred to it
 				// so these storage entries only need to be populated if the destination
 				// to which the asset is transferred to is a player account
-				AssetOwners::<T, I>::insert(to, asset_id, ());
-				AmountAssetsOwned::<T, I>::try_mutate(to, |owned_count| {
+				AssetOwners::<T, I>::insert((to, asset_season_id, asset_id), ());
+				AssetsOwnedCount::<T, I>::try_mutate(to, asset_season_id, |owned_count| {
 					owned_count.saturating_inc();
 					ensure!(
 						*owned_count <=

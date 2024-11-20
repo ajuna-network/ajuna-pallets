@@ -47,11 +47,11 @@ fn transfer_asset_works() {
 
 			// Asset transferred from Alice.
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::iter_prefix(ALICE).count(),
+				AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0)).count(),
 				alice_asset_ids.len() - 1
 			);
 			let alice_current_assets = {
-				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix(ALICE)
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0))
 					.map(|(asset_id, _)| asset_id)
 					.collect::<Vec<_>>();
 
@@ -66,24 +66,33 @@ fn transfer_asset_works() {
 			assert_eq!(alice_current_assets, alice_expected_assets);
 
 			// Asset transferred to Bob.
-			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix(BOB).count(), 7);
+			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0)).count(), 1);
 			assert_eq!(Assets::<Test, Instance1>::get(asset_id).unwrap().0, BOB);
 
-			let bob_current_assets = {
-				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix(BOB)
+			let bob_current_assets_season_0 = {
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0))
 					.map(|(asset_id, _)| asset_id)
 					.collect::<Vec<_>>();
+				assets.sort();
+				assets
+			};
+			assert_eq!(bob_current_assets_season_0, vec![asset_id]);
 
+			// Bob's original assets are safe.
+			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1)).count(), 6);
+			let bob_current_assets_season_1 = {
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1))
+					.map(|(asset_id, _)| asset_id)
+					.collect::<Vec<_>>();
 				assets.sort();
 				assets
 			};
-			let bob_expected_assets = {
-				let mut assets =
-					bob_asset_ids.iter().cloned().chain(vec![asset_id]).collect::<Vec<_>>();
+			let expected_bob_asset_ids_season_1 = {
+				let mut assets = bob_asset_ids.clone();
 				assets.sort();
 				assets
 			};
-			assert_eq!(bob_current_assets, bob_expected_assets);
+			assert_eq!(bob_current_assets_season_1, expected_bob_asset_ids_season_1);
 
 			// balance checks
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - transfer_fee);
@@ -95,10 +104,13 @@ fn transfer_asset_works() {
 			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, bob_asset_ids[0]));
 			assert_eq!(Balances::free_balance(BOB), MockExistentialDeposit::get());
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::iter_prefix(BOB).count(),
-				bob_current_assets.len() - 1
+				AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1)).count(),
+				bob_asset_ids.len() - 1
 			);
-			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix(CHARLIE).count(), 1);
+			assert_eq!(
+				AssetOwners::<Test, Instance1>::iter_prefix((CHARLIE, SEASON_ID_1)).count(),
+				1
+			);
 		});
 }
 
@@ -226,7 +238,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 			let asset_id_1 = asset_ids[0];
 			let asset_id_2 = asset_ids[1];
 
-			// Since asset_id_1 doest have its type match the filter we cannot set price to it
+			// Since asset_id_1 doest have its type match the filter we cannot set price for it
 			let (_, asset_1) =
 				Assets::<Test, Instance1>::get(asset_id_1).expect("Should get asset");
 			assert_eq!(asset_1.asset_type, 0);
