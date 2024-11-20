@@ -1,0 +1,61 @@
+[package]
+description = "Ajuna Network pallet used to handle seasons"
+name        = "pallet-ajuna-seasons"
+
+authors.workspace    = true
+edition.workspace    = true
+homepage.workspace   = true
+repository.workspace = true
+version.workspace    = true
+
+[package.metadata.docs.rs]
+targets = [ "x86_64-unknown-linux-gnu" ]
+
+[dependencies]
+# General
+log = { workspace = true }
+
+# Ajuna
+ajuna-primitives = { workspace = true }
+
+# Substrate (wasm)
+frame-support      = { workspace = true }
+frame-system       = { workspace = true }
+parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
+scale-info         = { workspace = true, features = [ "derive" ] }
+sp-runtime         = { workspace = true }
+sp-std             = { workspace = true }
+
+# Benchmarking
+frame-benchmarking = { workspace = true, optional = true }
+sp-io              = { workspace = true, optional = true }
+
+[dev-dependencies]
+sp-io           = { workspace = true, features = ["std"] }
+
+[features]
+default = [ "std" ]
+std = [
+    "log/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-io/std",
+    "sp-std/std",
+    "ajuna-primitives/std",
+    "frame-benchmarking/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+]
+runtime-benchmarks = [
+    "ajuna-primitives/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "sp-runtime/try-runtime",
+]
