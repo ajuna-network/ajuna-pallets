@@ -131,8 +131,9 @@ pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
 
-impl SeasonManager<ExampleTransitionId> for MockSeasonManager {
+impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
+	type SeasonData = ();
 	type AssetId = AssetId;
 	type Balance = MockBalance;
 
@@ -159,22 +160,18 @@ impl SeasonManager<ExampleTransitionId> for MockSeasonManager {
 
 	fn get_season_config_for(
 		_season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance, ExampleTransitionId>, DispatchError> {
-		Ok(SeasonConfig::<Self::Balance, ExampleTransitionId> {
-			fee: SeasonFeeConfig::<Self::Balance, ExampleTransitionId> {
+	) -> Result<SeasonConfig<Self::Balance, ()>, DispatchError> {
+		Ok(SeasonConfig::<Self::Balance, ()> {
+			fee: SeasonFeeConfig::<Self::Balance> {
 				transfer_asset: MockExistentialDeposit::get(),
 				buy_asset_min: MockExistentialDeposit::get(),
 				buy_percent: 1,
 				upgrade_asset_inventory: MockExistentialDeposit::get(),
 				unlock_trade_asset: MockExistentialDeposit::get(),
 				unlock_transfer_asset: MockExistentialDeposit::get(),
-				state_transition: {
-					let mut map = BTreeMap::new();
-					map.insert(ExampleTransitionId::UpgradeAsset, MockExistentialDeposit::get());
-					map.insert(ExampleTransitionId::ConsumeAsset, MockExistentialDeposit::get());
-					map
-				},
+				state_transition_base_fee: MockExistentialDeposit::get(),
 			},
+			data: (),
 		})
 	}
 }
@@ -210,6 +207,26 @@ impl FeeProvider for MockTournamentFeeProvider {
 		_identifier: &Self::FeeIdentifier,
 	) -> Self::FeeOutput {
 		(0, *account)
+	}
+}
+
+pub struct MockTransitionFeeProvider;
+
+impl FeeProvider for MockTransitionFeeProvider {
+	type AccountId = MockAccountId;
+	type FeeIdentifier = ExampleTransitionId;
+	type FeeCurrency = MockBalance;
+	type FeeOutput = MockBalance;
+
+	fn get_fee_from(
+		base_fee: Self::FeeCurrency,
+		_account: &Self::AccountId,
+		identifier: &Self::FeeIdentifier,
+	) -> Self::FeeOutput {
+		match identifier {
+			ExampleTransitionId::UpgradeAsset => base_fee.saturating_mul(2),
+			ExampleTransitionId::ConsumeAsset => base_fee.saturating_mul(3),
+		}
 	}
 }
 
@@ -340,6 +357,7 @@ impl crate::Config<SageInstance1> for Test {
 		Balances,
 		MockAffiliatesFeeProvider,
 		MockTournamentFeeProvider,
+		MockTransitionFeeProvider,
 		MockTreasuryManager,
 	>;
 	type FilterHandler = MockFilterHandler;

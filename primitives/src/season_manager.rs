@@ -16,14 +16,12 @@
 
 use frame_support::{
 	pallet_prelude::{Decode, DispatchError, Encode, Member, TypeInfo},
-	sp_runtime::traits::AtLeast32BitUnsigned,
 	Parameter,
 };
 use parity_scale_codec::MaxEncodedLen;
-use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct SeasonFeeConfig<Balance, TransitionId> {
+pub struct SeasonFeeConfig<Balance> {
 	/// Fee that will be deposited in the treasury when transferring an asset
 	pub transfer_asset: Balance,
 	/// Minimum fee that will be deposited in the treasury when buying an asset
@@ -39,30 +37,33 @@ pub struct SeasonFeeConfig<Balance, TransitionId> {
 	pub unlock_trade_asset: Balance,
 	/// Price of unlocking the `LockableFeatures::TransferAsset`
 	pub unlock_transfer_asset: Balance,
-	/// Price of executing an asset/s state transition
-	pub state_transition: BTreeMap<TransitionId, Balance>,
+	/// Base price of executing and asset transition
+	pub state_transition_base_fee: Balance,
 }
 
-impl<Balance, TransitionId> SeasonFeeConfig<Balance, TransitionId>
-where
-	TransitionId: PartialOrd + Ord,
-	Balance: AtLeast32BitUnsigned,
-{
-	pub fn get_transition_fee_for(&self, transition_id: &TransitionId) -> Balance {
-		self.state_transition.get(transition_id).cloned().unwrap_or(0_u32.into())
-	}
+pub trait Validate {
+	fn validate(&self) -> bool;
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct SeasonConfig<Balance, TransitionId> {
-	pub fee: SeasonFeeConfig<Balance, TransitionId>,
+pub struct SeasonConfig<Balance, SeasonData> {
+	pub fee: SeasonFeeConfig<Balance>,
+	pub data: SeasonData,
 }
 
-pub trait SeasonManager<TransitionId> {
+impl<Balance, SeasonData> SeasonConfig<Balance, SeasonData>
+where
+	SeasonData: Validate,
+{
+	pub fn validate_data(&self) -> bool {
+		self.data.validate()
+	}
+}
+
+pub trait SeasonManager {
 	type SeasonId: Member + Parameter + MaxEncodedLen;
-
+	type SeasonData: Member + Parameter + MaxEncodedLen;
 	type AssetId: Member + Parameter + MaxEncodedLen;
-
 	type Balance;
 
 	fn get_season_id_for(asset_id: &Self::AssetId) -> Result<Self::SeasonId, DispatchError>;
@@ -73,5 +74,5 @@ pub trait SeasonManager<TransitionId> {
 
 	fn get_season_config_for(
 		season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance, TransitionId>, DispatchError>;
+	) -> Result<SeasonConfig<Self::Balance, Self::SeasonData>, DispatchError>;
 }

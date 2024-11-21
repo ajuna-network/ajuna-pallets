@@ -43,6 +43,7 @@ use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use ajuna_primitives::season_manager::Validate;
 	use sp_runtime::{traits::AtLeast32BitUnsigned, ArithmeticError};
 
 	#[pallet::pallet]
@@ -50,12 +51,11 @@ pub mod pallet {
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	pub type SeasonIdOf<T, I> = <T as Config<I>>::SeasonId;
+	pub type SeasonDataOf<T, I> = <T as Config<I>>::SeasonData;
 	pub type AssetIdOf<T, I> = <T as Config<I>>::AssetId;
-	pub type TransitionIdOf<T, I> = <T as Config<I>>::TransitionId;
 
-	pub(crate) type SeasonOf<T, I> = Season<BlockNumberFor<T>, BalanceOf<T, I>>;
 	pub(crate) type SeasonStatusOf<T, I> = SeasonStatus<SeasonIdOf<T, I>>;
-	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, TransitionIdOf<T, I>>;
+	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
 	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
 
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
@@ -67,10 +67,9 @@ pub mod pallet {
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type SeasonId: Member + Parameter + MaxEncodedLen;
+		type SeasonData: Member + Parameter + MaxEncodedLen + Validate;
 
 		type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
-
-		type TransitionId: Member + Parameter + Ord + PartialOrd + MaxEncodedLen + TypeInfo;
 
 		type AccountHandler: AccountManager<AccountId = AccountIdOf<Self>>;
 
@@ -88,9 +87,13 @@ pub mod pallet {
 	pub type LatestSeason<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, SeasonIdOf<T, I>, OptionQuery>;
 
+	#[pallet::storage]
+	pub type FinishedSeasons<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, SeasonIdOf<T, I>, (), ValueQuery>;
+
 	/// Use to represent a linked list of SeasonId. All entries will have a
-	/// value indicating the previous season id to them except the first
-	/// created season which will not have a value for it.
+	/// value indicating the next season id to them except the latest season added
+	/// which will not have a value for it.
 	#[pallet::storage]
 	pub type SeasonChains<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, SeasonIdOf<T, I>, OptionQuery>;
@@ -98,7 +101,7 @@ pub mod pallet {
 	/// Storage for the seasons.
 	#[pallet::storage]
 	pub type Seasons<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Identity, SeasonIdOf<T, I>, SeasonOf<T, I>, OptionQuery>;
+		StorageMap<_, Identity, SeasonIdOf<T, I>, SeasonConfigOf<T, I>, OptionQuery>;
 
 	/// Storage for the season's metadata.
 	#[pallet::storage]
@@ -116,7 +119,7 @@ pub mod pallet {
 		/// The season configuration for {season_id} has been updated.
 		UpdatedSeason {
 			season_id: SeasonIdOf<T, I>,
-			season: Option<SeasonOf<T, I>>,
+			config: Option<SeasonConfigOf<T, I>>,
 			metadata: Option<SeasonMetadata>,
 			schedule: Option<SeasonScheduleOf<T>>,
 		},
@@ -124,6 +127,8 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T, I = ()> {
+		/// The season's data could not be validated.
+		SeasonDataNotValid,
 		/// There is currently no active season
 		NoActiveSeason,
 		/// The season starts before the previous season has ended.
@@ -144,33 +149,43 @@ pub mod pallet {
 		pub fn update_season(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
-			season: Option<SeasonOf<T, I>>,
+			config: Option<SeasonConfigOf<T, I>>,
 			metadata: Option<SeasonMetadata>,
 			schedule: Option<SeasonScheduleOf<T>>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::AccountHandler::is_organizer(&account)?;
 
-			// TODO: If season already started or is finished
-			// don't allow any change except metadata
+			// If season already started or is finished
+			// don't allow any changes except metadata
+			if Self::is_season_modifiable(&season_id) {
+				if let Some(ref config_update) = config {
+					Self::ensure_valid_config(config_update)?;
+					Seasons::<T, I>::insert(&season_id, config_update);
+				}
 
-			if let Some(ref season_update) = season {
-				Self::ensure_valid_season(season_update)?;
-				Seasons::<T, I>::insert(&season_id, season_update);
+				if let Some(ref schedule_update) = schedule {
+					Self::ensure_valid_schedule(&season_id, schedule_update)?;
+					SeasonSchedules::<T, I>::insert(&season_id, schedule_update);
+				}
 			}
 
 			if let Some(ref meta_update) = metadata {
 				SeasonMetadatas::<T, I>::insert(&season_id, meta_update);
 			}
 
-			if let Some(ref schedule_update) = schedule {
-				Self::ensure_valid_schedule(&season_id, schedule_update)?;
-				SeasonSchedules::<T, I>::insert(&season_id, schedule_update);
-			}
-
 			Self::update_season_chain(&season_id);
 
-			Self::deposit_event(Event::UpdatedSeason { season_id, season, metadata, schedule });
+			Self::deposit_event(Event::UpdatedSeason { season_id, config, metadata, schedule });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight({10_000})]
+		pub fn interrupt_active_season(origin: OriginFor<T>) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::AccountHandler::is_organizer(&account)?;
 
 			Ok(())
 		}
@@ -197,11 +212,24 @@ pub mod pallet {
 				}
 			});
 
-			SeasonChains::<T, I>::insert(new_season_id, maybe_prev_season_id);
+			if let Some(prev_season_id) = maybe_prev_season_id {
+				SeasonChains::<T, I>::insert(prev_season_id, new_season_id);
+			} else {
+				SeasonChains::<T, I>::insert(new_season_id, new_season_id);
+			}
 		}
 
-		pub(crate) fn ensure_valid_season(season: &SeasonOf<T, I>) -> DispatchResult {
-			// TODO
+		pub(crate) fn is_season_modifiable(season_id: &SeasonIdOf<T, I>) -> bool {
+			if let Ok(current_season) = CurrentSeasonStatus::<T, I>::get() {
+				(&current_season.season_id != season_id) &&
+					!FinishedSeasons::<T, I>::contains_key(season_id)
+			} else {
+				true
+			}
+		}
+
+		pub(crate) fn ensure_valid_config(config: &SeasonConfigOf<T, I>) -> DispatchResult {
+			ensure!(config.validate_data(), Error::<T, I>::SeasonDataNotValid);
 			Ok(())
 		}
 

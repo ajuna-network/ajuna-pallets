@@ -12,7 +12,7 @@ pub enum TransitionOutput<AssetId, Asset> {
 
 pub trait SageGameTransition {
 	/// Transition identifier type.
-	type TransitionId: Member + Parameter + Ord + PartialOrd + MaxEncodedLen + TypeInfo;
+	type TransitionId: Member + Parameter + MaxEncodedLen + TypeInfo;
 	type AccountId: Member + Codec;
 	type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
 	type Asset: Member + Parameter + MaxEncodedLen + TypeInfo;

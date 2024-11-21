@@ -22,17 +22,6 @@ use frame_support::{
 	BoundedVec,
 };
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
-pub struct Season<BlockNumber, Balance> {
-	pub max_tier_forges: u32,
-	pub max_variations: u8,
-	pub max_components: u8,
-	pub min_sacrifices: u8,
-	pub per_period: BlockNumber,
-	pub periods: u16,
-	pub fee: Balance,
-}
-
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
 pub struct SeasonStatus<SeasonId> {
 	pub season_id: SeasonId,

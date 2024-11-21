@@ -67,8 +67,8 @@ pub mod pallet {
 	pub type AssetIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
 	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
-	pub type SeasonIdOf<T, I> =
-		<<T as Config<I>>::SeasonHandler as SeasonManager<TransitionIdOf<T, I>>>::SeasonId;
+	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
+	pub type SeasonDataOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonData;
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 	pub type TransitionIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
@@ -80,7 +80,7 @@ pub mod pallet {
 
 	pub(crate) type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
-	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, TransitionIdOf<T, I>>;
+	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
 
 	pub(crate) type TradeFilterOf<T, I> =
 		<<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
@@ -108,7 +108,6 @@ pub mod pallet {
 
 		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
-			TransitionIdOf<Self, I>,
 			AssetId = AssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 		>;
@@ -120,6 +119,7 @@ pub mod pallet {
 			FeeCurrency = BalanceOf<Self, I>,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
+			TransitionFeeIdentifier = TransitionIdOf<Self, I>,
 			// TODO: Define if we want this as a configurable parameter or some different fixed
 			// value
 			TreasuryKey = SeasonIdOf<Self, I>,
@@ -700,17 +700,15 @@ pub mod pallet {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
 
-				let base_fee = fee.get_transition_fee_for(&transition_id);
-				let updated_fee = T::FeeHandler::try_propagate_tournament_fee(
-					base_fee,
-					&sender,
-					&current_season_id,
-				)?;
-				T::FeeHandler::try_propagate_chain_fee(
-					updated_fee,
+				let mut fee = fee.state_transition_base_fee;
+				fee =
+					T::FeeHandler::try_propagate_tournament_fee(fee, &sender, &current_season_id)?;
+				fee = T::FeeHandler::try_propagate_chain_fee(
+					fee,
 					&sender,
 					&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
-				)?
+				)?;
+				T::FeeHandler::get_transition_fee_for(fee, &sender, &transition_id)?
 			};
 			T::FeeHandler::deposit_fee_into_treasury(&sender, &current_season_id, transition_fee)?;
 

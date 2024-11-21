@@ -17,8 +17,9 @@
 use super::*;
 use ajuna_primitives::season_manager::SeasonConfig;
 
-impl<T: Config<I>, I: 'static> SeasonManager<TransitionIdOf<T, I>> for Pallet<T, I> {
+impl<T: Config<I>, I: 'static> SeasonManager for Pallet<T, I> {
 	type SeasonId = SeasonIdOf<T, I>;
+	type SeasonData = SeasonDataOf<T, I>;
 	type AssetId = AssetIdOf<T, I>;
 	type Balance = BalanceOf<T, I>;
 
@@ -36,7 +37,7 @@ impl<T: Config<I>, I: 'static> SeasonManager<TransitionIdOf<T, I>> for Pallet<T,
 
 	fn get_season_config_for(
 		season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance, TransitionIdOf<T, I>>, DispatchError> {
+	) -> Result<SeasonConfig<Self::Balance, Self::SeasonData>, DispatchError> {
 		todo!()
 	}
 }
