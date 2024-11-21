@@ -246,15 +246,24 @@ impl TreasuryManager for MockTreasuryManager {
 	}
 }
 
-pub struct MockTradeHandler;
+pub struct MockFilterHandler;
 
-pub type MockTradeFilter = u32;
+pub type MockFilter = u32;
 
-impl TradeManager for MockTradeHandler {
-	type TradeFilter = MockTradeFilter;
+impl TradeManager for MockFilterHandler {
+	type TradeFilter = MockFilter;
 	type Asset = Asset;
 
 	fn is_tradeable_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
+		asset.asset_type == *filter
+	}
+}
+
+impl TransferManager for MockFilterHandler {
+	type TransferFilter = MockFilter;
+	type Asset = Asset;
+
+	fn is_transferable_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
 		asset.asset_type == *filter
 	}
 }
@@ -333,7 +342,7 @@ impl crate::Config<SageInstance1> for Test {
 		MockTournamentFeeProvider,
 		MockTreasuryManager,
 	>;
-	type TradeHandler = MockTradeHandler;
+	type FilterHandler = MockFilterHandler;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

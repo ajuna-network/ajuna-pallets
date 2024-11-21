@@ -39,15 +39,12 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		ensure!(Self::is_locked(&asset_id).is_none(), Error::<T, I>::AssetLocked);
 
 		let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
-		AssetOwners::<T, I>::mutate(&owner, &asset_season_id, |asset_ids| {
-			asset_ids.retain(|id| id != &asset_id);
-		});
-
-		Assets::<T, I>::try_mutate(&asset_id, |maybe_asset| -> DispatchResult {
-			let (from_owner, _) = maybe_asset.as_mut().ok_or(Error::<T, I>::UnknownAsset)?;
-			*from_owner = Self::technical_account_id();
-			Ok(())
-		})?;
+		Self::do_transfer_asset(
+			&owner,
+			&Self::technical_account_id(),
+			&asset_season_id,
+			&asset_id,
+		)?;
 
 		let lock = Lock::new(lock_id, owner);
 		LockedAssets::<T, I>::insert(&asset_id, &lock);
@@ -67,24 +64,12 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 		ensure!(lock.locker == owner, Error::<T, I>::AssetNotOwned);
 
 		let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
-		AssetOwners::<T, I>::try_mutate(&owner, &asset_season_id, |asset_ids| {
-			asset_ids
-				.try_push(asset_id.clone())
-				.map_err(|_| Error::<T, I>::MaxOwnershipReached)?;
-			ensure!(
-				asset_ids.len() <=
-					PlayerSeasonConfigs::<T, I>::get(&owner, &asset_season_id).inventory_tier
-						as usize,
-				Error::<T, I>::MaxOwnershipReached
-			);
-			Ok::<_, DispatchError>(())
-		})?;
-
-		Assets::<T, I>::try_mutate(&asset_id, |maybe_asset| -> DispatchResult {
-			let (from_owner, _) = maybe_asset.as_mut().ok_or(Error::<T, I>::UnknownAsset)?;
-			*from_owner = owner.clone();
-			Ok(())
-		})?;
+		Self::do_transfer_asset(
+			&Self::technical_account_id(),
+			&owner,
+			&asset_season_id,
+			&asset_id,
+		)?;
 
 		LockedAssets::<T, I>::remove(&asset_id);
 		Self::deposit_event(Event::AssetUnlocked { asset_id, lock });

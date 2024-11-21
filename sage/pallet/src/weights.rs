@@ -49,8 +49,8 @@ pub trait WeightInfo {
 	fn update_general_config() -> Weight;
 	fn update_unlock_rule() -> Weight;
 	fn upgrade_asset_inventory() -> Weight;
+	fn update_asset_filter() -> Weight;
 	fn transfer_asset() -> Weight;
-	fn update_trade_filter() -> Weight;
 	fn set_asset_price() -> Weight;
 	fn remove_asset_price() -> Weight;
 	fn buy_asset() -> Weight;
@@ -87,13 +87,13 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 
-	fn transfer_asset() -> Weight {
-				// Minimum execution time: 26_582 nanoseconds.
+	fn update_asset_filter() -> Weight {
+		// Minimum execution time: 26_582 nanoseconds.
 		Weight::from_parts(0, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 
-	fn update_trade_filter() -> Weight {
+	fn transfer_asset() -> Weight {
 				// Minimum execution time: 26_582 nanoseconds.
 		Weight::from_parts(0, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -157,12 +157,13 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 
-	fn transfer_asset() -> Weight {
+	fn update_asset_filter() -> Weight {
+		// Minimum execution time: 26_582 nanoseconds.
 		Weight::from_parts(0, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 
-	fn update_trade_filter() -> Weight {
+	fn transfer_asset() -> Weight {
 		Weight::from_parts(0, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}

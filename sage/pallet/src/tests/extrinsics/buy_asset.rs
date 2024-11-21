@@ -42,8 +42,12 @@ fn buy_should_work() {
 
 			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 3);
 
-			let owned_by_alice = AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0);
-			let owned_by_bob = AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_0);
+			let owned_by_alice = AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0))
+				.map(|(asset_id, _)| asset_id)
+				.collect::<Vec<_>>();
+			let owned_by_bob = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0))
+				.map(|(asset_id, _)| asset_id)
+				.collect::<Vec<_>>();
 
 			let asset_for_sale = asset_ids[0];
 			let asset_price = 4_417;
@@ -63,19 +67,23 @@ fn buy_should_work() {
 
 			// check for ownership transfer
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0).len(),
+				AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0)).count(),
 				owned_by_alice.len() + 1
 			);
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_0).len(),
+				AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0)).count(),
 				owned_by_bob.len() - 1
 			);
-			assert!(
-				AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0).contains(&asset_for_sale)
-			);
-			assert!(
-				!AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_0).contains(&asset_for_sale)
-			);
+			assert!(AssetOwners::<Test, Instance1>::contains_key((
+				ALICE,
+				SEASON_ID_0,
+				asset_for_sale
+			)));
+			assert!(!AssetOwners::<Test, Instance1>::contains_key((
+				BOB,
+				SEASON_ID_0,
+				asset_for_sale
+			)));
 			assert_eq!(Assets::<Test, Instance1>::get(asset_for_sale).unwrap().0, ALICE);
 
 			// check for removal from trade storage

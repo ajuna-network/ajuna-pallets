@@ -46,12 +46,16 @@ mod lock_asset {
 				// Ensure ownership transferred to technical account
 				let technical_account = Sage::technical_account_id();
 
-				assert!(
-					!AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0).contains(&asset_id)
-				);
-				assert!(
-					AssetOwners::<Test, Instance1>::get(technical_account, SEASON_ID_0).is_empty()
-				);
+				assert!(!AssetOwners::<Test, Instance1>::contains_key((
+					ALICE,
+					SEASON_ID_0,
+					asset_id
+				)));
+				assert!(!AssetOwners::<Test, Instance1>::contains_key((
+					technical_account,
+					SEASON_ID_0,
+					asset_id
+				)));
 				assert_eq!(Assets::<Test, Instance1>::get(asset_id).unwrap().0, technical_account);
 			});
 	}

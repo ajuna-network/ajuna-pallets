@@ -47,21 +47,52 @@ fn transfer_asset_works() {
 
 			// Asset transferred from Alice.
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0).len(),
+				AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0)).count(),
 				alice_asset_ids.len() - 1
 			);
-			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(ALICE, SEASON_ID_0).to_vec(),
-				alice_asset_ids[1..]
-			);
+			let alice_current_assets = {
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0))
+					.map(|(asset_id, _)| asset_id)
+					.collect::<Vec<_>>();
+
+				assets.sort();
+				assets
+			};
+			let alice_expected_assets = {
+				let mut assets = alice_asset_ids[1..].to_vec();
+				assets.sort();
+				assets
+			};
+			assert_eq!(alice_current_assets, alice_expected_assets);
 
 			// Asset transferred to Bob.
-			assert_eq!(AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_0).len(), 1);
+			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0)).count(), 1);
 			assert_eq!(Assets::<Test, Instance1>::get(asset_id).unwrap().0, BOB);
 
+			let bob_current_assets_season_0 = {
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0))
+					.map(|(asset_id, _)| asset_id)
+					.collect::<Vec<_>>();
+				assets.sort();
+				assets
+			};
+			assert_eq!(bob_current_assets_season_0, vec![asset_id]);
+
 			// Bob's original assets are safe.
-			assert_eq!(AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_1).len(), 6);
-			assert_eq!(AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_1), bob_asset_ids);
+			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1)).count(), 6);
+			let bob_current_assets_season_1 = {
+				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1))
+					.map(|(asset_id, _)| asset_id)
+					.collect::<Vec<_>>();
+				assets.sort();
+				assets
+			};
+			let expected_bob_asset_ids_season_1 = {
+				let mut assets = bob_asset_ids.clone();
+				assets.sort();
+				assets
+			};
+			assert_eq!(bob_current_assets_season_1, expected_bob_asset_ids_season_1);
 
 			// balance checks
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - transfer_fee);
@@ -73,10 +104,13 @@ fn transfer_asset_works() {
 			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, bob_asset_ids[0]));
 			assert_eq!(Balances::free_balance(BOB), MockExistentialDeposit::get());
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::get(BOB, SEASON_ID_1).len(),
+				AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1)).count(),
 				bob_asset_ids.len() - 1
 			);
-			assert_eq!(AssetOwners::<Test, Instance1>::get(CHARLIE, SEASON_ID_1).len(), 1);
+			assert_eq!(
+				AssetOwners::<Test, Instance1>::iter_prefix((CHARLIE, SEASON_ID_1)).count(),
+				1
+			);
 		});
 }
 
@@ -181,5 +215,45 @@ fn transfer_asset_rejects_on_full_asset_inventory_of_recipient() {
 				Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id),
 				Error::<Test, Instance1>::MaxOwnershipReached
 			);
+		});
+}
+
+#[test]
+fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
+	// This test relies on the implementation of `MockFilterHandler` to work
+	ExtBuilder::default()
+		.organizer(ALICE)
+		.balances(&[(BOB, 1_000)])
+		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
+		.build()
+		.execute_with(|| {
+			let transfer_filter = MockFilter::from(2_u32);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				AssetFilter::Transfer(transfer_filter)
+			));
+
+			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 2);
+			let asset_id_1 = asset_ids[0];
+			let asset_id_2 = asset_ids[1];
+
+			// Since asset_id_1 doest have its type match the filter we cannot set price for it
+			let (_, asset_1) =
+				Assets::<Test, Instance1>::get(asset_id_1).expect("Should get asset");
+			assert_eq!(asset_1.asset_type, 0);
+			assert_noop!(
+				Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_1),
+				Error::<Test, Instance1>::AssetCannotBeTransfered
+			);
+
+			// We change asset_id_2 type so that it matches the filter, allowing us to put it on
+			// sale
+			Assets::<Test, Instance1>::mutate(asset_id_2, |maybe_asset| {
+				if let Some((_, ref mut asset)) = maybe_asset {
+					asset.asset_type = transfer_filter;
+				}
+			});
+			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_2));
 		});
 }

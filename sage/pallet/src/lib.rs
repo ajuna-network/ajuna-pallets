@@ -32,7 +32,7 @@ use ajuna_primitives::{
 	asset_manager::{AssetManager, Lock, LockIdentifier},
 	fee_handler::FeeHandler,
 	season_manager::{SeasonConfig, SeasonManager},
-	trade_manager::TradeManager,
+	trade_manager::{TradeManager, TransferManager},
 };
 use sage_api::{traits::TransitionOutput, AsErrorCode, SageGameTransition};
 
@@ -76,12 +76,13 @@ pub mod pallet {
 
 	pub(crate) type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
-	pub(crate) type BoundedAssetIdsOf<T, I> = BoundedVec<AssetIdOf<T, I>, MaxAssetsPerPlayer>;
-
 	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, TransitionIdOf<T, I>>;
 
 	pub(crate) type TradeFilterOf<T, I> =
-		<<T as Config<I>>::TradeHandler as TradeManager>::TradeFilter;
+		<<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
+	pub(crate) type TransferFilterOf<T, I> =
+		<<T as Config<I>>::FilterHandler as TransferManager>::TransferFilter;
+	pub(crate) type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
 	pub(crate) type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
 	#[pallet::config]
@@ -108,7 +109,8 @@ pub mod pallet {
 			TreasuryKey = SeasonIdOf<Self, I>,
 		>;
 
-		type TradeHandler: TradeManager<Asset = AssetOf<Self, I>>;
+		type FilterHandler: TradeManager<Asset = AssetOf<Self, I>>
+			+ TransferManager<Asset = AssetOf<Self, I>>;
 
 		type Currency: Currency<AccountIdOf<Self>>;
 
@@ -166,19 +168,28 @@ pub mod pallet {
 		StorageMap<_, Identity, AssetIdOf<T, I>, (AccountIdOf<T>, AssetOf<T, I>)>;
 
 	#[pallet::storage]
-	pub type AssetOwners<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+	pub type AssetOwners<T: Config<I>, I: 'static = ()> = StorageNMap<
 		_,
-		Identity,
-		AccountIdOf<T>,
-		Identity,
-		SeasonIdOf<T, I>,
-		BoundedAssetIdsOf<T, I>,
+		(
+			NMapKey<Identity, AccountIdOf<T>>,
+			NMapKey<Identity, SeasonIdOf<T, I>>,
+			NMapKey<Identity, AssetIdOf<T, I>>,
+		),
+		(),
 		ValueQuery,
 	>;
 
 	#[pallet::storage]
+	pub type AssetsOwnedCount<T: Config<I>, I: 'static = ()> =
+		StorageDoubleMap<_, Identity, AccountIdOf<T>, Identity, SeasonIdOf<T, I>, u8, ValueQuery>;
+
+	#[pallet::storage]
 	pub type SeasonTradeFilters<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, TradeFilterOf<T, I>, ValueQuery>;
+
+	#[pallet::storage]
+	pub type SeasonTransferFilters<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, SeasonIdOf<T, I>, TransferFilterOf<T, I>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type AssetTradePrices<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
@@ -214,10 +225,12 @@ pub mod pallet {
 			season_id: SeasonIdOf<T, I>,
 			new_tier: InventoryTier,
 		},
-		/// Asset transferred.
-		AssetTransferred { from: AccountIdOf<T>, to: AccountIdOf<T>, asset_id: AssetIdOf<T, I> },
 		/// Trade filter has been updated
 		UpdatedTradeFilter { season_id: SeasonIdOf<T, I>, filter: TradeFilterOf<T, I> },
+		/// Transfer filter has been updated
+		UpdatedTransferFilter { season_id: SeasonIdOf<T, I>, filter: TransferFilterOf<T, I> },
+		/// Asset transferred.
+		AssetTransferred { from: AccountIdOf<T>, to: AccountIdOf<T>, asset_id: AssetIdOf<T, I> },
 		/// Asset has price set for trade.
 		AssetPriceSet { asset_id: AssetIdOf<T, I>, price: BalanceOf<T, I> },
 		/// Asset has price removed for trade.
@@ -267,6 +280,8 @@ pub mod pallet {
 		AssetNotOwned,
 		/// Attempt to buy already owned asset.
 		AlreadyOwned,
+		/// This asset cannot be used in transfer.
+		AssetCannotBeTransfered,
 		/// This asset cannot be used in trade.
 		AssetCannotBeTraded,
 		/// An asset selected for buying is not actually in sale.
@@ -392,6 +407,30 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::update_asset_filter())]
+		pub fn update_asset_filter(
+			origin: OriginFor<T>,
+			season_id: SeasonIdOf<T, I>,
+			filter: AssetFilterOf<T, I>,
+		) -> DispatchResult {
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
+
+			match filter {
+				AssetFilter::Trade(filter) => {
+					SeasonTradeFilters::<T, I>::insert(&season_id, &filter);
+					Self::deposit_event(Event::UpdatedTradeFilter { season_id, filter });
+				},
+				AssetFilter::Transfer(filter) => {
+					SeasonTransferFilters::<T, I>::insert(&season_id, &filter);
+					Self::deposit_event(Event::UpdatedTransferFilter { season_id, filter });
+				},
+			}
+
+			Ok(())
+		}
+
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::transfer_asset())]
 		pub fn transfer_asset(
 			origin: OriginFor<T>,
@@ -413,11 +452,17 @@ pub mod pallet {
 			);
 			Self::ensure_unlocked(&asset_id)?;
 
-			Self::ensure_ownership(&from, &asset_id)?;
+			let asset = Self::ensure_ownership(&from, &asset_id)?;
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
 			ensure!(
 				PlayerSeasonConfigs::<T, I>::get(&from, &asset_season_id).locks.asset_transfer,
 				Error::<T, I>::FeatureLocked
+			);
+
+			let transfer_filter = SeasonTransferFilters::<T, I>::get(&asset_season_id);
+			ensure!(
+				T::FilterHandler::is_transferable_using(&asset, &transfer_filter),
+				Error::<T, I>::AssetCannotBeTransfered
 			);
 
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
@@ -425,23 +470,6 @@ pub mod pallet {
 
 			Self::do_transfer_asset(&from, &to, &asset_season_id, &asset_id)?;
 			Self::deposit_event(Event::AssetTransferred { from, to, asset_id });
-			Ok(())
-		}
-
-		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::update_trade_filter())]
-		pub fn update_trade_filter(
-			origin: OriginFor<T>,
-			season_id: SeasonIdOf<T, I>,
-			trade_filter: TradeFilterOf<T, I>,
-		) -> DispatchResult {
-			let signer = ensure_signed(origin)?;
-			Self::ensure_organizer(&signer)?;
-
-			SeasonTradeFilters::<T, I>::insert(&season_id, &trade_filter);
-
-			Self::deposit_event(Event::UpdatedTradeFilter { season_id, filter: trade_filter });
-
 			Ok(())
 		}
 
@@ -459,14 +487,19 @@ pub mod pallet {
 			let (owner, asset) = Self::asset_with_owner(&asset_id)?;
 			ensure!(owner == seller, Error::<T, I>::AssetNotOwned);
 
-			let season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
-			let config = PlayerSeasonConfigs::<T, I>::get(&seller, &season_id);
+			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
+			let config = PlayerSeasonConfigs::<T, I>::get(&seller, &asset_season_id);
 			ensure!(config.locks.asset_trade, Error::<T, I>::FeatureLocked);
 
 			Self::ensure_unlocked(&asset_id)?;
-			Self::ensure_can_be_set_for_trade(&asset_id, &asset)?;
 
-			AssetTradePrices::<T, I>::insert(&season_id, &asset_id, price);
+			let trade_filter = SeasonTradeFilters::<T, I>::get(&asset_season_id);
+			ensure!(
+				T::FilterHandler::is_tradeable_using(&asset, &trade_filter),
+				Error::<T, I>::AssetCannotBeTraded
+			);
+
+			AssetTradePrices::<T, I>::insert(&asset_season_id, &asset_id, price);
 			Self::deposit_event(Event::AssetPriceSet { asset_id, price });
 			Ok(())
 		}
@@ -648,27 +681,42 @@ pub mod pallet {
 			LockedAssets::<T, I>::get(asset_id)
 		}
 
-		fn do_transfer_asset(
+		pub(crate) fn do_transfer_asset(
 			from: &AccountIdOf<T>,
 			to: &AccountIdOf<T>,
-			season_id: &SeasonIdOf<T, I>,
+			asset_season_id: &SeasonIdOf<T, I>,
 			asset_id: &AssetIdOf<T, I>,
 		) -> DispatchResult {
-			let mut from_asset_ids = AssetOwners::<T, I>::get(from, season_id);
-			from_asset_ids.retain(|owned_asset_id| owned_asset_id != asset_id);
+			let technical_account = Self::technical_account_id();
 
-			let mut to_asset_ids = AssetOwners::<T, I>::get(to, season_id);
-			to_asset_ids
-				.try_push(asset_id.clone())
-				.map_err(|_| Error::<T, I>::MaxOwnershipReached)?;
-			ensure!(
-				to_asset_ids.len() <=
-					PlayerSeasonConfigs::<T, I>::get(to, season_id).inventory_tier as usize,
-				Error::<T, I>::MaxOwnershipReached
-			);
+			if from != &technical_account {
+				// The technical account doesn't keep track of the assets transferred to it
+				// so these storage entries are only populated if the asset is being
+				// transferred from a player account
+				AssetOwners::<T, I>::remove((from, asset_season_id, asset_id));
+				AssetsOwnedCount::<T, I>::mutate(from, asset_season_id, |owned_count| {
+					owned_count.saturating_dec()
+				});
+			}
 
-			AssetOwners::<T, I>::mutate(from, season_id, |asset_ids| *asset_ids = from_asset_ids);
-			AssetOwners::<T, I>::mutate(to, season_id, |asset_ids| *asset_ids = to_asset_ids);
+			if to != &Self::technical_account_id() {
+				// The technical account doesn't keep track of the assets transferred to it
+				// so these storage entries only need to be populated if the destination
+				// to which the asset is transferred to is a player account
+				AssetOwners::<T, I>::insert((to, asset_season_id, asset_id), ());
+				AssetsOwnedCount::<T, I>::try_mutate(to, asset_season_id, |owned_count| {
+					owned_count.saturating_inc();
+					ensure!(
+						*owned_count <=
+							PlayerSeasonConfigs::<T, I>::get(to, asset_season_id)
+								.inventory_tier
+								.get_asset_slots(),
+						Error::<T, I>::MaxOwnershipReached
+					);
+					Ok::<_, DispatchError>(())
+				})?;
+			}
+
 			Assets::<T, I>::try_mutate(asset_id, |maybe_asset| -> DispatchResult {
 				let (from_owner, _) = maybe_asset.as_mut().ok_or(Error::<T, I>::UnknownAsset)?;
 				*from_owner = to.clone();
