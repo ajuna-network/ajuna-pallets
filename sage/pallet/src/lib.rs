@@ -424,7 +424,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
-			let season_id = in_season.unwrap_or_else(T::SeasonHandler::get_current_season_id);
+			let season_id = if let Some(season_id) = in_season {
+				season_id
+			} else {
+				T::SeasonHandler::get_current_season_id()?
+			};
 			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
 
 			let upgrade_fee = {
@@ -595,7 +599,7 @@ pub mod pallet {
 			)?;
 
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
-			let current_season_id = T::SeasonHandler::get_current_season_id();
+			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			let fee = T::SeasonHandler::get_season_config_for(&current_season_id)?.fee;
 
 			let trade_fee = {
@@ -615,7 +619,6 @@ pub mod pallet {
 			Self::do_transfer_asset(&seller, &buyer, &asset_season_id, &asset_id)?;
 			AssetTradePrices::<T, I>::remove(&asset_season_id, &asset_id);
 
-			let current_season_id = T::SeasonHandler::get_current_season_id();
 			PlayerSeasonStats::<T, I>::mutate(&buyer, &current_season_id, |stats| {
 				stats.bought_amount.saturating_inc();
 			});
@@ -692,7 +695,7 @@ pub mod pallet {
 			let transition_results =
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
 					.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
-			let current_season_id = T::SeasonHandler::get_current_season_id();
+			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 
 			// TODO: Review the logic in this section
@@ -791,6 +794,13 @@ pub mod pallet {
 					TransitionOutput::Minted(_asset) => {
 						minted_amount = minted_amount.saturating_add(1);
 						// TODO: Need a way to create new asset_id generically
+						// TODO: What should we do if the transition puts you above the ownership
+						// TODO: limit? let asset_id = 1;
+
+						// T::SeasonHandler::register_asset_in(asset_id, season_id)?;
+						// Assets update
+						// AssetOwners update
+						// AssetsOwnedCount update
 					},
 					TransitionOutput::Mutated(asset_id, asset) => {
 						mutated_amount = mutated_amount.saturating_add(1);
@@ -800,7 +810,19 @@ pub mod pallet {
 							}
 						});
 					},
-					TransitionOutput::Consumed(asset_id) => Assets::<T, I>::remove(asset_id),
+					TransitionOutput::Consumed(asset_id) => {
+						if let Some((owner, _)) = Assets::<T, I>::take(&asset_id) {
+							let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
+							AssetOwners::<T, I>::remove((&owner, &asset_season_id, &asset_id));
+							AssetsOwnedCount::<T, I>::mutate(
+								&owner,
+								&asset_season_id,
+								|asset_count| {
+									asset_count.saturating_dec();
+								},
+							);
+						}
+					},
 				}
 			}
 

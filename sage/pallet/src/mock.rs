@@ -147,8 +147,8 @@ impl SeasonManager for MockSeasonManager {
 		})
 	}
 
-	fn get_current_season_id() -> Self::SeasonId {
-		CURRENT_SEASON.with(|season_id| *season_id.borrow())
+	fn get_current_season_id() -> Result<Self::SeasonId, DispatchError> {
+		Ok(CURRENT_SEASON.with(|season_id| *season_id.borrow()))
 	}
 
 	fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError> {
@@ -173,6 +173,17 @@ impl SeasonManager for MockSeasonManager {
 			},
 			data: (),
 		})
+	}
+
+	fn register_asset_in(
+		asset_id: &Self::AssetId,
+		season_id: &Self::SeasonId,
+	) -> Result<(), DispatchError> {
+		ASSET_SEASONS.with(|store| {
+			store.borrow_mut().insert(*asset_id, *season_id);
+		});
+
+		Ok(())
 	}
 }
 

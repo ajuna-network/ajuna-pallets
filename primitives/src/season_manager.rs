@@ -68,11 +68,16 @@ pub trait SeasonManager {
 
 	fn get_season_id_for(asset_id: &Self::AssetId) -> Result<Self::SeasonId, DispatchError>;
 
-	fn get_current_season_id() -> Self::SeasonId;
+	fn get_current_season_id() -> Result<Self::SeasonId, DispatchError>;
 
 	fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError>;
 
 	fn get_season_config_for(
 		season_id: &Self::SeasonId,
 	) -> Result<SeasonConfig<Self::Balance, Self::SeasonData>, DispatchError>;
+
+	fn register_asset_in(
+		asset_id: &Self::AssetId,
+		season_id: &Self::SeasonId,
+	) -> Result<(), DispatchError>;
 }

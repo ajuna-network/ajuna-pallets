@@ -95,7 +95,14 @@ pub mod pallet {
 	/// value indicating the next season id to them except the latest season added
 	/// which will not have a value for it.
 	#[pallet::storage]
-	pub type SeasonChains<T: Config<I>, I: 'static = ()> =
+	pub type NextSeasonChain<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, SeasonIdOf<T, I>, SeasonIdOf<T, I>, OptionQuery>;
+
+	/// Use to represent a linked list of SeasonId. All entries will have a
+	/// value indicating the previous season id to them except the firsts season added
+	/// which will not have a value for it.
+	#[pallet::storage]
+	pub type PrevSeasonChain<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, SeasonIdOf<T, I>, OptionQuery>;
 
 	/// Storage for the seasons.
@@ -112,6 +119,11 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type SeasonSchedules<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, SeasonScheduleOf<T>, OptionQuery>;
+
+	/// Stores the assets season id registration.
+	#[pallet::storage]
+	pub type AssetSeasonRegister<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, AssetIdOf<T, I>, SeasonIdOf<T, I>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -137,6 +149,12 @@ pub mod pallet {
 		EarlyStartTooLate,
 		/// The season's start block is greater than its end block.
 		SeasonStartTooLate,
+		/// The schedule for a given season id could not be found.
+		SeasonScheduleNotSet,
+		/// The given asset was not registered in any season.
+		AssetNotRegistered,
+		/// The given season identifier has not be registered.
+		InvalidSeason,
 	}
 
 	#[pallet::hooks]
@@ -174,7 +192,13 @@ pub mod pallet {
 				SeasonMetadatas::<T, I>::insert(&season_id, meta_update);
 			}
 
-			Self::update_season_chain(&season_id);
+			if !PrevSeasonChain::<T, I>::contains_key(&season_id) {
+				// If the 'season_id' key is not already in 'PrevSeasonChain',
+				// then that means that this is the first time we call this method with
+				// 'season_id', in that case we build the chain link for the given 'season_id'.
+				// Once the link has been built all subsequent calls will never modify it.
+				Self::insert_season_chains(&season_id);
+			}
 
 			Self::deposit_event(Event::UpdatedSeason { season_id, config, metadata, schedule });
 
@@ -187,39 +211,31 @@ pub mod pallet {
 			let account = ensure_signed(origin)?;
 			T::AccountHandler::is_organizer(&account)?;
 
+			// TODO
+
 			Ok(())
 		}
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
-		fn update_season_chain(new_season_id: &SeasonIdOf<T, I>) {
-			if SeasonChains::<T, I>::contains_key(new_season_id) {
-				// If the new_season_id is already in the SeasonChains, then
-				// that means that this is not the first time we call this method,
-				// in that case there is nothing to do.
-				// Since the chain link is established the first time the method is called.
-				return;
-			}
+		fn insert_season_chains(new_season_id: &SeasonIdOf<T, I>) {
+			LatestSeason::<T, I>::mutate(|maybe_prev_season_id| {
+				if let Some(prev_season_id) = maybe_prev_season_id {
+					// If there was a previous season we can build the chain links
+					PrevSeasonChain::<T, I>::insert(new_season_id, &*prev_season_id);
+					NextSeasonChain::<T, I>::insert(&*prev_season_id, new_season_id);
 
-			let maybe_prev_season_id = LatestSeason::<T, I>::mutate(|maybe_season_id| {
-				if let Some(season_id) = maybe_season_id {
-					let prev_season_id = season_id.clone();
-					*season_id = new_season_id.clone();
-					Some(prev_season_id)
+					*prev_season_id = new_season_id.clone();
 				} else {
-					*maybe_season_id = Some(new_season_id.clone());
-					None
+					// If this is the first season ever created
+					// we won't build the chain links
+					// since we are missing another season to do so
+					*maybe_prev_season_id = Some(new_season_id.clone());
 				}
 			});
-
-			if let Some(prev_season_id) = maybe_prev_season_id {
-				SeasonChains::<T, I>::insert(prev_season_id, new_season_id);
-			} else {
-				SeasonChains::<T, I>::insert(new_season_id, new_season_id);
-			}
 		}
 
-		pub(crate) fn is_season_modifiable(season_id: &SeasonIdOf<T, I>) -> bool {
+		fn is_season_modifiable(season_id: &SeasonIdOf<T, I>) -> bool {
 			if let Ok(current_season) = CurrentSeasonStatus::<T, I>::get() {
 				(&current_season.season_id != season_id) &&
 					!FinishedSeasons::<T, I>::contains_key(season_id)
@@ -228,35 +244,35 @@ pub mod pallet {
 			}
 		}
 
-		pub(crate) fn ensure_valid_config(config: &SeasonConfigOf<T, I>) -> DispatchResult {
+		fn ensure_valid_config(config: &SeasonConfigOf<T, I>) -> DispatchResult {
 			ensure!(config.validate_data(), Error::<T, I>::SeasonDataNotValid);
 			Ok(())
 		}
 
-		pub(crate) fn ensure_valid_schedule(
+		fn ensure_valid_schedule(
 			season_id: &SeasonIdOf<T, I>,
 			schedule: &SeasonScheduleOf<T>,
 		) -> DispatchResult {
 			ensure!(schedule.early_start < schedule.start, Error::<T, I>::EarlyStartTooLate);
 			ensure!(schedule.start < schedule.end, Error::<T, I>::SeasonStartTooLate);
 
-			/*let prev_season_id = season_id.checked_sub(1).ok_or(ArithmeticError::Underflow)?;
-			let next_season_id = season_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-
-			if prev_season_id > 0 {
-				let prev_schedule = SeasonSchedules::<T>::get(prev_season_id)
-					.ok_or(Error::<T>::NonSequentialSeasonId)?;
+			if let Some(prev_season_id) = PrevSeasonChain::<T, I>::get(season_id) {
+				let prev_schedule = SeasonSchedules::<T, I>::get(prev_season_id)
+					.ok_or(Error::<T, I>::SeasonScheduleNotSet)?;
 				ensure!(
-					prev_schedule.end < season_schedule.early_start,
-					Error::<T>::EarlyStartTooEarly
+					prev_schedule.end < schedule.early_start,
+					Error::<T, I>::EarlyStartTooEarly
 				);
 			}
-			if let Some(next_schedule) = SeasonSchedules::<T>::get(next_season_id) {
+
+			if let Some(next_season_id) = NextSeasonChain::<T, I>::get(season_id) {
+				let next_schedule = SeasonSchedules::<T, I>::get(next_season_id)
+					.ok_or(Error::<T, I>::SeasonScheduleNotSet)?;
 				ensure!(
-					season_schedule.end < next_schedule.early_start,
-					Error::<T>::SeasonEndTooLate
+					schedule.end < next_schedule.early_start,
+					Error::<T, I>::EarlyStartTooEarly
 				);
-			}*/
+			}
 
 			Ok(())
 		}

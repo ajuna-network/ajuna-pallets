@@ -24,7 +24,8 @@ fn state_transition_works() {
 		.balances(&[(ALICE, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id();
+			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
+				.expect("Should get season_id");
 			let season_config =
 				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&season_id)
 					.expect("Should get season config");

@@ -24,20 +24,35 @@ impl<T: Config<I>, I: 'static> SeasonManager for Pallet<T, I> {
 	type Balance = BalanceOf<T, I>;
 
 	fn get_season_id_for(asset_id: &Self::AssetId) -> Result<Self::SeasonId, DispatchError> {
-		todo!()
+		AssetSeasonRegister::<T, I>::get(asset_id).ok_or(Error::<T, I>::AssetNotRegistered.into())
 	}
 
-	fn get_current_season_id() -> Self::SeasonId {
-		todo!()
+	fn get_current_season_id() -> Result<Self::SeasonId, DispatchError> {
+		CurrentSeasonStatus::<T, I>::get()
+			.map(|status| status.season_id)
+			.map_err(|e| e.into())
 	}
 
 	fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError> {
-		todo!()
+		if Seasons::<T, I>::contains_key(season_id) {
+			Ok(())
+		} else {
+			Err(Error::<T, I>::InvalidSeason.into())
+		}
 	}
 
 	fn get_season_config_for(
 		season_id: &Self::SeasonId,
 	) -> Result<SeasonConfig<Self::Balance, Self::SeasonData>, DispatchError> {
-		todo!()
+		Seasons::<T, I>::get(season_id).ok_or(Error::<T, I>::InvalidSeason.into())
+	}
+
+	fn register_asset_in(
+		asset_id: &Self::AssetId,
+		season_id: &Self::SeasonId,
+	) -> Result<(), DispatchError> {
+		AssetSeasonRegister::<T, I>::insert(asset_id, season_id);
+
+		Ok(())
 	}
 }
