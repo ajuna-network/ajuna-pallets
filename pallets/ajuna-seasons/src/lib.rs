@@ -158,21 +158,25 @@ pub mod pallet {
 	#[pallet::error]
 	#[derive(PartialEq)]
 	pub enum Error<T, I = ()> {
-		/// The season's data could not be validated.
-		SeasonDataNotValid,
+		/// The season's data didn't pass its validation method.
+		InvalidSeasonData,
 		/// There is currently no active season
 		NoActiveSeason,
-		/// The season starts before the previous season has ended.
-		EarlyStartTooEarly,
+		/// Cannot set season schedule wihout season config first.
+		CannotScheduleSeasonWithoutConfig,
+		/// The season's early start is before the current block.
+		SeasonStartBeforeCurrentBlock,
+		/// The season starts before the previous season starts.
+		SeasonStartOverlapsPreviousSeason,
+		/// The season starts after the next season starts.
+		SeasonStartOverlapsNextSeason,
 		/// The season's early start is earlier than its normal start.
-		EarlyStartTooLate,
+		SeasonStartBeforeEarlyStart,
 		/// The season's start block is greater than its end block.
-		SeasonStartTooLate,
-		/// The schedule for a given season id could not be found.
-		SeasonScheduleNotSet,
+		SeasonEndBeforeStart,
 		/// The given asset was not registered in any season.
 		AssetNotRegistered,
-		/// The given season identifier has not be registered.
+		/// The given season identifier has not been registered.
 		InvalidSeason,
 		/// The given season schedule update clashed with another season's schedule.
 		ScheduleSlotAlreadyInUse,
@@ -302,7 +306,21 @@ pub mod pallet {
 					Seasons::<T, I>::insert(&season_id, config_update);
 				}
 
+				if !PrevSeasonChain::<T, I>::contains_key(&season_id) {
+					// If the 'season_id' key is not already in 'PrevSeasonChain',
+					// then that means that this is the first time we call this method with
+					// 'season_id', in that case we build the chain link for the given
+					// 'season_id'. Once the link has been built all subsequent calls will never
+					// modify it.
+					Self::insert_season_chains(&season_id);
+				}
+
 				if let Some(ref schedule_update) = schedule {
+					ensure!(
+						Seasons::<T, I>::contains_key(&season_id),
+						Error::<T, I>::CannotScheduleSeasonWithoutConfig
+					);
+
 					Self::ensure_valid_schedule(&season_id, schedule_update)?;
 					Self::update_season_scheduled_actions(&season_id, schedule_update)?;
 				}
@@ -310,14 +328,6 @@ pub mod pallet {
 
 			if let Some(ref meta_update) = metadata {
 				SeasonMetadatas::<T, I>::insert(&season_id, meta_update);
-			}
-
-			if !PrevSeasonChain::<T, I>::contains_key(&season_id) {
-				// If the 'season_id' key is not already in 'PrevSeasonChain',
-				// then that means that this is the first time we call this method with
-				// 'season_id', in that case we build the chain link for the given 'season_id'.
-				// Once the link has been built all subsequent calls will never modify it.
-				Self::insert_season_chains(&season_id);
 			}
 
 			Self::deposit_event(Event::UpdatedSeason { season_id, config, metadata, schedule });
@@ -342,6 +352,9 @@ pub mod pallet {
 						.ok_or(Error::<T, I>::InvalidSeason)?;
 					SeasonScheduledActions::<T, I>::remove(season_schedule.end);
 
+					// TODO: Maybe we could try to early start the next season if
+					// it exists and its early start was skipped
+
 					Self::deposit_event(Event::SeasonEarlyEnded {
 						season_id: current_season.season_id.clone(),
 					});
@@ -357,17 +370,19 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		fn insert_season_chains(new_season_id: &SeasonIdOf<T, I>) {
 			LatestSeason::<T, I>::mutate(|maybe_prev_season_id| {
-				if let Some(prev_season_id) = maybe_prev_season_id {
-					// If there was a previous season we can build the chain links
-					PrevSeasonChain::<T, I>::insert(new_season_id, &*prev_season_id);
-					NextSeasonChain::<T, I>::insert(&*prev_season_id, new_season_id);
-
-					*prev_season_id = new_season_id.clone();
-				} else {
-					// If this is the first season ever created
-					// we won't build the chain links
-					// since we are missing another season to do so
-					*maybe_prev_season_id = Some(new_season_id.clone());
+				match maybe_prev_season_id {
+					Some(prev_season_id) if prev_season_id != new_season_id => {
+						// If there was a previous season we can build the chain links
+						PrevSeasonChain::<T, I>::insert(new_season_id, &*prev_season_id);
+						NextSeasonChain::<T, I>::insert(&*prev_season_id, new_season_id);
+						*prev_season_id = new_season_id.clone();
+					},
+					_ => {
+						// If this is the first season ever created
+						// we won't build the chain links
+						// since we are missing another season to do so
+						*maybe_prev_season_id = Some(new_season_id.clone());
+					},
 				}
 			});
 		}
@@ -382,7 +397,7 @@ pub mod pallet {
 		}
 
 		fn ensure_valid_config(config: &SeasonConfigOf<T, I>) -> DispatchResult {
-			ensure!(config.validate_data(), Error::<T, I>::SeasonDataNotValid);
+			ensure!(config.validate_data(), Error::<T, I>::InvalidSeasonData);
 			Ok(())
 		}
 
@@ -390,25 +405,33 @@ pub mod pallet {
 			season_id: &SeasonIdOf<T, I>,
 			schedule: &SeasonScheduleOf<T>,
 		) -> DispatchResult {
-			ensure!(schedule.early_start < schedule.start, Error::<T, I>::EarlyStartTooLate);
-			ensure!(schedule.start < schedule.end, Error::<T, I>::SeasonStartTooLate);
+			let current_block = <frame_system::Pallet<T>>::block_number();
+			ensure!(
+				current_block < schedule.early_start,
+				Error::<T, I>::SeasonStartBeforeCurrentBlock
+			);
+			ensure!(
+				schedule.early_start < schedule.start,
+				Error::<T, I>::SeasonStartBeforeEarlyStart
+			);
+			ensure!(schedule.start < schedule.end, Error::<T, I>::SeasonEndBeforeStart);
 
 			if let Some(prev_season_id) = PrevSeasonChain::<T, I>::get(season_id) {
-				let prev_schedule = SeasonSchedules::<T, I>::get(prev_season_id)
-					.ok_or(Error::<T, I>::SeasonScheduleNotSet)?;
-				ensure!(
-					prev_schedule.start < schedule.early_start,
-					Error::<T, I>::EarlyStartTooEarly
-				);
+				if let Some(prev_schedule) = SeasonSchedules::<T, I>::get(prev_season_id) {
+					ensure!(
+						prev_schedule.start < schedule.early_start,
+						Error::<T, I>::SeasonStartOverlapsPreviousSeason
+					);
+				}
 			}
 
 			if let Some(next_season_id) = NextSeasonChain::<T, I>::get(season_id) {
-				let next_schedule = SeasonSchedules::<T, I>::get(next_season_id)
-					.ok_or(Error::<T, I>::SeasonScheduleNotSet)?;
-				ensure!(
-					schedule.start < next_schedule.early_start,
-					Error::<T, I>::EarlyStartTooEarly
-				);
+				if let Some(next_schedule) = SeasonSchedules::<T, I>::get(next_season_id) {
+					ensure!(
+						schedule.start < next_schedule.early_start,
+						Error::<T, I>::SeasonStartOverlapsNextSeason
+					);
+				}
 			}
 
 			Ok(())

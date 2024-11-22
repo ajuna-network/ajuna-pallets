@@ -14,5 +14,49 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{mock::*, Error};
+use crate::{mock::*, tests::ALICE, *};
 use frame_support::{assert_noop, assert_ok};
+
+mod season_manager {
+	use super::*;
+
+	#[test]
+	fn get_season_id_for_works() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+
+	#[test]
+	fn get_current_season_id_works_if_active_season() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+
+	#[test]
+	fn get_current_season_id_rejects_if_no_active_season() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+
+	#[test]
+	fn is_valid_season_works() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+
+	#[test]
+	fn get_season_config_for_works() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+
+	#[test]
+	fn get_season_config_for_rejects_for_invalid_season() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+
+	#[test]
+	fn register_asset_in_works() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+
+	#[test]
+	fn register_asset_in_rejects_registering_asset_to_invalid_season() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {});
+	}
+}

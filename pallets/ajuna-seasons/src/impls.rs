@@ -51,6 +51,7 @@ impl<T: Config<I>, I: 'static> SeasonManager for Pallet<T, I> {
 		asset_id: &Self::AssetId,
 		season_id: &Self::SeasonId,
 	) -> Result<(), DispatchError> {
+		Self::is_valid_season(season_id)?;
 		AssetSeasonRegister::<T, I>::insert(asset_id, season_id);
 
 		Ok(())
