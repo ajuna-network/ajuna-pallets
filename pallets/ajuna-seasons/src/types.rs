@@ -14,13 +14,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{Config, Error};
 use frame_support::{
-	dispatch::DispatchResult,
-	ensure,
 	pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, TypeInfo},
 	BoundedVec,
 };
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+pub enum SeasonScheduledAction<SeasonId> {
+	EarlyStart(SeasonId),
+	Start(SeasonId),
+	End(SeasonId),
+}
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
 pub struct SeasonStatus<SeasonId> {
@@ -28,11 +32,6 @@ pub struct SeasonStatus<SeasonId> {
 	pub early: bool,
 	pub active: bool,
 	pub early_ended: bool,
-}
-impl<SeasonId> SeasonStatus<SeasonId> {
-	pub(crate) fn is_in_season(&self) -> bool {
-		self.early || self.active || self.early_ended
-	}
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
@@ -46,17 +45,4 @@ pub struct SeasonSchedule<BlockNumber> {
 	pub early_start: BlockNumber,
 	pub start: BlockNumber,
 	pub end: BlockNumber,
-}
-
-impl<BlockNumber> SeasonSchedule<BlockNumber>
-where
-	BlockNumber: PartialOrd,
-{
-	pub(crate) fn is_active(&self, now: BlockNumber) -> bool {
-		now >= self.start && now <= self.end
-	}
-
-	pub(crate) fn is_early(&self, now: BlockNumber) -> bool {
-		now >= self.early_start && now < self.start
-	}
 }

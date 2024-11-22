@@ -40,11 +40,12 @@ use frame_system::pallet_prelude::*;
 pub use types::*;
 use weights::WeightInfo;
 
+const LOG_TARGET: &str = "runtime::ajuna-seasons";
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use ajuna_primitives::season_manager::Validate;
-	use sp_runtime::{traits::AtLeast32BitUnsigned, ArithmeticError};
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
@@ -57,6 +58,8 @@ pub mod pallet {
 	pub(crate) type SeasonStatusOf<T, I> = SeasonStatus<SeasonIdOf<T, I>>;
 	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
 	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
+	pub(crate) type SeasonScheduledActionOf<T, I> =
+		SeasonScheduledAction<<T as Config<I>>::SeasonId>;
 
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
@@ -120,6 +123,10 @@ pub mod pallet {
 	pub type SeasonSchedules<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, SeasonScheduleOf<T>, OptionQuery>;
 
+	#[pallet::storage]
+	pub type SeasonScheduledActions<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Identity, BlockNumberFor<T>, SeasonScheduledActionOf<T, I>, OptionQuery>;
+
 	/// Stores the assets season id registration.
 	#[pallet::storage]
 	pub type AssetSeasonRegister<T: Config<I>, I: 'static = ()> =
@@ -128,13 +135,21 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
-		/// The season configuration for {season_id} has been updated.
+		/// The season configuration for 'season_id' has been updated.
 		UpdatedSeason {
 			season_id: SeasonIdOf<T, I>,
 			config: Option<SeasonConfigOf<T, I>>,
 			metadata: Option<SeasonMetadata>,
 			schedule: Option<SeasonScheduleOf<T>>,
 		},
+		/// The season was started during its 'early_start' by the scheduler.
+		SeasonEarlyStarted { season_id: SeasonIdOf<T, I> },
+		/// The season was started during its 'start' by the scheduler.
+		SeasonStarted { season_id: SeasonIdOf<T, I> },
+		/// The season was ended during its 'end' by the scheduler.
+		SeasonEnded { season_id: SeasonIdOf<T, I> },
+		/// The season was ended prematurely by the organizer.
+		SeasonEarlyEnded { season_id: SeasonIdOf<T, I> },
 	}
 
 	#[pallet::error]
@@ -158,12 +173,105 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {}
+	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
+		fn on_initialize(now: BlockNumberFor<T>) -> Weight {
+			let mut weight = T::DbWeight::get().reads(1);
+
+			if let Some(action) = SeasonScheduledActions::<T, I>::take(now) {
+				let w = match action {
+					SeasonScheduledAction::EarlyStart(season_id) =>
+						CurrentSeasonStatus::<T, I>::mutate(|maybe_season_status| {
+							if let Ok(current_season) = maybe_season_status {
+								if !current_season.active {
+									*current_season = SeasonStatus {
+										season_id: season_id.clone(),
+										early: true,
+										active: true,
+										early_ended: false,
+									};
+									Self::deposit_event(Event::SeasonEarlyStarted { season_id });
+									T::DbWeight::get().reads_writes(1, 1)
+								} else {
+									log::info!(target: LOG_TARGET,
+										"Season {:?} could not be early started, previous season {:?} still active.",
+										season_id,
+										current_season.season_id
+									);
+									T::DbWeight::get().reads(1)
+								}
+							} else {
+								*maybe_season_status = Ok(SeasonStatus {
+									season_id: season_id.clone(),
+									early: true,
+									active: true,
+									early_ended: false,
+								});
+								Self::deposit_event(Event::SeasonEarlyStarted { season_id });
+								T::DbWeight::get().reads_writes(1, 1)
+							}
+						}),
+					SeasonScheduledAction::Start(season_id) =>
+						CurrentSeasonStatus::<T, I>::mutate(|maybe_season_status| {
+							if let Ok(current_season) = maybe_season_status {
+								if !current_season.active {
+									*current_season = SeasonStatus {
+										season_id: season_id.clone(),
+										early: false,
+										active: true,
+										early_ended: false,
+									};
+									Self::deposit_event(Event::SeasonStarted { season_id });
+									T::DbWeight::get().reads_writes(1, 1)
+								} else {
+									log::error!(target: LOG_TARGET,
+										"Season {:?} could not be started, previous season {:?} still active.",
+										season_id,
+										current_season.season_id
+									);
+									T::DbWeight::get().reads(1)
+								}
+							} else {
+								log::warn!(target: LOG_TARGET,
+									"Season {:?} was not early started, without any previous season found.",
+									season_id,
+								);
+								*maybe_season_status = Ok(SeasonStatus {
+									season_id: season_id.clone(),
+									early: false,
+									active: true,
+									early_ended: false,
+								});
+								Self::deposit_event(Event::SeasonStarted { season_id });
+								T::DbWeight::get().reads_writes(1, 1)
+							}
+						}),
+					SeasonScheduledAction::End(season_id) =>
+						CurrentSeasonStatus::<T, I>::mutate(|maybe_current_status| {
+							if let Ok(current_status) = maybe_current_status {
+								current_status.active = false;
+								FinishedSeasons::<T, I>::insert(&season_id, ());
+								Self::deposit_event(Event::SeasonEnded { season_id });
+								T::DbWeight::get().reads_writes(1, 2)
+							} else {
+								log::error!(target: LOG_TARGET,
+									"CurrentSeasonStatus didn't contain the expected entry for season_id {:?}.",
+									season_id
+								);
+								T::DbWeight::get().reads(1)
+							}
+						}),
+				};
+				weight.saturating_accrue(w);
+			};
+
+			weight
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		#[pallet::call_index(0)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::update_season())]
 		pub fn update_season(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
@@ -184,7 +292,7 @@ pub mod pallet {
 
 				if let Some(ref schedule_update) = schedule {
 					Self::ensure_valid_schedule(&season_id, schedule_update)?;
-					SeasonSchedules::<T, I>::insert(&season_id, schedule_update);
+					Self::update_season_scheduled_actions(&season_id, schedule_update)?;
 				}
 			}
 
@@ -206,14 +314,25 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight({10_000})]
+		#[pallet::weight(T::WeightInfo::interrupt_active_season())]
 		pub fn interrupt_active_season(origin: OriginFor<T>) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::AccountHandler::is_organizer(&account)?;
 
-			// TODO
+			CurrentSeasonStatus::<T, I>::try_mutate(|maybe_current_season| {
+				if let Ok(current_season) = maybe_current_season {
+					current_season.active = false;
+					current_season.early_ended = true;
 
-			Ok(())
+					Self::deposit_event(Event::SeasonEarlyEnded {
+						season_id: current_season.season_id.clone(),
+					});
+
+					Ok(())
+				} else {
+					Err(Error::<T, I>::NoActiveSeason.into())
+				}
+			})
 		}
 	}
 
@@ -260,7 +379,7 @@ pub mod pallet {
 				let prev_schedule = SeasonSchedules::<T, I>::get(prev_season_id)
 					.ok_or(Error::<T, I>::SeasonScheduleNotSet)?;
 				ensure!(
-					prev_schedule.end < schedule.early_start,
+					prev_schedule.start < schedule.early_start,
 					Error::<T, I>::EarlyStartTooEarly
 				);
 			}
@@ -269,10 +388,40 @@ pub mod pallet {
 				let next_schedule = SeasonSchedules::<T, I>::get(next_season_id)
 					.ok_or(Error::<T, I>::SeasonScheduleNotSet)?;
 				ensure!(
-					schedule.end < next_schedule.early_start,
+					schedule.start < next_schedule.early_start,
 					Error::<T, I>::EarlyStartTooEarly
 				);
 			}
+
+			Ok(())
+		}
+
+		fn update_season_scheduled_actions(
+			season_id: &SeasonIdOf<T, I>,
+			schedule: &SeasonScheduleOf<T>,
+		) -> DispatchResult {
+			SeasonSchedules::<T, I>::mutate(season_id, |maybe_prev_schedule| {
+				if let Some(ref prev_schedule) = maybe_prev_schedule {
+					SeasonScheduledActions::<T, I>::remove(prev_schedule.early_start);
+					SeasonScheduledActions::<T, I>::remove(prev_schedule.start);
+					SeasonScheduledActions::<T, I>::remove(prev_schedule.end);
+				}
+
+				SeasonScheduledActions::<T, I>::insert(
+					schedule.early_start,
+					SeasonScheduledAction::EarlyStart(season_id.clone()),
+				);
+				SeasonScheduledActions::<T, I>::insert(
+					schedule.start,
+					SeasonScheduledAction::Start(season_id.clone()),
+				);
+				SeasonScheduledActions::<T, I>::insert(
+					schedule.end,
+					SeasonScheduledAction::End(season_id.clone()),
+				);
+
+				*maybe_prev_schedule = Some(schedule.clone())
+			});
 
 			Ok(())
 		}
