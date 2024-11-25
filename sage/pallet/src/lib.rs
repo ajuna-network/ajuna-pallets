@@ -390,6 +390,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Updates an unlock rule for the given season.
+		///
+		/// It doesn't affect ulready unlocked features.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::update_unlock_rule())]
 		pub fn update_unlock_rule(
@@ -454,6 +457,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Updates the filter that assets need to pass for certain actions.
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::update_asset_filter())]
 		pub fn update_asset_filter(
@@ -478,6 +482,10 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Transfers the asset with `asset_id` from the `origin` to `to`.
+		///
+		/// It will fail if the asset transfer is disabled, the asset doesn't pass the filter
+		/// of if the asset is on the market.
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::transfer_asset())]
 		pub fn transfer_asset(
@@ -552,7 +560,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Remove the price of an asset set on sale previously.
+		/// Remove the price of an asset, and thereby remove it from the market.
 		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::remove_asset_price())]
 		pub fn remove_asset_price(
@@ -569,7 +577,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Attempt to buy the selected asset
+		/// Attempt to buy the selected asset.
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::buy_asset())]
 		pub fn buy_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
@@ -637,7 +645,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Attempts to unlock the selected feature for the given player
+		/// Attempts to unlock the selected feature for the `target`.
 		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::unlock_feature())]
 		pub fn unlock_feature(
