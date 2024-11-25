@@ -91,18 +91,30 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
+		/// This pallet's id.
+		///
+		/// It will be used as a lock identifier when locking assets.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// The `SageGameTransition` that this pallet hosts, and whose state transition
+		/// are executed as part of the `state_transition` extrinsic.
 		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
 
+		/// Custom transition config.
+		///
+		/// Todo: Shouldn't this just be part of the `SageGameTranstion` trait?
 		type SageTransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
+		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
 			TransitionIdOf<Self, I>,
 			AssetId = AssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 		>;
 
+		/// Handles the extra fees that incur during executing the state transition, or other
+		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
 			FeeCurrency = BalanceOf<Self, I>,
@@ -113,9 +125,13 @@ pub mod pallet {
 			TreasuryKey = SeasonIdOf<Self, I>,
 		>;
 
+		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
+		/// `SeasonTransferFilters` storage.
 		type FilterHandler: TradeManager<Asset = AssetOf<Self, I>>
 			+ TransferManager<Asset = AssetOf<Self, I>>;
 
+		/// Currency implementation used by this pallet. This will most likely be the
+		/// balances-pallet.
 		type Currency: Currency<AccountIdOf<Self>>;
 
 		/// The overarching event type.
