@@ -126,14 +126,20 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
+	/// Organizer of the game. Essentially the administrator with certain privileges.
 	#[pallet::storage]
 	pub type Organizer<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, AccountIdOf<T>, OptionQuery>;
 
+	/// Tracks global configuration values that can be changed by the organizer only.
 	#[pallet::storage]
 	pub type GeneralConfigStore<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, GeneralConfigOf<T, I>, ValueQuery>;
 
+	/// Certain features need to be unlocked fulfilling certain criteria.
+	///
+	/// This storage keeps track of the `UnlockRule` that needs to be satisfied to unlock the
+	/// feature. If there is no unlock rule, the feature can't be unlocked in that season.
 	#[pallet::storage]
 	pub type SeasonUnlocks<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -145,6 +151,8 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// Tracks player configs per season. This can be mutated by unlocking certain privileges, e.g.
+	/// upgrading the storage inventory size.
 	#[pallet::storage]
 	pub type PlayerSeasonConfigs<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -156,6 +164,7 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Tracks player stats per season.
 	#[pallet::storage]
 	pub type PlayerSeasonStats<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -167,10 +176,17 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Maps the `AssetId` to its owner and the asset.
 	#[pallet::storage]
 	pub type Assets<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, AssetIdOf<T, I>, (AccountIdOf<T>, AssetOf<T, I>)>;
 
+	/// Keeps track of which asset and account owns and in which season the asset was created.
+	///
+	/// We mostly do ownership checks on this in the runtime. Whereas the frontends want to display
+	/// a list. This has to be queried with a `state.getKeysPaged` followed by a `state.getStorage`
+	/// call. Maybe it makes sense to implement a runtime api call for this to reduce networking
+	/// bandwidth.
 	#[pallet::storage]
 	pub type AssetOwners<T: Config<I>, I: 'static = ()> = StorageNMap<
 		_,
@@ -183,18 +199,26 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Keeps track of how many assets an account owns.
 	#[pallet::storage]
 	pub type AssetsOwnedCount<T: Config<I>, I: 'static = ()> =
 		StorageDoubleMap<_, Identity, AccountIdOf<T>, Identity, SeasonIdOf<T, I>, u8, ValueQuery>;
 
+	/// A filter that assets need to pass in order to be traded.
+	///
+	/// The filter can be changed by the organizer.
 	#[pallet::storage]
 	pub type SeasonTradeFilters<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, TradeFilterOf<T, I>, ValueQuery>;
 
+	/// A filter that assets need to pass in order to be transfer.
+	///
+	/// The filter can be changed by the organizer.
 	#[pallet::storage]
 	pub type SeasonTransferFilters<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, TransferFilterOf<T, I>, ValueQuery>;
 
+	/// Tracks assets that have been put on the market with a certain price.
 	#[pallet::storage]
 	pub type AssetTradePrices<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -206,6 +230,10 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// Tracks assets that have been locked either through the `lock_asset` extrinsic, or by
+	/// other pallets via this pallet's `AssetManager` implementation.
+	///
+	/// A locked asset can't be transferred, traded, consumed or mutated.
 	#[pallet::storage]
 	pub type LockedAssets<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, AssetIdOf<T, I>, Lock<AccountIdOf<T>>>;
