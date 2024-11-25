@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Pallet-SAGE
+//!
+//! This pallet is the core entry point of the sage architecture that wires things together.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod weights;
