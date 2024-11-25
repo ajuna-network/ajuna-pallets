@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Pallet-SAGE
+//!
+//! This pallet is the core entry point of the sage architecture that wires things together.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod weights;
@@ -87,18 +91,30 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
+		/// This pallet's id.
+		///
+		/// It will be used as a lock identifier when locking assets.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// The `SageGameTransition` that this pallet hosts, and whose state transition
+		/// are executed as part of the `state_transition` extrinsic.
 		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
 
+		/// Custom transition config.
+		///
+		/// Todo: Shouldn't this just be part of the `SageGameTranstion` trait?
 		type SageTransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
+		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
 			TransitionIdOf<Self, I>,
 			AssetId = AssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 		>;
 
+		/// Handles the extra fees that incur during executing the state transition, or other
+		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
 			FeeCurrency = BalanceOf<Self, I>,
@@ -109,9 +125,13 @@ pub mod pallet {
 			TreasuryKey = SeasonIdOf<Self, I>,
 		>;
 
+		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
+		/// `SeasonTransferFilters` storage.
 		type FilterHandler: TradeManager<Asset = AssetOf<Self, I>>
 			+ TransferManager<Asset = AssetOf<Self, I>>;
 
+		/// Currency implementation used by this pallet. This will most likely be the
+		/// balances-pallet.
 		type Currency: Currency<AccountIdOf<Self>>;
 
 		/// The overarching event type.
@@ -122,14 +142,20 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
+	/// Organizer of the game. Essentially the administrator with certain privileges.
 	#[pallet::storage]
 	pub type Organizer<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, AccountIdOf<T>, OptionQuery>;
 
+	/// Tracks global configuration values that can be changed by the organizer only.
 	#[pallet::storage]
 	pub type GeneralConfigStore<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, GeneralConfigOf<T, I>, ValueQuery>;
 
+	/// Some features need to be unlocked fulfilling certain criteria.
+	///
+	/// This storage keeps track of the `UnlockRule` that needs to be satisfied to unlock the
+	/// feature. If there is no unlock rule, the feature can't be unlocked in that season.
 	#[pallet::storage]
 	pub type SeasonUnlocks<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -141,6 +167,8 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// Tracks player configs per season. This can be mutated by unlocking certain privileges, e.g.
+	/// upgrading the storage inventory size.
 	#[pallet::storage]
 	pub type PlayerSeasonConfigs<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -152,6 +180,7 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Tracks player stats per season.
 	#[pallet::storage]
 	pub type PlayerSeasonStats<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -163,10 +192,17 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Maps the `AssetId` to its owner and the asset.
 	#[pallet::storage]
 	pub type Assets<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, AssetIdOf<T, I>, (AccountIdOf<T>, AssetOf<T, I>)>;
 
+	/// Keeps track of the assets owned by an account and in which season the asset was created.
+	///
+	/// We mostly do ownership checks on this in the runtime. Whereas the frontends want to display
+	/// a list. This has to be queried with a `state.getKeysPaged` followed by a `state.getStorage`
+	/// call. Maybe it makes sense to implement a runtime api call for this to reduce networking
+	/// bandwidth.
 	#[pallet::storage]
 	pub type AssetOwners<T: Config<I>, I: 'static = ()> = StorageNMap<
 		_,
@@ -179,18 +215,26 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Keeps track of how many assets an account owns.
 	#[pallet::storage]
 	pub type AssetsOwnedCount<T: Config<I>, I: 'static = ()> =
 		StorageDoubleMap<_, Identity, AccountIdOf<T>, Identity, SeasonIdOf<T, I>, u8, ValueQuery>;
 
+	/// A filter that assets need to pass in order to be traded.
+	///
+	/// The filter can be changed by the organizer.
 	#[pallet::storage]
 	pub type SeasonTradeFilters<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, TradeFilterOf<T, I>, ValueQuery>;
 
+	/// A filter that assets need to pass in order to be transfer.
+	///
+	/// The filter can be changed by the organizer.
 	#[pallet::storage]
 	pub type SeasonTransferFilters<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, SeasonIdOf<T, I>, TransferFilterOf<T, I>, ValueQuery>;
 
+	/// Tracks assets that have been put on the market with a certain price.
 	#[pallet::storage]
 	pub type AssetTradePrices<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
@@ -202,6 +246,10 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// Tracks assets that have been locked either through the `lock_asset` extrinsic, or by
+	/// other pallets via this pallet's `AssetManager` implementation.
+	///
+	/// A locked asset can't be transferred, traded, consumed or mutated.
 	#[pallet::storage]
 	pub type LockedAssets<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, AssetIdOf<T, I>, Lock<AccountIdOf<T>>>;
@@ -342,6 +390,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Updates an unlock rule for the given season.
+		///
+		/// It doesn't affect ulready unlocked features.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::update_unlock_rule())]
 		pub fn update_unlock_rule(
@@ -406,6 +457,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Updates the filter that assets need to pass for certain actions.
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::update_asset_filter())]
 		pub fn update_asset_filter(
@@ -430,6 +482,10 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Transfers the asset with `asset_id` from the `origin` to `to`.
+		///
+		/// It will fail if the asset transfer is disabled, the asset doesn't pass the filter
+		/// or if the asset is on the market.
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::transfer_asset())]
 		pub fn transfer_asset(
@@ -504,7 +560,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Remove the price of an asset set on sale previously.
+		/// Remove the price of an asset, and thereby remove it from the market.
 		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::remove_asset_price())]
 		pub fn remove_asset_price(
@@ -521,7 +577,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Attempt to buy the selected asset
+		/// Attempt to buy the selected asset.
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::buy_asset())]
 		pub fn buy_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
@@ -589,7 +645,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Attempts to unlock the selected feature for the given player
+		/// Attempts to unlock the selected feature for the `target`.
 		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::unlock_feature())]
 		pub fn unlock_feature(
