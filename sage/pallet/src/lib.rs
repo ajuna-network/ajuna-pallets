@@ -152,7 +152,7 @@ pub mod pallet {
 	pub type GeneralConfigStore<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, GeneralConfigOf<T, I>, ValueQuery>;
 
-	/// Certain features need to be unlocked fulfilling certain criteria.
+	/// Some features need to be unlocked fulfilling certain criteria.
 	///
 	/// This storage keeps track of the `UnlockRule` that needs to be satisfied to unlock the
 	/// feature. If there is no unlock rule, the feature can't be unlocked in that season.
@@ -197,7 +197,7 @@ pub mod pallet {
 	pub type Assets<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, AssetIdOf<T, I>, (AccountIdOf<T>, AssetOf<T, I>)>;
 
-	/// Keeps track of which asset and account owns and in which season the asset was created.
+	/// Keeps track of the assets owned by an account and in which season the asset was created.
 	///
 	/// We mostly do ownership checks on this in the runtime. Whereas the frontends want to display
 	/// a list. This has to be queried with a `state.getKeysPaged` followed by a `state.getStorage`
@@ -485,7 +485,7 @@ pub mod pallet {
 		/// Transfers the asset with `asset_id` from the `origin` to `to`.
 		///
 		/// It will fail if the asset transfer is disabled, the asset doesn't pass the filter
-		/// of if the asset is on the market.
+		/// or if the asset is on the market.
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::transfer_asset())]
 		pub fn transfer_asset(
