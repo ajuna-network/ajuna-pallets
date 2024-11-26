@@ -33,6 +33,7 @@ frame-benchmarking                         = { version = "37.0.0", default-featu
 frame-support                              = { version = "37.0.1", default-features = false }
 frame-system                               = { version = "37.1.0", default-features = false }
 pallet-assets                              = { version = "39.0.0", default-features = false }
+pallet-asset-conversion                    = { version = "19.0.0", default-features = false }
 pallet-balances                            = { version = "38.0.0", default-features = false }
 pallet-insecure-randomness-collective-flip = { version = "25.0.0", default-features = false }
 pallet-nfts                                = { version = "31.0.0", default-features = false }

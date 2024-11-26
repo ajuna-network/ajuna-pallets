@@ -12,14 +12,17 @@ ajuna-primitives = { workspace = true }
 # Substrate - SCALE codec
 
 # Substrate frame
+pallet-asset-conversion = { workspace = true }
 frame-support = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
     "ajuna-primitives/std",
+    "pallet-asset-conversion/std",
     "frame-support/std",
 ]
 runtime-benchmarks = [
+    "pallet-asset-conversion/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
 ]
