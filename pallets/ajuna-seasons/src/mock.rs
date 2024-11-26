@@ -19,7 +19,6 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-use frame_system::pallet_prelude::BlockNumberFor;
 #[cfg(test)]
 use sp_runtime::BuildStorage;
 
@@ -36,7 +35,6 @@ pub type MockAccountPublic = <MockSignature as Verify>::Signer;
 pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
-pub type MockBlockNumber = BlockNumberFor<Test>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(

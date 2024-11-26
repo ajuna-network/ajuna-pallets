@@ -533,6 +533,18 @@ mod update_season {
 	fn update_season_rejects_scheduling_season_without_config_set() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
+
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			assert_noop!(
+				SeasonsAlpha::update_season(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID_1,
+					None,
+					None,
+					Some(schedule)
+				),
+				Error::<Test, Instance1>::CannotScheduleSeasonWithoutConfig
+			);
 		});
 	}
 
@@ -540,13 +552,100 @@ mod update_season {
 	fn update_season_rejects_non_organizer() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
+
+			assert_noop!(
+				SeasonsAlpha::update_season(
+					RuntimeOrigin::signed(BOB),
+					SEASON_ID_1,
+					None,
+					None,
+					None,
+				),
+				DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
+			);
 		});
 	}
 
 	#[test]
-	fn update_season_rejects_changing_active_or_already_finished_season() {
+	fn update_season_ignores_changing_active_or_already_finished_season() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
+
+			let config = SeasonConfigOf::<Test, Instance1> {
+				fee: SeasonFeeConfig {
+					transfer_asset: 10_u64,
+					buy_asset_min: 5_u64,
+					buy_percent: 10,
+					upgrade_asset_inventory: 5_u64,
+					unlock_trade_asset: 9_u64,
+					unlock_transfer_asset: 13_u64,
+					state_transition_base_fee: 20_u64,
+				},
+				data: MockSeasonData { data: 24 },
+			};
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+
+			// We set up the first season but with no schedule
+			assert_ok!(SeasonsAlpha::update_season(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				Some(config.clone()),
+				None,
+				Some(schedule.clone())
+			));
+
+			run_to_block(20);
+
+			System::assert_last_event(RuntimeEvent::SeasonsAlpha(Event::SeasonEarlyStarted {
+				season_id: SEASON_ID_1,
+			}));
+
+			let new_config = SeasonConfigOf::<Test, Instance1> {
+				fee: SeasonFeeConfig {
+					transfer_asset: 12_u64,
+					buy_asset_min: 3_u64,
+					buy_percent: 20,
+					upgrade_asset_inventory: 7_u64,
+					unlock_trade_asset: 9_u64,
+					unlock_transfer_asset: 13_u64,
+					state_transition_base_fee: 23_u64,
+				},
+				data: MockSeasonData { data: 12 },
+			};
+			let new_schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+
+			assert_ok!(SeasonsAlpha::update_season(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				Some(new_config.clone()),
+				None,
+				Some(new_schedule.clone()),
+			));
+
+			// Nothing has changed
+			assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), Some(config.clone()));
+			assert_eq!(
+				SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1),
+				Some(schedule.clone())
+			);
+
+			run_to_block(30);
+
+			System::assert_last_event(RuntimeEvent::SeasonsAlpha(Event::SeasonEnded {
+				season_id: SEASON_ID_1,
+			}));
+
+			assert_ok!(SeasonsAlpha::update_season(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				Some(new_config),
+				None,
+				Some(new_schedule),
+			));
+
+			// Nothing has changed
+			assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), Some(config));
+			assert_eq!(SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1), Some(schedule));
 		});
 	}
 
@@ -554,6 +653,23 @@ mod update_season {
 	fn update_season_works_with_long_season_chains() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
+
+			for season_id in 0..100_u32 {
+				assert_ok!(SeasonsAlpha::update_season(
+					RuntimeOrigin::signed(ALICE),
+					season_id,
+					None,
+					None,
+					None,
+				));
+			}
+
+			for season_id in 0..100_u32 {
+				let expected_prev_id = if season_id == 0 { None } else { Some(season_id - 1) };
+				let expected_next_id = if season_id == 99 { None } else { Some(season_id + 1) };
+				assert_eq!(PrevSeasonChain::<Test, Instance1>::get(season_id), expected_prev_id);
+				assert_eq!(NextSeasonChain::<Test, Instance1>::get(season_id), expected_next_id);
+			}
 		});
 	}
 }
@@ -565,6 +681,57 @@ mod interrupt_active_season {
 	fn interrupt_active_season_works() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
+
+			let config = SeasonConfigOf::<Test, Instance1> {
+				fee: SeasonFeeConfig {
+					transfer_asset: 10_u64,
+					buy_asset_min: 5_u64,
+					buy_percent: 10,
+					upgrade_asset_inventory: 5_u64,
+					unlock_trade_asset: 9_u64,
+					unlock_transfer_asset: 13_u64,
+					state_transition_base_fee: 20_u64,
+				},
+				data: MockSeasonData { data: 24 },
+			};
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+
+			assert_ok!(SeasonsAlpha::update_season(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				Some(config.clone()),
+				None,
+				Some(schedule.clone())
+			));
+
+			run_to_block(20);
+
+			System::assert_last_event(RuntimeEvent::SeasonsAlpha(Event::SeasonEarlyStarted {
+				season_id: SEASON_ID_1,
+			}));
+
+			let expected_status = SeasonStatus {
+				season_id: SEASON_ID_1,
+				early: true,
+				active: true,
+				early_ended: false,
+			};
+			assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
+			assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 2);
+
+			assert_ok!(SeasonsAlpha::interrupt_active_season(RuntimeOrigin::signed(ALICE)));
+
+			System::assert_last_event(RuntimeEvent::SeasonsAlpha(Event::SeasonEarlyEnded {
+				season_id: SEASON_ID_1,
+			}));
+			let expected_status = SeasonStatus {
+				season_id: SEASON_ID_1,
+				early: true,
+				active: false,
+				early_ended: true,
+			};
+			assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
+			assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 0);
 		});
 	}
 
@@ -572,6 +739,39 @@ mod interrupt_active_season {
 	fn interrupt_active_season_rejects_non_organizer_calls() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
+
+			let config = SeasonConfigOf::<Test, Instance1> {
+				fee: SeasonFeeConfig {
+					transfer_asset: 10_u64,
+					buy_asset_min: 5_u64,
+					buy_percent: 10,
+					upgrade_asset_inventory: 5_u64,
+					unlock_trade_asset: 9_u64,
+					unlock_transfer_asset: 13_u64,
+					state_transition_base_fee: 20_u64,
+				},
+				data: MockSeasonData { data: 24 },
+			};
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+
+			assert_ok!(SeasonsAlpha::update_season(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				Some(config.clone()),
+				None,
+				Some(schedule.clone())
+			));
+
+			run_to_block(20);
+
+			System::assert_last_event(RuntimeEvent::SeasonsAlpha(Event::SeasonEarlyStarted {
+				season_id: SEASON_ID_1,
+			}));
+
+			assert_noop!(
+				SeasonsAlpha::interrupt_active_season(RuntimeOrigin::signed(BOB)),
+				DispatchError::Other(ACCOUNT_IS_NOT_ORGANIZER)
+			);
 		});
 	}
 }

@@ -350,6 +350,8 @@ pub mod pallet {
 
 					let season_schedule = SeasonSchedules::<T, I>::get(&current_season.season_id)
 						.ok_or(Error::<T, I>::InvalidSeason)?;
+					SeasonScheduledActions::<T, I>::remove(season_schedule.early_start);
+					SeasonScheduledActions::<T, I>::remove(season_schedule.start);
 					SeasonScheduledActions::<T, I>::remove(season_schedule.end);
 
 					// TODO: Maybe we could try to early start the next season if
@@ -448,24 +450,21 @@ pub mod pallet {
 					SeasonScheduledActions::<T, I>::remove(prev_schedule.end);
 				}
 
-				SeasonScheduledActions::<T, I>::try_mutate(
-					&schedule.early_start,
-					|maybe_action| {
-						ensure!(maybe_action.is_none(), Error::<T, I>::ScheduleSlotAlreadyInUse);
+				SeasonScheduledActions::<T, I>::try_mutate(schedule.early_start, |maybe_action| {
+					ensure!(maybe_action.is_none(), Error::<T, I>::ScheduleSlotAlreadyInUse);
 
-						*maybe_action = Some(SeasonScheduledAction::EarlyStart(season_id.clone()));
+					*maybe_action = Some(SeasonScheduledAction::EarlyStart(season_id.clone()));
 
-						Ok::<(), DispatchError>(())
-					},
-				)?;
-				SeasonScheduledActions::<T, I>::try_mutate(&schedule.start, |maybe_action| {
+					Ok::<(), DispatchError>(())
+				})?;
+				SeasonScheduledActions::<T, I>::try_mutate(schedule.start, |maybe_action| {
 					ensure!(maybe_action.is_none(), Error::<T, I>::ScheduleSlotAlreadyInUse);
 
 					*maybe_action = Some(SeasonScheduledAction::Start(season_id.clone()));
 
 					Ok::<(), DispatchError>(())
 				})?;
-				SeasonScheduledActions::<T, I>::try_mutate(&schedule.end, |maybe_action| {
+				SeasonScheduledActions::<T, I>::try_mutate(schedule.end, |maybe_action| {
 					ensure!(maybe_action.is_none(), Error::<T, I>::ScheduleSlotAlreadyInUse);
 
 					*maybe_action = Some(SeasonScheduledAction::End(season_id.clone()));
