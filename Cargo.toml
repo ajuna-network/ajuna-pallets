@@ -13,6 +13,7 @@ members = [
     "pallets/ajuna-awesome-avatars/benchmarking",
     "pallets/ajuna-nft-staking/benchmarking",
     "primitives",
+    "primitives/fee-handler",
     "sage/example-transition",
     "sage/pallet",
     "sage/api",

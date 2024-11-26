@@ -1,0 +1,25 @@
+[package]
+name = "ajuna-fee-handler"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+ajuna-primitives = { workspace = true }
+
+# Substrate - SCALE codec
+
+# Substrate frame
+frame-support = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "ajuna-primitives/std",
+    "frame-support/std",
+]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+]

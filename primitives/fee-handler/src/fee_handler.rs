@@ -1,4 +1,4 @@
-use crate::treasury_manager::TreasuryManager;
+use ajuna_primitives::treasury_manager::TreasuryManager;
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,

@@ -60,6 +60,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ajuna-fee-handler"
+version = "0.15.0"
+dependencies = [
+ "ajuna-primitives",
+ "frame-support",
+]
+
+[[package]]
 name = "ajuna-primitives"
 version = "0.15.0"
 dependencies = [
