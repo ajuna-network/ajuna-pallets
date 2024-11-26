@@ -2,9 +2,9 @@
 //!
 //! These should be expanded to really showcase the power of the SageApi design.
 
-use frame_support::sp_runtime::testing::H256;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_core::H256;
 
 pub type AssetId = H256;
 

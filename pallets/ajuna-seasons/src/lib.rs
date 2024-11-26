@@ -22,7 +22,7 @@ pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-#[cfg(test)]
+#[cfg(any(test, feature = "runtime-benchmarks"))]
 mod mock;
 #[cfg(test)]
 mod test_impls;
@@ -34,7 +34,7 @@ mod types;
 
 use ajuna_primitives::{
 	account_manager::AccountManager,
-	season_manager::{SeasonConfig, SeasonManager},
+	season_manager::{SeasonConfig, SeasonManager, Validate},
 };
 
 use frame_support::{pallet_prelude::*, traits::Currency};
@@ -48,7 +48,6 @@ const LOG_TARGET: &str = "runtime::ajuna-seasons";
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use ajuna_primitives::season_manager::Validate;
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
@@ -66,6 +65,24 @@ pub mod pallet {
 
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<SeasonId, SeasonData> {
+		fn create_season_id(id: u32) -> SeasonId;
+
+		fn create_default_season_data() -> SeasonData;
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<SeasonId: From<u32>, SeasonData: Default> BenchmarkHelper<SeasonId, SeasonData> for () {
+		fn create_season_id(id: u32) -> SeasonId {
+			id.into()
+		}
+
+		fn create_default_season_data() -> SeasonData {
+			SeasonData::default()
+		}
+	}
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// The overarching event type.
@@ -82,6 +99,9 @@ pub mod pallet {
 		type Currency: Currency<AccountIdOf<Self>>;
 
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type BenchmarkHelper: BenchmarkHelper<SeasonIdOf<Self, I>, SeasonDataOf<Self, I>>;
 	}
 
 	#[pallet::storage]

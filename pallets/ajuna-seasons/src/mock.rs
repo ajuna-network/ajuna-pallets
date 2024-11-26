@@ -42,7 +42,8 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		SeasonsAlpha: pallet_ajuna_seasons::<Instance1> = 2,
-		SeasonsBeta: pallet_ajuna_seasons::<Instance2> = 3,
+		#[cfg(feature = "runtime-benchmarks")]
+		SeasonsBench: pallet_ajuna_seasons = 3,
 	}
 );
 
@@ -162,6 +163,20 @@ impl Validate for MockSeasonData {
 	}
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct SeasonsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<MockSeasonId, MockSeasonData> for SeasonsBenchmarkHelper {
+	fn create_season_id(id: u32) -> MockSeasonId {
+		MockSeasonId::from(id)
+	}
+
+	fn create_default_season_data() -> MockSeasonData {
+		MockSeasonData { data: 24 }
+	}
+}
+
 type SeasonsInstance1 = pallet_ajuna_seasons::Instance1;
 impl pallet_ajuna_seasons::Config<SeasonsInstance1> for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -171,17 +186,8 @@ impl pallet_ajuna_seasons::Config<SeasonsInstance1> for Test {
 	type AccountHandler = MockAccountManager;
 	type Currency = Balances;
 	type WeightInfo = ();
-}
-
-type SeasonsInstance2 = pallet_ajuna_seasons::Instance2;
-impl pallet_ajuna_seasons::Config<SeasonsInstance2> for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type SeasonId = MockSeasonId;
-	type SeasonData = MockSeasonData;
-	type AssetId = MockAssetId;
-	type AccountHandler = MockAccountManager;
-	type Currency = Balances;
-	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = SeasonsBenchmarkHelper;
 }
 
 #[cfg(test)]
@@ -217,11 +223,13 @@ pub fn run_to_block(n: u64) {
 		if System::block_number() > 1 {
 			System::on_finalize(System::block_number());
 			SeasonsAlpha::on_finalize(System::block_number());
-			SeasonsBeta::on_finalize(System::block_number());
+			#[cfg(feature = "runtime-benchmarks")]
+			SeasonsBench::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		SeasonsAlpha::on_initialize(System::block_number());
-		SeasonsBeta::on_initialize(System::block_number());
+		#[cfg(feature = "runtime-benchmarks")]
+		SeasonsBench::on_initialize(System::block_number());
 	}
 }

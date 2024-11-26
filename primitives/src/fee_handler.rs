@@ -6,6 +6,7 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement::KeepAlive},
 	Parameter,
 };
+use sp_std::vec::Vec;
 
 pub trait FeeProvider {
 	type AccountId;
