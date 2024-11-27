@@ -96,7 +96,8 @@ mod ensure_for_trade {
 		ExtBuilder::default().build().execute_with(|| {
 			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
 			let asset_id = asset_ids[0];
-			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id();
+			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
+				.expect("Should get season_id");
 
 			AssetTradePrices::<Test, Instance1>::insert(season_id, asset_id, 100);
 			assert_ok!(Sage::ensure_for_trade(&asset_id));

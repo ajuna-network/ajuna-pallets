@@ -6,6 +6,7 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement::KeepAlive},
 	Parameter,
 };
+use sp_std::vec::Vec;
 
 pub trait FeeProvider {
 	type AccountId;
@@ -25,6 +26,7 @@ pub trait FeeHandler {
 	type FeeCurrency;
 	type AffiliateFeeIdentifier;
 	type TournamentFeeIdentifier;
+	type TransitionFeeIdentifier;
 	type TreasuryKey;
 
 	fn try_propagate_chain_fee(
@@ -39,6 +41,12 @@ pub trait FeeHandler {
 		identifier: &Self::TournamentFeeIdentifier,
 	) -> Result<Self::FeeCurrency, DispatchError>;
 
+	fn get_transition_fee_for(
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
+		identifier: &Self::TransitionFeeIdentifier,
+	) -> Result<Self::FeeCurrency, DispatchError>;
+
 	fn deposit_fee_into_treasury(
 		depositor: &Self::AccountId,
 		key: &Self::TreasuryKey,
@@ -46,12 +54,13 @@ pub trait FeeHandler {
 	) -> Result<(), DispatchError>;
 }
 
-pub struct GameFeeHandler<AccountId, Currency, Affiliate, Tournament, Treasury> {
-	_phantom: PhantomData<(AccountId, Currency, Affiliate, Tournament, Treasury)>,
+pub struct GameFeeHandler<AccountId, Currency, Affiliate, Tournament, Transition, Treasury> {
+	_phantom: PhantomData<(AccountId, Currency, Affiliate, Tournament, Transition, Treasury)>,
 }
 
-impl<AccountId, CurrencyHandler, Affiliate, Aid, Tournament, Tid, Treasury> FeeHandler
-	for GameFeeHandler<AccountId, CurrencyHandler, Affiliate, Tournament, Treasury>
+impl<AccountId, CurrencyHandler, Affiliate, Aid, Tournament, Tid, Transition, TRid, Treasury>
+	FeeHandler
+	for GameFeeHandler<AccountId, CurrencyHandler, Affiliate, Tournament, Transition, Treasury>
 where
 	AccountId: Parameter,
 	CurrencyHandler: Currency<AccountId>,
@@ -69,12 +78,20 @@ where
 		FeeOutput = (CurrencyHandler::Balance, AccountId),
 	>,
 	Tid: Parameter,
+	Transition: FeeProvider<
+		AccountId = AccountId,
+		FeeIdentifier = TRid,
+		FeeCurrency = CurrencyHandler::Balance,
+		FeeOutput = CurrencyHandler::Balance,
+	>,
+	TRid: Parameter,
 	Treasury: TreasuryManager<AccountId = AccountId, Currency = CurrencyHandler::Balance>,
 {
 	type AccountId = AccountId;
 	type FeeCurrency = CurrencyHandler::Balance;
 	type AffiliateFeeIdentifier = Aid;
 	type TournamentFeeIdentifier = Tid;
+	type TransitionFeeIdentifier = TRid;
 	type TreasuryKey = Treasury::TreasuryPotKey;
 
 	fn try_propagate_chain_fee(
@@ -113,6 +130,14 @@ where
 		} else {
 			Ok(base_fee)
 		}
+	}
+
+	fn get_transition_fee_for(
+		base_fee: Self::FeeCurrency,
+		account: &Self::AccountId,
+		transition_id: &Self::TransitionFeeIdentifier,
+	) -> Result<Self::FeeCurrency, DispatchError> {
+		Ok(Transition::get_fee_from(base_fee, account, transition_id))
 	}
 
 	fn deposit_fee_into_treasury(

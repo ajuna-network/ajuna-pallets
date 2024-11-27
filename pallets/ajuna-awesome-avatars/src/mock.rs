@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
-use ajuna_primitives::fee_handler::GameFeeHandler;
+use ajuna_primitives::fee_handler::{FeeProvider, GameFeeHandler};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
@@ -113,6 +113,23 @@ parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
+pub struct MockTransitionFeeProvider;
+
+impl FeeProvider for MockTransitionFeeProvider {
+	type AccountId = MockAccountId;
+	type FeeIdentifier = SeasonId;
+	type FeeCurrency = MockBalance;
+	type FeeOutput = MockBalance;
+
+	fn get_fee_from(
+		base_fee: Self::FeeCurrency,
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Self::FeeOutput {
+		base_fee
+	}
+}
+
 impl pallet_ajuna_awesome_avatars::Config for Test {
 	type PalletId = AwesomeAvatarsPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -121,7 +138,14 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
-	type FeeHandler = GameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
+	type FeeHandler = GameFeeHandler<
+		MockAccountId,
+		Balances,
+		Affiliates,
+		Tournament,
+		MockTransitionFeeProvider,
+		AAvatars,
+	>;
 	type WeightInfo = ();
 }
 

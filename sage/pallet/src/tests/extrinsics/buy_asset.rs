@@ -131,7 +131,8 @@ fn buy_should_work() {
 			// Since the current season is SEASON_ID_0 the stat changes are applied to that season
 			// not SEASON_ID_1
 			let current_season_id =
-				<Test as Config<Instance1>>::SeasonHandler::get_current_season_id();
+				<Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
+					.expect("Should get season id");
 			assert_eq!(current_season_id, SEASON_ID_0);
 			// changes in SEASON_ID_0
 			assert_eq!(
