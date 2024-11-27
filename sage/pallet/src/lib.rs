@@ -789,21 +789,29 @@ pub mod pallet {
 			let mut minted_amount = 0 as Stat;
 			let mut mutated_amount = 0 as Stat;
 
+			let mut player_asset_count = AssetsOwnedCount::<T, I>::get(player, season_id);
+			let player_inventory_slots = PlayerSeasonConfigs::<T, I>::get(player, season_id)
+				.inventory_tier
+				.get_asset_slots();
+
 			for output in transition_results {
 				match output {
 					TransitionOutput::Minted(_asset) => {
-						minted_amount = minted_amount.saturating_add(1);
-						// TODO: Need a way to create new asset_id generically
-						// TODO: What should we do if the transition puts you above the ownership
-						// TODO: limit? let asset_id = 1;
+						minted_amount.saturating_inc();
+						player_asset_count.saturating_inc();
+						ensure!(
+							player_asset_count <= player_inventory_slots,
+							Error::<T, I>::MaxOwnershipReached
+						);
 
+						// TODO: Need a way to create new asset_id generically
 						// T::SeasonHandler::register_asset_in(asset_id, season_id)?;
-						// Assets update
-						// AssetOwners update
+						// Assets::<T, I>::insert(asset_id, asset);
+						// AssetOwners::<T, I>::insert((player, season_id, asset_id);
 						// AssetsOwnedCount update
 					},
 					TransitionOutput::Mutated(asset_id, asset) => {
-						mutated_amount = mutated_amount.saturating_add(1);
+						mutated_amount.saturating_inc();
 						Assets::<T, I>::mutate(asset_id, |maybe_asset| {
 							if let Some((_, old_asset)) = maybe_asset {
 								*old_asset = asset;
@@ -824,6 +832,12 @@ pub mod pallet {
 						}
 					},
 				}
+			}
+
+			if minted_amount > 0 {
+				AssetsOwnedCount::<T, I>::mutate(player, season_id, |asset_count| {
+					*asset_count = asset_count.saturating_add(minted_amount as u8);
+				});
 			}
 
 			PlayerSeasonStats::<T, I>::mutate(player, season_id, |stats| {

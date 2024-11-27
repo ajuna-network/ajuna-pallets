@@ -20,10 +20,9 @@
 use crate::{
 	mock::{
 		run_to_block, Balances, MockAccountManager, MockAssetId, MockSeasonData, MockSeasonId,
-		RuntimeEvent, RuntimeOrigin, SeasonsBenchmarkHelper, System, Test,
+		RuntimeEvent, SeasonsBenchmarkHelper, System, Test,
 	},
-	pallet::SeasonConfigOf,
-	BenchmarkHelper, Config, Event, Pallet as Seasons, SeasonMetadata, SeasonSchedule, *,
+	Pallet as Seasons, *,
 };
 use ajuna_primitives::season_manager::SeasonFeeConfig;
 
@@ -139,14 +138,13 @@ benchmarks_instance_pallet! {
 	);
 }
 
+#[allow(dead_code)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
 	ext.execute_with(|| {
 		let acc_1 = account::<Test, ()>(ACC_1);
-		Balances::force_set_balance(RuntimeOrigin::root(), acc_1.clone(), 1_000)
-			.expect("Should set balance");
 		MockAccountManager::set_organizer(acc_1);
 	});
 	ext
