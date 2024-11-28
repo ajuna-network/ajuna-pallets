@@ -89,6 +89,7 @@ impl Level {
 pub enum ExampleTransitionId {
 	UpgradeAsset,
 	ConsumeAsset,
+	BenchTransition,
 }
 
 /// One specific transition that a game wants to execute.

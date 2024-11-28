@@ -26,7 +26,9 @@ pub mod config;
 mod pallet_impls;
 mod trait_impls;
 
-#[cfg(test)]
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+#[cfg(any(test, feature = "runtime-benchmarks"))]
 pub mod mock;
 #[cfg(test)]
 mod tests;
@@ -64,7 +66,10 @@ pub const MAX_ASSETS_IN_TRANSITION: usize = 10;
 pub mod pallet {
 	use super::*;
 
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
 	pub type AssetIdOf<T, I> =
@@ -92,6 +97,92 @@ pub mod pallet {
 		<<T as Config<I>>::FilterHandler as TransferManager>::TransferFilter;
 	pub(crate) type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
 	pub(crate) type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<
+		AssetId,
+		Asset,
+		TradeFilter,
+		TransferFilter,
+		SeasonId,
+		TransitionId,
+		TransitionConfig,
+		Extra,
+	>
+	{
+		fn create_asset(seed: u32) -> (AssetId, Asset);
+
+		fn create_asset_trade_filter(id: u32) -> TradeFilter;
+
+		fn create_asset_transfer_filter(id: u32) -> TransferFilter;
+
+		fn create_transition_id(id: u32) -> TransitionId;
+
+		fn create_season_id(id: u32) -> SeasonId;
+
+		fn create_transition_config(id: u32) -> TransitionConfig;
+
+		fn create_extra(id: u32) -> Extra;
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<
+			AssetId,
+			Asset,
+			TradeFilter,
+			TransferFilter,
+			SeasonId,
+			TransitionId,
+			TransitionConfig,
+			Extra,
+		>
+		BenchmarkHelper<
+			AssetId,
+			Asset,
+			TradeFilter,
+			TransferFilter,
+			SeasonId,
+			TransitionId,
+			TransitionConfig,
+			Extra,
+		> for ()
+	where
+		AssetId: From<u32>,
+		Asset: From<u32>,
+		TradeFilter: From<u32>,
+		TransferFilter: From<u32>,
+		SeasonId: From<u32>,
+		TransitionId: From<u32>,
+		TransitionConfig: From<u32>,
+		Extra: From<u32>,
+	{
+		fn create_asset(seed: u32) -> (AssetId, Asset) {
+			(AssetId::from(seed), Asset::from(seed))
+		}
+
+		fn create_asset_trade_filter(id: u32) -> TradeFilter {
+			TradeFilter::from(id)
+		}
+
+		fn create_asset_transfer_filter(id: u32) -> TransferFilter {
+			TransferFilter::from(id)
+		}
+
+		fn create_transition_id(id: u32) -> TransitionId {
+			TransitionId::from(id)
+		}
+
+		fn create_season_id(id: u32) -> SeasonId {
+			SeasonId::from(id)
+		}
+
+		fn create_transition_config(id: u32) -> TransitionConfig {
+			TransitionConfig::from(id)
+		}
+
+		fn create_extra(id: u32) -> Extra {
+			Extra::from(id)
+		}
+	}
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
@@ -139,6 +230,18 @@ pub mod pallet {
 
 		/// The weight calculations
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type BenchmarkHelper: BenchmarkHelper<
+			AssetIdOf<Self, I>,
+			AssetOf<Self, I>,
+			TradeFilterOf<Self, I>,
+			TransferFilterOf<Self, I>,
+			SeasonIdOf<Self, I>,
+			TransitionIdOf<Self, I>,
+			TransitionConfigOf<Self, I>,
+			ExtraOf<Self, I>,
+		>;
 	}
 
 	/// Organizer of the game. Essentially the administrator with certain privileges.
@@ -391,7 +494,7 @@ pub mod pallet {
 
 		/// Updates an unlock rule for the given season.
 		///
-		/// It doesn't affect ulready unlocked features.
+		/// It doesn't affect already unlocked features.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::update_unlock_rule())]
 		pub fn update_unlock_rule(
@@ -462,7 +565,8 @@ pub mod pallet {
 
 		/// Updates the filter that assets need to pass for certain actions.
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::update_asset_filter())]
+		#[pallet::weight({T::WeightInfo::update_asset_trade_filter()
+			.max(T::WeightInfo::update_asset_transfer_filter())})]
 		pub fn update_asset_filter(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
@@ -649,7 +753,8 @@ pub mod pallet {
 
 		/// Attempts to unlock the selected feature for the `target`.
 		#[pallet::call_index(11)]
-		#[pallet::weight(T::WeightInfo::unlock_feature())]
+		#[pallet::weight(T::WeightInfo::unlock_trade_asset_feature()
+			.max(T::WeightInfo::unlock_transfer_asset_feature()))]
 		pub fn unlock_feature(
 			origin: OriginFor<T>,
 			target: UnlockTarget<AccountIdOf<T>>,
@@ -804,7 +909,7 @@ pub mod pallet {
 						let asset_id = asset.get_id();
 
 						T::SeasonHandler::register_asset_in(&asset_id, season_id)?;
-						Assets::<T, I>::insert(&asset_id, asset);
+						Assets::<T, I>::insert(&asset_id, (player, asset));
 						AssetOwners::<T, I>::insert((player, season_id, &asset_id), ());
 					},
 					TransitionOutput::Mutated(asset_id, asset) => {

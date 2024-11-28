@@ -58,22 +58,27 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		Sage: pallet_sage::<Instance1> = 2,
+		#[cfg(feature = "runtime-benchmarks")]
+		SageBench: pallet_sage = 3,
 	}
 );
 
 impl frame_system::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
+	type Nonce = u32;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = MockAccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
+	type Block = MockBlock;
 	type BlockHashCount = ConstU64<250>;
+	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<MockBalance>;
@@ -83,9 +88,6 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type Nonce = u32;
-	type Block = MockBlock;
-	type RuntimeTask = RuntimeTask;
 	type SingleBlockMigrations = ();
 	type MultiBlockMigrator = ();
 	type PreInherents = ();
@@ -98,24 +100,24 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = MockBalance;
-	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = MockExistentialDeposit;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type WeightInfo = ();
+	type Balance = MockBalance;
+	type DustRemoval = ();
+	type ExistentialDeposit = MockExistentialDeposit;
+	type AccountStore = System;
+	type ReserveIdentifier = [u8; 8];
+	type FreezeIdentifier = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type MaxFreezes = ();
 }
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
-	types::{Asset, AssetId, ExampleTransitionId},
+	types::{Asset, AssetId, ExampleTransitionId, Level},
 };
 
 parameter_types! {
@@ -238,6 +240,7 @@ impl FeeProvider for MockTransitionFeeProvider {
 		match identifier {
 			ExampleTransitionId::UpgradeAsset => base_fee.saturating_mul(2),
 			ExampleTransitionId::ConsumeAsset => base_fee.saturating_mul(3),
+			ExampleTransitionId::BenchTransition => base_fee.saturating_mul(10),
 		}
 	}
 }
@@ -358,6 +361,54 @@ impl AssetInspector for MockAssetMediator {
 	}
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct SageBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl
+	BenchmarkHelper<
+		AssetId,
+		Asset,
+		MockFilter,
+		MockFilter,
+		MockSeasonId,
+		ExampleTransitionId,
+		(),
+		(),
+	> for SageBenchmarkHelper
+{
+	fn create_asset(seed: u32) -> (AssetId, Asset) {
+		let asset_id = AssetId::from_low_u64_le(seed as u64);
+		let asset = Asset::create(asset_id, 0, 0, 0, [seed as u8; 32], 1, Level::One);
+
+		(asset_id, asset)
+	}
+
+	fn create_asset_trade_filter(id: u32) -> MockFilter {
+		MockFilter::from(id)
+	}
+
+	fn create_asset_transfer_filter(id: u32) -> MockFilter {
+		MockFilter::from(id)
+	}
+
+	fn create_transition_id(id: u32) -> ExampleTransitionId {
+		if id == 99 {
+			ExampleTransitionId::BenchTransition
+		} else {
+			ExampleTransitionId::UpgradeAsset
+		}
+	}
+
+	fn create_season_id(id: u32) -> MockSeasonId {
+		MockSeasonId::from(id as u8)
+	}
+
+	fn create_transition_config(_id: u32) {}
+
+	fn create_extra(_id: u32) {}
+}
+
 pub type SageInstance1 = pallet_sage::Instance1;
 impl crate::Config<SageInstance1> for Test {
 	type PalletId = ExamplePalletId;
@@ -375,6 +426,8 @@ impl crate::Config<SageInstance1> for Test {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = SageBenchmarkHelper;
 }
 
 #[derive(Default)]
