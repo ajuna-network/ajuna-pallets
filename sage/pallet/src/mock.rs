@@ -123,6 +123,7 @@ parameter_types! {
 }
 
 thread_local! {
+	pub static ASSET_SEEDS: RefCell<u64> = RefCell::new(0);
 	pub static ASSET_SEASONS: RefCell<BTreeMap<AssetId, MockSeasonId>> = RefCell::new(BTreeMap::new());
 	pub static CURRENT_SEASON: RefCell<MockSeasonId> = RefCell::new(SEASON_ID_0)
 }
@@ -361,7 +362,6 @@ pub type SageInstance1 = pallet_sage::Instance1;
 impl crate::Config<SageInstance1> for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
-	type SageTransitionConfig = ();
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = GameFeeHandler<
 		MockAccountId,

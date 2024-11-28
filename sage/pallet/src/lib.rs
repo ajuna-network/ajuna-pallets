@@ -38,7 +38,10 @@ use ajuna_primitives::{
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
 };
-use sage_api::{traits::TransitionOutput, AsErrorCode, SageGameTransition};
+use sage_api::{
+	traits::{Identifiable, TransitionOutput},
+	AsErrorCode, SageGameTransition,
+};
 
 use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
 use frame_system::pallet_prelude::*;
@@ -74,7 +77,8 @@ pub mod pallet {
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
 	pub type ExtraOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Extra;
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub type TransitionConfigOf<T, I> = <T as Config<I>>::SageTransitionConfig;
+	pub type TransitionConfigOf<T, I> =
+		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionConfig;
 	pub(crate) type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
 	pub type GeneralConfigOf<T, I> = GeneralConfig<TransitionConfigOf<T, I>>;
 
@@ -100,11 +104,6 @@ pub mod pallet {
 		/// The `SageGameTransition` that this pallet hosts, and whose state transition
 		/// are executed as part of the `state_transition` extrinsic.
 		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
-
-		/// Custom transition config.
-		///
-		/// Todo: Shouldn't this just be part of the `SageGameTranstion` trait?
-		type SageTransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
@@ -698,7 +697,6 @@ pub mod pallet {
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 
-			// TODO: Review the logic in this section
 			let transition_fee = {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
@@ -796,19 +794,18 @@ pub mod pallet {
 
 			for output in transition_results {
 				match output {
-					TransitionOutput::Minted(_asset) => {
+					TransitionOutput::Minted(asset) => {
 						minted_amount.saturating_inc();
 						player_asset_count.saturating_inc();
 						ensure!(
 							player_asset_count <= player_inventory_slots,
 							Error::<T, I>::MaxOwnershipReached
 						);
+						let asset_id = asset.get_id();
 
-						// TODO: Need a way to create new asset_id generically
-						// T::SeasonHandler::register_asset_in(asset_id, season_id)?;
-						// Assets::<T, I>::insert(asset_id, asset);
-						// AssetOwners::<T, I>::insert((player, season_id, asset_id);
-						// AssetsOwnedCount update
+						T::SeasonHandler::register_asset_in(&asset_id, season_id)?;
+						Assets::<T, I>::insert(&asset_id, asset);
+						AssetOwners::<T, I>::insert((player, season_id, &asset_id), ());
 					},
 					TransitionOutput::Mutated(asset_id, asset) => {
 						mutated_amount.saturating_inc();

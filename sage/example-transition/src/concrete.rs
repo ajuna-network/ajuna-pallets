@@ -74,6 +74,7 @@ where
 		+ AssetInspector<AssetId = AssetId, Asset = Asset>,
 {
 	type TransitionId = ExampleTransitionId;
+	type TransitionConfig = ();
 	type AccountId = AccountId;
 
 	type AssetId = AssetId;
