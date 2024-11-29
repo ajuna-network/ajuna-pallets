@@ -36,11 +36,6 @@ impl<T: Config> TreasuryManager for Pallet<T> {
 		Ok(Self::treasury_account_id())
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
-		unimplemented!()
-	}
-
 	fn deposit_into(
 		depositor: &Self::AccountId,
 		key: &Self::TreasuryPotKey,

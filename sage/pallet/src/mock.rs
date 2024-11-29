@@ -264,11 +264,6 @@ impl TreasuryManager for MockTreasuryManager {
 		Ok(TREASURER)
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
-		todo!()
-	}
-
 	fn deposit_into(
 		depository: &Self::AccountId,
 		_key: &Self::TreasuryPotKey,
@@ -286,7 +281,7 @@ impl TradeManager for MockFilterHandler {
 	type TradeFilter = MockFilter;
 	type Asset = Asset;
 
-	fn is_tradeable_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
+	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
 		asset.asset_type == *filter
 	}
 }
@@ -295,7 +290,7 @@ impl TransferManager for MockFilterHandler {
 	type TransferFilter = MockFilter;
 	type Asset = Asset;
 
-	fn is_transferable_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
+	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
 		asset.asset_type == *filter
 	}
 }
@@ -344,11 +339,6 @@ impl AssetManager for MockAssetMediator {
 		fees_recipient: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		<Sage as AssetManager>::handle_asset_prepare_fee(asset, from, fees_recipient)
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		<Sage as AssetManager>::create_assets(owner, count)
 	}
 }
 

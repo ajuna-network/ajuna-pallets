@@ -206,6 +206,16 @@ parameter_types! {
 	pub const NftTransferPalletId: PalletId = PalletId(*b"aj/nfttr");
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct NftTransferBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl crate::BenchmarkHelper<MockAccountId, ItemId> for NftTransferBenchmarkHelper {
+	fn create_items(owner: MockAccountId, count: u32) -> Vec<ItemId> {
+		MockAssetManager::create_items(owner, count)
+	}
+}
+
 impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -219,6 +229,8 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
 	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = NftTransferBenchmarkHelper;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
@@ -275,18 +287,16 @@ thread_local! {
 pub struct MockAssetManager;
 
 impl MockAssetManager {
-	pub fn create_assets(owner: MockAccountId, count: u32) -> Vec<(ItemId, MockItem)> {
+	pub fn create_items(owner: MockAccountId, count: u32) -> Vec<ItemId> {
 		let mut ids = Vec::with_capacity(count as usize);
-		let mut items = Vec::with_capacity(count as usize);
 		for i in 0..count {
 			let id = ItemId::repeat_byte(i as u8);
 			let item = MockItem::new_with_field2(i);
 			ids.push(id);
-			items.push(item.clone());
 			Self::add_asset(owner, id, item)
 		}
 
-		ids.into_iter().zip(items).collect()
+		ids
 	}
 
 	pub fn add_asset(owner: MockAccountId, asset_id: ItemId, asset: MockItem) {
@@ -393,11 +403,6 @@ impl AssetManager for MockAssetManager {
 
 		Ok(())
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		Self::create_assets(owner, count)
-	}
 }
 
 /// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this
@@ -429,20 +434,7 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(organizer: Self::AccountId) {
-		Self::set_organizer(organizer)
-	}
-
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
-		unimplemented!()
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_set_whitelisted_for(
-		_identifier: &WhitelistKey,
-		_account: &Self::AccountId,
-	) -> Result<(), DispatchError> {
 		unimplemented!()
 	}
 }

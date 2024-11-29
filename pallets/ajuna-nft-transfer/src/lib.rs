@@ -57,6 +57,18 @@ pub mod pallet {
 		Uploaded,
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<AccountId, ItemId> {
+		fn create_items(owner: AccountId, count: u32) -> sp_std::vec::Vec<ItemId>;
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<AccountId, ItemId> BenchmarkHelper<AccountId, ItemId> for () {
+		fn create_items(_owner: AccountId, _count: u32) -> sp_std::vec::Vec<ItemId> {
+			sp_std::vec::Vec::with_capacity(0)
+		}
+	}
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -101,6 +113,9 @@ pub mod pallet {
 			+ Mutate<Self::AccountId, Self::ItemConfig>;
 
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type BenchmarkHelper: BenchmarkHelper<AccountIdFor<Self>, Self::ItemId>;
 	}
 
 	#[pallet::storage]

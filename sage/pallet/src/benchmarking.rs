@@ -84,10 +84,6 @@ impl AssetManager for MockAssetMediatorBench {
 	) -> Result<(), DispatchError> {
 		<Sage<Test, ()> as AssetManager>::handle_asset_prepare_fee(asset, from, fees_recipient)
 	}
-
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		<Sage<Test, ()> as AssetManager>::create_assets(owner, count)
-	}
 }
 
 impl AssetInspector for MockAssetMediatorBench {

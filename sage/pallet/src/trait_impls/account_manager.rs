@@ -25,20 +25,7 @@ impl<T: Config<I>, I: 'static> AccountManager for Pallet<T, I> {
 		Ok(())
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(organizer: Self::AccountId) {
-		Organizer::<T, I>::put(organizer)
-	}
-
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
-		todo!()
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_set_whitelisted_for(
-		_identifier: &WhitelistKey,
-		_account: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		todo!()
+		unimplemented!()
 	}
 }

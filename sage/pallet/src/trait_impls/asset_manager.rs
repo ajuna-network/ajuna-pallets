@@ -92,12 +92,6 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	) -> Result<(), DispatchError> {
 		todo!()
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(_owner: Self::AccountId, _count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		// TODO: Decide how to implement this
-		Vec::with_capacity(0)
-	}
 }
 
 impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {

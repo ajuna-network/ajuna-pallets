@@ -565,8 +565,10 @@ pub mod pallet {
 
 		/// Updates the filter that assets need to pass for certain actions.
 		#[pallet::call_index(4)]
-		#[pallet::weight({T::WeightInfo::update_asset_trade_filter()
-			.max(T::WeightInfo::update_asset_transfer_filter())})]
+		#[pallet::weight(
+			T::WeightInfo::update_asset_trade_filter()
+				.max(T::WeightInfo::update_asset_transfer_filter())
+		)]
 		pub fn update_asset_filter(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
@@ -624,7 +626,7 @@ pub mod pallet {
 
 			let transfer_filter = SeasonTransferFilters::<T, I>::get(&asset_season_id);
 			ensure!(
-				T::FilterHandler::is_transferable_using(&asset, &transfer_filter),
+				T::FilterHandler::can_be_transferred_using(&asset, &transfer_filter),
 				Error::<T, I>::AssetCannotBeTransfered
 			);
 
@@ -658,7 +660,7 @@ pub mod pallet {
 
 			let trade_filter = SeasonTradeFilters::<T, I>::get(&asset_season_id);
 			ensure!(
-				T::FilterHandler::is_tradeable_using(&asset, &trade_filter),
+				T::FilterHandler::can_be_traded_using(&asset, &trade_filter),
 				Error::<T, I>::AssetCannotBeTraded
 			);
 
@@ -753,8 +755,10 @@ pub mod pallet {
 
 		/// Attempts to unlock the selected feature for the `target`.
 		#[pallet::call_index(11)]
-		#[pallet::weight(T::WeightInfo::unlock_trade_asset_feature()
-			.max(T::WeightInfo::unlock_transfer_asset_feature()))]
+		#[pallet::weight(
+			T::WeightInfo::unlock_trade_asset_feature()
+				.max(T::WeightInfo::unlock_transfer_asset_feature())
+		)]
 		pub fn unlock_feature(
 			origin: OriginFor<T>,
 			target: UnlockTarget<AccountIdOf<T>>,

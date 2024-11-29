@@ -132,20 +132,7 @@ impl AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(owner: Self::AccountId) {
-		MockAccountManager::set_organizer(owner);
-	}
-
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
-		unimplemented!()
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_set_whitelisted_for(
-		_identifier: &WhitelistKey,
-		_account: &Self::AccountId,
-	) -> Result<(), DispatchError> {
 		unimplemented!()
 	}
 }

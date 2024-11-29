@@ -75,15 +75,25 @@ pub mod pallet {
 	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker> {
+	pub trait BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker, AccountId, EntityId, Entity>
+	{
 		fn create_category_id(id: u32) -> CategoryId;
 
 		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker>;
+
+		fn create_entities(owner: AccountId, count: u32) -> sp_std::vec::Vec<(EntityId, Entity)>;
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	impl<CategoryId: From<u32>, BlockNumber: From<u64>, Balance: From<u64>, Ranker: Default>
-		BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker> for ()
+	impl<
+			CategoryId: From<u32>,
+			BlockNumber: From<u64>,
+			Balance: From<u64>,
+			Ranker: Default,
+			AccountId,
+			EntityId,
+			Entity,
+		> BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker, AccountId, EntityId, Entity> for ()
 	{
 		fn create_category_id(id: u32) -> CategoryId {
 			id.into()
@@ -102,6 +112,10 @@ pub mod pallet {
 				max_players: 0,
 				ranker: Ranker::default(),
 			}
+		}
+
+		fn create_entities(_owner: AccountId, _count: u32) -> sp_std::vec::Vec<(EntityId, Entity)> {
+			sp_std::vec::Vec::with_capacity(0)
 		}
 	}
 
@@ -157,6 +171,9 @@ pub mod pallet {
 			BlockNumberFor<Self>,
 			BalanceOf<Self, I>,
 			Self::EntityRanker,
+			AccountIdFor<Self>,
+			EntityIdFor<Self, I>,
+			Self::RankedEntity,
 		>;
 	}
 
