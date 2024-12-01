@@ -3,7 +3,10 @@ use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{DispatchError, InvalidTransaction},
 	sp_runtime::{traits::CheckedSub, ArithmeticError},
-	traits::{Currency, ExistenceRequirement::KeepAlive, Get},
+	traits::{
+		fungibles, fungibles::Mutate, tokens::Preservation, Currency,
+		ExistenceRequirement::KeepAlive, Get,
+	},
 	Parameter,
 };
 use pallet_asset_conversion::Pallet as AssetConversion;
@@ -26,7 +29,7 @@ pub trait DenominatedToFee {
 
 pub struct ConvertToNativeFee<A, D, T>(PhantomData<(A, D, T)>);
 
-impl<D, N, T> DenominatedToFee for ConvertToNativeFee<D, D, T>
+impl<D, N, T> DenominatedToFee for ConvertToNativeFee<D, N, T>
 where
 	D: Get<T::AssetKind>,
 	N: Get<T::AssetKind>,
@@ -67,74 +70,90 @@ pub trait FeeProvider {
 	) -> Self::FeeOutput;
 }
 
+pub trait EnsureWhitelistedAsset {
+	type AssetId;
+
+	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError>;
+}
+
 pub trait FeeHandler {
 	type AccountId;
-	type FeeCurrency;
+
+	type AssetId;
+
+	/// Scalar type of the fee balance.
+	type FeeBalance;
+
 	type AffiliateFeeIdentifier;
 	type TournamentFeeIdentifier;
 	type TreasuryKey;
 
 	fn try_propagate_chain_fee(
-		base_fee: Self::FeeCurrency,
+		base_fee: Self::FeeBalance,
 		account: &Self::AccountId,
 		identifier: &Self::AffiliateFeeIdentifier,
-	) -> Result<Self::FeeCurrency, DispatchError>;
+	) -> Result<Self::FeeBalance, DispatchError>;
 
 	fn try_propagate_tournament_fee(
-		base_fee: Self::FeeCurrency,
+		base_fee: Self::FeeBalance,
 		account: &Self::AccountId,
 		identifier: &Self::TournamentFeeIdentifier,
-	) -> Result<Self::FeeCurrency, DispatchError>;
+	) -> Result<Self::FeeBalance, DispatchError>;
 
 	fn deposit_fee_into_treasury(
 		depositor: &Self::AccountId,
 		key: &Self::TreasuryKey,
-		fee: Self::FeeCurrency,
+		fee: Self::FeeBalance,
 	) -> Result<(), DispatchError>;
 }
 
-pub struct GameFeeHandler<AccountId, Currency, Affiliate, Tournament, Treasury> {
-	_phantom: PhantomData<(AccountId, Currency, Affiliate, Tournament, Treasury)>,
+pub struct GameFeeHandler<AssetConversion, PaymentAsset, Affiliate, Tournament, Treasury> {
+	_phantom: PhantomData<(AssetConversion, PaymentAsset, Affiliate, Tournament, Treasury)>,
 }
 
-impl<AccountId, CurrencyHandler, Affiliate, Aid, Tournament, Tid, Treasury> FeeHandler
-	for GameFeeHandler<AccountId, CurrencyHandler, Affiliate, Tournament, Treasury>
+impl<T, PaymentAsset, Affiliate, Tournament, Treasury> FeeHandler
+	for GameFeeHandler<T, PaymentAsset, Affiliate, Tournament, Treasury>
 where
-	AccountId: Parameter,
-	CurrencyHandler: Currency<AccountId>,
+	PaymentAsset: Get<T::AssetKind>,
+	T: pallet_asset_conversion::Config,
+	T::Assets: fungibles::Inspect<T::AccountId, Balance = T::Balance, AssetId = T::AssetKind>,
+
 	Affiliate: FeeProvider<
-		AccountId = AccountId,
-		FeeIdentifier = Aid,
-		FeeCurrency = CurrencyHandler::Balance,
-		FeeOutput = Vec<(CurrencyHandler::Balance, AccountId)>,
+		AccountId = T::AccountId,
+		FeeCurrency = T::Balance,
+		FeeOutput = Vec<(T::Balance, T::AccountId)>,
 	>,
-	Aid: Parameter,
 	Tournament: FeeProvider<
-		AccountId = AccountId,
-		FeeIdentifier = Tid,
-		FeeCurrency = CurrencyHandler::Balance,
-		FeeOutput = (CurrencyHandler::Balance, AccountId),
+		AccountId = T::AccountId,
+		FeeCurrency = T::Balance,
+		FeeOutput = (T::Balance, T::AccountId),
 	>,
-	Tid: Parameter,
-	Treasury: TreasuryManager<AccountId = AccountId, Currency = CurrencyHandler::Balance>,
+	Treasury: TreasuryManager<AccountId = T::AccountId, Currency = T::Balance>,
 {
-	type AccountId = AccountId;
-	type FeeCurrency = CurrencyHandler::Balance;
-	type AffiliateFeeIdentifier = Aid;
-	type TournamentFeeIdentifier = Tid;
+	type AccountId = T::AccountId;
+	type AssetId = T::AssetKind;
+	type FeeBalance = T::Balance;
+	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
+	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 	type TreasuryKey = Treasury::TreasuryPotKey;
 
 	fn try_propagate_chain_fee(
-		base_fee: Self::FeeCurrency,
+		base_fee: Self::FeeBalance,
 		account: &Self::AccountId,
 		identifier: &Self::AffiliateFeeIdentifier,
-	) -> Result<Self::FeeCurrency, DispatchError> {
+	) -> Result<Self::FeeBalance, DispatchError> {
 		let mut final_fee = base_fee;
 
 		for (transfer_fee, chain_account) in Affiliate::get_fee_from(base_fee, account, identifier)
 		{
 			if transfer_fee > 0_u32.into() {
-				CurrencyHandler::transfer(account, &chain_account, transfer_fee, KeepAlive)?;
+				T::Assets::transfer(
+					PaymentAsset::get(),
+					account,
+					&chain_account,
+					transfer_fee,
+					Preservation::Preserve,
+				)?;
 				final_fee = final_fee
 					.checked_sub(&transfer_fee)
 					.ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
@@ -145,15 +164,21 @@ where
 	}
 
 	fn try_propagate_tournament_fee(
-		base_fee: Self::FeeCurrency,
+		base_fee: Self::FeeBalance,
 		account: &Self::AccountId,
 		identifier: &Self::TournamentFeeIdentifier,
-	) -> Result<Self::FeeCurrency, DispatchError> {
+	) -> Result<Self::FeeBalance, DispatchError> {
 		let (tournament_fee, tournament_account) =
 			Tournament::get_fee_from(base_fee, account, identifier);
 
 		if tournament_fee > 0_u32.into() {
-			CurrencyHandler::transfer(account, &tournament_account, tournament_fee, KeepAlive)?;
+			T::Assets::transfer(
+				PaymentAsset::get(),
+				account,
+				&tournament_account,
+				tournament_fee,
+				Preservation::Preserve,
+			)?;
 			base_fee
 				.checked_sub(&tournament_fee)
 				.ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))
@@ -165,7 +190,7 @@ where
 	fn deposit_fee_into_treasury(
 		depositor: &Self::AccountId,
 		key: &Self::TreasuryKey,
-		fee: Self::FeeCurrency,
+		fee: Self::FeeBalance,
 	) -> Result<(), DispatchError> {
 		Treasury::deposit_into(depositor, key, fee)
 	}
