@@ -14,6 +14,7 @@ ajuna-primitives = { workspace = true }
 # Substrate frame
 pallet-asset-conversion = { workspace = true }
 frame-support = { workspace = true }
+frame-system = { workspace = true }
 
 [features]
 default = ["std"]
@@ -21,8 +22,10 @@ std = [
     "ajuna-primitives/std",
     "pallet-asset-conversion/std",
     "frame-support/std",
+    "frame-system/std",
 ]
 runtime-benchmarks = [
     "pallet-asset-conversion/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
 ]

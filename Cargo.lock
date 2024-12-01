@@ -65,6 +65,7 @@ version = "0.15.0"
 dependencies = [
  "ajuna-primitives",
  "frame-support",
+ "frame-system",
  "pallet-asset-conversion",
 ]
 

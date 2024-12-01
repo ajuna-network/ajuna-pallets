@@ -1,11 +1,11 @@
-use ajuna_primitives::treasury_manager::TreasuryManager;
+use ajuna_primitives::{runtime_types::AccountId, treasury_manager::TreasuryManager};
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
 	sp_runtime::{traits::CheckedSub, TokenError},
 	traits::{fungibles, fungibles::Balanced, tokens::Precision, Get},
 };
-use pallet_asset_conversion::Pallet as AssetConversion;
+use pallet_asset_conversion::{CreditOf, Pallet as AssetConversion};
 
 pub trait DenominatedToFee {
 	type Balance;
@@ -72,49 +72,67 @@ pub trait EnsureWhitelistedAsset {
 	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError>;
 }
 
+pub trait WithdrawFee {
+	type AccountId;
+	type AssetId;
+	type Balance;
+	type LiquidityInfo;
+
+	fn withdraw_fee(
+		payer: &Self::AccountId,
+		asset_id: Self::AssetId,
+		fee: Self::Balance,
+	) -> Result<Self::LiquidityInfo, DispatchError>;
+}
+
 pub trait FeeHandler {
 	type AccountId;
 
 	type AssetId;
 
 	/// Scalar type of the fee balance.
-	type FeeBalance;
+	type Balance;
 
 	type AffiliateFeeIdentifier;
 	type TournamentFeeIdentifier;
-	type TreasuryKey;
 
-	fn try_propagate_chain_fee(
+	fn withdraw_and_pay_fees(
+		payer: &Self::AccountId,
 		payment_asset: Self::AssetId,
-		base_fee: Self::FeeBalance,
-		account: &Self::AccountId,
-		identifier: &Self::AffiliateFeeIdentifier,
-	) -> Result<Self::FeeBalance, DispatchError>;
+		base_fee: Self::Balance,
+		tournament_id: &Self::TournamentFeeIdentifier,
+		affiliate_id: &Self::AffiliateFeeIdentifier,
+		treasury_pot: &Self::AccountId,
+	) -> Result<(), DispatchError>;
 
-	fn try_propagate_tournament_fee(
-		payment_asset: Self::AssetId,
-		base_fee: Self::FeeBalance,
-		account: &Self::AccountId,
-		identifier: &Self::TournamentFeeIdentifier,
-	) -> Result<Self::FeeBalance, DispatchError>;
-
-	fn deposit_fee_into_treasury(
+	fn withdraw_and_deposit_into_treasury(
 		depositor: &Self::AccountId,
-		key: &Self::TreasuryKey,
-		fee: Self::FeeBalance,
+		key: &Self::AccountId,
+		fee: Self::Balance,
 	) -> Result<(), DispatchError>;
 }
 
-pub struct GameFeeHandler<AssetConversion, PaymentAsset, Affiliate, Tournament, Treasury> {
-	_phantom: PhantomData<(AssetConversion, PaymentAsset, Affiliate, Tournament, Treasury)>,
+pub struct GameFeeHandler<AssetConversion, WithdrawAsset, DepositAsset, Affiliate, Tournament> {
+	_phantom: PhantomData<(AssetConversion, WithdrawAsset, DepositAsset, Affiliate, Tournament)>,
 }
 
-impl<T, DepositAsset, Affiliate, Tournament, Treasury> FeeHandler
-	for GameFeeHandler<T, DepositAsset, Affiliate, Tournament, Treasury>
+impl<T, WithdrawAsset, DepositAsset, Affiliate, Tournament> FeeHandler
+	for GameFeeHandler<T, WithdrawAsset, DepositAsset, Affiliate, Tournament>
 where
 	DepositAsset: Get<T::AssetKind>,
-	T: pallet_asset_conversion::Config,
-	T::Assets: fungibles::Inspect<T::AccountId, Balance = T::Balance, AssetId = T::AssetKind>,
+	T: pallet_asset_conversion::Config + frame_system::Config,
+	T::Assets: fungibles::Inspect<
+		<T as frame_system::Config>::AccountId,
+		Balance = T::Balance,
+		AssetId = T::AssetKind,
+	>,
+
+	WithdrawAsset: WithdrawFee<
+		AccountId = <T as frame_system::Config>::AccountId,
+		AssetId = T::AssetKind,
+		Balance = T::Balance,
+		LiquidityInfo = CreditOf<T>,
+	>,
 
 	Affiliate: FeeProvider<
 		AccountId = T::AccountId,
@@ -126,45 +144,79 @@ where
 		FeeCurrency = T::Balance,
 		FeeOutput = (T::Balance, T::AccountId),
 	>,
-	Treasury: TreasuryManager<AccountId = T::AccountId, Currency = T::Balance>,
 {
 	type AccountId = T::AccountId;
 	type AssetId = T::AssetKind;
-	type FeeBalance = T::Balance;
+	type Balance = T::Balance;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
-	type TreasuryKey = Treasury::TreasuryPotKey;
 
+	fn withdraw_and_pay_fees(
+		payer: &Self::AccountId,
+		payment_asset: Self::AssetId,
+		base_fee: Self::Balance,
+		tournament_id: &Self::TournamentFeeIdentifier,
+		affiliate_id: &Self::AffiliateFeeIdentifier,
+		treasury_pot: &T::AccountId,
+	) -> Result<(), DispatchError> {
+		let fee_credit = WithdrawAsset::withdraw_fee(payer, payment_asset, base_fee)?;
+
+		let remaining_credit =
+			Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
+
+		let remaining_credit2 =
+			Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
+
+		Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+	}
+
+	fn withdraw_and_deposit_into_treasury(
+		depositor: &Self::AccountId,
+		key: &Self::AccountId,
+		fee: Self::Balance,
+	) -> Result<(), DispatchError> {
+		todo!()
+	}
+}
+
+impl<T, WithdrawAsset, DepositAsset, Affiliate, Tournament>
+	GameFeeHandler<T, WithdrawAsset, DepositAsset, Affiliate, Tournament>
+where
+	DepositAsset: Get<T::AssetKind>,
+	T: pallet_asset_conversion::Config,
+	T::Assets: fungibles::Inspect<T::AccountId, Balance = T::Balance, AssetId = T::AssetKind>,
+
+	WithdrawAsset:
+		WithdrawFee<AssetId = T::AssetKind, Balance = T::Balance, LiquidityInfo = CreditOf<T>>,
+
+	Affiliate: FeeProvider<
+		AccountId = T::AccountId,
+		FeeCurrency = T::Balance,
+		FeeOutput = Vec<(T::Balance, T::AccountId)>,
+	>,
+	Tournament: FeeProvider<
+		AccountId = T::AccountId,
+		FeeCurrency = T::Balance,
+		FeeOutput = (T::Balance, T::AccountId),
+	>,
+{
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		deposit_asset: Self::AssetId,
-		fee_credit: Self::FeeBalance,
-		account: &Self::AccountId,
-		identifier: &Self::AffiliateFeeIdentifier,
-	) -> Result<Self::FeeBalance, DispatchError> {
+		fee_credit: CreditOf<T>,
+		account: &T::AccountId,
+		identifier: &Affiliate::FeeIdentifier,
+	) -> Result<CreditOf<T>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		for (transfer_fee, chain_account) in
-			Affiliate::get_fee_from(fee_credit, account, identifier)
+			Affiliate::get_fee_from(final_fee.peek(), account, identifier)
 		{
 			if transfer_fee > 0_u32.into() {
-				final_fee = final_fee
-					.checked_sub(&transfer_fee)
-					.ok_or(DispatchError::Token(TokenError::FundsUnavailable))?;
-
-				let debt = T::Assets::deposit(
-					deposit_asset.clone(),
-					&chain_account,
-					transfer_fee.clone(),
-					Precision::BestEffort,
-				)?;
-
-				if debt.peek() != transfer_fee {
-					// we should never reach this arm, but it is better to double-check.
-					return Err(DispatchError::Other("Unexpected error in fee payment."));
-				}
+				let affiliate_fee = final_fee.extract(transfer_fee);
+				T::Assets::resolve(&chain_account, affiliate_fee)
+					.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
 			}
 		}
 
@@ -176,42 +228,24 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		deposit_asset: Self::AssetId,
-		fee_credit: Self::FeeBalance,
-		account: &Self::AccountId,
-		identifier: &Self::TournamentFeeIdentifier,
-	) -> Result<Self::FeeBalance, DispatchError> {
+		fee_credit: CreditOf<T>,
+		account: &T::AccountId,
+		identifier: &Tournament::FeeIdentifier,
+	) -> Result<CreditOf<T>, DispatchError> {
 		let (tournament_fee, tournament_account) =
-			Tournament::get_fee_from(fee_credit, account, identifier);
+			Tournament::get_fee_from(fee_credit.peek(), account, identifier);
 
 		if tournament_fee > 0_u32.into() {
-			let remaining_credit = fee_credit
-				.checked_sub(&tournament_fee)
-				.ok_or(DispatchError::Token(TokenError::FundsUnavailable))?;
-
-			let debt = T::Assets::deposit(
-				deposit_asset,
-				&tournament_account,
-				tournament_fee.clone(),
-				Precision::BestEffort,
-			)?;
-
-			if debt.peek() == tournament_fee {
-				Ok(remaining_credit)
-			} else {
-				// we should never reach this arm, but it is better to double-check.
-				Err(DispatchError::Other("Unexpected error in fee payment."))
-			}
+			let (remaining_credit, tournament_credit) = fee_credit.split(tournament_fee);
+			T::Assets::resolve(&tournament_account, tournament_credit)
+				.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
+			Ok(remaining_credit)
 		} else {
 			Ok(fee_credit)
 		}
 	}
 
-	fn deposit_fee_into_treasury(
-		depositor: &Self::AccountId,
-		key: &Self::TreasuryKey,
-		fee: Self::FeeBalance,
-	) -> Result<(), DispatchError> {
-		Treasury::deposit_into(depositor, key, fee)
+	fn deposit_into_treasury(key: &T::AccountId, credit: CreditOf<T>) -> Result<(), DispatchError> {
+		T::Assets::resolve(key, credit).map_err(|_| DispatchError::Token(TokenError::CannotCreate))
 	}
 }
