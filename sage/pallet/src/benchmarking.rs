@@ -152,7 +152,7 @@ benchmarks! {
 		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
 		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 31);
 		let price = BalanceOf::<T, ()>::from(45_242_u32);
-		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, &price);
+		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, price);
 	}: _(RawOrigin::Signed(acc_1), asset_id.clone())
 	verify {
 		assert_last_event::<T, ()>(Event::AssetPriceUnset {
@@ -166,14 +166,14 @@ benchmarks! {
 		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
 		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 31);
 		let price = BalanceOf::<T, ()>::from(45_242_u32);
-		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, &price);
+		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, price);
 	}: _(RawOrigin::Signed(acc_2.clone()), asset_id.clone())
 	verify {
 		assert_last_event::<T, ()>(Event::AssetTraded {
 			asset_id,
 			from: acc_1,
 			to: acc_2,
-			price: price.into(),
+			price,
 		})
 	}
 
