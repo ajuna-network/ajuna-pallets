@@ -62,13 +62,6 @@ pub mod pallet {
 		fn create_items(owner: AccountId, count: u32) -> sp_std::vec::Vec<ItemId>;
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	impl<AccountId, ItemId> BenchmarkHelper<AccountId, ItemId> for () {
-		fn create_items(_owner: AccountId, _count: u32) -> sp_std::vec::Vec<ItemId> {
-			sp_std::vec::Vec::with_capacity(0)
-		}
-	}
-
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 

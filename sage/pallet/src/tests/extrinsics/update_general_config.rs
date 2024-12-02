@@ -19,7 +19,7 @@ use super::*;
 #[test]
 fn update_general_config_should_work() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let config = GeneralConfigOf::<Test, Instance1>::default();
+		let config = GeneralConfigOf::<Test, ()>::default();
 		assert_ok!(Sage::update_general_config(RuntimeOrigin::signed(ALICE), config.clone()));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedGeneralConfig {
 			updated_config: config,
@@ -33,7 +33,7 @@ fn update_general_config_should_reject_non_organizer_calls() {
 		assert_noop!(
 			Sage::update_general_config(
 				RuntimeOrigin::signed(BOB),
-				GeneralConfigOf::<Test, Instance1>::default()
+				GeneralConfigOf::<Test, ()>::default()
 			),
 			DispatchError::BadOrigin
 		);

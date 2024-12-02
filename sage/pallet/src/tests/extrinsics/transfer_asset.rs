@@ -30,12 +30,12 @@ fn transfer_asset_works() {
 		.build()
 		.execute_with(|| {
 			let season_config =
-				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
+				<Test as Config<()>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
 					.expect("Should get season config");
 			let transfer_fee = season_config.fee.transfer_asset;
 
-			let alice_asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 3);
-			let bob_asset_ids = create_assets::<Instance1>(SEASON_ID_1, BOB, 6);
+			let alice_asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 3);
+			let bob_asset_ids = create_assets::<()>(SEASON_ID_1, BOB, 6);
 			let asset_id = alice_asset_ids[0];
 
 			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id));
@@ -47,11 +47,11 @@ fn transfer_asset_works() {
 
 			// Asset transferred from Alice.
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0)).count(),
+				AssetOwners::<Test, ()>::iter_prefix((ALICE, SEASON_ID_0)).count(),
 				alice_asset_ids.len() - 1
 			);
 			let alice_current_assets = {
-				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0))
+				let mut assets = AssetOwners::<Test, ()>::iter_prefix((ALICE, SEASON_ID_0))
 					.map(|(asset_id, _)| asset_id)
 					.collect::<Vec<_>>();
 
@@ -66,11 +66,11 @@ fn transfer_asset_works() {
 			assert_eq!(alice_current_assets, alice_expected_assets);
 
 			// Asset transferred to Bob.
-			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0)).count(), 1);
-			assert_eq!(Assets::<Test, Instance1>::get(asset_id).unwrap().0, BOB);
+			assert_eq!(AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_0)).count(), 1);
+			assert_eq!(Assets::<Test, ()>::get(asset_id).unwrap().0, BOB);
 
 			let bob_current_assets_season_0 = {
-				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0))
+				let mut assets = AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_0))
 					.map(|(asset_id, _)| asset_id)
 					.collect::<Vec<_>>();
 				assets.sort();
@@ -79,9 +79,9 @@ fn transfer_asset_works() {
 			assert_eq!(bob_current_assets_season_0, vec![asset_id]);
 
 			// Bob's original assets are safe.
-			assert_eq!(AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1)).count(), 6);
+			assert_eq!(AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_1)).count(), 6);
 			let bob_current_assets_season_1 = {
-				let mut assets = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1))
+				let mut assets = AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_1))
 					.map(|(asset_id, _)| asset_id)
 					.collect::<Vec<_>>();
 				assets.sort();
@@ -98,29 +98,26 @@ fn transfer_asset_works() {
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - transfer_fee);
 
 			// Organizer can transfer even when trade is closed.
-			GeneralConfigStore::<Test, Instance1>::mutate(|config| config.transfer.open = false);
+			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 			Balances::make_free_balance_be(&BOB, transfer_fee + MockExistentialDeposit::get());
 			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), BOB));
 			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, bob_asset_ids[0]));
 			assert_eq!(Balances::free_balance(BOB), MockExistentialDeposit::get());
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_1)).count(),
+				AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_1)).count(),
 				bob_asset_ids.len() - 1
 			);
-			assert_eq!(
-				AssetOwners::<Test, Instance1>::iter_prefix((CHARLIE, SEASON_ID_1)).count(),
-				1
-			);
+			assert_eq!(AssetOwners::<Test, ()>::iter_prefix((CHARLIE, SEASON_ID_1)).count(), 1);
 		});
 }
 
 #[test]
 fn transfer_asset_rejects_on_transfer_closed() {
 	ExtBuilder::default().build().execute_with(|| {
-		GeneralConfigStore::<Test, Instance1>::mutate(|config| config.transfer.open = false);
+		GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 		assert_noop!(
 			Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, AssetId::random()),
-			Error::<Test, Instance1>::TransferClosed
+			Error::<Test, ()>::TransferClosed
 		);
 	});
 }
@@ -133,8 +130,8 @@ fn transfer_asset_works_on_transfer_closed_with_organizer() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			GeneralConfigStore::<Test, Instance1>::mutate(|config| config.transfer.open = false);
-			let bob_asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
+			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
+			let bob_asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 			let asset_id = bob_asset_ids[0];
 			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), DAVE, asset_id));
 		});
@@ -144,11 +141,11 @@ fn transfer_asset_works_on_transfer_closed_with_organizer() {
 fn transfer_asset_rejects_transferring_to_self() {
 	ExtBuilder::default().build().execute_with(|| {
 		for who in [ALICE, BOB, CHARLIE, DAVE] {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, who, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, who, 1);
 			let asset_id = asset_ids[0];
 			assert_noop!(
 				Sage::transfer_asset(RuntimeOrigin::signed(who), who, asset_id),
-				Error::<Test, Instance1>::CannotTransferToSelf
+				Error::<Test, ()>::CannotTransferToSelf
 			);
 		}
 	});
@@ -160,12 +157,12 @@ fn transfer_asset_rejects_asset_in_trade() {
 		.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, CHARLIE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, CHARLIE, 1);
 			let asset_id = asset_ids[0];
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 999));
 			assert_noop!(
 				Sage::transfer_asset(RuntimeOrigin::signed(CHARLIE), DAVE, asset_id),
-				Error::<Test, Instance1>::CannotTransferAssetInTrade
+				Error::<Test, ()>::CannotTransferAssetInTrade
 			);
 		});
 }
@@ -173,10 +170,10 @@ fn transfer_asset_rejects_asset_in_trade() {
 #[test]
 fn transfer_asset_rejects_unowned_assets() {
 	ExtBuilder::default().build().execute_with(|| {
-		let asset_id = create_assets::<Instance1>(SEASON_ID_0, CHARLIE, 1)[0];
+		let asset_id = create_assets::<()>(SEASON_ID_0, CHARLIE, 1)[0];
 		assert_noop!(
 			Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id),
-			Error::<Test, Instance1>::AssetNotOwned
+			Error::<Test, ()>::AssetNotOwned
 		);
 	});
 }
@@ -186,7 +183,7 @@ fn transfer_asset_rejects_unknown_assets() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
 			Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, AssetId::random()),
-			Error::<Test, Instance1>::UnknownAsset
+			Error::<Test, ()>::UnknownAsset
 		);
 	});
 }
@@ -198,22 +195,18 @@ fn transfer_asset_rejects_on_full_asset_inventory_of_recipient() {
 		.locks(&[(ALICE, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			PlayerSeasonConfigs::<Test, Instance1>::mutate(BOB, SEASON_ID_0, |config| {
+			PlayerSeasonConfigs::<Test, ()>::mutate(BOB, SEASON_ID_0, |config| {
 				config.inventory_tier = InventoryTier::Three
 			});
 
-			let alice_asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+			let alice_asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let asset_id = alice_asset_ids[0];
-			let _ = create_assets::<Instance1>(
-				SEASON_ID_0,
-				BOB,
-				InventoryTier::Three.get_asset_slots(),
-			);
+			let _ = create_assets::<()>(SEASON_ID_0, BOB, InventoryTier::Three.get_asset_slots());
 
 			// Trying to send an asset to BOB while his inventory is already full
 			assert_noop!(
 				Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id),
-				Error::<Test, Instance1>::MaxOwnershipReached
+				Error::<Test, ()>::MaxOwnershipReached
 			);
 		});
 }
@@ -234,22 +227,21 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 				AssetFilter::Transfer(transfer_filter)
 			));
 
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 2);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 2);
 			let asset_id_1 = asset_ids[0];
 			let asset_id_2 = asset_ids[1];
 
 			// Since asset_id_1 doest have its type match the filter we cannot set price for it
-			let (_, asset_1) =
-				Assets::<Test, Instance1>::get(asset_id_1).expect("Should get asset");
+			let (_, asset_1) = Assets::<Test, ()>::get(asset_id_1).expect("Should get asset");
 			assert_eq!(asset_1.asset_type, 0);
 			assert_noop!(
 				Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_1),
-				Error::<Test, Instance1>::AssetCannotBeTransfered
+				Error::<Test, ()>::AssetCannotBeTransfered
 			);
 
 			// We change asset_id_2 type so that it matches the filter, allowing us to put it on
 			// sale
-			Assets::<Test, Instance1>::mutate(asset_id_2, |maybe_asset| {
+			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
 				if let Some((_, ref mut asset)) = maybe_asset {
 					asset.asset_type = transfer_filter;
 				}

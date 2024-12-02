@@ -57,9 +57,7 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		Sage: pallet_sage::<Instance1> = 2,
-		#[cfg(feature = "runtime-benchmarks")]
-		SageBench: pallet_sage = 3,
+		Sage: pallet_sage = 2,
 	}
 );
 
@@ -194,7 +192,7 @@ pub struct MockAffiliatesFeeProvider;
 
 impl FeeProvider for MockAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
-	type FeeIdentifier = AffiliateMethodsOf<Test, Instance1>;
+	type FeeIdentifier = AffiliateMethodsOf<Test, ()>;
 	type FeeCurrency = MockBalance;
 	type FeeOutput = Vec<(MockBalance, MockAccountId)>;
 
@@ -355,12 +353,31 @@ impl AssetInspector for MockAssetMediator {
 pub struct SageBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
+impl SageBenchmarkHelper {
+	pub(crate) fn create_asset_for<T: Config<I>, I: 'static>(
+		account: &T::AccountId,
+		season_id: &SeasonIdOf<T, I>,
+		seed: u32,
+	) -> AssetIdOf<T, I> {
+		let (asset_id, asset) = T::BenchmarkHelper::create_asset(seed);
+
+		T::SeasonHandler::register_asset_in(&asset_id, season_id)
+			.expect("Asset should be registered");
+		Assets::<T, I>::insert(&asset_id, (account, asset));
+		AssetOwners::<T, I>::insert((account, season_id, &asset_id), ());
+
+		asset_id
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
 impl
 	BenchmarkHelper<
 		AssetId,
 		Asset,
 		MockFilter,
 		MockFilter,
+		MockAccountId,
 		MockSeasonId,
 		ExampleTransitionId,
 		(),
@@ -382,12 +399,20 @@ impl
 		MockFilter::from(id)
 	}
 
-	fn create_transition_id(id: u32) -> ExampleTransitionId {
-		if id == 99 {
-			ExampleTransitionId::BenchTransition
-		} else {
-			ExampleTransitionId::UpgradeAsset
-		}
+	fn create_bench_transition_for(
+		account: &MockAccountId,
+		season: &MockSeasonId,
+		seed: u32,
+	) -> (ExampleTransitionId, Vec<AssetId>) {
+		let asset_id_1 = Self::create_asset_for::<Test, ()>(account, season, seed);
+		let asset_id_2 = Self::create_asset_for::<Test, ()>(account, season, seed * 2);
+		let asset_id_3 = Self::create_asset_for::<Test, ()>(account, season, seed * 3);
+		let asset_id_4 = Self::create_asset_for::<Test, ()>(account, season, seed * 4);
+		let asset_id_5 = Self::create_asset_for::<Test, ()>(account, season, seed * 5);
+
+		let asset_vec = vec![asset_id_1, asset_id_2, asset_id_3, asset_id_4, asset_id_5];
+
+		(ExampleTransitionId::BenchTransition, asset_vec)
 	}
 
 	fn create_season_id(id: u32) -> MockSeasonId {
@@ -399,8 +424,7 @@ impl
 	fn create_extra(_id: u32) {}
 }
 
-pub type SageInstance1 = pallet_sage::Instance1;
-impl crate::Config<SageInstance1> for Test {
+impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
 	type SeasonHandler = MockSeasonManager;
@@ -455,13 +479,13 @@ impl ExtBuilder {
 			let _ = Balances::deposit_creating(&TREASURER, MockExistentialDeposit::get());
 
 			if let Some(organizer) = self.organizer {
-				Organizer::<Test, Instance1>::put(organizer);
+				Organizer::<Test, ()>::put(organizer);
 			}
 
 			if !self.locks.is_empty() {
 				for (account, season_id, lock) in self.locks {
 					let config = PlayerConfig { inventory_tier: InventoryTier::One, locks: lock };
-					PlayerSeasonConfigs::<Test, Instance1>::insert(account, season_id, config);
+					PlayerSeasonConfigs::<Test, ()>::insert(account, season_id, config);
 				}
 			}
 
@@ -471,7 +495,7 @@ impl ExtBuilder {
 				transfer: TransferConfig { open: true },
 				trade: TradeConfig { open: true },
 			};
-			GeneralConfigStore::<Test, Instance1>::put(config);
+			GeneralConfigStore::<Test, ()>::put(config);
 		});
 		ext
 	}

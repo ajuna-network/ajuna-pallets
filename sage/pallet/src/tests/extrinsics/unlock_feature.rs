@@ -24,19 +24,17 @@ fn unlock_feature_works_for_trade_asset_targets() {
 		.balances(&[(ALICE, initial_balance), (BOB, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
+			let season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
 				.expect("Should get season_id");
 			let season_config =
-				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&season_id)
+				<Test as Config<()>>::SeasonHandler::get_season_config_for(&season_id)
 					.expect("Should get season config");
 			let unlock_rule = UnlockRule::from([1, 0, 0, 0, 0]);
 
-			SeasonUnlocks::<Test, Instance1>::insert(season_id, feature_to_unlock, unlock_rule);
+			SeasonUnlocks::<Test, ()>::insert(season_id, feature_to_unlock, unlock_rule);
 
 			// Unlocking feature for oneself through the unlock filters
-			assert!(
-				!PlayerSeasonConfigs::<Test, Instance1>::get(ALICE, season_id).locks.asset_trade
-			);
+			assert!(!PlayerSeasonConfigs::<Test, ()>::get(ALICE, season_id).locks.asset_trade);
 			// The first attempt fails since ALICE doesn't pass the filters
 			assert_noop!(
 				Sage::unlock_feature(
@@ -45,10 +43,10 @@ fn unlock_feature_works_for_trade_asset_targets() {
 					feature_to_unlock,
 					season_id
 				),
-				Error::<Test, Instance1>::UnlockCriteriaNotFulfilled
+				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
 			// We adjust her stats so that she does
-			PlayerSeasonStats::<Test, Instance1>::mutate(ALICE, season_id, |stats| {
+			PlayerSeasonStats::<Test, ()>::mutate(ALICE, season_id, |stats| {
 				stats.minted_amount = 1;
 			});
 			assert_ok!(Sage::unlock_feature(
@@ -63,13 +61,11 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				season_id,
 				account: ALICE,
 			}));
-			assert!(
-				PlayerSeasonConfigs::<Test, Instance1>::get(ALICE, season_id).locks.asset_trade
-			);
+			assert!(PlayerSeasonConfigs::<Test, ()>::get(ALICE, season_id).locks.asset_trade);
 
 			// Unlocking feature for oneself through paying
 			assert_eq!(Balances::free_balance(BOB), initial_balance);
-			assert!(!PlayerSeasonConfigs::<Test, Instance1>::get(BOB, season_id).locks.asset_trade);
+			assert!(!PlayerSeasonConfigs::<Test, ()>::get(BOB, season_id).locks.asset_trade);
 			assert_ok!(Sage::unlock_feature(
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OneselfPaying,
@@ -85,14 +81,10 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				Balances::free_balance(BOB),
 				initial_balance - season_config.fee.unlock_trade_asset
 			);
-			assert!(PlayerSeasonConfigs::<Test, Instance1>::get(BOB, season_id).locks.asset_trade);
+			assert!(PlayerSeasonConfigs::<Test, ()>::get(BOB, season_id).locks.asset_trade);
 
 			// Unlocking feature for another through paying
-			assert!(
-				!PlayerSeasonConfigs::<Test, Instance1>::get(CHARLIE, season_id)
-					.locks
-					.asset_trade
-			);
+			assert!(!PlayerSeasonConfigs::<Test, ()>::get(CHARLIE, season_id).locks.asset_trade);
 			assert_ok!(Sage::unlock_feature(
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OtherPaying(CHARLIE),
@@ -108,11 +100,7 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				Balances::free_balance(BOB),
 				initial_balance - season_config.fee.unlock_trade_asset * 2
 			);
-			assert!(
-				PlayerSeasonConfigs::<Test, Instance1>::get(CHARLIE, season_id)
-					.locks
-					.asset_trade
-			);
+			assert!(PlayerSeasonConfigs::<Test, ()>::get(CHARLIE, season_id).locks.asset_trade);
 		});
 }
 
@@ -124,21 +112,17 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 		.balances(&[(ALICE, initial_balance), (BOB, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
+			let season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
 				.expect("Should get season_id");
 			let season_config =
-				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&season_id)
+				<Test as Config<()>>::SeasonHandler::get_season_config_for(&season_id)
 					.expect("Should get season config");
 			let unlock_rule = UnlockRule::from([0, 0, 3, 0, 0]);
 
-			SeasonUnlocks::<Test, Instance1>::insert(season_id, feature_to_unlock, unlock_rule);
+			SeasonUnlocks::<Test, ()>::insert(season_id, feature_to_unlock, unlock_rule);
 
 			// Unlocking feature for oneself through the unlock filters
-			assert!(
-				!PlayerSeasonConfigs::<Test, Instance1>::get(ALICE, season_id)
-					.locks
-					.asset_transfer
-			);
+			assert!(!PlayerSeasonConfigs::<Test, ()>::get(ALICE, season_id).locks.asset_transfer);
 			// The first attempt fails since ALICE doesn't pass the filters
 			assert_noop!(
 				Sage::unlock_feature(
@@ -147,10 +131,10 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 					feature_to_unlock,
 					season_id
 				),
-				Error::<Test, Instance1>::UnlockCriteriaNotFulfilled
+				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
 			// We adjust her stats so that she does
-			PlayerSeasonStats::<Test, Instance1>::mutate(ALICE, season_id, |stats| {
+			PlayerSeasonStats::<Test, ()>::mutate(ALICE, season_id, |stats| {
 				stats.forged_amount = 3;
 			});
 			assert_ok!(Sage::unlock_feature(
@@ -165,17 +149,11 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				season_id,
 				account: ALICE,
 			}));
-			assert!(
-				PlayerSeasonConfigs::<Test, Instance1>::get(ALICE, season_id)
-					.locks
-					.asset_transfer
-			);
+			assert!(PlayerSeasonConfigs::<Test, ()>::get(ALICE, season_id).locks.asset_transfer);
 
 			// Unlocking feature for oneself through paying
 			assert_eq!(Balances::free_balance(BOB), initial_balance);
-			assert!(
-				!PlayerSeasonConfigs::<Test, Instance1>::get(BOB, season_id).locks.asset_transfer
-			);
+			assert!(!PlayerSeasonConfigs::<Test, ()>::get(BOB, season_id).locks.asset_transfer);
 			assert_ok!(Sage::unlock_feature(
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OneselfPaying,
@@ -191,16 +169,10 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				Balances::free_balance(BOB),
 				initial_balance - season_config.fee.unlock_trade_asset
 			);
-			assert!(
-				PlayerSeasonConfigs::<Test, Instance1>::get(BOB, season_id).locks.asset_transfer
-			);
+			assert!(PlayerSeasonConfigs::<Test, ()>::get(BOB, season_id).locks.asset_transfer);
 
 			// Unlocking feature for another through paying
-			assert!(
-				!PlayerSeasonConfigs::<Test, Instance1>::get(CHARLIE, season_id)
-					.locks
-					.asset_transfer
-			);
+			assert!(!PlayerSeasonConfigs::<Test, ()>::get(CHARLIE, season_id).locks.asset_transfer);
 			assert_ok!(Sage::unlock_feature(
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OtherPaying(CHARLIE),
@@ -216,10 +188,6 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				Balances::free_balance(BOB),
 				initial_balance - season_config.fee.unlock_trade_asset * 2
 			);
-			assert!(
-				PlayerSeasonConfigs::<Test, Instance1>::get(CHARLIE, season_id)
-					.locks
-					.asset_transfer
-			);
+			assert!(PlayerSeasonConfigs::<Test, ()>::get(CHARLIE, season_id).locks.asset_transfer);
 		});
 }

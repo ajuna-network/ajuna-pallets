@@ -41,7 +41,7 @@ use ajuna_primitives::{
 	trade_manager::{TradeManager, TransferManager},
 };
 use sage_api::{
-	traits::{Identifiable, TransitionOutput},
+	traits::{GetId, TransitionOutput},
 	AsErrorCode, SageGameTransition,
 };
 
@@ -104,6 +104,7 @@ pub mod pallet {
 		Asset,
 		TradeFilter,
 		TransferFilter,
+		AccountId,
 		SeasonId,
 		TransitionId,
 		TransitionConfig,
@@ -116,72 +117,17 @@ pub mod pallet {
 
 		fn create_asset_transfer_filter(id: u32) -> TransferFilter;
 
-		fn create_transition_id(id: u32) -> TransitionId;
+		fn create_bench_transition_for(
+			account: &AccountId,
+			season: &SeasonId,
+			seed: u32,
+		) -> (TransitionId, Vec<AssetId>);
 
 		fn create_season_id(id: u32) -> SeasonId;
 
 		fn create_transition_config(id: u32) -> TransitionConfig;
 
 		fn create_extra(id: u32) -> Extra;
-	}
-	#[cfg(feature = "runtime-benchmarks")]
-	impl<
-			AssetId,
-			Asset,
-			TradeFilter,
-			TransferFilter,
-			SeasonId,
-			TransitionId,
-			TransitionConfig,
-			Extra,
-		>
-		BenchmarkHelper<
-			AssetId,
-			Asset,
-			TradeFilter,
-			TransferFilter,
-			SeasonId,
-			TransitionId,
-			TransitionConfig,
-			Extra,
-		> for ()
-	where
-		AssetId: From<u32>,
-		Asset: From<u32>,
-		TradeFilter: From<u32>,
-		TransferFilter: From<u32>,
-		SeasonId: From<u32>,
-		TransitionId: From<u32>,
-		TransitionConfig: From<u32>,
-		Extra: From<u32>,
-	{
-		fn create_asset(seed: u32) -> (AssetId, Asset) {
-			(AssetId::from(seed), Asset::from(seed))
-		}
-
-		fn create_asset_trade_filter(id: u32) -> TradeFilter {
-			TradeFilter::from(id)
-		}
-
-		fn create_asset_transfer_filter(id: u32) -> TransferFilter {
-			TransferFilter::from(id)
-		}
-
-		fn create_transition_id(id: u32) -> TransitionId {
-			TransitionId::from(id)
-		}
-
-		fn create_season_id(id: u32) -> SeasonId {
-			SeasonId::from(id)
-		}
-
-		fn create_transition_config(id: u32) -> TransitionConfig {
-			TransitionConfig::from(id)
-		}
-
-		fn create_extra(id: u32) -> Extra {
-			Extra::from(id)
-		}
 	}
 
 	#[pallet::config]
@@ -237,6 +183,7 @@ pub mod pallet {
 			AssetOf<Self, I>,
 			TradeFilterOf<Self, I>,
 			TransferFilterOf<Self, I>,
+			AccountIdOf<Self>,
 			SeasonIdOf<Self, I>,
 			TransitionIdOf<Self, I>,
 			TransitionConfigOf<Self, I>,

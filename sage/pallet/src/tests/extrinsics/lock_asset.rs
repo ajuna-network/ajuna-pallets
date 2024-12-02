@@ -28,12 +28,12 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 		])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let asset_id = asset_ids[0];
 			let expected_lock = Lock { id: *SAGE_LOCK_ID, locker: ALICE };
 
 			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(ALICE), asset_id));
-			assert!(LockedAssets::<Test, Instance1>::contains_key(asset_id));
+			assert!(LockedAssets::<Test, ()>::contains_key(asset_id));
 			System::assert_has_event(RuntimeEvent::Sage(Event::AssetLocked {
 				asset_id,
 				lock: expected_lock,
@@ -42,13 +42,13 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 			// Ensure ownership transferred to technical account
 			let technical_account = Sage::technical_account_id();
 
-			assert!(!AssetOwners::<Test, Instance1>::contains_key((ALICE, SEASON_ID_0, asset_id)));
-			assert!(!AssetOwners::<Test, Instance1>::contains_key((
+			assert!(!AssetOwners::<Test, ()>::contains_key((ALICE, SEASON_ID_0, asset_id)));
+			assert!(!AssetOwners::<Test, ()>::contains_key((
 				technical_account,
 				SEASON_ID_0,
 				asset_id
 			)));
-			assert_eq!(Assets::<Test, Instance1>::get(asset_id).unwrap().0, technical_account);
+			assert_eq!(Assets::<Test, ()>::get(asset_id).unwrap().0, technical_account);
 
 			// Ensure locked assets cannot be used in trading, transferring and forging
 			for extrinsic in [
@@ -61,7 +61,7 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 					(),
 				),
 			] {
-				assert_noop!(extrinsic, Error::<Test, Instance1>::AssetLocked);
+				assert_noop!(extrinsic, Error::<Test, ()>::AssetLocked);
 			}
 		});
 }

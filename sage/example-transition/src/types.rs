@@ -3,7 +3,7 @@
 //! These should be expanded to really showcase the power of the SageApi design.
 
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use sage_api::traits::Identifiable;
+use sage_api::traits::GetId;
 use scale_info::TypeInfo;
 use sp_core::H256;
 
@@ -54,7 +54,7 @@ impl Asset {
 	}
 }
 
-impl Identifiable<AssetId> for Asset {
+impl GetId<AssetId> for Asset {
 	fn get_id(&self) -> AssetId {
 		self.asset_id
 	}
