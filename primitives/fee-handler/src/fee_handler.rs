@@ -26,13 +26,19 @@ pub trait DistributeFee {
 		base_fee: Self::Balance,
 		account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>;
+	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>>;
 }
 
 /// Payment to be executed.
 pub struct Payment<AccountId, Balance> {
 	beneficiary: AccountId,
 	amount: Balance,
+}
+
+impl<AccountId, Balance> Payment<AccountId, Balance> {
+	pub fn new(beneficiary: AccountId, amount: Balance) -> Self {
+		Self { beneficiary, amount }
+	}
 }
 
 /// Abstraction of withdrawing fees in one asset and return allocating the fees in the same or
@@ -161,11 +167,13 @@ where
 	) -> Result<CreditOf<T>, DispatchError> {
 		let mut final_fee = fee_credit;
 
-		for allocation in Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
-			if allocation.amount > 0_u32.into() {
-				let affiliate_fee = final_fee.extract(allocation.amount);
-				T::Assets::resolve(&allocation.beneficiary, affiliate_fee)
-					.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
+		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
+			for allocation in a {
+				if allocation.amount > 0_u32.into() {
+					let affiliate_fee = final_fee.extract(allocation.amount);
+					T::Assets::resolve(&allocation.beneficiary, affiliate_fee)
+						.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
+				}
 			}
 		}
 
@@ -181,20 +189,20 @@ where
 		account: &T::AccountId,
 		identifier: &Tournament::FeeIdentifier,
 	) -> Result<CreditOf<T>, DispatchError> {
-		let fees = Tournament::distribute_fee(fee_credit.peek(), account, identifier);
+		let mut final_fee = fee_credit;
 
-		assert_eq!(fees.len(), 1, "invalid fee provider implementation");
+		if let Some(fee) = Tournament::distribute_fee(final_fee.peek(), account, identifier) {
+			assert_eq!(fee.len(), 1, "invalid fee provider implementation");
+			let allocation = &fee[0];
 
-		let allocation = &fees[0];
-
-		if allocation.amount > 0_u32.into() {
-			let (remaining_credit, tournament_credit) = fee_credit.split(allocation.amount);
-			T::Assets::resolve(&allocation.beneficiary, tournament_credit)
-				.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
-			Ok(remaining_credit)
-		} else {
-			Ok(fee_credit)
+			if allocation.amount > 0_u32.into() {
+				let tournament_credit = final_fee.extract(allocation.amount);
+				T::Assets::resolve(&allocation.beneficiary, tournament_credit)
+					.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
+			}
 		}
+
+		Ok(final_fee)
 	}
 
 	fn deposit_into_treasury(key: &T::AccountId, credit: CreditOf<T>) -> Result<(), DispatchError> {
