@@ -76,8 +76,8 @@ impl DistributeFee for MockAffiliatesFeeProvider {
 			AffiliateFeeId::Paying => Some(
 				vec![
 					Payment::new(ALICE, base_fee * 5 / 10),
-					Payment::new(BOB, base_fee * 5 / 10),
-					Payment::new(CHARLIE, base_fee * 5 / 10),
+					Payment::new(BOB, base_fee * 3 / 10),
+					Payment::new(CHARLIE, base_fee * 2 / 10),
 				]
 				.try_into()
 				.expect("max distributions = 3; qed"),
