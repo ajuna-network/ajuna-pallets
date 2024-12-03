@@ -7,6 +7,7 @@ use frame_support::{
 	BoundedVec,
 };
 use pallet_asset_conversion::CreditOf;
+use parity_scale_codec::{Decode, Encode};
 
 /// Distributes shares of a base fee to some beneficiaries.
 pub trait DistributeFee {
@@ -30,6 +31,7 @@ pub trait DistributeFee {
 }
 
 /// Payment to be executed.
+#[derive(Debug, Encode, Decode, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Payment<AccountId, Balance> {
 	beneficiary: AccountId,
 	amount: Balance,
