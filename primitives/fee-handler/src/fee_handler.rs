@@ -147,6 +147,7 @@ where
 	Tournament: DistributeFee<
 		AccountId = T::AccountId,
 		Balance = T::Balance,
+		// We assume that the only beneficiary is the tournament treasury
 		MaxDistributions = ConstU32<1>,
 	>,
 {
