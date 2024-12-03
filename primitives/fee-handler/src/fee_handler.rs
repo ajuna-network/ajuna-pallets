@@ -139,14 +139,13 @@ pub trait FeeHandler {
 	) -> Result<(), DispatchError>;
 }
 
-pub struct GameFeeHandler<AssetConversion, WithdrawAsset, DepositAsset, Affiliate, Tournament> {
-	_phantom: PhantomData<(AssetConversion, WithdrawAsset, DepositAsset, Affiliate, Tournament)>,
+pub struct GameFeeHandler<AssetConversion, WithdrawAsset, Affiliate, Tournament> {
+	_phantom: PhantomData<(AssetConversion, WithdrawAsset, Affiliate, Tournament)>,
 }
 
-impl<T, WithdrawAsset, DepositAsset, Affiliate, Tournament> FeeHandler
-	for GameFeeHandler<T, WithdrawAsset, DepositAsset, Affiliate, Tournament>
+impl<T, WithdrawAsset, Affiliate, Tournament> FeeHandler
+	for GameFeeHandler<T, WithdrawAsset, Affiliate, Tournament>
 where
-	DepositAsset: Get<T::AssetKind>,
 	T: pallet_asset_conversion::Config + frame_system::Config,
 	T::Assets: fungibles::Inspect<
 		<T as frame_system::Config>::AccountId,
@@ -182,6 +181,7 @@ where
 		affiliate_id: &Self::AffiliateFeeIdentifier,
 		treasury_pot: &T::AccountId,
 	) -> Result<(), DispatchError> {
+		// The credit may be in any asset as implemented by `WithdrawAsset`.
 		let fee_credit = WithdrawAsset::withdraw_fee(payer, payment_asset, base_fee)?;
 
 		let remaining_credit =
@@ -204,10 +204,9 @@ where
 	}
 }
 
-impl<T, WithdrawAsset, DepositAsset, Affiliate, Tournament>
-	GameFeeHandler<T, WithdrawAsset, DepositAsset, Affiliate, Tournament>
+impl<T, WithdrawAsset, Affiliate, Tournament>
+	GameFeeHandler<T, WithdrawAsset, Affiliate, Tournament>
 where
-	DepositAsset: Get<T::AssetKind>,
 	T: pallet_asset_conversion::Config,
 	T::Assets: fungibles::Inspect<T::AccountId, Balance = T::Balance, AssetId = T::AssetKind>,
 
