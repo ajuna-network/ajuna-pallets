@@ -1,9 +1,9 @@
-use ajuna_primitives::treasury_manager::TreasuryManager;
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
 	sp_runtime::TokenError,
-	traits::{fungibles, fungibles::Balanced, Get},
+	traits::{fungibles, fungibles::Balanced, ConstU32, Get},
+	BoundedVec,
 };
 use pallet_asset_conversion::{CreditOf, Pallet as AssetConversion};
 
@@ -53,17 +53,26 @@ where
 	}
 }
 
-pub trait FeeProvider {
+/// Distributes a
+pub trait DistributeFee {
 	type AccountId;
-	type FeeIdentifier;
-	type FeeCurrency;
-	type FeeOutput;
 
-	fn get_fee_from(
-		base_fee: Self::FeeCurrency,
+	type Balance;
+
+	type FeeIdentifier;
+
+	type MaxDistributions;
+
+	fn distribute_fee(
+		base_fee: Self::Balance,
 		account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput;
+	) -> BoundedVec<FeeAllocation<Self::AccountId, Self::Balance>, Self::MaxDistributions>;
+}
+
+pub struct FeeAllocation<AccountId, Balance> {
+	beneficiary: AccountId,
+	amount: Balance,
 }
 
 pub trait EnsureWhitelistedAsset {
@@ -135,15 +144,11 @@ where
 		LiquidityInfo = CreditOf<T>,
 	>,
 
-	Affiliate: FeeProvider<
+	Affiliate: DistributeFee<AccountId = T::AccountId, Balance = T::Balance>,
+	Tournament: DistributeFee<
 		AccountId = T::AccountId,
-		FeeCurrency = T::Balance,
-		FeeOutput = Vec<(T::Balance, T::AccountId)>,
-	>,
-	Tournament: FeeProvider<
-		AccountId = T::AccountId,
-		FeeCurrency = T::Balance,
-		FeeOutput = (T::Balance, T::AccountId),
+		Balance = T::Balance,
+		MaxDistributions = ConstU32<1>,
 	>,
 {
 	type AccountId = T::AccountId;
@@ -192,15 +197,11 @@ where
 	WithdrawAsset:
 		WithdrawFee<AssetId = T::AssetKind, Balance = T::Balance, LiquidityInfo = CreditOf<T>>,
 
-	Affiliate: FeeProvider<
+	Affiliate: DistributeFee<AccountId = T::AccountId, Balance = T::Balance>,
+	Tournament: DistributeFee<
 		AccountId = T::AccountId,
-		FeeCurrency = T::Balance,
-		FeeOutput = Vec<(T::Balance, T::AccountId)>,
-	>,
-	Tournament: FeeProvider<
-		AccountId = T::AccountId,
-		FeeCurrency = T::Balance,
-		FeeOutput = (T::Balance, T::AccountId),
+		Balance = T::Balance,
+		MaxDistributions = ConstU32<1>,
 	>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
@@ -213,12 +214,10 @@ where
 	) -> Result<CreditOf<T>, DispatchError> {
 		let mut final_fee = fee_credit;
 
-		for (transfer_fee, chain_account) in
-			Affiliate::get_fee_from(final_fee.peek(), account, identifier)
-		{
-			if transfer_fee > 0_u32.into() {
-				let affiliate_fee = final_fee.extract(transfer_fee);
-				T::Assets::resolve(&chain_account, affiliate_fee)
+		for allocation in Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
+			if allocation.amount > 0_u32.into() {
+				let affiliate_fee = final_fee.extract(allocation.amount);
+				T::Assets::resolve(&allocation.beneficiary, affiliate_fee)
 					.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
 			}
 		}
@@ -235,12 +234,15 @@ where
 		account: &T::AccountId,
 		identifier: &Tournament::FeeIdentifier,
 	) -> Result<CreditOf<T>, DispatchError> {
-		let (tournament_fee, tournament_account) =
-			Tournament::get_fee_from(fee_credit.peek(), account, identifier);
+		let fees = Tournament::distribute_fee(fee_credit.peek(), account, identifier);
 
-		if tournament_fee > 0_u32.into() {
-			let (remaining_credit, tournament_credit) = fee_credit.split(tournament_fee);
-			T::Assets::resolve(&tournament_account, tournament_credit)
+		assert_eq!(fees.len(), 1, "invalid fee provider implementation");
+
+		let allocation = &fees[0];
+
+		if allocation.amount > 0_u32.into() {
+			let (remaining_credit, tournament_credit) = fee_credit.split(allocation.amount);
+			T::Assets::resolve(&allocation.beneficiary, tournament_credit)
 				.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
 			Ok(remaining_credit)
 		} else {
