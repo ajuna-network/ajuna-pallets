@@ -1,9 +1,9 @@
-use ajuna_primitives::{runtime_types::AccountId, treasury_manager::TreasuryManager};
+use ajuna_primitives::treasury_manager::TreasuryManager;
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
-	sp_runtime::{traits::CheckedSub, TokenError},
-	traits::{fungibles, fungibles::Balanced, tokens::Precision, Get},
+	sp_runtime::TokenError,
+	traits::{fungibles, fungibles::Balanced, Get},
 };
 use pallet_asset_conversion::{CreditOf, Pallet as AssetConversion};
 
@@ -106,9 +106,10 @@ pub trait FeeHandler {
 	) -> Result<(), DispatchError>;
 
 	fn withdraw_and_deposit_into_treasury(
-		depositor: &Self::AccountId,
-		key: &Self::AccountId,
-		fee: Self::Balance,
+		who: &Self::AccountId,
+		asset_id: Self::AssetId,
+		treasury_pot: &Self::AccountId,
+		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
 }
 
@@ -171,11 +172,13 @@ where
 	}
 
 	fn withdraw_and_deposit_into_treasury(
-		depositor: &Self::AccountId,
-		key: &Self::AccountId,
-		fee: Self::Balance,
+		who: &Self::AccountId,
+		asset_id: Self::AssetId,
+		treasury_pot: &Self::AccountId,
+		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		todo!()
+		let credit = WithdrawAsset::withdraw_fee(who, asset_id, amount)?;
+		Self::deposit_into_treasury(treasury_pot, credit)
 	}
 }
 
