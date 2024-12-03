@@ -1,3 +1,4 @@
+use crate::withdraw_credit::WithdrawCredit;
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
@@ -32,31 +33,6 @@ pub trait DistributeFee {
 pub struct Payment<AccountId, Balance> {
 	beneficiary: AccountId,
 	amount: Balance,
-}
-
-pub trait EnsureWhitelistedAsset {
-	type AssetId;
-
-	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError>;
-}
-
-/// Abstraction to withdraw some asset from an account, and return a credit in some asset.
-///
-/// Currently, this is intended to be implemented by the `SwapCredit` adapter we have in the
-/// ajuna-parachain, which will convert whitelisted assets into the native currency via the
-/// `pallet-asset-conversion` and return a credit in the native balance, which can then be allocated
-/// to the affiliates, or the specific treasury pots.
-pub trait WithdrawFee {
-	type AccountId;
-	type AssetId;
-	type Balance;
-	type Credit;
-
-	fn withdraw_fee(
-		payer: &Self::AccountId,
-		asset_id: Self::AssetId,
-		fee: Self::Balance,
-	) -> Result<Self::Credit, DispatchError>;
 }
 
 /// Abstraction of withdrawing fees in one asset and return allocating the fees in the same or
@@ -107,7 +83,7 @@ where
 		AssetId = T::AssetKind,
 	>,
 
-	WithdrawAsset: WithdrawFee<
+	WithdrawAsset: WithdrawCredit<
 		AccountId = <T as frame_system::Config>::AccountId,
 		AssetId = T::AssetKind,
 		Balance = T::Balance,
@@ -136,7 +112,7 @@ where
 		treasury_pot: &T::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		let fee_credit = WithdrawAsset::withdraw_fee(payer, payment_asset, base_fee)?;
+		let fee_credit = WithdrawAsset::withdraw_credit(payer, payment_asset, base_fee)?;
 
 		let remaining_credit =
 			Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
@@ -153,7 +129,7 @@ where
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		let credit = WithdrawAsset::withdraw_fee(who, asset_id, amount)?;
+		let credit = WithdrawAsset::withdraw_credit(who, asset_id, amount)?;
 		Self::deposit_into_treasury(treasury_pot, credit)
 	}
 }
@@ -164,7 +140,8 @@ where
 	T: pallet_asset_conversion::Config,
 	T::Assets: fungibles::Inspect<T::AccountId, Balance = T::Balance, AssetId = T::AssetKind>,
 
-	WithdrawAsset: WithdrawFee<AssetId = T::AssetKind, Balance = T::Balance, Credit = CreditOf<T>>,
+	WithdrawAsset:
+		WithdrawCredit<AssetId = T::AssetKind, Balance = T::Balance, Credit = CreditOf<T>>,
 
 	Affiliate: DistributeFee<AccountId = T::AccountId, Balance = T::Balance>,
 	Tournament: DistributeFee<
