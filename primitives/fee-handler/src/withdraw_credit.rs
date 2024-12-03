@@ -46,3 +46,69 @@ pub trait WithdrawCredit {
 		credit: Self::Balance,
 	) -> Result<Self::Credit, DispatchError>;
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use frame_support::sp_runtime::TokenError;
+
+	struct AlwaysAllowWithdraw;
+	struct AlwaysDenyWithdraw;
+
+	impl EnsureWhitelistedAsset for AlwaysAllowWithdraw {
+		type AssetId = u8;
+
+		fn ensure_whitelisted(_asset_id: &Self::AssetId) -> Result<(), DispatchError> {
+			Ok(())
+		}
+	}
+
+	impl EnsureWhitelistedAsset for AlwaysDenyWithdraw {
+		type AssetId = u8;
+
+		fn ensure_whitelisted(_asset_id: &Self::AssetId) -> Result<(), DispatchError> {
+			Err(DispatchError::Token(TokenError::Unsupported))
+		}
+	}
+
+	struct MockWithdraw;
+
+	impl WithdrawCredit for MockWithdraw {
+		type AccountId = u8;
+		type AssetId = u8;
+		type Balance = u8;
+		type Credit = u8;
+
+		fn withdraw_credit(
+			_who: &Self::AccountId,
+			_asset_id: Self::AssetId,
+			credit: Self::Balance,
+		) -> Result<Self::Credit, DispatchError> {
+			Ok(credit)
+		}
+	}
+
+	#[test]
+	fn can_withdraw_whitelisted_asset() {
+		let credit = 2;
+
+		assert_eq!(
+			WithdrawWhitelistedCredit::<AlwaysAllowWithdraw, MockWithdraw>::withdraw_credit(
+				&1u8, 1, credit
+			),
+			Ok(credit)
+		)
+	}
+
+	#[test]
+	fn cannot_withdraw_whitelisted_asset() {
+		let credit = 2;
+
+		assert_eq!(
+			WithdrawWhitelistedCredit::<AlwaysDenyWithdraw, MockWithdraw>::withdraw_credit(
+				&1u8, 1, credit
+			),
+			Err(DispatchError::Token(TokenError::Unsupported))
+		)
+	}
+}
