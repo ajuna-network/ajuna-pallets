@@ -53,24 +53,29 @@ where
 	}
 }
 
-/// Distributes a
+/// Distributes shares of a base fee to some beneficiaries.
 pub trait DistributeFee {
+	/// AccountId type used.
 	type AccountId;
 
+	/// Scalar balance type.
 	type Balance;
 
+	/// Fee identifier used to derive the fee distribution.
 	type FeeIdentifier;
 
+	/// Maximum number of distributions of shares from the base fee to beneficiaries.
 	type MaxDistributions;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
 		account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> BoundedVec<FeeAllocation<Self::AccountId, Self::Balance>, Self::MaxDistributions>;
+	) -> BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>;
 }
 
-pub struct FeeAllocation<AccountId, Balance> {
+/// Payment to be executed.
+pub struct Payment<AccountId, Balance> {
 	beneficiary: AccountId,
 	amount: Balance,
 }
@@ -81,19 +86,27 @@ pub trait EnsureWhitelistedAsset {
 	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError>;
 }
 
+/// Abstraction to withdraw some asset from an account, and return a credit in some asset.
+///
+/// Currently, this is intended to be implemented by the `SwapCredit` adapter we have in the
+/// ajuna-parachain, which will convert whitelisted assets into the native currency via the
+/// `pallet-asset-conversion` and return a credit in the native balance, which can then be allocated
+/// to the affiliates, or the specific treasury pots.
 pub trait WithdrawFee {
 	type AccountId;
 	type AssetId;
 	type Balance;
-	type LiquidityInfo;
+	type Credit;
 
 	fn withdraw_fee(
 		payer: &Self::AccountId,
 		asset_id: Self::AssetId,
 		fee: Self::Balance,
-	) -> Result<Self::LiquidityInfo, DispatchError>;
+	) -> Result<Self::Credit, DispatchError>;
 }
 
+/// Abstraction of withdrawing fees in one asset and return allocating the fees in the same or
+/// another asset.
 pub trait FeeHandler {
 	type AccountId;
 
@@ -105,6 +118,8 @@ pub trait FeeHandler {
 	type AffiliateFeeIdentifier;
 	type TournamentFeeIdentifier;
 
+	/// Withdraws the `base_fee` denominated in `payment_asset` allocate shares of the base fee to
+	/// the affiliate, tournament, and treasury if implemented.
 	fn withdraw_and_pay_fees(
 		payer: &Self::AccountId,
 		payment_asset: Self::AssetId,
@@ -114,6 +129,8 @@ pub trait FeeHandler {
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError>;
 
+	/// Withdraws the `base_fee` denominated in `payment_asset` allocate it fully to the
+	/// `treasury_pot`.
 	fn withdraw_and_deposit_into_treasury(
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
@@ -141,7 +158,7 @@ where
 		AccountId = <T as frame_system::Config>::AccountId,
 		AssetId = T::AssetKind,
 		Balance = T::Balance,
-		LiquidityInfo = CreditOf<T>,
+		Credit = CreditOf<T>,
 	>,
 
 	Affiliate: DistributeFee<AccountId = T::AccountId, Balance = T::Balance>,
@@ -194,8 +211,7 @@ where
 	T: pallet_asset_conversion::Config,
 	T::Assets: fungibles::Inspect<T::AccountId, Balance = T::Balance, AssetId = T::AssetKind>,
 
-	WithdrawAsset:
-		WithdrawFee<AssetId = T::AssetKind, Balance = T::Balance, LiquidityInfo = CreditOf<T>>,
+	WithdrawAsset: WithdrawFee<AssetId = T::AssetKind, Balance = T::Balance, Credit = CreditOf<T>>,
 
 	Affiliate: DistributeFee<AccountId = T::AccountId, Balance = T::Balance>,
 	Tournament: DistributeFee<
