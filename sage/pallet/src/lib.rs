@@ -99,35 +99,14 @@ pub mod pallet {
 	pub(crate) type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<
-		AssetId,
-		Asset,
-		TradeFilter,
-		TransferFilter,
-		AccountId,
-		SeasonId,
-		TransitionId,
-		TransitionConfig,
-		Extra,
-	>
-	{
-		fn create_asset(seed: u32) -> (AssetId, Asset);
-
-		fn create_asset_trade_filter(id: u32) -> TradeFilter;
-
-		fn create_asset_transfer_filter(id: u32) -> TransferFilter;
+	pub trait BenchmarkHelper<AccountId, SeasonId, AssetId, Asset, TransitionId> {
+		fn create_asset_for(account: &AccountId, season: &SeasonId, seed: u32) -> AssetId;
 
 		fn create_bench_transition_for(
 			account: &AccountId,
 			season: &SeasonId,
 			seed: u32,
 		) -> (TransitionId, Vec<AssetId>);
-
-		fn create_season_id(id: u32) -> SeasonId;
-
-		fn create_transition_config(id: u32) -> TransitionConfig;
-
-		fn create_extra(id: u32) -> Extra;
 	}
 
 	#[pallet::config]
@@ -179,15 +158,11 @@ pub mod pallet {
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type BenchmarkHelper: BenchmarkHelper<
-			AssetIdOf<Self, I>,
-			AssetOf<Self, I>,
-			TradeFilterOf<Self, I>,
-			TransferFilterOf<Self, I>,
 			AccountIdOf<Self>,
 			SeasonIdOf<Self, I>,
+			AssetIdOf<Self, I>,
+			AssetOf<Self, I>,
 			TransitionIdOf<Self, I>,
-			TransitionConfigOf<Self, I>,
-			ExtraOf<Self, I>,
 		>;
 	}
 

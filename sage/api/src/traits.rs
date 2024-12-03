@@ -24,7 +24,7 @@ pub trait SageGameTransition {
 	type Asset: Member + Parameter + MaxEncodedLen + TypeInfo + GetId<Self::AssetId>;
 	/// An optional extra, which is simply forwarded to the `verify_rule` and `do_transition`
 	/// method. If you don't need custom arguments, you can define that type as `()`.
-	type Extra: Member + Parameter + MaxEncodedLen + TypeInfo;
+	type Extra: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 	fn verify_rule(
 		transition_id: &Self::TransitionId,

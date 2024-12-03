@@ -353,50 +353,19 @@ impl AssetInspector for MockAssetMediator {
 pub struct SageBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl SageBenchmarkHelper {
-	pub(crate) fn create_asset_for<T: Config<I>, I: 'static>(
-		account: &T::AccountId,
-		season_id: &SeasonIdOf<T, I>,
-		seed: u32,
-	) -> AssetIdOf<T, I> {
-		let (asset_id, asset) = T::BenchmarkHelper::create_asset(seed);
-
-		T::SeasonHandler::register_asset_in(&asset_id, season_id)
-			.expect("Asset should be registered");
-		Assets::<T, I>::insert(&asset_id, (account, asset));
-		AssetOwners::<T, I>::insert((account, season_id, &asset_id), ());
-
-		asset_id
-	}
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-impl
-	BenchmarkHelper<
-		AssetId,
-		Asset,
-		MockFilter,
-		MockFilter,
-		MockAccountId,
-		MockSeasonId,
-		ExampleTransitionId,
-		(),
-		(),
-	> for SageBenchmarkHelper
+impl BenchmarkHelper<MockAccountId, MockSeasonId, AssetId, Asset, ExampleTransitionId>
+	for SageBenchmarkHelper
 {
-	fn create_asset(seed: u32) -> (AssetId, Asset) {
+	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
 		let asset_id = AssetId::from_low_u64_le(seed as u64);
 		let asset = Asset::create(asset_id, 0, 0, 0, [seed as u8; 32], 1, Level::One);
 
-		(asset_id, asset)
-	}
+		MockSeasonManager::register_asset_in(&asset_id, season_id)
+			.expect("Asset should be registered");
+		Assets::<Test, ()>::insert(asset_id, (account, asset));
+		AssetOwners::<Test, ()>::insert((account, season_id, &asset_id), ());
 
-	fn create_asset_trade_filter(id: u32) -> MockFilter {
-		MockFilter::from(id)
-	}
-
-	fn create_asset_transfer_filter(id: u32) -> MockFilter {
-		MockFilter::from(id)
+		asset_id
 	}
 
 	fn create_bench_transition_for(
@@ -404,24 +373,16 @@ impl
 		season: &MockSeasonId,
 		seed: u32,
 	) -> (ExampleTransitionId, Vec<AssetId>) {
-		let asset_id_1 = Self::create_asset_for::<Test, ()>(account, season, seed);
-		let asset_id_2 = Self::create_asset_for::<Test, ()>(account, season, seed * 2);
-		let asset_id_3 = Self::create_asset_for::<Test, ()>(account, season, seed * 3);
-		let asset_id_4 = Self::create_asset_for::<Test, ()>(account, season, seed * 4);
-		let asset_id_5 = Self::create_asset_for::<Test, ()>(account, season, seed * 5);
+		let asset_id_1 = Self::create_asset_for(account, season, seed);
+		let asset_id_2 = Self::create_asset_for(account, season, seed * 2);
+		let asset_id_3 = Self::create_asset_for(account, season, seed * 3);
+		let asset_id_4 = Self::create_asset_for(account, season, seed * 4);
+		let asset_id_5 = Self::create_asset_for(account, season, seed * 5);
 
 		let asset_vec = vec![asset_id_1, asset_id_2, asset_id_3, asset_id_4, asset_id_5];
 
 		(ExampleTransitionId::BenchTransition, asset_vec)
 	}
-
-	fn create_season_id(id: u32) -> MockSeasonId {
-		MockSeasonId::from(id as u8)
-	}
-
-	fn create_transition_config(_id: u32) {}
-
-	fn create_extra(_id: u32) {}
 }
 
 impl crate::Config for Test {

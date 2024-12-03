@@ -19,13 +19,13 @@
 
 use crate::{
 	config::{InventoryTier, Locks},
-	mock::{Balances, RuntimeOrigin, SageBenchmarkHelper, System, Test, SEASON_ID_0},
-	pallet::AssetFilterOf,
-	AssetTradePrices, BalanceOf, BenchmarkHelper, Call, Config, Event, GeneralConfigOf,
+	mock::{Balances, RuntimeOrigin, System, Test, SEASON_ID_0},
+	pallet::{AssetFilterOf, TradeFilterOf, TransferFilterOf},
+	AssetTradePrices, BalanceOf, BenchmarkHelper, Call, Config, Event, ExtraOf, GeneralConfigOf,
 	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonUnlocks,
 	UnlockRule, UnlockTarget, SAGE_LOCK_ID,
 };
-use ajuna_primitives::asset_manager::Lock;
+use ajuna_primitives::{asset_manager::Lock, season_manager::SeasonManager};
 use frame_benchmarking::benchmarks;
 use frame_system::RawOrigin;
 use sp_runtime::BuildStorage;
@@ -54,11 +54,7 @@ benchmarks! {
 
 	update_general_config {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let general_config = GeneralConfigOf::<T, ()> {
-			transition: T::BenchmarkHelper::create_transition_config(0),
-			transfer: Default::default(),
-			trade: Default::default()
-		};
+		let general_config = GeneralConfigOf::<T, ()>::default();
 	}: _(RawOrigin::Signed(acc_1), general_config.clone())
 	verify {
 		assert_last_event::<T, ()>(Event::UpdatedGeneralConfig { updated_config: general_config })
@@ -66,10 +62,10 @@ benchmarks! {
 
 	update_unlock_rule {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
 		let feature = LockableFeature::TradeAsset;
 		let unlock_rule: UnlockRule = [10, 10, 10, 10, 10];
-		// Benchmark helper season_id
 	}: _(RawOrigin::Signed(acc_1), season_id.clone(), feature, unlock_rule)
 	verify {
 		assert_last_event::<T, ()>(Event::UpdatedUnlockRule {
@@ -82,9 +78,9 @@ benchmarks! {
 	upgrade_asset_inventory {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let acc_2 = account::<T, ()>(ACC_2);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
 		let in_season = Some(season_id.clone());
-		// Benchmark helper season_id
 	}: _(RawOrigin::Signed(acc_1), Some(acc_2.clone()), in_season)
 	verify {
 		assert_last_event::<T, ()>(Event::InventoryTierUpgraded {
@@ -96,8 +92,9 @@ benchmarks! {
 
 	update_asset_trade_filter {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let filter = T::BenchmarkHelper::create_asset_trade_filter(0);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let filter = TradeFilterOf::<T, ()>::default();
 		let trade_filter = AssetFilterOf::<T, ()>::Trade(filter.clone());
 	}: update_asset_filter(RawOrigin::Signed(acc_1), season_id.clone(), trade_filter)
 	verify {
@@ -109,8 +106,9 @@ benchmarks! {
 
 	update_asset_transfer_filter {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let filter = T::BenchmarkHelper::create_asset_transfer_filter(0);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let filter = TransferFilterOf::<T, ()>::default();
 		let transfer_filter = AssetFilterOf::<T, ()>::Transfer(filter.clone());
 	}: update_asset_filter(RawOrigin::Signed(acc_1), season_id.clone(), transfer_filter)
 	verify {
@@ -123,8 +121,9 @@ benchmarks! {
 	transfer_asset {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let acc_2 = account::<T, ()>(ACC_2);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 2);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 2);
 	}: _(RawOrigin::Signed(acc_1.clone()), acc_2.clone(), asset_id.clone())
 	verify {
 		assert_last_event::<T, ()>(Event::AssetTransferred {
@@ -136,8 +135,9 @@ benchmarks! {
 
 	set_asset_price {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 31);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let price = 45_242_u32;
 	}: _(RawOrigin::Signed(acc_1), asset_id.clone(), price.into())
 	verify {
@@ -149,8 +149,9 @@ benchmarks! {
 
 	remove_asset_price {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 31);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let price = BalanceOf::<T, ()>::from(45_242_u32);
 		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, price);
 	}: _(RawOrigin::Signed(acc_1), asset_id.clone())
@@ -163,8 +164,9 @@ benchmarks! {
 	buy_asset {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let acc_2 = account::<T, ()>(ACC_2);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 31);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let price = BalanceOf::<T, ()>::from(45_242_u32);
 		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, price);
 	}: _(RawOrigin::Signed(acc_2.clone()), asset_id.clone())
@@ -179,8 +181,9 @@ benchmarks! {
 
 	lock_asset {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 31);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let expected_lock = Lock::new(*SAGE_LOCK_ID, acc_1.clone());
 	}: _(RawOrigin::Signed(acc_1), asset_id.clone())
 	verify {
@@ -192,8 +195,9 @@ benchmarks! {
 
 	unlock_asset {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
-		let asset_id = SageBenchmarkHelper::create_asset_for::<T, ()>(&acc_1, &season_id, 31);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
+		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let expected_lock = Lock::new(*SAGE_LOCK_ID, acc_1.clone());
 		Pallet::<T, ()>::lock_asset(
 			RawOrigin::Signed(acc_1.clone()).into(),
@@ -211,7 +215,8 @@ benchmarks! {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let target = UnlockTarget::OneselfFree;
 		let feature = LockableFeature::TradeAsset;
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
 	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone())
 	verify {
 		assert_last_event::<T, ()>(Event::FeatureUnlocked {
@@ -225,7 +230,8 @@ benchmarks! {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let target = UnlockTarget::OneselfFree;
 		let feature = LockableFeature::TransferAsset;
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
 	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone())
 	verify {
 		assert_last_event::<T, ()>(Event::FeatureUnlocked {
@@ -237,9 +243,10 @@ benchmarks! {
 
 	state_transition {
 		let acc_1 = account::<T, ()>(ACC_1);
-		let season_id = T::BenchmarkHelper::create_season_id(SEASON_ID_0 as u32);
+		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
+			.expect("Should get current season");
 		let (transition_id, asset_ids) = T::BenchmarkHelper::create_bench_transition_for(&acc_1, &season_id, 99);
-		let extra = T::BenchmarkHelper::create_extra(0);
+		let extra = ExtraOf::<T, ()>::default();
 	}: _(RawOrigin::Signed(acc_1.clone()), transition_id.clone(), asset_ids, extra)
 	verify {
 		assert_last_event::<T, ()>(Event::TransitionExecuted {

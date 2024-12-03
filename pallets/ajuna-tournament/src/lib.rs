@@ -84,41 +84,6 @@ pub mod pallet {
 		fn create_entities(owner: AccountId, count: u32) -> sp_std::vec::Vec<(EntityId, Entity)>;
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	impl<
-			CategoryId: From<u32>,
-			BlockNumber: From<u64>,
-			Balance: From<u64>,
-			Ranker: Default,
-			AccountId,
-			EntityId,
-			Entity,
-		> BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker, AccountId, EntityId, Entity> for ()
-	{
-		fn create_category_id(id: u32) -> CategoryId {
-			id.into()
-		}
-
-		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker> {
-			TournamentConfig {
-				start: 20_u64.into(),
-				active_end: 40_u64.into(),
-				claim_end: 50_u64.into(),
-				initial_reward: None,
-				max_reward: None,
-				take_fee_percentage: None,
-				reward_distribution: Default::default(),
-				golden_duck_config: Default::default(),
-				max_players: 0,
-				ranker: Ranker::default(),
-			}
-		}
-
-		fn create_entities(_owner: AccountId, _count: u32) -> sp_std::vec::Vec<(EntityId, Entity)> {
-			sp_std::vec::Vec::with_capacity(0)
-		}
-	}
-
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
