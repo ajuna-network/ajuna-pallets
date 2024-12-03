@@ -2,56 +2,10 @@ use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
 	sp_runtime::TokenError,
-	traits::{fungibles, fungibles::Balanced, ConstU32, Get},
+	traits::{fungibles, fungibles::Balanced, ConstU32},
 	BoundedVec,
 };
-use pallet_asset_conversion::{CreditOf, Pallet as AssetConversion};
-
-pub trait DenominatedToFee {
-	type Balance;
-
-	/// The asset id of the asset denominating the fee.
-	type DenominatedAssetId;
-
-	/// Kind of asset to be swapped.
-	type AssetKind;
-
-	/// Converts the
-	fn nominal_asset_fee(
-		denominated: Self::Balance,
-		asset: Self::AssetKind,
-	) -> Result<Self::Balance, DispatchError>;
-}
-
-pub struct ConvertToNativeFee<A, D, T>(PhantomData<(A, D, T)>);
-
-impl<D, N, T> DenominatedToFee for ConvertToNativeFee<D, N, T>
-where
-	D: Get<T::AssetKind>,
-	N: Get<T::AssetKind>,
-	T: pallet_asset_conversion::Config,
-{
-	type Balance = T::Balance;
-	type DenominatedAssetId = D;
-
-	type AssetKind = T::AssetKind;
-
-	fn nominal_asset_fee(
-		denominated: Self::Balance,
-		_: Self::AssetKind,
-	) -> Result<Self::Balance, DispatchError> {
-		// Convert the fee denominated in `D` into the native fee.
-		let asset_fee = AssetConversion::<T>::quote_price_tokens_for_exact_tokens(
-			D::get(),
-			N::get(),
-			denominated,
-			true,
-		)
-		.ok_or(DispatchError::Other("can't convert"))?;
-
-		Ok(asset_fee)
-	}
-}
+use pallet_asset_conversion::CreditOf;
 
 /// Distributes shares of a base fee to some beneficiaries.
 pub trait DistributeFee {
