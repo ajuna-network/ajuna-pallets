@@ -81,29 +81,23 @@ pub struct GameFeeHandler<WithdrawAsset, Affiliate, Tournament> {
 	_phantom: PhantomData<(WithdrawAsset, Affiliate, Tournament)>,
 }
 
-impl<WithdrawAsset, Affiliate, Tournament> FeeHandler
-	for GameFeeHandler<WithdrawAsset, Affiliate, Tournament>
+impl<W, Affiliate, Tournament> FeeHandler for GameFeeHandler<W, Affiliate, Tournament>
 where
-	WithdrawAsset::Assets: fungibles::Inspect<
-		WithdrawAsset::AccountId,
-		Balance = WithdrawAsset::Balance,
-		AssetId = WithdrawAsset::AssetId,
-	>,
+	W::Assets: fungibles::Inspect<W::AccountId, Balance = W::Balance, AssetId = W::AssetId>,
 
-	WithdrawAsset: WithdrawCredit,
+	W: WithdrawCredit,
 
-	Affiliate:
-		DistributeFee<AccountId = WithdrawAsset::AccountId, Balance = WithdrawAsset::Balance>,
+	Affiliate: DistributeFee<AccountId = W::AccountId, Balance = W::Balance>,
 	Tournament: DistributeFee<
-		AccountId = WithdrawAsset::AccountId,
-		Balance = WithdrawAsset::Balance,
+		AccountId = W::AccountId,
+		Balance = W::Balance,
 		MaxDistributions = ConstU32<1>,
 	>,
 {
-	type AccountId = WithdrawAsset::AccountId;
-	type AssetId = WithdrawAsset::AssetId;
-	type Balance = WithdrawAsset::Balance;
-	type Assets = WithdrawAsset::Assets;
+	type AccountId = W::AccountId;
+	type AssetId = W::AssetId;
+	type Balance = W::Balance;
+	type Assets = W::Assets;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 
@@ -116,7 +110,7 @@ where
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		let fee_credit = WithdrawAsset::withdraw_credit(payer, payment_asset, base_fee)?;
+		let fee_credit = W::withdraw_credit(payer, payment_asset, base_fee)?;
 
 		let remaining_credit =
 			Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
@@ -133,26 +127,20 @@ where
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		let credit = WithdrawAsset::withdraw_credit(who, asset_id, amount)?;
+		let credit = W::withdraw_credit(who, asset_id, amount)?;
 		Self::deposit_into_treasury(treasury_pot, credit)
 	}
 }
 
-impl<WithdrawAsset, Affiliate, Tournament> GameFeeHandler<WithdrawAsset, Affiliate, Tournament>
+impl<W, Affiliate, Tournament> GameFeeHandler<W, Affiliate, Tournament>
 where
-	WithdrawAsset::Assets: fungibles::Inspect<
-		WithdrawAsset::AccountId,
-		Balance = WithdrawAsset::Balance,
-		AssetId = WithdrawAsset::AssetId,
-	>,
+	W: WithdrawCredit,
+	W::Assets: fungibles::Inspect<W::AccountId, Balance = W::Balance, AssetId = W::AssetId>,
 
-	WithdrawAsset: WithdrawCredit,
-
-	Affiliate:
-		DistributeFee<AccountId = WithdrawAsset::AccountId, Balance = WithdrawAsset::Balance>,
+	Affiliate: DistributeFee<AccountId = W::AccountId, Balance = W::Balance>,
 	Tournament: DistributeFee<
-		AccountId = WithdrawAsset::AccountId,
-		Balance = WithdrawAsset::Balance,
+		AccountId = W::AccountId,
+		Balance = W::Balance,
 		MaxDistributions = ConstU32<1>,
 	>,
 {
@@ -160,17 +148,17 @@ where
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		fee_credit: CreditOf<WithdrawAsset>,
-		account: &WithdrawAsset::AccountId,
+		fee_credit: CreditOf<W>,
+		account: &W::AccountId,
 		identifier: &Affiliate::FeeIdentifier,
-	) -> Result<CreditOf<WithdrawAsset>, DispatchError> {
+	) -> Result<CreditOf<W>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
 			for allocation in a {
 				if allocation.amount > 0_u32.into() {
 					let affiliate_fee = final_fee.extract(allocation.amount);
-					WithdrawAsset::Assets::resolve(&allocation.beneficiary, affiliate_fee)
+					W::Assets::resolve(&allocation.beneficiary, affiliate_fee)
 						.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
 				}
 			}
@@ -184,10 +172,10 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		fee_credit: CreditOf<WithdrawAsset>,
-		account: &WithdrawAsset::AccountId,
+		fee_credit: CreditOf<W>,
+		account: &W::AccountId,
 		identifier: &Tournament::FeeIdentifier,
-	) -> Result<CreditOf<WithdrawAsset>, DispatchError> {
+	) -> Result<CreditOf<W>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(fee) = Tournament::distribute_fee(final_fee.peek(), account, identifier) {
@@ -196,7 +184,7 @@ where
 
 			if allocation.amount > 0_u32.into() {
 				let tournament_credit = final_fee.extract(allocation.amount);
-				WithdrawAsset::Assets::resolve(&allocation.beneficiary, tournament_credit)
+				W::Assets::resolve(&allocation.beneficiary, tournament_credit)
 					.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
 			}
 		}
@@ -204,11 +192,7 @@ where
 		Ok(final_fee)
 	}
 
-	fn deposit_into_treasury(
-		key: &WithdrawAsset::AccountId,
-		credit: CreditOf<WithdrawAsset>,
-	) -> Result<(), DispatchError> {
-		WithdrawAsset::Assets::resolve(key, credit)
-			.map_err(|_| DispatchError::Token(TokenError::CannotCreate))
+	fn deposit_into_treasury(key: &W::AccountId, credit: CreditOf<W>) -> Result<(), DispatchError> {
+		W::Assets::resolve(key, credit).map_err(|_| DispatchError::Token(TokenError::CannotCreate))
 	}
 }
