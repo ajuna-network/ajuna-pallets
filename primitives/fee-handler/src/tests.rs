@@ -1,16 +1,15 @@
 use crate::{
 	fee_handler::FeeHandler,
 	mock::{
-		AffiliateFeeId, Assets, ExtBuilder, TestFeeHandler, TournamentFeeId, ALICE,
-		TOURNAMENT_TREASURY, WHITELISTED_ASSET_ID,
+		AffiliateFeeId, Assets, ExtBuilder, TestFeeHandler, TournamentFeeId, ALICE, BOB, CHARLIE,
+		DAVE, FERDIE, NOT_WHITE_LISTED_ASSET_ID, TOURNAMENT_TREASURY, WHITELISTED_ASSET_ID,
 	},
 };
+use frame_support::assert_noop;
+use sp_runtime::{DispatchError, ModuleError, TokenError};
 
 mod withdraw_and_pay_fees {
 	use super::*;
-	use crate::mock::{BOB, CHARLIE, DAVE, FERDIE, NOT_WHITE_LISTED_ASSET_ID};
-	use frame_support::assert_noop;
-	use sp_runtime::{DispatchError, ModuleError, TokenError};
 
 	#[test]
 	fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
@@ -211,9 +210,6 @@ mod withdraw_and_pay_fees {
 
 mod withdraw_and_deposit_into_treasury {
 	use super::*;
-	use crate::mock::{FERDIE, NOT_WHITE_LISTED_ASSET_ID};
-	use frame_support::assert_noop;
-	use sp_runtime::{DispatchError, ModuleError, TokenError};
 
 	#[test]
 	fn withdraw_and_deposit_into_treasury_works() {
