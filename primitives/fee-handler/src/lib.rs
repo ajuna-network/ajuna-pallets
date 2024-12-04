@@ -5,3 +5,5 @@ pub mod withdraw_credit;
 
 #[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod tests;

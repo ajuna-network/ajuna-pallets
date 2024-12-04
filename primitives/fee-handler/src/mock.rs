@@ -47,6 +47,9 @@ pub const DAVE: AccountId = 4;
 
 pub const TREASURER: AccountId = 431;
 
+pub const WHITELISTED_ASSET_ID: AssetId = 888;
+pub const NOT_WHITE_LISTED_ASSET_ID: AssetId = 999;
+
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
@@ -151,8 +154,8 @@ impl EnsureWhitelistedAsset for WhitelistedAssets {
 
 	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError> {
 		match asset_id {
-			888 => Ok(()),
-			999 => Err(DispatchError::Token(TokenError::Unsupported)),
+			&WHITELISTED_ASSET_ID => Ok(()),
+			&NOT_WHITE_LISTED_ASSET_ID => Err(DispatchError::Token(TokenError::Unsupported)),
 			_ => Err(DispatchError::Token(TokenError::Unsupported)),
 		}
 	}
@@ -202,18 +205,18 @@ impl ExtBuilder {
 			assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance
-					(888, ALICE, true, 1),
-					(999, ALICE, true, 1),
+					(WHITELISTED_ASSET_ID, ALICE, true, 1),
+					(NOT_WHITE_LISTED_ASSET_ID, ALICE, true, 1),
 				],
 				metadata: vec![
 					// id, name, symbol, decimals
-					(888, "Token 888 Name".into(), "TO888".into(), 10),
-					(999, "Token 999 Name".into(), "TO999".into(), 10),
+					(WHITELISTED_ASSET_ID, "Token 888 Name".into(), "TO888".into(), 10),
+					(NOT_WHITE_LISTED_ASSET_ID, "Token 999 Name".into(), "TO999".into(), 10),
 				],
 				accounts: vec![
 					// id, account_id, balance
-					(888, ALICE, 100),
-					(999, ALICE, 100),
+					(WHITELISTED_ASSET_ID, ALICE, 100),
+					(NOT_WHITE_LISTED_ASSET_ID, ALICE, 100),
 				],
 				next_asset_id: None,
 			},
