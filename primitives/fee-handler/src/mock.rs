@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	fee_handler::{DistributeFee, Payment},
+	fee_handler::{DistributeFee, GameFeeHandler, Payment},
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawCredit, WithdrawWhitelistedCredit},
 };
 use frame_support::{
@@ -138,6 +138,9 @@ impl DistributeFee for TestTournamentFeeProvider {
 		}
 	}
 }
+
+pub type TestFeeHandler =
+	GameFeeHandler<WithdrawWhitelistedAssets, TestAffiliatesFeeProvider, TestTournamentFeeProvider>;
 
 pub type WithdrawWhitelistedAssets = WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawAsset>;
 
