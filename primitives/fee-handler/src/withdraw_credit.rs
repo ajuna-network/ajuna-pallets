@@ -5,7 +5,7 @@ use frame_support::{
 		tokens::Balance,
 	},
 };
-use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
+use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
 use std::{fmt::Debug, marker::PhantomData};
 
