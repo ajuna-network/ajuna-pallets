@@ -86,7 +86,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			LockableFeature::TradeAsset => fee.unlock_trade_asset,
 			LockableFeature::TransferAsset => fee.unlock_transfer_asset,
 		};
-		T::FeeHandler::deposit_fee_into_treasury(&payer, &season_id, feature_fee)?;
+		T::FeeHandler::withdraw_and_deposit_into_treasury(
+			&payer,
+			0,
+			&Self::treasury_account_id(),
+			feature_fee,
+		)?;
 
 		// after payment, we can enable the feature
 		Self::enable_feature_in_config(&target, &season_id, feature);

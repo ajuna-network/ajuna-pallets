@@ -160,7 +160,7 @@ pub mod pallet {
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
-			FeeCurrency = BalanceOf<Self>,
+			Balance = BalanceOf<Self>,
 			AffiliateFeeIdentifier = AffiliateMethods,
 			TournamentFeeIdentifier = SeasonId,
 		>;
@@ -1316,31 +1316,20 @@ pub mod pallet {
 			let GlobalConfig { mint, affiliate_config, .. } = GlobalConfigs::<T>::get();
 			match mint_option.payment {
 				MintPayment::Normal => {
-					let mint_fee = {
-						let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
+					let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
 
-						let updated_fee = if is_tournament_in_active_period {
-							T::FeeHandler::try_propagate_tournament_fee(
-								base_fee, player, &season_id,
-							)?
-						} else {
-							base_fee
-						};
-
-						if affiliate_config.mode == AffiliateMode::Open &&
-							affiliate_config.enabled_in_mint
-						{
-							T::FeeHandler::try_propagate_chain_fee(
-								updated_fee,
-								player,
-								&AffiliateMethods::Mint,
-							)?
-						} else {
-							updated_fee
-						}
-					};
-
-					Self::deposit_into_treasury(player, &season_id, mint_fee)?;
+					// Todo: there was this check before;
+					// if affiliate_config.mode == AffiliateMode::Open &&
+					// affiliate_config.enabled_in_mint The identifier could have an predefined
+					// enum variant that just says disabled.
+					T::FeeHandler::withdraw_and_pay_fees(
+						player,
+						0,
+						base_fee,
+						&season_id,
+						&AffiliateMethods::Mint,
+						&Self::treasury_account(),
+					)?;
 				},
 				MintPayment::Free => {
 					let mint_fee = (mint_option.pack_size.as_mint_count())

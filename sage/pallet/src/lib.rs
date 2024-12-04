@@ -116,6 +116,7 @@ pub mod pallet {
 		/// Handles the extra fees that incur during executing the state transition, or other
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
+			AssetId = u32,
 			AccountId = AccountIdOf<Self>,
 			Balance = BalanceOf<Self, I>,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
@@ -424,15 +425,15 @@ pub mod pallet {
 			let season_id = in_season.unwrap_or_else(T::SeasonHandler::get_current_season_id);
 			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
 
-			let upgrade_fee = {
-				let base_fee = fee.upgrade_asset_inventory;
-				T::FeeHandler::try_propagate_chain_fee(
-					base_fee,
-					&caller,
-					&AffiliateMethods::UpgradeAssetInventory,
-				)?
-			};
-			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
+			let base_fee = fee.upgrade_asset_inventory;
+			T::FeeHandler::withdraw_and_pay_fees(
+				&caller,
+				0,
+				base_fee,
+				&season_id,
+				&AffiliateMethods::UpgradeAssetInventory,
+				&Self::treasury_account_id(),
+			)?;
 
 			let account_to_upgrade = beneficiary.unwrap_or(caller);
 
@@ -718,6 +719,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		pub fn treasury_account_id() -> T::AccountId {
+			T::PalletId::get().into_account_truncating()
+		}
+
 		pub fn technical_account_id() -> T::AccountId {
 			T::PalletId::get().into_sub_account_truncating(b"technical")
 		}
