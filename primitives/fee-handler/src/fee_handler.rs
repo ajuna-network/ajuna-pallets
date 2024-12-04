@@ -51,7 +51,6 @@ pub trait FeeHandler {
 
 	/// Scalar type of the fee balance.
 	type Balance;
-	type Assets;
 
 	type AffiliateFeeIdentifier;
 	type TournamentFeeIdentifier;
@@ -97,7 +96,6 @@ where
 	type AccountId = W::AccountId;
 	type AssetId = W::AssetId;
 	type Balance = W::Balance;
-	type Assets = W::Assets;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 
