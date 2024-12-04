@@ -1,4 +1,4 @@
-use crate::withdraw_credit::WithdrawCredit;
+use crate::withdraw_credit::{CreditOf, WithdrawCredit};
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
@@ -6,7 +6,6 @@ use frame_support::{
 	traits::{fungibles, fungibles::Balanced, ConstU32},
 	BoundedVec,
 };
-use pallet_asset_conversion::CreditOf;
 use parity_scale_codec::{Decode, Encode};
 
 /// Distributes shares of a base fee to some beneficiaries.
@@ -52,6 +51,7 @@ pub trait FeeHandler {
 
 	/// Scalar type of the fee balance.
 	type Balance;
+	type Assets;
 
 	type AffiliateFeeIdentifier;
 	type TournamentFeeIdentifier;
@@ -77,37 +77,33 @@ pub trait FeeHandler {
 	) -> Result<(), DispatchError>;
 }
 
-pub struct GameFeeHandler<AssetConversion, WithdrawAsset, Affiliate, Tournament> {
-	_phantom: PhantomData<(AssetConversion, WithdrawAsset, Affiliate, Tournament)>,
+pub struct GameFeeHandler<WithdrawAsset, Affiliate, Tournament> {
+	_phantom: PhantomData<(WithdrawAsset, Affiliate, Tournament)>,
 }
 
-impl<T, WithdrawAsset, Affiliate, Tournament> FeeHandler
-	for GameFeeHandler<T, WithdrawAsset, Affiliate, Tournament>
+impl<WithdrawAsset, Affiliate, Tournament> FeeHandler
+	for GameFeeHandler<WithdrawAsset, Affiliate, Tournament>
 where
-	T: pallet_asset_conversion::Config + frame_system::Config,
-	T::Assets: fungibles::Inspect<
-		<T as frame_system::Config>::AccountId,
-		Balance = T::Balance,
-		AssetId = T::AssetKind,
+	WithdrawAsset::Assets: fungibles::Inspect<
+		WithdrawAsset::AccountId,
+		Balance = WithdrawAsset::Balance,
+		AssetId = WithdrawAsset::AssetId,
 	>,
 
-	WithdrawAsset: WithdrawCredit<
-		AccountId = <T as frame_system::Config>::AccountId,
-		AssetId = T::AssetKind,
-		Balance = T::Balance,
-		Credit = CreditOf<T>,
-	>,
+	WithdrawAsset: WithdrawCredit,
 
-	Affiliate: DistributeFee<AccountId = T::AccountId, Balance = T::Balance>,
+	Affiliate:
+		DistributeFee<AccountId = WithdrawAsset::AccountId, Balance = WithdrawAsset::Balance>,
 	Tournament: DistributeFee<
-		AccountId = T::AccountId,
-		Balance = T::Balance,
+		AccountId = WithdrawAsset::AccountId,
+		Balance = WithdrawAsset::Balance,
 		MaxDistributions = ConstU32<1>,
 	>,
 {
-	type AccountId = T::AccountId;
-	type AssetId = T::AssetKind;
-	type Balance = T::Balance;
+	type AccountId = WithdrawAsset::AccountId;
+	type AssetId = WithdrawAsset::AssetId;
+	type Balance = WithdrawAsset::Balance;
+	type Assets = WithdrawAsset::Assets;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 
@@ -117,7 +113,7 @@ where
 		base_fee: Self::Balance,
 		tournament_id: &Self::TournamentFeeIdentifier,
 		affiliate_id: &Self::AffiliateFeeIdentifier,
-		treasury_pot: &T::AccountId,
+		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
 		let fee_credit = WithdrawAsset::withdraw_credit(payer, payment_asset, base_fee)?;
@@ -142,20 +138,21 @@ where
 	}
 }
 
-impl<T, WithdrawAsset, Affiliate, Tournament>
-	GameFeeHandler<T, WithdrawAsset, Affiliate, Tournament>
+impl<WithdrawAsset, Affiliate, Tournament> GameFeeHandler<WithdrawAsset, Affiliate, Tournament>
 where
-	T: pallet_asset_conversion::Config,
-	T::Assets: fungibles::Inspect<T::AccountId, Balance = T::Balance, AssetId = T::AssetKind>,
+	WithdrawAsset::Assets: fungibles::Inspect<
+		WithdrawAsset::AccountId,
+		Balance = WithdrawAsset::Balance,
+		AssetId = WithdrawAsset::AssetId,
+	>,
 
-	WithdrawAsset:
-		WithdrawCredit<AssetId = T::AssetKind, Balance = T::Balance, Credit = CreditOf<T>>,
+	WithdrawAsset: WithdrawCredit,
 
-	Affiliate: DistributeFee<AccountId = T::AccountId, Balance = T::Balance>,
+	Affiliate:
+		DistributeFee<AccountId = WithdrawAsset::AccountId, Balance = WithdrawAsset::Balance>,
 	Tournament: DistributeFee<
-		AccountId = T::AccountId,
-		Balance = T::Balance,
-		// We assume that the only beneficiary is the tournament treasury
+		AccountId = WithdrawAsset::AccountId,
+		Balance = WithdrawAsset::Balance,
 		MaxDistributions = ConstU32<1>,
 	>,
 {
@@ -163,17 +160,17 @@ where
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		fee_credit: CreditOf<T>,
-		account: &T::AccountId,
+		fee_credit: CreditOf<WithdrawAsset>,
+		account: &WithdrawAsset::AccountId,
 		identifier: &Affiliate::FeeIdentifier,
-	) -> Result<CreditOf<T>, DispatchError> {
+	) -> Result<CreditOf<WithdrawAsset>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
 			for allocation in a {
 				if allocation.amount > 0_u32.into() {
 					let affiliate_fee = final_fee.extract(allocation.amount);
-					T::Assets::resolve(&allocation.beneficiary, affiliate_fee)
+					WithdrawAsset::Assets::resolve(&allocation.beneficiary, affiliate_fee)
 						.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
 				}
 			}
@@ -187,10 +184,10 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		fee_credit: CreditOf<T>,
-		account: &T::AccountId,
+		fee_credit: CreditOf<WithdrawAsset>,
+		account: &WithdrawAsset::AccountId,
 		identifier: &Tournament::FeeIdentifier,
-	) -> Result<CreditOf<T>, DispatchError> {
+	) -> Result<CreditOf<WithdrawAsset>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(fee) = Tournament::distribute_fee(final_fee.peek(), account, identifier) {
@@ -199,7 +196,7 @@ where
 
 			if allocation.amount > 0_u32.into() {
 				let tournament_credit = final_fee.extract(allocation.amount);
-				T::Assets::resolve(&allocation.beneficiary, tournament_credit)
+				WithdrawAsset::Assets::resolve(&allocation.beneficiary, tournament_credit)
 					.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
 			}
 		}
@@ -207,7 +204,11 @@ where
 		Ok(final_fee)
 	}
 
-	fn deposit_into_treasury(key: &T::AccountId, credit: CreditOf<T>) -> Result<(), DispatchError> {
-		T::Assets::resolve(key, credit).map_err(|_| DispatchError::Token(TokenError::CannotCreate))
+	fn deposit_into_treasury(
+		key: &WithdrawAsset::AccountId,
+		credit: CreditOf<WithdrawAsset>,
+	) -> Result<(), DispatchError> {
+		WithdrawAsset::Assets::resolve(key, credit)
+			.map_err(|_| DispatchError::Token(TokenError::CannotCreate))
 	}
 }
