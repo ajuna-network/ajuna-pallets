@@ -14,30 +14,38 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::fee_handler::{DistributeFee, Payment};
+use crate::{
+	fee_handler::{DistributeFee, Payment},
+	withdraw_credit::{EnsureWhitelistedAsset, WithdrawCredit, WithdrawWhitelistedCredit},
+};
 use frame_support::{
 	derive_impl,
-	traits::{AsEnsureOriginWithArg, ConstU32},
+	traits::{
+		fungibles::{Balanced, Credit},
+		tokens::{Fortitude, Precision, Preservation},
+		AsEnsureOriginWithArg, ConstU32,
+	},
 	BoundedVec,
 };
 use sp_runtime::{
 	testing::TestSignature,
 	traits::{IdentifyAccount, Verify},
-	BuildStorage,
+	BuildStorage, DispatchError, TokenError,
 };
 
-pub type MockSignature = TestSignature;
-pub type MockAccountPublic = <MockSignature as Verify>::Signer;
-pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
-pub type MockBlock = frame_system::mocking::MockBlock<Test>;
-pub type MockBalance = u64;
+pub type Signature = TestSignature;
+pub type AccountSignature = <Signature as Verify>::Signer;
+pub type AccountId = <AccountSignature as IdentifyAccount>::AccountId;
+pub type Block = frame_system::mocking::MockBlock<Test>;
+pub type Balance = u64;
+pub type AssetId = u32;
 
-pub const ALICE: MockAccountId = 1;
-pub const BOB: MockAccountId = 2;
-pub const CHARLIE: MockAccountId = 3;
-pub const DAVE: MockAccountId = 4;
+pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
+pub const CHARLIE: AccountId = 3;
+pub const DAVE: AccountId = 4;
 
-pub const TREASURER: MockAccountId = 431;
+pub const TREASURER: AccountId = 431;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -50,9 +58,9 @@ frame_support::construct_runtime!(
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type AccountId = MockAccountId;
-	type AccountData = pallet_balances::AccountData<MockBalance>;
-	type Block = MockBlock;
+	type AccountId = AccountId;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type Block = Block;
 }
 
 #[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
@@ -63,7 +71,7 @@ impl pallet_balances::Config for Test {
 #[derive_impl(pallet_assets::config_preludes::TestDefaultConfig)]
 impl pallet_assets::Config for Test {
 	type Currency = Balances;
-	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<MockAccountId>>;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 	type ForceOrigin = frame_system::EnsureRoot<u64>;
 	type Freezer = ();
 	type CallbackHandle = ();
@@ -77,8 +85,8 @@ pub enum AffiliateFeeId {
 }
 
 impl DistributeFee for TestAffiliatesFeeProvider {
-	type AccountId = MockAccountId;
-	type Balance = MockBalance;
+	type AccountId = AccountId;
+	type Balance = Balance;
 	type FeeIdentifier = AffiliateFeeId;
 	type MaxDistributions = ConstU32<3>;
 
@@ -110,8 +118,8 @@ pub enum TournamentFeeId {
 }
 
 impl DistributeFee for TestTournamentFeeProvider {
-	type AccountId = MockAccountId;
-	type Balance = MockBalance;
+	type AccountId = AccountId;
+	type Balance = Balance;
 	type FeeIdentifier = TournamentFeeId;
 	type MaxDistributions = ConstU32<1>;
 
@@ -131,13 +139,55 @@ impl DistributeFee for TestTournamentFeeProvider {
 	}
 }
 
+pub type WithdrawWhitelistedAssets = WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawAsset>;
+
+pub struct WhitelistedAssets;
+
+impl EnsureWhitelistedAsset for WhitelistedAssets {
+	type AssetId = AssetId;
+
+	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError> {
+		match asset_id {
+			888 => Ok(()),
+			999 => Err(DispatchError::Token(TokenError::Unsupported)),
+			_ => Err(DispatchError::Token(TokenError::Unsupported)),
+		}
+	}
+}
+
+pub struct WithdrawAsset;
+
+impl WithdrawCredit for WithdrawAsset {
+	type AccountId = AccountId;
+	type AssetId = AssetId;
+	type Assets = Assets;
+	type Balance = Balance;
+
+	fn withdraw_credit(
+		who: &Self::AccountId,
+		asset_id: Self::AssetId,
+		credit: Self::Balance,
+	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError> {
+		let asset_fee_credit = Self::Assets::withdraw(
+			asset_id.clone(),
+			who,
+			credit,
+			Precision::Exact,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		)?;
+
+		Ok(asset_fee_credit)
+	}
+}
+
 #[derive(Default)]
 pub struct ExtBuilder {
-	balances: Vec<(MockAccountId, MockBalance)>,
+	balances: Vec<(AccountId, Balance)>,
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
+	pub fn balances(mut self, balances: &[(AccountId, Balance)]) -> Self {
 		self.balances = balances.to_vec();
 		self
 	}
