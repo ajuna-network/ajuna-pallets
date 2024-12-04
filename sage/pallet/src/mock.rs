@@ -17,12 +17,13 @@
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	asset_manager::AssetInspector,
-	fee_handler::{FeeProvider, GameFeeHandler},
+	fee_handler::{DistributeFee, GameFeeHandler},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 	trade_manager::TradeManager,
 	treasury_manager::TreasuryManager,
 };
 
+use ajuna_primitives::fee_handler::Payment;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, ExistenceRequirement},
@@ -181,35 +182,35 @@ impl SeasonManager<ExampleTransitionId> for MockSeasonManager {
 
 pub struct MockAffiliatesFeeProvider;
 
-impl FeeProvider for MockAffiliatesFeeProvider {
+impl DistributeFee for MockAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
+	type Balance = MockBalance;
 	type FeeIdentifier = AffiliateMethodsOf<Test, Instance1>;
-	type FeeCurrency = MockBalance;
-	type FeeOutput = Vec<(MockBalance, MockAccountId)>;
+	type MaxDistributions = ConstU32<3>;
 
-	fn get_fee_from(
-		_base_fee: Self::FeeCurrency,
+	fn distribute_fee(
+		_base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		_identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
-		Vec::with_capacity(0)
+	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+		None
 	}
 }
 
 pub struct MockTournamentFeeProvider;
 
-impl FeeProvider for MockTournamentFeeProvider {
+impl DistributeFee for MockTournamentFeeProvider {
 	type AccountId = MockAccountId;
 	type FeeIdentifier = MockSeasonId;
-	type FeeCurrency = MockBalance;
-	type FeeOutput = (MockBalance, MockAccountId);
+	type Balance = MockBalance;
+	type MaxDistributions = ConstU32<1>;
 
-	fn get_fee_from(
-		_base_fee: Self::FeeCurrency,
-		account: &Self::AccountId,
+	fn distribute_fee(
+		_base_fee: Self::Balance,
+		_account: &Self::AccountId,
 		_identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
-		(0, *account)
+	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+		None
 	}
 }
 
@@ -235,14 +236,6 @@ impl TreasuryManager for MockTreasuryManager {
 	#[cfg(feature = "runtime-benchmarks")]
 	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
 		todo!()
-	}
-
-	fn deposit_into(
-		depository: &Self::AccountId,
-		_key: &Self::TreasuryPotKey,
-		fee: Self::Currency,
-	) -> Result<(), DispatchError> {
-		Balances::transfer(depository, &TREASURER, fee, ExistenceRequirement::KeepAlive)
 	}
 }
 

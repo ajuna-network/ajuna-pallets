@@ -117,12 +117,9 @@ pub mod pallet {
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
-			FeeCurrency = BalanceOf<Self, I>,
+			Balance = BalanceOf<Self, I>,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
-			// TODO: Define if we want this as a configurable parameter or some different fixed
-			// value
-			TreasuryKey = SeasonIdOf<Self, I>,
 		>;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the

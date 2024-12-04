@@ -1,7 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod fee_handler;
-pub mod withdraw_credit;
+mod fee_handler;
+mod withdraw_credit;
+
+pub use fee_handler::*;
+pub use withdraw_credit::*;
 
 #[cfg(test)]
 mod mock;

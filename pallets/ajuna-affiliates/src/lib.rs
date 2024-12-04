@@ -53,6 +53,7 @@ pub mod pallet {
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub type RuleIdentifierFor<T, I> = <T as Config<I>>::RuleIdentifier;
+	pub type AffiliateMaxLevelFor<T, I> = <T as Config<I>>::AffiliateMaxLevel;
 	pub type FeePropagationOf<T, I> = FeePropagation<<T as Config<I>>::AffiliateMaxLevel>;
 
 	#[cfg(feature = "runtime-benchmarks")]

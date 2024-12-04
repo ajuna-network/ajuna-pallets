@@ -29,7 +29,6 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::BuildStorage;
 
 use sp_runtime::{
-	bounded_vec,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	MultiSignature,

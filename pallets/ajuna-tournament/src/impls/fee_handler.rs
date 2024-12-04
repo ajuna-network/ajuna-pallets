@@ -1,18 +1,18 @@
 use super::*;
-use ajuna_primitives::fee_handler::FeeProvider;
+use ajuna_primitives::fee_handler::{DistributeFee, Payment};
 use sp_arithmetic::traits::{CheckedDiv, Saturating};
 
-impl<T: Config<I>, I: 'static> FeeProvider for Pallet<T, I> {
+impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 	type AccountId = AccountIdFor<T>;
+	type Balance = BalanceOf<T, I>;
 	type FeeIdentifier = TournamentCategoryIdFor<T, I>;
-	type FeeCurrency = BalanceOf<T, I>;
-	type FeeOutput = (BalanceOf<T, I>, Self::AccountId);
+	type MaxDistributions = ConstU32<1>;
 
-	fn get_fee_from(
-		base_fee: Self::FeeCurrency,
+	fn distribute_fee(
+		base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
+	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
 		let is_tournament_in_active_period = matches!(
 			Self::get_active_tournament_state_for(identifier),
 			TournamentState::ActivePeriod(_)
@@ -29,9 +29,13 @@ impl<T: Config<I>, I: 'static> FeeProvider for Pallet<T, I> {
 					.checked_div(&100_u32.into())
 					.unwrap_or_default();
 
-				(tournament_fee, tournament_account)
+				Some(
+					vec![Payment::new(tournament_account, tournament_fee)]
+						.try_into()
+						.expect("max distributions is not < 1; qed"),
+				)
 			},
-			_ => (0_u32.into(), tournament_account),
+			_ => None,
 		}
 	}
 }
