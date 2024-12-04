@@ -8,7 +8,9 @@ use crate::{
 
 mod withdraw_and_pay_fees {
 	use super::*;
-	use crate::mock::{BOB, CHARLIE, DAVE, FERDIE};
+	use crate::mock::{BOB, CHARLIE, DAVE, FERDIE, NOT_WHITE_LISTED_ASSET_ID};
+	use frame_support::assert_noop;
+	use sp_runtime::{DispatchError, ModuleError, TokenError};
 
 	#[test]
 	fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
@@ -153,6 +155,56 @@ mod withdraw_and_pay_fees {
 				Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary),
 				fee - tournament_share - bob_share - charlie_share - dave_share
 			);
+		});
+	}
+
+	#[test]
+	fn withdraw_and_pay_fee_fails_if_missing_funds() {
+		ExtBuilder::default().build().execute_with(|| {
+			let fee = 101;
+			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+			let fee_beneficiary = FERDIE;
+
+			assert_noop!(
+				TestFeeHandler::withdraw_and_pay_fees(
+					&ALICE,
+					WHITELISTED_ASSET_ID,
+					fee,
+					&TournamentFeeId::Free,
+					&AffiliateFeeId::Free,
+					&fee_beneficiary,
+				),
+				DispatchError::Module(ModuleError {
+					index: 2,
+					error: [0, 0, 0, 0],
+					message: Some("BalanceLow")
+				})
+			);
+
+			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+		});
+	}
+
+	#[test]
+	fn withdraw_and_pay_fee_fails_for_not_whitelisted_asset() {
+		ExtBuilder::default().build().execute_with(|| {
+			let fee = 2;
+			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+			let fee_beneficiary = FERDIE;
+
+			assert_noop!(
+				TestFeeHandler::withdraw_and_pay_fees(
+					&ALICE,
+					NOT_WHITE_LISTED_ASSET_ID,
+					fee,
+					&TournamentFeeId::Free,
+					&AffiliateFeeId::Free,
+					&fee_beneficiary,
+				),
+				DispatchError::Token(TokenError::Unsupported)
+			);
+
+			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
 		});
 	}
 }
