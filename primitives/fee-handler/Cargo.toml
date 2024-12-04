@@ -7,14 +7,12 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-ajuna-primitives = { workspace = true }
 
 # Substrate - SCALE codec
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 
 # Substrate frame
-pallet-asset-conversion = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 
@@ -27,15 +25,8 @@ sp-runtime = { workspace = true, features = ["std"]}
 [features]
 default = ["std"]
 std = [
-    "ajuna-primitives/std",
-    "pallet-asset-conversion/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "frame-support/std",
     "frame-system/std",
-]
-runtime-benchmarks = [
-    "pallet-asset-conversion/runtime-benchmarks",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
 ]

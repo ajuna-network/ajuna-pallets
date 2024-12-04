@@ -63,10 +63,8 @@ dependencies = [
 name = "ajuna-fee-handler"
 version = "0.15.0"
 dependencies = [
- "ajuna-primitives",
  "frame-support",
  "frame-system",
- "pallet-asset-conversion",
  "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
@@ -1953,25 +1951,6 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-asset-conversion"
-version = "19.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6847af5ada683672e4ba5307edd30935b523b96ddd3e6c0d9ae538967e7b6e72"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",
