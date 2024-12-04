@@ -44,8 +44,9 @@ pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
 pub const CHARLIE: AccountId = 3;
 pub const DAVE: AccountId = 4;
+pub const FERDIE: AccountId = 5;
 
-pub const TREASURER: AccountId = 431;
+pub const TOURNAMENT_TREASURY: AccountId = 431;
 
 pub const WHITELISTED_ASSET_ID: AssetId = 888;
 pub const NOT_WHITE_LISTED_ASSET_ID: AssetId = 999;
@@ -101,9 +102,9 @@ impl DistributeFee for TestAffiliatesFeeProvider {
 		match identifier {
 			AffiliateFeeId::Paying => Some(
 				vec![
-					Payment::new(ALICE, base_fee * 5 / 10),
-					Payment::new(BOB, base_fee * 3 / 10),
-					Payment::new(CHARLIE, base_fee * 2 / 10),
+					Payment::new(BOB, base_fee * 4 / 20),
+					Payment::new(CHARLIE, base_fee * 3 / 20),
+					Payment::new(DAVE, base_fee * 2 / 20),
 				]
 				.try_into()
 				.expect("max distributions = 3; qed"),
@@ -133,7 +134,7 @@ impl DistributeFee for TestTournamentFeeProvider {
 	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
 		match identifier {
 			TournamentFeeId::Paying => Some(
-				vec![Payment::new(TREASURER, base_fee * 2 / 10)]
+				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)]
 					.try_into()
 					.expect("max distribution = 1; qed"),
 			),
@@ -188,20 +189,13 @@ impl WithdrawCredit for WithdrawAsset {
 }
 
 #[derive(Default)]
-pub struct ExtBuilder {
-	balances: Vec<(AccountId, Balance)>,
-}
+pub struct ExtBuilder;
 
 impl ExtBuilder {
-	pub fn balances(mut self, balances: &[(AccountId, Balance)]) -> Self {
-		self.balances = balances.to_vec();
-		self
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: Default::default(),
 			assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance
