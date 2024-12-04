@@ -67,6 +67,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-asset-conversion",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",

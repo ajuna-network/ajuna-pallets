@@ -15,7 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::fee_handler::{DistributeFee, Payment};
-use frame_support::{derive_impl, traits::ConstU32, BoundedVec};
+use frame_support::{
+	derive_impl,
+	traits::{AsEnsureOriginWithArg, ConstU32},
+	BoundedVec,
+};
 use sp_runtime::{
 	testing::TestSignature,
 	traits::{IdentifyAccount, Verify},
@@ -40,6 +44,7 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
+		Assets: pallet_assets = 2,
 	}
 );
 
@@ -54,6 +59,16 @@ impl frame_system::Config for Test {
 impl pallet_balances::Config for Test {
 	type AccountStore = System;
 }
+
+#[derive_impl(pallet_assets::config_preludes::TestDefaultConfig)]
+impl pallet_assets::Config for Test {
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<MockAccountId>>;
+	type ForceOrigin = frame_system::EnsureRoot<u64>;
+	type Freezer = ();
+	type CallbackHandle = ();
+}
+
 pub struct MockAffiliatesFeeProvider;
 
 pub enum AffiliateFeeId {
@@ -131,6 +146,24 @@ impl ExtBuilder {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
 			balances: BalancesConfig { balances: self.balances },
+			assets: pallet_assets::GenesisConfig {
+				assets: vec![
+					// id, owner, is_sufficient, min_balance
+					(888, ALICE, true, 1),
+					(999, ALICE, true, 1),
+				],
+				metadata: vec![
+					// id, name, symbol, decimals
+					(888, "Token 888 Name".into(), "TO888".into(), 10),
+					(999, "Token 999 Name".into(), "TO999".into(), 10),
+				],
+				accounts: vec![
+					// id, account_id, balance
+					(888, ALICE, 100),
+					(999, ALICE, 100),
+				],
+				next_asset_id: None,
+			},
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
