@@ -69,14 +69,14 @@ impl pallet_assets::Config for Test {
 	type CallbackHandle = ();
 }
 
-pub struct MockAffiliatesFeeProvider;
+pub struct TestAffiliatesFeeProvider;
 
 pub enum AffiliateFeeId {
 	Paying,
 	Free,
 }
 
-impl DistributeFee for MockAffiliatesFeeProvider {
+impl DistributeFee for TestAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
 	type FeeIdentifier = AffiliateFeeId;
@@ -102,14 +102,14 @@ impl DistributeFee for MockAffiliatesFeeProvider {
 	}
 }
 
-pub struct MockTournamentFeeProvider;
+pub struct TestTournamentFeeProvider;
 
 pub enum TournamentFeeId {
 	Paying,
 	Free,
 }
 
-impl DistributeFee for MockTournamentFeeProvider {
+impl DistributeFee for TestTournamentFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
 	type FeeIdentifier = TournamentFeeId;
