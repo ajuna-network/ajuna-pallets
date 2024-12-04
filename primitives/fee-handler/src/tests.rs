@@ -189,7 +189,7 @@ mod withdraw_and_pay_fees {
 	fn withdraw_and_pay_fee_fails_for_not_whitelisted_asset() {
 		ExtBuilder::default().build().execute_with(|| {
 			let fee = 2;
-			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+			let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
 			let fee_beneficiary = FERDIE;
 
 			assert_noop!(
@@ -204,7 +204,84 @@ mod withdraw_and_pay_fees {
 				DispatchError::Token(TokenError::Unsupported)
 			);
 
+			assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
+		});
+	}
+}
+
+mod withdraw_and_deposit_into_treasury {
+	use super::*;
+	use crate::mock::{FERDIE, NOT_WHITE_LISTED_ASSET_ID};
+	use frame_support::assert_noop;
+	use sp_runtime::{DispatchError, ModuleError, TokenError};
+
+	#[test]
+	fn withdraw_and_deposit_into_treasury_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			let fee = 20;
+			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+			let fee_beneficiary = FERDIE;
+
+			TestFeeHandler::withdraw_and_deposit_into_treasury(
+				&ALICE,
+				WHITELISTED_ASSET_ID,
+				&fee_beneficiary,
+				fee,
+			)
+			.unwrap();
+
+			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before - fee);
+			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), fee)
+		});
+	}
+
+	#[test]
+	fn withdraw_and_deposit_into_treasury_fails_if_missing_funds() {
+		ExtBuilder::default().build().execute_with(|| {
+			let fee = 101;
+			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+			let fee_beneficiary = FERDIE;
+
+			assert_noop!(
+				TestFeeHandler::withdraw_and_pay_fees(
+					&ALICE,
+					WHITELISTED_ASSET_ID,
+					fee,
+					&TournamentFeeId::Free,
+					&AffiliateFeeId::Free,
+					&fee_beneficiary,
+				),
+				DispatchError::Module(ModuleError {
+					index: 2,
+					error: [0, 0, 0, 0],
+					message: Some("BalanceLow")
+				})
+			);
+
 			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+		});
+	}
+
+	#[test]
+	fn withdraw_and_deposit_into_treasury_for_not_whitelisted_asset() {
+		ExtBuilder::default().build().execute_with(|| {
+			let fee = 101;
+			let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
+			let fee_beneficiary = FERDIE;
+
+			assert_noop!(
+				TestFeeHandler::withdraw_and_pay_fees(
+					&ALICE,
+					NOT_WHITE_LISTED_ASSET_ID,
+					fee,
+					&TournamentFeeId::Free,
+					&AffiliateFeeId::Free,
+					&fee_beneficiary,
+				),
+				DispatchError::Token(TokenError::Unsupported)
+			);
+
+			assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
 		});
 	}
 }
