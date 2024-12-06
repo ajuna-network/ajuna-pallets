@@ -282,11 +282,6 @@ impl crate::Config<SageInstance1> for Test {
 
 pub struct TestAffiliatesFeeProvider;
 
-pub enum AffiliateFeeId {
-	Paying,
-	Free,
-}
-
 impl DistributeFee for TestAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
@@ -294,38 +289,14 @@ impl DistributeFee for TestAffiliatesFeeProvider {
 	type MaxDistributions = ConstU32<3>;
 
 	fn distribute_fee(
-		base_fee: Self::Balance,
+		_base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
 	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
 		match identifier {
-			AffiliateMethods::UpgradeAssetInventory => Some(
-				vec![
-					Payment::new(BOB, base_fee * 5 / 20),
-					Payment::new(CHARLIE, base_fee * 3 / 20),
-					Payment::new(DAVE, base_fee * 2 / 20),
-				]
-				.try_into()
-				.expect("max distributions = 3; qed"),
-			),
-			AffiliateMethods::TradeAsset => Some(
-				vec![
-					Payment::new(BOB, base_fee * 4 / 20),
-					Payment::new(CHARLIE, base_fee * 3 / 20),
-					Payment::new(DAVE, base_fee * 2 / 20),
-				]
-				.try_into()
-				.expect("max distributions = 3; qed"),
-			),
-			AffiliateMethods::StateTransition(_) => Some(
-				vec![
-					Payment::new(BOB, base_fee * 4 / 20),
-					Payment::new(CHARLIE, base_fee * 3 / 20),
-					Payment::new(DAVE, base_fee * 2 / 20),
-				]
-				.try_into()
-				.expect("max distributions = 3; qed"),
-			),
+			AffiliateMethods::UpgradeAssetInventory => None,
+			AffiliateMethods::TradeAsset => None,
+			AffiliateMethods::StateTransition(_) => None,
 		}
 	}
 }
