@@ -1,5 +1,6 @@
 use super::*;
 use ajuna_primitives::fee_handler::{DistributeFee, Payment};
+use frame_support::traits::Defensive;
 use sp_runtime::{traits::CheckedDiv, Saturating};
 
 impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
@@ -27,11 +28,7 @@ impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 					.map(|(fee, account)| Payment::new(account, fee))
 					.collect();
 
-				Some(
-					payments
-						.try_into()
-						.expect("iterator is not longer than affiliate max level; qed"),
-				)
+				Some(payments.try_into().defensive_unwrap_or_default())
 			} else {
 				None
 			}
