@@ -386,6 +386,9 @@ impl ExtBuilder {
 				accounts: vec![
 					// id, account_id, balance
 					(DEFAULT_PAYMENT_ASSET_ID, ALICE, 100),
+					(DEFAULT_PAYMENT_ASSET_ID, BOB, 100),
+					(DEFAULT_PAYMENT_ASSET_ID, CHARLIE, 100),
+					(DEFAULT_PAYMENT_ASSET_ID, DAVE, 100),
 				],
 				next_asset_id: None,
 			},
