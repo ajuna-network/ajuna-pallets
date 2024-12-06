@@ -19,6 +19,16 @@ pub trait EnsureWhitelistedAsset {
 	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError>;
 }
 
+pub struct AllowAllAssets;
+
+impl EnsureWhitelistedAsset for AllowAllAssets {
+	type AssetId = ();
+
+	fn ensure_whitelisted(_: &Self::AssetId) -> Result<(), DispatchError> {
+		Ok(())
+	}
+}
+
 impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: WithdrawCredit>
 	WithdrawCredit for WithdrawWhitelistedCredit<Whitelist, Withdraw>
 {

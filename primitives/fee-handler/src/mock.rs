@@ -17,6 +17,7 @@
 use crate::{
 	fee_handler::{AssetGameFeeHandler, DistributeFee, Payment},
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawCredit, WithdrawWhitelistedCredit},
+	NativeGameFeeHandler, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
@@ -144,10 +145,18 @@ impl DistributeFee for TestTournamentFeeProvider {
 	}
 }
 
-pub type TestFeeHandler = AssetGameFeeHandler<
+pub type TestAssetFeeHandler = AssetGameFeeHandler<
 	AccountId,
 	Assets,
 	WithdrawWhitelistedAssets,
+	TestAffiliatesFeeProvider,
+	TestTournamentFeeProvider,
+>;
+
+pub type TestNativeFeeHandler = NativeGameFeeHandler<
+	AccountId,
+	Balances,
+	WithdrawNative<Test>,
 	TestAffiliatesFeeProvider,
 	TestTournamentFeeProvider,
 >;
@@ -202,7 +211,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: Default::default(),
+			balances: pallet_balances::GenesisConfig { balances: vec![(ALICE, 100)] },
 			assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance
