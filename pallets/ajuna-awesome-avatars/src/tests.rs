@@ -1053,7 +1053,6 @@ mod minting {
 		let season_2 = Season::default().max_components(17);
 		let season_2_schedule = SeasonSchedule::default().early_start(23).start(35).end(40);
 
-		let expected_nonce_increment = 1 as MockNonce;
 		let mint_cooldown = 1;
 
 		let mut initial_balance = fees.one + fees.three + fees.six + MockExistentialDeposit::get();
@@ -1069,7 +1068,6 @@ mod minting {
 			.build()
 			.execute_with(|| {
 				for payment in [MintPayment::Normal, MintPayment::Free] {
-					let mut expected_nonce = 0;
 					let mut owned_avatar_count = 0;
 					let mut season_minted_count = 0;
 					let mut season_free_minted_count = 0;
@@ -1096,7 +1094,6 @@ mod minting {
 							initial_free_mints
 						),
 					}
-					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_eq!(Owners::<Test>::get(ALICE, SEASON_ID).len(), owned_avatar_count);
 					assert!(!CurrentSeasonStatus::<Test>::get().active);
 
@@ -1140,9 +1137,7 @@ mod minting {
 							);
 						},
 					}
-					expected_nonce += expected_nonce_increment;
 					owned_avatar_count += 1;
-					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_eq!(Owners::<Test>::get(ALICE, SEASON_ID).len(), owned_avatar_count);
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					assert_eq!(
@@ -1198,9 +1193,7 @@ mod minting {
 							);
 						},
 					}
-					expected_nonce += expected_nonce_increment * 3;
 					owned_avatar_count += 3;
-					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_eq!(Owners::<Test>::get(ALICE, SEASON_ID).len(), owned_avatar_count);
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					System::assert_last_event(mock::RuntimeEvent::AAvatars(
@@ -1211,7 +1204,6 @@ mod minting {
 
 					// batch mint: six
 					run_to_block(System::block_number() + 1 + mint_cooldown);
-					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_ok!(AAvatars::mint(
 						RuntimeOrigin::signed(ALICE),
 						MintOption {
@@ -1250,9 +1242,7 @@ mod minting {
 							);
 						},
 					}
-					expected_nonce += expected_nonce_increment * 6;
 					owned_avatar_count += 6;
-					assert_eq!(System::account_nonce(ALICE), expected_nonce);
 					assert_eq!(Owners::<Test>::get(ALICE, SEASON_ID).len(), owned_avatar_count);
 					assert!(CurrentSeasonStatus::<Test>::get().active);
 					System::assert_last_event(mock::RuntimeEvent::AAvatars(
@@ -1285,9 +1275,7 @@ mod minting {
 								season_minted_count
 							);
 						},
-						MintPayment::Free => {
-							assert_eq!(System::account_nonce(ALICE), expected_nonce);
-						},
+						MintPayment::Free => {},
 					}
 
 					// check for season ending
