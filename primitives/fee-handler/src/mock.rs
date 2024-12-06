@@ -16,17 +16,12 @@
 
 use crate::{
 	fee_handler::{AssetGameFeeHandler, DistributeFee, Payment},
-	withdraw_credit::{EnsureWhitelistedAsset, WithdrawCredit, WithdrawWhitelistedCredit},
-	NativeGameFeeHandler, WithdrawNative,
+	withdraw_credit::{EnsureWhitelistedAsset, WithdrawWhitelistedCredit},
+	NativeGameFeeHandler, WithdrawAsset, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
-	traits::{
-		fungibles,
-		fungibles::{Balanced, Credit},
-		tokens::{Fortitude, Precision, Preservation},
-		AsEnsureOriginWithArg, ConstU32,
-	},
+	traits::{AsEnsureOriginWithArg, ConstU32},
 	BoundedVec,
 };
 use sp_runtime::{
@@ -161,7 +156,8 @@ pub type TestNativeFeeHandler = NativeGameFeeHandler<
 	TestTournamentFeeProvider,
 >;
 
-pub type WithdrawWhitelistedAssets = WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawAsset>;
+pub type WithdrawWhitelistedAssets =
+	WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawAsset<Test>>;
 
 pub struct WhitelistedAssets;
 
@@ -174,33 +170,6 @@ impl EnsureWhitelistedAsset for WhitelistedAssets {
 			&NOT_WHITE_LISTED_ASSET_ID => Err(DispatchError::Token(TokenError::Unsupported)),
 			_ => Err(DispatchError::Token(TokenError::Unsupported)),
 		}
-	}
-}
-
-pub struct WithdrawAsset;
-
-impl WithdrawCredit for WithdrawAsset {
-	type AccountId = AccountId;
-	type AssetId = AssetId;
-	type Assets = Assets;
-	type Balance = Balance;
-	type Credit = fungibles::Credit<Self::AccountId, Self::Assets>;
-
-	fn withdraw_credit(
-		who: &Self::AccountId,
-		asset_id: Self::AssetId,
-		credit: Self::Balance,
-	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError> {
-		let asset_fee_credit = Self::Assets::withdraw(
-			asset_id.clone(),
-			who,
-			credit,
-			Precision::Exact,
-			Preservation::Preserve,
-			Fortitude::Polite,
-		)?;
-
-		Ok(asset_fee_credit)
 	}
 }
 

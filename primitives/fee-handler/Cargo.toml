@@ -15,6 +15,7 @@ scale-info = { workspace = true }
 # Substrate frame
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+pallet-assets = { workspace = true}
 pallet-balances = { workspace = true}
 
 [dev-dependencies]

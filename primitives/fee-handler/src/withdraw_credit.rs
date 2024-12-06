@@ -3,6 +3,8 @@ use frame_support::{
 	traits::{
 		fungible,
 		fungible::Balanced,
+		fungibles,
+		fungibles::{Balanced as AssetsBalanced, Credit},
 		tokens::{Balance, Fortitude, Precision, Preservation},
 	},
 };
@@ -91,5 +93,32 @@ impl<T: pallet_balances::Config + frame_system::Config> WithdrawCredit for Withd
 			Preservation::Preserve,
 			Fortitude::Polite,
 		)
+	}
+}
+
+pub struct WithdrawAsset<T>(PhantomData<T>);
+
+impl<T: pallet_assets::Config + frame_system::Config> WithdrawCredit for WithdrawAsset<T> {
+	type AccountId = T::AccountId;
+	type AssetId = T::AssetId;
+	type Assets = pallet_assets::Pallet<T>;
+	type Balance = T::Balance;
+	type Credit = fungibles::Credit<Self::AccountId, pallet_assets::Pallet<T>>;
+
+	fn withdraw_credit(
+		who: &Self::AccountId,
+		asset_id: Self::AssetId,
+		credit: Self::Balance,
+	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError> {
+		let asset_fee_credit = Self::Assets::withdraw(
+			asset_id.clone(),
+			who,
+			credit,
+			Precision::Exact,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		)?;
+
+		Ok(asset_fee_credit)
 	}
 }
