@@ -13,7 +13,7 @@ use sp_core::Pair;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, RuntimeAppPublic,
+	BuildStorage,
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;

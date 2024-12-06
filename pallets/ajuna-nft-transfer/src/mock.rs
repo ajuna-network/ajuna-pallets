@@ -37,7 +37,7 @@ use sp_runtime::{
 	bounded_vec,
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
-	DispatchError, RuntimeAppPublic,
+	DispatchError,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
