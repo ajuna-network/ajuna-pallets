@@ -7,6 +7,7 @@ use frame_support::{
 	BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode};
+use std::fmt::Debug;
 
 /// Distributes shares of a base fee to some beneficiaries.
 pub trait DistributeFee {

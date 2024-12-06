@@ -23,9 +23,16 @@ use ajuna_primitives::{
 };
 
 use ajuna_primitives::fee_handler::{
-	AllowAllAssets, DistributeFee, Payment, WithdrawAsset, WithdrawWhitelistedCredit,
+	AllowAllAssets, DistributeFee, Payment, WithdrawFungibles, WithdrawWhitelistedCredit,
 };
-use frame_support::{derive_impl, parameter_types, traits::AsEnsureOriginWithArg, PalletId};
+use frame_support::{
+	derive_impl, parameter_types,
+	traits::{
+		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
+		AsEnsureOriginWithArg,
+	},
+	PalletId,
+};
 use sp_runtime::{
 	testing::TestSignature,
 	traits::{IdentifyAccount, Verify},
@@ -50,8 +57,8 @@ pub const TOURNAMENT_TREASURY: MockAccountId = 431;
 pub const SEASON_ID_0: MockSeasonId = 0;
 pub const SEASON_ID_1: MockSeasonId = 1;
 
-pub const DEFAULT_PAYMENT_ASSET_ID: u32 = 0;
-pub const LOW_LIQUIDITY_ASSET: u32 = 99;
+pub const MAIN_ASSET_ID: u32 = 0;
+pub const LOW_LIQUIDITY_ASSET_ID: u32 = 99;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -88,6 +95,10 @@ impl pallet_assets::Config for Test {
 	type Freezer = ();
 	type CallbackHandle = ();
 }
+
+pub type NativeAndAssets =
+	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
+pub const NATIVE: NativeOrWithId<u32> = NativeOrWithId::Native;
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
@@ -254,11 +265,15 @@ impl crate::Config<SageInstance1> for Test {
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
-		PalletAssets,
-		WithdrawWhitelistedCredit<AllowAllAssets<u32>, WithdrawAsset<Test>>,
+		NativeAndAssets,
+		WithdrawWhitelistedCredit<
+			AllowAllAssets<NativeOrWithId<u32>>,
+			WithdrawFungibles<NativeAndAssets, MockAccountId>,
+		>,
 		TestAffiliatesFeeProvider,
 		TestTournamentFeeProvider,
 	>;
+	type PaymentAssetId = NativeOrWithId<u32>;
 	type FilterHandler = MockFilterHandler;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
@@ -378,21 +393,21 @@ impl ExtBuilder {
 			pallet_assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance
-					(DEFAULT_PAYMENT_ASSET_ID, ALICE, true, 1),
-					(LOW_LIQUIDITY_ASSET, ALICE, true, 1),
+					(MAIN_ASSET_ID, ALICE, true, 1),
+					(LOW_LIQUIDITY_ASSET_ID, ALICE, true, 1),
 				],
 				metadata: vec![
 					// id, name, symbol, decimals
-					(DEFAULT_PAYMENT_ASSET_ID, "Main Asset".into(), "MAIN".into(), 10),
-					(LOW_LIQUIDITY_ASSET, "Main Asset".into(), "MAIN".into(), 10),
+					(MAIN_ASSET_ID, "Main Asset".into(), "MAIN".into(), 10),
+					(LOW_LIQUIDITY_ASSET_ID, "Main Asset".into(), "MAIN".into(), 10),
 				],
 				accounts: vec![
 					// id, account_id, balance
-					(DEFAULT_PAYMENT_ASSET_ID, ALICE, 100),
-					(DEFAULT_PAYMENT_ASSET_ID, BOB, 100),
-					(DEFAULT_PAYMENT_ASSET_ID, CHARLIE, 100),
-					(DEFAULT_PAYMENT_ASSET_ID, DAVE, 100),
-					(LOW_LIQUIDITY_ASSET, ALICE, 1),
+					(MAIN_ASSET_ID, ALICE, 100),
+					(MAIN_ASSET_ID, BOB, 100),
+					(MAIN_ASSET_ID, CHARLIE, 100),
+					(MAIN_ASSET_ID, DAVE, 100),
+					(LOW_LIQUIDITY_ASSET_ID, ALICE, 1),
 				],
 				next_asset_id: None,
 			},

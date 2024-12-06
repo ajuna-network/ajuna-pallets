@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
-use sp_runtime::{DispatchError::Module, ModuleError};
+use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 
 #[test]
 fn upgrade_asset_inventory_should_work() {
@@ -45,7 +45,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				DEFAULT_PAYMENT_ASSET_ID
+				NATIVE
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -69,7 +69,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				DEFAULT_PAYMENT_ASSET_ID
+				NATIVE
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -93,7 +93,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				DEFAULT_PAYMENT_ASSET_ID
+				NATIVE
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -117,7 +117,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				DEFAULT_PAYMENT_ASSET_ID
+				NATIVE
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -141,7 +141,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				DEFAULT_PAYMENT_ASSET_ID
+				NATIVE
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -183,7 +183,7 @@ fn upgrade_asset_inventory_should_work_on_different_beneficiary() {
 				RuntimeOrigin::signed(ALICE),
 				Some(BOB),
 				None,
-				DEFAULT_PAYMENT_ASSET_ID
+				NATIVE
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: BOB,
@@ -222,7 +222,7 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				Some(SEASON_ID_1),
-				DEFAULT_PAYMENT_ASSET_ID
+				NATIVE
 			));
 
 			assert_eq!(
@@ -240,13 +240,8 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 fn upgrade_asset_inventory_should_reject_insufficient_balance() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::upgrade_asset_inventory(
-				RuntimeOrigin::signed(ALICE),
-				None,
-				None,
-				LOW_LIQUIDITY_ASSET
-			),
-			Module(ModuleError { index: 2, error: [0, 0, 0, 0], message: Some("BalanceLow") }),
+			Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None, NATIVE),
+			Token(FundsUnavailable),
 		);
 	});
 }
@@ -264,12 +259,7 @@ fn upgrade_asset_inventory_should_reject_fully_upgraded_storage() {
 			});
 
 			assert_noop!(
-				Sage::upgrade_asset_inventory(
-					RuntimeOrigin::signed(ALICE),
-					None,
-					None,
-					DEFAULT_PAYMENT_ASSET_ID
-				),
+				Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None, NATIVE),
 				Error::<Test, Instance1>::MaxStorageTierReached
 			);
 		});

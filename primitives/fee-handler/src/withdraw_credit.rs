@@ -122,3 +122,33 @@ impl<T: pallet_assets::Config + frame_system::Config> WithdrawCredit for Withdra
 		Ok(asset_fee_credit)
 	}
 }
+
+pub struct WithdrawFungibles<Fungibles, AccountId>(PhantomData<(Fungibles, AccountId)>);
+
+impl<Fungibles, AccountId> WithdrawCredit for WithdrawFungibles<Fungibles, AccountId>
+where
+	Fungibles: fungibles::Inspect<AccountId> + fungibles::Balanced<AccountId>,
+{
+	type AccountId = AccountId;
+	type AssetId = Fungibles::AssetId;
+	type Assets = Fungibles;
+	type Balance = Fungibles::Balance;
+	type Credit = fungibles::Credit<Self::AccountId, Fungibles>;
+
+	fn withdraw_credit(
+		who: &Self::AccountId,
+		asset_id: Self::AssetId,
+		credit: Self::Balance,
+	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError> {
+		let asset_fee_credit = Self::Assets::withdraw(
+			asset_id.clone(),
+			who,
+			credit,
+			Precision::Exact,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		)?;
+
+		Ok(asset_fee_credit)
+	}
+}

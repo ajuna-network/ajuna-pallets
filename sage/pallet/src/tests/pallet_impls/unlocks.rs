@@ -23,7 +23,12 @@ mod unlock_asset_trading_for {
 	fn unlock_asset_trading_for_oneself_free_should_reject_if_feature_locked_in_season() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
-				Sage::unlock_asset_trading_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
+				Sage::unlock_asset_trading_for(
+					DAVE,
+					UnlockTarget::OneselfFree,
+					SEASON_ID_0,
+					NATIVE
+				),
 				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 		});
@@ -46,7 +51,12 @@ mod unlock_asset_trading_for {
 			assert_eq!(player_stats.bought_amount, 0);
 			assert_eq!(player_stats.sold_amount, 0);
 			assert_noop!(
-				Sage::unlock_asset_trading_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
+				Sage::unlock_asset_trading_for(
+					DAVE,
+					UnlockTarget::OneselfFree,
+					SEASON_ID_0,
+					NATIVE
+				),
 				Error::<Test, Instance1>::UnlockCriteriaNotFulfilled
 			);
 
@@ -60,7 +70,8 @@ mod unlock_asset_trading_for {
 			assert_ok!(Sage::unlock_asset_trading_for(
 				DAVE,
 				UnlockTarget::OneselfFree,
-				SEASON_ID_0
+				SEASON_ID_0,
+				NATIVE
 			));
 		});
 	}
@@ -73,7 +84,12 @@ mod unlock_asset_trading_for {
 				None
 			);
 			assert_noop!(
-				Sage::unlock_asset_trading_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
+				Sage::unlock_asset_trading_for(
+					DAVE,
+					UnlockTarget::OneselfFree,
+					SEASON_ID_0,
+					NATIVE
+				),
 				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 
@@ -82,7 +98,8 @@ mod unlock_asset_trading_for {
 			assert_ok!(Sage::unlock_asset_trading_for(
 				DAVE,
 				UnlockTarget::OneselfPaying,
-				SEASON_ID_0
+				SEASON_ID_0,
+				NATIVE
 			));
 			let player_config = PlayerSeasonConfigs::<Test, Instance1>::get(DAVE, SEASON_ID_0);
 			assert!(player_config.locks.asset_trade);
@@ -92,7 +109,8 @@ mod unlock_asset_trading_for {
 			assert_ok!(Sage::unlock_asset_trading_for(
 				DAVE,
 				UnlockTarget::OtherPaying(BOB),
-				SEASON_ID_0
+				SEASON_ID_0,
+				NATIVE
 			));
 			let player_config = PlayerSeasonConfigs::<Test, Instance1>::get(BOB, SEASON_ID_0);
 			assert!(player_config.locks.asset_trade);
@@ -107,7 +125,12 @@ mod unlock_asset_transfer_for {
 	fn unlock_asset_transfer_for_oneself_free_should_reject_if_feature_locked_in_season() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
-				Sage::unlock_asset_transfer_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
+				Sage::unlock_asset_transfer_for(
+					DAVE,
+					UnlockTarget::OneselfFree,
+					SEASON_ID_0,
+					NATIVE
+				),
 				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 		});
@@ -130,7 +153,12 @@ mod unlock_asset_transfer_for {
 			assert_eq!(player_stats.bought_amount, 0);
 			assert_eq!(player_stats.sold_amount, 0);
 			assert_noop!(
-				Sage::unlock_asset_trading_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
+				Sage::unlock_asset_trading_for(
+					DAVE,
+					UnlockTarget::OneselfFree,
+					SEASON_ID_0,
+					NATIVE
+				),
 				Error::<Test, Instance1>::UnlockCriteriaNotFulfilled
 			);
 
@@ -144,7 +172,8 @@ mod unlock_asset_transfer_for {
 			assert_ok!(Sage::unlock_asset_trading_for(
 				DAVE,
 				UnlockTarget::OneselfFree,
-				SEASON_ID_0
+				SEASON_ID_0,
+				NATIVE
 			));
 		});
 	}
@@ -157,7 +186,12 @@ mod unlock_asset_transfer_for {
 				None
 			);
 			assert_noop!(
-				Sage::unlock_asset_transfer_for(DAVE, UnlockTarget::OneselfFree, SEASON_ID_0),
+				Sage::unlock_asset_transfer_for(
+					DAVE,
+					UnlockTarget::OneselfFree,
+					SEASON_ID_0,
+					NATIVE
+				),
 				Error::<Test, Instance1>::FeatureUnavailableInSeason
 			);
 
@@ -166,7 +200,8 @@ mod unlock_asset_transfer_for {
 			assert_ok!(Sage::unlock_asset_transfer_for(
 				DAVE,
 				UnlockTarget::OneselfPaying,
-				SEASON_ID_0
+				SEASON_ID_0,
+				NATIVE
 			));
 			let player_config = PlayerSeasonConfigs::<Test, Instance1>::get(DAVE, SEASON_ID_0);
 			assert!(player_config.locks.asset_transfer);
@@ -176,7 +211,8 @@ mod unlock_asset_transfer_for {
 			assert_ok!(Sage::unlock_asset_transfer_for(
 				DAVE,
 				UnlockTarget::OtherPaying(BOB),
-				SEASON_ID_0
+				SEASON_ID_0,
+				NATIVE
 			));
 			let player_config = PlayerSeasonConfigs::<Test, Instance1>::get(BOB, SEASON_ID_0);
 			assert!(player_config.locks.asset_transfer);

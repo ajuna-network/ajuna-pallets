@@ -15,6 +15,7 @@ scale-info = { workspace = true }
 # Substrate frame
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+sp-runtime = { workspace = true }
 pallet-assets = { workspace = true}
 pallet-balances = { workspace = true}
 
@@ -22,7 +23,6 @@ pallet-balances = { workspace = true}
 pallet-assets = { workspace = true, features = ["std"]}
 pallet-balances = { workspace = true, features = ["std"]}
 sp-io = { workspace = true, features = ["std"]}
-sp-runtime = { workspace = true, features = ["std"]}
 
 [features]
 default = ["std"]
@@ -31,5 +31,6 @@ std = [
     "scale-info/std",
     "frame-support/std",
     "frame-system/std",
+    "sp-runtime/std",
     "pallet-balances/std",
 ]

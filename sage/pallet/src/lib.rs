@@ -119,10 +119,12 @@ pub mod pallet {
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
 			Balance = BalanceOf<Self, I>,
-			AssetId = u32,
+			AssetId = Self::PaymentAssetId,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
 		>;
+
+		type PaymentAssetId: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
 		/// `SeasonTransferFilters` storage.
@@ -669,15 +671,16 @@ pub mod pallet {
 			target: UnlockTarget<AccountIdOf<T>>,
 			feature: LockableFeature,
 			season_id: SeasonIdOf<T, I>,
+			payment_asset_id: PaymentAssetIdOf<T, I>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
 
 			match feature {
 				LockableFeature::TradeAsset =>
-					Self::unlock_asset_trading_for(account, target, season_id),
+					Self::unlock_asset_trading_for(account, target, season_id, payment_asset_id),
 				LockableFeature::TransferAsset =>
-					Self::unlock_asset_transfer_for(account, target, season_id),
+					Self::unlock_asset_transfer_for(account, target, season_id, payment_asset_id),
 			}
 		}
 
