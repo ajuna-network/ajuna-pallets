@@ -64,30 +64,30 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
+	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
 	pub type AssetIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
 	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
-	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
-	pub type SeasonDataOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonData;
-	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 	pub type TransitionIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
 	pub type ExtraOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Extra;
-	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	pub type TransitionConfigOf<T, I> = <T as Config<I>>::SageTransitionConfig;
-	pub(crate) type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
+	pub type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
+
 	pub type GeneralConfigOf<T, I> = GeneralConfig<TransitionConfigOf<T, I>>;
+	pub type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
-	pub(crate) type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
+	pub type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
+	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
+	pub type SeasonDataOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonData;
 
-	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
-
-	pub(crate) type TradeFilterOf<T, I> =
-		<<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
-	pub(crate) type TransferFilterOf<T, I> =
+	pub type TradeFilterOf<T, I> = <<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
+	pub type TransferFilterOf<T, I> =
 		<<T as Config<I>>::FilterHandler as TransferManager>::TransferFilter;
-	pub(crate) type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
-	pub(crate) type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
+	pub type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
+	pub type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
