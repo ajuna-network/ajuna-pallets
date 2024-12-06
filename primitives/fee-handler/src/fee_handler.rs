@@ -214,7 +214,7 @@ where
 	}
 
 	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
-		if let Err(_credit) = W::Assets::resolve(&key, credit) {
+		if let Err(_credit) = W::Assets::resolve(key, credit) {
 			log::error!(
 				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
 			);
@@ -315,7 +315,7 @@ where
 							"Could not deposit to affiliate account, it probably doesn't exist."
 						);
 						// Reabsorb the credit it can still be used.
-						let _ = final_fee.subsume(credit);
+						final_fee.subsume(credit);
 					}
 				}
 			}
@@ -348,7 +348,7 @@ where
 						"Could not deposit to tournament account, it probably doesn't exist."
 					);
 					// Reabsorb the credit it can still be used.
-					let _ = final_fee.subsume(credit);
+					final_fee.subsume(credit);
 				}
 			}
 		}
@@ -357,7 +357,7 @@ where
 	}
 
 	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
-		if let Err(_credit) = W::Assets::resolve(&key, credit) {
+		if let Err(_credit) = W::Assets::resolve(key, credit) {
 			log::error!(
 				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
 			);
