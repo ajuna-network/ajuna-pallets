@@ -76,6 +76,8 @@ impl pallet_assets::Config for Test {
 	type ForceOrigin = frame_system::EnsureRoot<u64>;
 	type Freezer = ();
 	type CallbackHandle = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 }
 
 pub struct TestAffiliatesFeeProvider;

@@ -320,7 +320,7 @@ impl BenchmarkHelper<MockCategoryId, MockBlockNumber, MockBalance, MockRanker>
 			initial_reward: Some(10),
 			max_reward: None,
 			take_fee_percentage: None,
-			reward_distribution: bounded_vec![40, 30, 10],
+			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
 			golden_duck_config: GoldenDuckConfig::Enabled(10),
 			max_players: 4,
 			ranker: MockRanker,

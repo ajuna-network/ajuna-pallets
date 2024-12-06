@@ -192,7 +192,7 @@ impl
 			initial_reward: Some(10),
 			max_reward: None,
 			take_fee_percentage: None,
-			reward_distribution: bounded_vec![40, 30, 10],
+			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
 			golden_duck_config: pallet_ajuna_tournament::GoldenDuckConfig::Enabled(10),
 			max_players: 4,
 			ranker: AvatarRankerFor::<Test>::default(),

@@ -16,6 +16,9 @@ use sp_runtime::{
 	BuildStorage,
 };
 
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeAppPublic;
+
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;

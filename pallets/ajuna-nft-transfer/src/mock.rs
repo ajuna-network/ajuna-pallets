@@ -48,6 +48,9 @@ pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 pub type MockCollectionId = u32;
 
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeAppPublic;
+
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
