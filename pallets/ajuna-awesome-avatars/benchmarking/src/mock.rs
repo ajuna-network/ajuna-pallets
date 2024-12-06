@@ -16,7 +16,7 @@
 
 #![cfg(test)]
 
-use ajuna_primitives::{account_manager::WhitelistKey, fee_handler::GameFeeHandler};
+use ajuna_primitives::{account_manager::WhitelistKey, fee_handler::AssetGameFeeHandler};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
@@ -137,7 +137,8 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
-	type FeeHandler = GameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
+	type FeeHandler =
+		AssetGameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
 	type WeightInfo = ();
 }
 

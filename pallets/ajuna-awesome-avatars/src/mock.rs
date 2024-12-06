@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
-use ajuna_primitives::fee_handler::GameFeeHandler;
+use ajuna_primitives::fee_handler::AssetGameFeeHandler;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
@@ -121,7 +121,8 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
-	type FeeHandler = GameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
+	type FeeHandler =
+		AssetGameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
 	type WeightInfo = ();
 }
 

@@ -1,10 +1,4 @@
-use frame_support::{
-	pallet_prelude::DispatchError,
-	traits::{
-		fungibles::{Balanced, Credit},
-		tokens::Balance,
-	},
-};
+use frame_support::{pallet_prelude::DispatchError, traits::tokens::Balance};
 use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
 use std::{fmt::Debug, marker::PhantomData};
@@ -25,12 +19,13 @@ impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: W
 	type AssetId = Withdraw::AssetId;
 	type Assets = Withdraw::Assets;
 	type Balance = Withdraw::Balance;
+	type Credit = Withdraw::Credit;
 
 	fn withdraw_credit(
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError> {
+	) -> Result<Self::Credit, DispatchError> {
 		Whitelist::ensure_whitelisted(&asset_id)?;
 		Withdraw::withdraw_credit(who, asset_id, credit)
 	}
@@ -46,14 +41,14 @@ pub trait WithdrawCredit {
 	type AccountId;
 	type AssetId: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
 
-	type Assets: Balanced<Self::AccountId>;
+	type Assets;
 	type Balance: Balance;
+
+	type Credit;
 
 	fn withdraw_credit(
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError>;
+	) -> Result<Self::Credit, DispatchError>;
 }
-
-pub type CreditOf<T> = Credit<<T as WithdrawCredit>::AccountId, <T as WithdrawCredit>::Assets>;

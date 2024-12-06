@@ -17,7 +17,7 @@
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	asset_manager::AssetInspector,
-	fee_handler::{DistributeFee, GameFeeHandler},
+	fee_handler::{AssetGameFeeHandler, DistributeFee},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 	trade_manager::TradeManager,
 	treasury_manager::TreasuryManager,
@@ -328,7 +328,7 @@ impl crate::Config<SageInstance1> for Test {
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
 	type SageTransitionConfig = ();
 	type SeasonHandler = MockSeasonManager;
-	type FeeHandler = GameFeeHandler<
+	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
 		Balances,
 		MockAffiliatesFeeProvider,

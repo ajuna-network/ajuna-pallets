@@ -1,9 +1,13 @@
-use crate::withdraw_credit::{CreditOf, WithdrawCredit};
+use crate::withdraw_credit::WithdrawCredit;
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
 	sp_runtime::TokenError,
-	traits::{fungibles, fungibles::Balanced, ConstU32},
+	traits::{
+		fungibles,
+		fungibles::{Balanced, Credit},
+		ConstU32,
+	},
 	BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode};
@@ -76,24 +80,23 @@ pub trait FeeHandler {
 	) -> Result<(), DispatchError>;
 }
 
-pub struct GameFeeHandler<WithdrawAsset, Affiliate, Tournament> {
-	_phantom: PhantomData<(WithdrawAsset, Affiliate, Tournament)>,
+pub struct AssetGameFeeHandler<AccountId, Assets, WithdrawAsset, Affiliate, Tournament> {
+	_phantom: PhantomData<(AccountId, Assets, WithdrawAsset, Affiliate, Tournament)>,
 }
 
-impl<W, Affiliate, Tournament> FeeHandler for GameFeeHandler<W, Affiliate, Tournament>
+impl<AccountId, Assets, W, Affiliate, Tournament> FeeHandler
+	for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, Tournament>
 where
-	W::Assets: fungibles::Inspect<W::AccountId, Balance = W::Balance, AssetId = W::AssetId>,
+	Assets: fungibles::Inspect<AccountId, Balance = W::Balance, AssetId = W::AssetId>
+		+ Balanced<AccountId>,
 
-	W: WithdrawCredit,
+	W: WithdrawCredit<AccountId = AccountId, Assets = Assets, Credit = Credit<AccountId, Assets>>,
 
 	Affiliate: DistributeFee<AccountId = W::AccountId, Balance = W::Balance>,
-	Tournament: DistributeFee<
-		AccountId = W::AccountId,
-		Balance = W::Balance,
-		MaxDistributions = ConstU32<1>,
-	>,
+	Tournament:
+		DistributeFee<AccountId = AccountId, Balance = W::Balance, MaxDistributions = ConstU32<1>>,
 {
-	type AccountId = W::AccountId;
+	type AccountId = AccountId;
 	type AssetId = W::AssetId;
 	type Balance = W::Balance;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
@@ -130,26 +133,26 @@ where
 	}
 }
 
-impl<W, Affiliate, Tournament> GameFeeHandler<W, Affiliate, Tournament>
+impl<AccountId, Assets, W, Affiliate, Tournament>
+	AssetGameFeeHandler<AccountId, Assets, W, Affiliate, Tournament>
 where
-	W: WithdrawCredit,
-	W::Assets: fungibles::Inspect<W::AccountId, Balance = W::Balance, AssetId = W::AssetId>,
+	Assets: fungibles::Inspect<AccountId, Balance = W::Balance, AssetId = W::AssetId>
+		+ Balanced<AccountId>,
+
+	W: WithdrawCredit<AccountId = AccountId, Assets = Assets, Credit = Credit<AccountId, Assets>>,
 
 	Affiliate: DistributeFee<AccountId = W::AccountId, Balance = W::Balance>,
-	Tournament: DistributeFee<
-		AccountId = W::AccountId,
-		Balance = W::Balance,
-		MaxDistributions = ConstU32<1>,
-	>,
+	Tournament:
+		DistributeFee<AccountId = AccountId, Balance = W::Balance, MaxDistributions = ConstU32<1>>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		fee_credit: CreditOf<W>,
+		fee_credit: W::Credit,
 		account: &W::AccountId,
 		identifier: &Affiliate::FeeIdentifier,
-	) -> Result<CreditOf<W>, DispatchError> {
+	) -> Result<W::Credit, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
@@ -170,10 +173,10 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		fee_credit: CreditOf<W>,
+		fee_credit: W::Credit,
 		account: &W::AccountId,
 		identifier: &Tournament::FeeIdentifier,
-	) -> Result<CreditOf<W>, DispatchError> {
+	) -> Result<W::Credit, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(fee) = Tournament::distribute_fee(final_fee.peek(), account, identifier) {
@@ -190,7 +193,7 @@ where
 		Ok(final_fee)
 	}
 
-	fn deposit_into_treasury(key: &W::AccountId, credit: CreditOf<W>) -> Result<(), DispatchError> {
+	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
 		W::Assets::resolve(key, credit).map_err(|_| DispatchError::Token(TokenError::CannotCreate))
 	}
 }

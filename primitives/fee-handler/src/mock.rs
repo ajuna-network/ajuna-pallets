@@ -15,12 +15,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	fee_handler::{DistributeFee, GameFeeHandler, Payment},
+	fee_handler::{AssetGameFeeHandler, DistributeFee, Payment},
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawCredit, WithdrawWhitelistedCredit},
 };
 use frame_support::{
 	derive_impl,
 	traits::{
+		fungibles,
 		fungibles::{Balanced, Credit},
 		tokens::{Fortitude, Precision, Preservation},
 		AsEnsureOriginWithArg, ConstU32,
@@ -143,8 +144,13 @@ impl DistributeFee for TestTournamentFeeProvider {
 	}
 }
 
-pub type TestFeeHandler =
-	GameFeeHandler<WithdrawWhitelistedAssets, TestAffiliatesFeeProvider, TestTournamentFeeProvider>;
+pub type TestFeeHandler = AssetGameFeeHandler<
+	AccountId,
+	Assets,
+	WithdrawWhitelistedAssets,
+	TestAffiliatesFeeProvider,
+	TestTournamentFeeProvider,
+>;
 
 pub type WithdrawWhitelistedAssets = WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawAsset>;
 
@@ -169,6 +175,7 @@ impl WithdrawCredit for WithdrawAsset {
 	type AssetId = AssetId;
 	type Assets = Assets;
 	type Balance = Balance;
+	type Credit = fungibles::Credit<Self::AccountId, Self::Assets>;
 
 	fn withdraw_credit(
 		who: &Self::AccountId,
