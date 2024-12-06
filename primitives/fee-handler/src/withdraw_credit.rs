@@ -1,4 +1,11 @@
-use frame_support::{pallet_prelude::DispatchError, traits::tokens::Balance};
+use frame_support::{
+	pallet_prelude::DispatchError,
+	traits::{
+		fungible,
+		fungible::Balanced,
+		tokens::{Balance, Fortitude, Precision, Preservation},
+	},
+};
 use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
 use std::{fmt::Debug, marker::PhantomData};
@@ -51,4 +58,28 @@ pub trait WithdrawCredit {
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
 	) -> Result<Self::Credit, DispatchError>;
+}
+
+pub struct WithdrawNative<T>(PhantomData<T>);
+
+impl<T: pallet_balances::Config + frame_system::Config> WithdrawCredit for WithdrawNative<T> {
+	type AccountId = T::AccountId;
+	type AssetId = ();
+	type Assets = pallet_balances::Pallet<T>;
+	type Balance = T::Balance;
+	type Credit = fungible::Credit<Self::AccountId, pallet_balances::Pallet<T>>;
+
+	fn withdraw_credit(
+		who: &Self::AccountId,
+		_: Self::AssetId,
+		credit: Self::Balance,
+	) -> Result<Self::Credit, DispatchError> {
+		pallet_balances::Pallet::<T>::withdraw(
+			who,
+			credit,
+			Precision::Exact,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		)
+	}
 }
