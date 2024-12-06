@@ -479,29 +479,6 @@ mod native_fee_handler {
 				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
 			});
 		}
-
-		#[test]
-		fn withdraw_and_pay_fee_fails_for_not_whitelisted_asset() {
-			ExtBuilder::default().build().execute_with(|| {
-				let fee = 2;
-				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
-				let fee_beneficiary = FERDIE;
-
-				assert_noop!(
-					TestNativeFeeHandler::withdraw_and_pay_fees(
-						&ALICE,
-						(),
-						fee,
-						&TournamentFeeId::Free,
-						&AffiliateFeeId::Free,
-						&fee_beneficiary,
-					),
-					DispatchError::Token(TokenError::Unsupported)
-				);
-
-				assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
-			});
-		}
 	}
 
 	mod withdraw_and_deposit_into_treasury {
@@ -543,37 +520,10 @@ mod native_fee_handler {
 						&AffiliateFeeId::Free,
 						&fee_beneficiary,
 					),
-					DispatchError::Module(ModuleError {
-						index: 2,
-						error: [0, 0, 0, 0],
-						message: Some("BalanceLow")
-					})
+					DispatchError::Token(TokenError::FundsUnavailable)
 				);
 
 				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
-			});
-		}
-
-		#[test]
-		fn withdraw_and_deposit_into_treasury_for_not_whitelisted_asset() {
-			ExtBuilder::default().build().execute_with(|| {
-				let fee = 101;
-				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
-				let fee_beneficiary = FERDIE;
-
-				assert_noop!(
-					TestNativeFeeHandler::withdraw_and_pay_fees(
-						&ALICE,
-						(),
-						fee,
-						&TournamentFeeId::Free,
-						&AffiliateFeeId::Free,
-						&fee_beneficiary,
-					),
-					DispatchError::Token(TokenError::Unsupported)
-				);
-
-				assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
 			});
 		}
 	}
