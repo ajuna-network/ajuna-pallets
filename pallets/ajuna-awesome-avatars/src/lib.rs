@@ -161,7 +161,7 @@ pub mod pallet {
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
 			Balance = BalanceOf<Self>,
-			AssetId = u32,
+			AssetId = (),
 			AffiliateFeeIdentifier = AffiliateMethods,
 			TournamentFeeIdentifier = SeasonId,
 		>;
@@ -743,7 +743,7 @@ pub mod pallet {
 			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
 				T::FeeHandler::withdraw_and_pay_fees(
 					&buyer,
-					0,
+					(),
 					base_fee,
 					&avatar.season_id,
 					&AffiliateMethods::Buy,
@@ -752,7 +752,7 @@ pub mod pallet {
 			} else {
 				T::FeeHandler::withdraw_and_deposit_into_treasury(
 					&buyer,
-					0,
+					(),
 					&Self::treasury_account_id(),
 					base_fee,
 				)?;
@@ -813,7 +813,7 @@ pub mod pallet {
 			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_upgrade {
 				T::FeeHandler::withdraw_and_pay_fees(
 					&caller,
-					0,
+					(),
 					base_fee,
 					&season_id,
 					&AffiliateMethods::UpgradeStorage,
@@ -822,7 +822,7 @@ pub mod pallet {
 			} else {
 				T::FeeHandler::withdraw_and_deposit_into_treasury(
 					&caller,
-					0,
+					(),
 					&Self::treasury_account_id(),
 					base_fee,
 				)?;
@@ -1332,7 +1332,7 @@ pub mod pallet {
 					{
 						T::FeeHandler::withdraw_and_pay_fees(
 							player,
-							0,
+							(),
 							base_fee,
 							&season_id,
 							&AffiliateMethods::Mint,
@@ -1341,7 +1341,7 @@ pub mod pallet {
 					} else {
 						T::FeeHandler::withdraw_and_deposit_into_treasury(
 							&player,
-							0,
+							(),
 							&Self::treasury_account_id(),
 							base_fee,
 						)?;

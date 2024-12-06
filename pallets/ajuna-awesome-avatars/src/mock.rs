@@ -15,13 +15,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
-use ajuna_primitives::fee_handler::AssetGameFeeHandler;
+use ajuna_primitives::fee_handler::{NativeGameFeeHandler, WithdrawNative};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
 	PalletId,
 };
-use sp_core::bounded_vec;
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
 	testing::TestSignature,
@@ -122,7 +121,7 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
 	type FeeHandler =
-		AssetGameFeeHandler<MockAccountId, Balances, Affiliates, Tournament, AAvatars>;
+		NativeGameFeeHandler<MockAccountId, Balances, WithdrawNative<Test>, Affiliates, Tournament>;
 	type WeightInfo = ();
 }
 
