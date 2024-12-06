@@ -67,8 +67,8 @@ pub mod pallet {
 	pub type AssetIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
 	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
-	pub type SeasonIdOf<T, I> =
-		<<T as Config<I>>::SeasonHandler as SeasonManager<TransitionIdOf<T, I>>>::SeasonId;
+	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
+	pub type SeasonDataOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonData;
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 	pub type TransitionIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
@@ -80,7 +80,7 @@ pub mod pallet {
 
 	pub(crate) type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
-	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, TransitionIdOf<T, I>>;
+	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
 
 	pub(crate) type TradeFilterOf<T, I> =
 		<<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
@@ -108,7 +108,6 @@ pub mod pallet {
 
 		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
-			TransitionIdOf<Self, I>,
 			AssetId = AssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 		>;
@@ -121,6 +120,7 @@ pub mod pallet {
 			AssetId = u32,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
+			TransitionFeeIdentifier = TransitionIdOf<Self, I>,
 		>;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
@@ -422,7 +422,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
-			let season_id = in_season.unwrap_or_else(T::SeasonHandler::get_current_season_id);
+			let season_id = if let Some(season_id) = in_season {
+				season_id
+			} else {
+				T::SeasonHandler::get_current_season_id()?
+			};
 			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
 
 			let base_fee = fee.upgrade_asset_inventory;
@@ -598,7 +602,7 @@ pub mod pallet {
 			)?;
 
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
-			let current_season_id = T::SeasonHandler::get_current_season_id();
+			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			let fee = T::SeasonHandler::get_season_config_for(&current_season_id)?.fee;
 
 			let trade_fee = {
@@ -621,7 +625,6 @@ pub mod pallet {
 			Self::do_transfer_asset(&seller, &buyer, &asset_season_id, &asset_id)?;
 			AssetTradePrices::<T, I>::remove(&asset_season_id, &asset_id);
 
-			let current_season_id = T::SeasonHandler::get_current_season_id();
 			PlayerSeasonStats::<T, I>::mutate(&buyer, &current_season_id, |stats| {
 				stats.bought_amount.saturating_inc();
 			});
@@ -698,7 +701,7 @@ pub mod pallet {
 			let transition_results =
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
 					.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
-			let current_season_id = T::SeasonHandler::get_current_season_id();
+			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 
 			// TODO: Review the logic in this section
@@ -797,22 +800,55 @@ pub mod pallet {
 			let mut minted_amount = 0 as Stat;
 			let mut mutated_amount = 0 as Stat;
 
+			let mut player_asset_count = AssetsOwnedCount::<T, I>::get(player, season_id);
+			let player_inventory_slots = PlayerSeasonConfigs::<T, I>::get(player, season_id)
+				.inventory_tier
+				.get_asset_slots();
+
 			for output in transition_results {
 				match output {
 					TransitionOutput::Minted(_asset) => {
-						minted_amount = minted_amount.saturating_add(1);
+						minted_amount.saturating_inc();
+						player_asset_count.saturating_inc();
+						ensure!(
+							player_asset_count <= player_inventory_slots,
+							Error::<T, I>::MaxOwnershipReached
+						);
+
 						// TODO: Need a way to create new asset_id generically
+						// T::SeasonHandler::register_asset_in(asset_id, season_id)?;
+						// Assets::<T, I>::insert(asset_id, asset);
+						// AssetOwners::<T, I>::insert((player, season_id, asset_id);
+						// AssetsOwnedCount update
 					},
 					TransitionOutput::Mutated(asset_id, asset) => {
-						mutated_amount = mutated_amount.saturating_add(1);
+						mutated_amount.saturating_inc();
 						Assets::<T, I>::mutate(asset_id, |maybe_asset| {
 							if let Some((_, old_asset)) = maybe_asset {
 								*old_asset = asset;
 							}
 						});
 					},
-					TransitionOutput::Consumed(asset_id) => Assets::<T, I>::remove(asset_id),
+					TransitionOutput::Consumed(asset_id) => {
+						if let Some((owner, _)) = Assets::<T, I>::take(&asset_id) {
+							let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
+							AssetOwners::<T, I>::remove((&owner, &asset_season_id, &asset_id));
+							AssetsOwnedCount::<T, I>::mutate(
+								&owner,
+								&asset_season_id,
+								|asset_count| {
+									asset_count.saturating_dec();
+								},
+							);
+						}
+					},
 				}
+			}
+
+			if minted_amount > 0 {
+				AssetsOwnedCount::<T, I>::mutate(player, season_id, |asset_count| {
+					*asset_count = asset_count.saturating_add(minted_amount as u8);
+				});
 			}
 
 			PlayerSeasonStats::<T, I>::mutate(player, season_id, |stats| {

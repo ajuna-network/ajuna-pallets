@@ -10,6 +10,8 @@ version.workspace = true
 # Substrate - FRAME
 frame-support      = { workspace = true }
 sp-std             = { workspace = true }
+# Substrate - Primitives
+sp-core            = { workspace = true }
 # Substrate - SCALE codec
 parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
 scale-info         = { workspace = true, features = [ "derive" ] }
@@ -23,6 +25,7 @@ sage-api = { workspace = true}
 default = ["std"]
 std = [
     "frame-support/std",
+    "sp-core/std",
     "sp-std/std",
     "parity-scale-codec/std",
     "scale-info/std",

@@ -24,7 +24,8 @@ fn state_transition_works() {
 		.balances(&[(ALICE, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id();
+			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
+				.expect("Should get season_id");
 			let season_config =
 				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&season_id)
 					.expect("Should get season config");
@@ -42,8 +43,10 @@ fn state_transition_works() {
 				account: ALICE,
 				id: transition_id,
 			}));
-			let transition_fee = season_config.fee.get_transition_fee_for(&transition_id);
-			assert_eq!(Balances::free_balance(ALICE), initial_balance - transition_fee);
+			let transition_fee = season_config.fee.state_transition_base_fee;
+			// This assertion assumes that for the UpgradeAsset transition the fee is 2x
+			// the 'state_transition_base_fee'
+			assert_eq!(Balances::free_balance(ALICE), initial_balance - (transition_fee * 2));
 		});
 }
 

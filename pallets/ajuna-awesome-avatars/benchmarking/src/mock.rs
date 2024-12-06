@@ -129,6 +129,23 @@ parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
+pub struct MockTransitionFeeProvider;
+
+impl FeeProvider for MockTransitionFeeProvider {
+	type AccountId = MockAccountId;
+	type FeeIdentifier = SeasonId;
+	type FeeCurrency = MockBalance;
+	type FeeOutput = MockBalance;
+
+	fn get_fee_from(
+		base_fee: Self::FeeCurrency,
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Self::FeeOutput {
+		base_fee
+	}
+}
+
 impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type PalletId = AwesomeAvatarsPalletId;
 	type RuntimeEvent = RuntimeEvent;

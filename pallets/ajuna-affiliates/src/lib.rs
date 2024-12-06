@@ -32,18 +32,18 @@ pub mod weights;
 
 use crate::weights::WeightInfo;
 
-use frame_support::pallet_prelude::*;
+use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
+
+use frame_support::{pallet_prelude::*, traits::Currency};
 use frame_system::{ensure_signed, pallet_prelude::*};
+use sp_runtime::ArithmeticError;
+use sp_std::vec::Vec;
 
 use traits::*;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use ajuna_primitives::account_manager::{AccountManager, WhitelistKey};
-	use frame_support::traits::Currency;
-	use sp_runtime::ArithmeticError;
-	use sp_std::vec::Vec;
 
 	pub(crate) type BalanceOf<T, I> =
 		<<T as Config<I>>::Currency as Currency<AccountIdFor<T>>>::Balance;

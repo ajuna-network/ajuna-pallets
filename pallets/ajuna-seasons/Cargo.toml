@@ -1,6 +1,6 @@
 [package]
-description = "Ajuna Network pallet used to handle tournaments"
-name        = "pallet-ajuna-tournament"
+description = "Ajuna Network pallet used to handle seasons"
+name        = "pallet-ajuna-seasons"
 
 authors.workspace    = true
 edition.workspace    = true
@@ -23,7 +23,6 @@ frame-support      = { workspace = true }
 frame-system       = { workspace = true }
 parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
 scale-info         = { workspace = true, features = [ "derive" ] }
-sp-arithmetic      = { workspace = true }
 sp-runtime         = { workspace = true }
 sp-std             = { workspace = true }
 
@@ -40,7 +39,6 @@ sp-io           = { workspace = true }
 default = [ "std" ]
 std = [
     "log/std",
-    "pallet-balances/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "sp-io/std",
@@ -49,20 +47,20 @@ std = [
     "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
-    "sp-arithmetic/std",
     "sp-runtime/std",
+    "pallet-balances/std",
 ]
 runtime-benchmarks = [
     "ajuna-primitives/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
-    "pallet-balances/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",
     "frame-system/try-runtime",
-    "pallet-balances/try-runtime",
     "sp-runtime/try-runtime",
+    "pallet-balances/try-runtime",
 ]

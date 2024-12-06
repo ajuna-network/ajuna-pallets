@@ -107,8 +107,9 @@ pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
 
-impl SeasonManager<ExampleTransitionId> for MockSeasonManager {
+impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
+	type SeasonData = ();
 	type AssetId = AssetId;
 	type Balance = MockBalance;
 
@@ -122,8 +123,8 @@ impl SeasonManager<ExampleTransitionId> for MockSeasonManager {
 		})
 	}
 
-	fn get_current_season_id() -> Self::SeasonId {
-		CURRENT_SEASON.with(|season_id| *season_id.borrow())
+	fn get_current_season_id() -> Result<Self::SeasonId, DispatchError> {
+		Ok(CURRENT_SEASON.with(|season_id| *season_id.borrow()))
 	}
 
 	fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError> {
@@ -135,23 +136,30 @@ impl SeasonManager<ExampleTransitionId> for MockSeasonManager {
 
 	fn get_season_config_for(
 		_season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance, ExampleTransitionId>, DispatchError> {
-		Ok(SeasonConfig::<Self::Balance, ExampleTransitionId> {
-			fee: SeasonFeeConfig::<Self::Balance, ExampleTransitionId> {
+	) -> Result<SeasonConfig<Self::Balance, ()>, DispatchError> {
+		Ok(SeasonConfig::<Self::Balance, ()> {
+			fee: SeasonFeeConfig::<Self::Balance> {
 				transfer_asset: MockExistentialDeposit::get(),
 				buy_asset_min: MockExistentialDeposit::get(),
 				buy_percent: 1,
 				upgrade_asset_inventory: MockExistentialDeposit::get(),
 				unlock_trade_asset: MockExistentialDeposit::get(),
 				unlock_transfer_asset: MockExistentialDeposit::get(),
-				state_transition: {
-					let mut map = BTreeMap::new();
-					map.insert(ExampleTransitionId::UpgradeAsset, MockExistentialDeposit::get());
-					map.insert(ExampleTransitionId::ConsumeAsset, MockExistentialDeposit::get());
-					map
-				},
+				state_transition_base_fee: MockExistentialDeposit::get(),
 			},
+			data: (),
 		})
+	}
+
+	fn register_asset_in(
+		asset_id: &Self::AssetId,
+		season_id: &Self::SeasonId,
+	) -> Result<(), DispatchError> {
+		ASSET_SEASONS.with(|store| {
+			store.borrow_mut().insert(*asset_id, *season_id);
+		});
+
+		Ok(())
 	}
 }
 
