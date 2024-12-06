@@ -51,6 +51,7 @@ pub const SEASON_ID_0: MockSeasonId = 0;
 pub const SEASON_ID_1: MockSeasonId = 1;
 
 pub const DEFAULT_PAYMENT_ASSET_ID: u32 = 0;
+pub const LOW_LIQUIDITY_ASSET: u32 = 99;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -285,7 +286,7 @@ impl DistributeFee for TestAffiliatesFeeProvider {
 		match identifier {
 			AffiliateMethods::UpgradeAssetInventory => Some(
 				vec![
-					Payment::new(BOB, base_fee * 4 / 20),
+					Payment::new(BOB, base_fee * 5 / 20),
 					Payment::new(CHARLIE, base_fee * 3 / 20),
 					Payment::new(DAVE, base_fee * 2 / 20),
 				]
@@ -337,7 +338,7 @@ impl DistributeFee for TestTournamentFeeProvider {
 	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
 		match identifier {
 			&PAYING => Some(
-				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)]
+				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 5 / 10)]
 					.try_into()
 					.expect("max distribution = 1; qed"),
 			),
@@ -378,10 +379,12 @@ impl ExtBuilder {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance
 					(DEFAULT_PAYMENT_ASSET_ID, ALICE, true, 1),
+					(LOW_LIQUIDITY_ASSET, ALICE, true, 1),
 				],
 				metadata: vec![
 					// id, name, symbol, decimals
 					(DEFAULT_PAYMENT_ASSET_ID, "Main Asset".into(), "MAIN".into(), 10),
+					(LOW_LIQUIDITY_ASSET, "Main Asset".into(), "MAIN".into(), 10),
 				],
 				accounts: vec![
 					// id, account_id, balance
@@ -389,6 +392,7 @@ impl ExtBuilder {
 					(DEFAULT_PAYMENT_ASSET_ID, BOB, 100),
 					(DEFAULT_PAYMENT_ASSET_ID, CHARLIE, 100),
 					(DEFAULT_PAYMENT_ASSET_ID, DAVE, 100),
+					(LOW_LIQUIDITY_ASSET, ALICE, 1),
 				],
 				next_asset_id: None,
 			},

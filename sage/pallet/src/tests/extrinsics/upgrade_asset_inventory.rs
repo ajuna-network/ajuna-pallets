@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use sp_runtime::{DispatchError::Module, ModuleError};
 
 #[test]
 fn upgrade_asset_inventory_should_work() {
@@ -243,9 +244,9 @@ fn upgrade_asset_inventory_should_reject_insufficient_balance() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				DEFAULT_PAYMENT_ASSET_ID
+				LOW_LIQUIDITY_ASSET
 			),
-			sp_runtime::TokenError::FundsUnavailable,
+			Module(ModuleError { index: 2, error: [0, 0, 0, 0], message: Some("BalanceLow") }),
 		);
 	});
 }
