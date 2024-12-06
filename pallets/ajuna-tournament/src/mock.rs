@@ -151,6 +151,7 @@ pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
 impl MockAccountManager {
+	#[cfg(feature = "runtime-benchmarks")]
 	pub(crate) fn try_add_to_whitelist(
 		identifier: &WhitelistKey,
 		account: &MockAccountId,

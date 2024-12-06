@@ -120,7 +120,6 @@ pub mod pallet {
 			AssetId = u32,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
-			TransitionFeeIdentifier = TransitionIdOf<Self, I>,
 		>;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
@@ -704,12 +703,11 @@ pub mod pallet {
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 
-			// TODO: Review the logic in this section
 			let transition_fee = {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
 
-				let base_fee = fee.get_transition_fee_for(&transition_id);
+				let base_fee = fee.state_transition_base_fee;
 				base_fee
 			};
 
