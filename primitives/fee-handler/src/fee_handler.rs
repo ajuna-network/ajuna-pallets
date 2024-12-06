@@ -3,8 +3,9 @@ use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::DispatchError,
 	sp_runtime::TokenError,
-	traits::{fungible, fungibles, ConstU32, Imbalance},
+	traits::{fungible, fungibles, ConstU32, Defensive, Imbalance},
 	BoundedVec,
+	__private::log,
 };
 use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
@@ -164,8 +165,14 @@ where
 			for allocation in a {
 				if allocation.amount > 0_u32.into() {
 					let affiliate_fee = final_fee.extract(allocation.amount);
-					W::Assets::resolve(&allocation.beneficiary, affiliate_fee)
-						.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
+
+					if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, affiliate_fee)
+					{
+						log::error!(
+							"Could deposit to affiliate, it probably doesn't exist anymore"
+						);
+						let _ = final_fee.subsume(credit).defensive();
+					}
 				}
 			}
 		}
@@ -190,8 +197,12 @@ where
 
 			if allocation.amount > 0_u32.into() {
 				let tournament_credit = final_fee.extract(allocation.amount);
-				W::Assets::resolve(&allocation.beneficiary, tournament_credit)
-					.map_err(|_| DispatchError::Token(TokenError::CannotCreate))?;
+
+				if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, tournament_credit)
+				{
+					log::error!("Could deposit to tournament account, it probably doesn't exist");
+					let _ = final_fee.subsume(credit).defensive();
+				}
 			}
 		}
 
@@ -199,7 +210,12 @@ where
 	}
 
 	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
-		W::Assets::resolve(key, credit).map_err(|_| DispatchError::Token(TokenError::CannotCreate))
+		if let Err(_credit) = W::Assets::resolve(&key, credit) {
+			log::error!(
+				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
+			);
+		}
+		Ok(())
 	}
 }
 

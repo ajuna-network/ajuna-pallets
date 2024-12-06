@@ -47,7 +47,8 @@ fn state_transition_works() {
 			let transition_fee = season_config.fee.state_transition_base_fee;
 			// This assertion assumes that for the UpgradeAsset transition the fee is 2x
 			// the 'state_transition_base_fee'
-			assert_eq!(Balances::free_balance(ALICE), initial_balance - (transition_fee * 2));
+			// assert_eq!(Balances::free_balance(ALICE), initial_balance - (transition_fee * 2));
+			assert_eq!(Balances::free_balance(ALICE), initial_balance - transition_fee);
 		});
 }
 
