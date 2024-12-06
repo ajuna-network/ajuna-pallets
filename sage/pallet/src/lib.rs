@@ -307,7 +307,7 @@ pub mod pallet {
 		},
 	}
 
-	/// Error for the treasury pallet.
+	/// Error for the pallet-sage.
 	#[pallet::error]
 	pub enum Error<T, I = ()> {
 		/// There is no account set as the organizer
