@@ -520,7 +520,12 @@ pub mod pallet {
 			);
 
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
-			T::FeeHandler::deposit_fee_into_treasury(&from, &asset_season_id, fee.transfer_asset)?;
+			T::FeeHandler::withdraw_and_deposit_into_treasury(
+				&from,
+				0,
+				&Self::treasury_account_id(),
+				fee.transfer_asset,
+			)?;
 
 			Self::do_transfer_asset(&from, &to, &asset_season_id, &asset_id)?;
 			Self::deposit_event(Event::AssetTransferred { from, to, asset_id });
@@ -601,14 +606,17 @@ pub mod pallet {
 				let percentage_fee = price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
 					MAX_PERCENTAGE.unique_saturated_into();
 				let base_fee = sp_std::cmp::max(min_buy_fee, percentage_fee);
-
-				T::FeeHandler::try_propagate_chain_fee(
-					base_fee,
-					&buyer,
-					&AffiliateMethods::TradeAsset,
-				)?
+				base_fee
 			};
-			T::FeeHandler::deposit_fee_into_treasury(&buyer, &asset_season_id, trade_fee)?;
+
+			T::FeeHandler::withdraw_and_pay_fees(
+				&buyer,
+				0,
+				trade_fee,
+				&asset_season_id,
+				&AffiliateMethods::TradeAsset,
+				&Self::treasury_account_id(),
+			)?;
 
 			Self::do_transfer_asset(&seller, &buyer, &asset_season_id, &asset_id)?;
 			AssetTradePrices::<T, I>::remove(&asset_season_id, &asset_id);
@@ -699,18 +707,17 @@ pub mod pallet {
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
 
 				let base_fee = fee.get_transition_fee_for(&transition_id);
-				let updated_fee = T::FeeHandler::try_propagate_tournament_fee(
-					base_fee,
-					&sender,
-					&current_season_id,
-				)?;
-				T::FeeHandler::try_propagate_chain_fee(
-					updated_fee,
-					&sender,
-					&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
-				)?
+				base_fee
 			};
-			T::FeeHandler::deposit_fee_into_treasury(&sender, &current_season_id, transition_fee)?;
+
+			T::FeeHandler::withdraw_and_pay_fees(
+				&sender,
+				0,
+				transition_fee,
+				&current_season_id,
+				&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
+				&Self::treasury_account_id(),
+			)?;
 
 			Self::deposit_event(Event::TransitionExecuted { account: sender, id: transition_id });
 
