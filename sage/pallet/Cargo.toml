@@ -25,6 +25,7 @@ sage-api           = { workspace = true }
 [dev-dependencies]
 example-transition = { workspace = true, features = ["std"] }
 pallet-balances = { workspace = true, features = ["std"] }
+pallet-assets = { workspace = true, features = ["std"] }
 
 [features]
 default = [ "std" ]

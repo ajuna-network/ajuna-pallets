@@ -21,10 +21,10 @@ pub trait EnsureWhitelistedAsset {
 	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError>;
 }
 
-pub struct AllowAllAssets;
+pub struct AllowAllAssets<A>(PhantomData<A>);
 
-impl EnsureWhitelistedAsset for AllowAllAssets {
-	type AssetId = ();
+impl<AssetId> EnsureWhitelistedAsset for AllowAllAssets<AssetId> {
+	type AssetId = AssetId;
 
 	fn ensure_whitelisted(_: &Self::AssetId) -> Result<(), DispatchError> {
 		Ok(())

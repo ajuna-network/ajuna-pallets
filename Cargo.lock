@@ -2030,6 +2030,7 @@ dependencies = [
  "example-transition",
  "frame-support",
  "frame-system",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "sage-api",

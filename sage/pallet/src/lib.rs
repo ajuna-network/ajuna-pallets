@@ -116,9 +116,9 @@ pub mod pallet {
 		/// Handles the extra fees that incur during executing the state transition, or other
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
-			AssetId = u32,
 			AccountId = AccountIdOf<Self>,
 			Balance = BalanceOf<Self, I>,
+			AssetId = u32,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
 		>;
