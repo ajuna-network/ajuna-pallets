@@ -56,7 +56,11 @@ fn buy_should_work() {
 				asset_for_sale,
 				asset_price
 			));
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale));
+			assert_ok!(Sage::buy_asset(
+				RuntimeOrigin::signed(ALICE),
+				asset_for_sale,
+				DEFAULT_PAYMENT_ASSET_ID
+			));
 
 			// check for balance transfer
 			let price_fee = asset_price
@@ -112,7 +116,11 @@ fn buy_should_work() {
 				asset_for_sale,
 				asset_price
 			));
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(CHARLIE), asset_for_sale));
+			assert_ok!(Sage::buy_asset(
+				RuntimeOrigin::signed(CHARLIE),
+				asset_for_sale,
+				DEFAULT_PAYMENT_ASSET_ID
+			));
 			assert_eq!(
 				PlayerSeasonStats::<Test, Instance1>::get(CHARLIE, SEASON_ID_0).bought_amount,
 				1
@@ -127,7 +135,11 @@ fn buy_should_work() {
 				asset_on_sale,
 				asset_price
 			));
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(DAVE), asset_on_sale));
+			assert_ok!(Sage::buy_asset(
+				RuntimeOrigin::signed(DAVE),
+				asset_on_sale,
+				DEFAULT_PAYMENT_ASSET_ID
+			));
 			// Since the current season is SEASON_ID_0 the stat changes are applied to that season
 			// not SEASON_ID_1
 			let current_season_id =
@@ -182,7 +194,11 @@ fn buy_fee_should_be_calculated_correctly() {
 				.saturating_mul(season_fees_0.buy_percent as u64)
 				.saturating_div(MAX_PERCENTAGE as u64);
 			assert!(price_fee_1 > season_fees_0.buy_asset_min);
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0]));
+			assert_ok!(Sage::buy_asset(
+				RuntimeOrigin::signed(BOB),
+				asset_ids[0],
+				DEFAULT_PAYMENT_ASSET_ID
+			));
 			// We check that the fees have been paid
 			assert_eq!(Balances::free_balance(BOB), initial_balance - asset_price - price_fee_1);
 			assert_eq!(Balances::free_balance(ALICE), initial_balance + asset_price);
@@ -199,7 +215,11 @@ fn buy_fee_should_be_calculated_correctly() {
 				.saturating_mul(season_fees_0.buy_percent as u64)
 				.saturating_div(MAX_PERCENTAGE as u64);
 			assert!(price_fee_2 < season_fees_0.buy_asset_min);
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[1]));
+			assert_ok!(Sage::buy_asset(
+				RuntimeOrigin::signed(BOB),
+				asset_ids[1],
+				DEFAULT_PAYMENT_ASSET_ID
+			));
 			assert_eq!(
 				Balances::free_balance(BOB),
 				initial_balance -
@@ -218,7 +238,11 @@ fn buy_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, Instance1>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random()),
+			Sage::buy_asset(
+				RuntimeOrigin::signed(ALICE),
+				AssetId::random(),
+				DEFAULT_PAYMENT_ASSET_ID
+			),
 			Error::<Test, Instance1>::TradeClosed,
 		);
 	});
@@ -228,7 +252,7 @@ fn buy_should_reject_when_trading_is_closed() {
 fn buy_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random()),
+			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random(), DEFAULT_PAYMENT_ASSET_ID),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -239,7 +263,7 @@ fn buy_should_reject_unlisted_asset() {
 	ExtBuilder::default().build().execute_with(|| {
 		let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0]),
+			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], DEFAULT_PAYMENT_ASSET_ID),
 			Error::<Test, Instance1>::AssetNotInTrade,
 		);
 	});
@@ -263,7 +287,11 @@ fn buy_should_reject_insufficient_balance() {
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale),
+				Sage::buy_asset(
+					RuntimeOrigin::signed(ALICE),
+					asset_for_sale,
+					DEFAULT_PAYMENT_ASSET_ID
+				),
 				sp_runtime::TokenError::FundsUnavailable
 			);
 		});
@@ -285,7 +313,11 @@ fn buy_should_reject_when_buyer_tries_to_buy_own_asset() {
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_for_sale),
+				Sage::buy_asset(
+					RuntimeOrigin::signed(BOB),
+					asset_for_sale,
+					DEFAULT_PAYMENT_ASSET_ID
+				),
 				Error::<Test, Instance1>::AlreadyOwned
 			);
 		});

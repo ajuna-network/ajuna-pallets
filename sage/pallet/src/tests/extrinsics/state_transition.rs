@@ -37,7 +37,8 @@ fn state_transition_works() {
 				RuntimeOrigin::signed(ALICE),
 				transition_id,
 				asset_ids,
-				()
+				(),
+				DEFAULT_PAYMENT_ASSET_ID
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
 				account: ALICE,
@@ -61,7 +62,13 @@ fn state_transition_should_reject_non_owned_assets() {
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
-				Sage::state_transition(RuntimeOrigin::signed(ALICE), transition_id, asset_ids, ()),
+				Sage::state_transition(
+					RuntimeOrigin::signed(ALICE),
+					transition_id,
+					asset_ids,
+					(),
+					DEFAULT_PAYMENT_ASSET_ID
+				),
 				Error::<Test, Instance1>::AssetNotOwned
 			);
 		})
@@ -86,7 +93,8 @@ fn state_transition_should_reject_locked_assets() {
 					RuntimeOrigin::signed(Sage::technical_account_id()),
 					transition_id,
 					asset_ids,
-					()
+					(),
+					DEFAULT_PAYMENT_ASSET_ID
 				),
 				Error::<Test, Instance1>::AssetLocked
 			);
@@ -107,7 +115,13 @@ fn state_transition_should_reject_rule_verification_failure() {
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
-				Sage::state_transition(RuntimeOrigin::signed(ALICE), transition_id, asset_ids, ()),
+				Sage::state_transition(
+					RuntimeOrigin::signed(ALICE),
+					transition_id,
+					asset_ids,
+					(),
+					DEFAULT_PAYMENT_ASSET_ID
+				),
 				Error::<Test, Instance1>::RuleNotSatisfied {
 					code: sage_api::Error::InvalidAssetLength.as_error_code()
 				}
@@ -130,7 +144,13 @@ fn state_transition_should_reject_too_many_input_assets() {
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
-				Sage::state_transition(RuntimeOrigin::signed(ALICE), transition_id, asset_ids, ()),
+				Sage::state_transition(
+					RuntimeOrigin::signed(ALICE),
+					transition_id,
+					asset_ids,
+					(),
+					DEFAULT_PAYMENT_ASSET_ID
+				),
 				Error::<Test, Instance1>::TooManyAssetsInTransition
 			);
 		})

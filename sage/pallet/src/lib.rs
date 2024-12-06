@@ -89,6 +89,8 @@ pub mod pallet {
 	pub type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
 	pub type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
+	pub type PaymentAssetIdOf<T, I> = <<T as Config<I>>::FeeHandler as FeeHandler>::AssetId;
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// This pallet's id.
@@ -418,6 +420,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			beneficiary: Option<AccountIdOf<T>>,
 			in_season: Option<SeasonIdOf<T, I>>,
+			payment_asset_id: PaymentAssetIdOf<T, I>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
@@ -431,7 +434,7 @@ pub mod pallet {
 			let base_fee = fee.upgrade_asset_inventory;
 			T::FeeHandler::withdraw_and_pay_fees(
 				&caller,
-				0,
+				payment_asset_id,
 				base_fee,
 				&season_id,
 				&AffiliateMethods::UpgradeAssetInventory,
@@ -493,6 +496,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
+			payment_asset_id: PaymentAssetIdOf<T, I>,
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 
@@ -525,7 +529,7 @@ pub mod pallet {
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::withdraw_and_deposit_into_treasury(
 				&from,
-				0,
+				payment_asset_id,
 				&Self::treasury_account_id(),
 				fee.transfer_asset,
 			)?;
@@ -586,7 +590,11 @@ pub mod pallet {
 		/// Attempt to buy the selected asset.
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::buy_asset())]
-		pub fn buy_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
+		pub fn buy_asset(
+			origin: OriginFor<T>,
+			asset_id: AssetIdOf<T, I>,
+			payment_asset_id: PaymentAssetIdOf<T, I>,
+		) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			let GeneralConfig { trade, .. } = GeneralConfigStore::<T, I>::get();
 			ensure!(trade.open, Error::<T, I>::TradeClosed);
@@ -614,7 +622,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&buyer,
-				0,
+				payment_asset_id,
 				trade_fee,
 				&asset_season_id,
 				&AffiliateMethods::TradeAsset,
@@ -681,6 +689,7 @@ pub mod pallet {
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
+			payment_asset_id: PaymentAssetIdOf<T, I>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -713,7 +722,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&sender,
-				0,
+				payment_asset_id,
 				transition_fee,
 				&current_season_id,
 				&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),

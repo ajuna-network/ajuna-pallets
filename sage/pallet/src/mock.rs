@@ -50,8 +50,7 @@ pub const TOURNAMENT_TREASURY: MockAccountId = 431;
 pub const SEASON_ID_0: MockSeasonId = 0;
 pub const SEASON_ID_1: MockSeasonId = 1;
 
-pub const WHITELISTED_ASSET_ID: u32 = 888;
-pub const NOT_WHITE_LISTED_ASSET_ID: u32 = 999;
+pub const DEFAULT_PAYMENT_ASSET_ID: u32 = 0;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -378,18 +377,15 @@ impl ExtBuilder {
 			pallet_assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance
-					(WHITELISTED_ASSET_ID, ALICE, true, 1),
-					(NOT_WHITE_LISTED_ASSET_ID, ALICE, true, 1),
+					(DEFAULT_PAYMENT_ASSET_ID, ALICE, true, 1),
 				],
 				metadata: vec![
 					// id, name, symbol, decimals
-					(WHITELISTED_ASSET_ID, "Token 888 Name".into(), "TO888".into(), 10),
-					(NOT_WHITE_LISTED_ASSET_ID, "Token 999 Name".into(), "TO999".into(), 10),
+					(DEFAULT_PAYMENT_ASSET_ID, "Main Asset".into(), "MAIN".into(), 10),
 				],
 				accounts: vec![
 					// id, account_id, balance
-					(WHITELISTED_ASSET_ID, ALICE, 100),
-					(NOT_WHITE_LISTED_ASSET_ID, ALICE, 100),
+					(DEFAULT_PAYMENT_ASSET_ID, ALICE, 100),
 				],
 				next_asset_id: None,
 			},
