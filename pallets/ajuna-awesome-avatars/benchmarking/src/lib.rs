@@ -197,9 +197,14 @@ benchmarks! {
 		create_avatars::<T>(buyer.clone(), n - 1)?;
 		create_avatars::<T>(seller.clone(), n)?;
 
-		let sell_fee = BalanceOf::<T>::unique_saturated_from(u64::MAX / 2);
-		let trade_fee = sell_fee / BalanceOf::<T>::unique_saturated_from(100_u8);
 		let ed = CurrencyOf::<T>::minimum_balance();
+		let current_season_id = CurrentSeasonStatus::<T>::get().season_id;
+		let min_fee = Seasons::<T>::get(current_season_id).unwrap().fee.buy_minimum;
+		let sell_fee = min_fee;
+		// buyer also has to pay a fraction of the sell_fee to the affiliates etc.
+		// This is just an upper bound to give the necessary funds to the account.
+		let trade_fee = sell_fee;
+
 		CurrencyOf::<T>::make_free_balance_be(&buyer, sell_fee + trade_fee + ed);
 		CurrencyOf::<T>::make_free_balance_be(&seller, sell_fee + ed);
 
