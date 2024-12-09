@@ -167,9 +167,9 @@ impl EnsureWhitelistedAsset for WhitelistedAssets {
 	type AssetId = AssetId;
 
 	fn ensure_whitelisted(asset_id: &Self::AssetId) -> Result<(), DispatchError> {
-		match asset_id {
-			&WHITELISTED_ASSET_ID => Ok(()),
-			&NOT_WHITE_LISTED_ASSET_ID => Err(DispatchError::Token(TokenError::Unsupported)),
+		match *asset_id {
+			WHITELISTED_ASSET_ID => Ok(()),
+			NOT_WHITE_LISTED_ASSET_ID => Err(DispatchError::Token(TokenError::Unsupported)),
 			_ => Err(DispatchError::Token(TokenError::Unsupported)),
 		}
 	}

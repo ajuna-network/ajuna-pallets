@@ -17,7 +17,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -42,7 +42,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_into_tournament_and_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 2;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -90,7 +90,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_affiliates_and_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -133,7 +133,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_tournament_affiliates_and_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -181,7 +181,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_fails_if_missing_funds() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -208,7 +208,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_fails_for_not_whitelisted_asset() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 2;
 				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -235,7 +235,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_works() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -258,7 +258,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_fails_if_missing_funds() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -285,7 +285,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_for_not_whitelisted_asset() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -317,7 +317,7 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -339,7 +339,7 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_into_tournament_and_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 2;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -377,7 +377,7 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_affiliates_and_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -417,7 +417,7 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_tournament_affiliates_and_treasury() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -459,7 +459,7 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_fails_if_missing_funds() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -486,7 +486,7 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_works() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -506,7 +506,7 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_fails_if_missing_funds() {
-			ExtBuilder::default().build().execute_with(|| {
+			ExtBuilder.build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
