@@ -261,7 +261,7 @@ impl BenchmarkHelper<MockAccountId, MockSeasonId, AssetId, Asset, ExampleTransit
 	for SageBenchmarkHelper
 {
 	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
-		use example_transition::Level;
+		use example_transition::types::Level;
 		let asset_id = AssetId::from_low_u64_le(seed as u64);
 		let asset = Asset::create(asset_id, 0, 0, 0, [seed as u8; 32], 1, Level::One);
 
