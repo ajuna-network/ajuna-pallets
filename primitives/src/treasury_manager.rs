@@ -37,4 +37,4 @@ pub trait TreasuryManager {
 
 	/// Get the assigned holder of the treasury pot for the given key
 	fn get_treasurer_for(key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError>;
-	}
+}
