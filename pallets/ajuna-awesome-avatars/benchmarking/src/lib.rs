@@ -77,7 +77,8 @@ benchmarks! {
 
 		let season = Seasons::<T>::get(CurrentSeasonStatus::<T>::get().season_id).unwrap();
 		let mint_fee = season.fee.mint.fee_for(&MintPackSize::Six);
-		CurrencyOf::<T>::make_free_balance_be(&caller, mint_fee);
+		let ed = CurrencyOf::<T>::minimum_balance();
+		CurrencyOf::<T>::make_free_balance_be(&caller, mint_fee + ed);
 
 		let mint_option = MintOption { payment: MintPayment::Normal, pack_size: MintPackSize::Six,
 			pack_type: PackType::Material };
@@ -198,8 +199,9 @@ benchmarks! {
 
 		let sell_fee = BalanceOf::<T>::unique_saturated_from(u64::MAX / 2);
 		let trade_fee = sell_fee / BalanceOf::<T>::unique_saturated_from(100_u8);
-		CurrencyOf::<T>::make_free_balance_be(&buyer, sell_fee + trade_fee);
-		CurrencyOf::<T>::make_free_balance_be(&seller, sell_fee);
+		let ed = CurrencyOf::<T>::minimum_balance();
+		CurrencyOf::<T>::make_free_balance_be(&buyer, sell_fee + trade_fee + ed);
+		CurrencyOf::<T>::make_free_balance_be(&seller, sell_fee + ed);
 
 		let season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let avatar_id = Owners::<T>::get(&seller, season_id)[0];
@@ -214,7 +216,8 @@ benchmarks! {
 		let player = account::<T>("player");
 		let current_season_id = CurrentSeasonStatus::<T>::get().season_id;
 		let season = Seasons::<T>::get(current_season_id).unwrap();
-		CurrencyOf::<T>::make_free_balance_be(&player, season.fee.upgrade_storage);
+		let ed = CurrencyOf::<T>::minimum_balance();
+		CurrencyOf::<T>::make_free_balance_be(&player, season.fee.upgrade_storage + ed);
 	}: _(RawOrigin::Signed(player.clone()), None, None)
 	verify {
 		assert_last_event::<T>(Event::StorageTierUpgraded {
