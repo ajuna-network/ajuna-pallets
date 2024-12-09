@@ -38,7 +38,7 @@ fn state_transition_works() {
 				transition_id,
 				asset_ids,
 				(),
-				NATIVE
+				Some(NATIVE)
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
 				account: ALICE,
@@ -68,7 +68,7 @@ fn state_transition_should_reject_non_owned_assets() {
 					transition_id,
 					asset_ids,
 					(),
-					NATIVE
+					Some(NATIVE)
 				),
 				Error::<Test, ()>::AssetNotOwned
 			);
@@ -95,7 +95,7 @@ fn state_transition_should_reject_locked_assets() {
 					transition_id,
 					asset_ids,
 					(),
-					NATIVE
+					Some(NATIVE)
 				),
 				Error::<Test, ()>::AssetLocked
 			);
@@ -121,7 +121,7 @@ fn state_transition_should_reject_rule_verification_failure() {
 					transition_id,
 					asset_ids,
 					(),
-					NATIVE
+					Some(NATIVE)
 				),
 				Error::<Test, ()>::RuleNotSatisfied {
 					code: sage_api::Error::InvalidAssetLength.as_error_code()
@@ -147,7 +147,7 @@ fn state_transition_should_reject_too_many_input_assets() {
 					transition_id,
 					asset_ids,
 					(),
-					NATIVE
+					Some(NATIVE)
 				),
 				Error::<Test, ()>::TooManyAssetsInTransition
 			);

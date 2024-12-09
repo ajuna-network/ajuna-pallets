@@ -25,6 +25,9 @@ sage-api           = { workspace = true }
 # Benchmarking
 frame-benchmarking = { workspace = true, optional = true }
 example-transition = { workspace = true, optional = true }
+# todo: these pallets are not needed when we fix that the
+# mock doesn't need to be used in with the feature runtime-benchmarks
+pallet-assets    = { workspace = true, optional = true }
 pallet-balances    = { workspace = true, optional = true }
 
 [dev-dependencies]

@@ -28,7 +28,7 @@ mod trait_impls;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
-#[cfg(test)]
+#[cfg(any(test, feature = "runtime-benchmarks"))]
 pub mod mock;
 #[cfg(test)]
 mod tests;
@@ -445,7 +445,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			beneficiary: Option<AccountIdOf<T>>,
 			in_season: Option<SeasonIdOf<T, I>>,
-			payment_asset_id: PaymentAssetIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
@@ -459,7 +459,7 @@ pub mod pallet {
 			let base_fee = fee.upgrade_asset_inventory;
 			T::FeeHandler::withdraw_and_pay_fees(
 				&caller,
-				payment_asset_id,
+				payment_asset_id.unwrap_or_default(),
 				base_fee,
 				&season_id,
 				&AffiliateMethods::UpgradeAssetInventory,
@@ -524,7 +524,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment_asset_id: PaymentAssetIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 
@@ -557,7 +557,7 @@ pub mod pallet {
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::withdraw_and_deposit_into_treasury(
 				&from,
-				payment_asset_id,
+				payment_asset_id.unwrap_or_default(),
 				&Self::treasury_account_id(),
 				fee.transfer_asset,
 			)?;
@@ -621,7 +621,7 @@ pub mod pallet {
 		pub fn buy_asset(
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment_asset_id: PaymentAssetIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			let GeneralConfig { trade, .. } = GeneralConfigStore::<T, I>::get();
@@ -650,7 +650,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&buyer,
-				payment_asset_id,
+				payment_asset_id.unwrap_or_default(),
 				trade_fee,
 				&asset_season_id,
 				&AffiliateMethods::TradeAsset,
@@ -700,16 +700,18 @@ pub mod pallet {
 			target: UnlockTarget<AccountIdOf<T>>,
 			feature: LockableFeature,
 			season_id: SeasonIdOf<T, I>,
-			payment_asset_id: PaymentAssetIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
 
+			let payment_asset = payment_asset_id.unwrap_or_default();
+
 			match feature {
 				LockableFeature::TradeAsset =>
-					Self::unlock_asset_trading_for(account, target, season_id, payment_asset_id),
+					Self::unlock_asset_trading_for(account, target, season_id, payment_asset),
 				LockableFeature::TransferAsset =>
-					Self::unlock_asset_transfer_for(account, target, season_id, payment_asset_id),
+					Self::unlock_asset_transfer_for(account, target, season_id, payment_asset),
 			}
 		}
 
@@ -721,7 +723,7 @@ pub mod pallet {
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
-			payment_asset_id: PaymentAssetIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -754,7 +756,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&sender,
-				payment_asset_id,
+				payment_asset_id.unwrap_or_default(),
 				transition_fee,
 				&current_season_id,
 				&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
