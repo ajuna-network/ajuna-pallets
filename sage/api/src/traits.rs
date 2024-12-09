@@ -4,6 +4,10 @@ use scale_info::TypeInfo;
 use sp_runtime::traits::Member;
 use sp_std::vec::Vec;
 
+pub trait GetId<Id> {
+	fn get_id(&self) -> Id;
+}
+
 pub enum TransitionOutput<AssetId, Asset> {
 	Minted(Asset),
 	Mutated(AssetId, Asset),
@@ -13,12 +17,14 @@ pub enum TransitionOutput<AssetId, Asset> {
 pub trait SageGameTransition {
 	/// Transition identifier type.
 	type TransitionId: Member + Parameter + MaxEncodedLen + TypeInfo;
+	/// THe type of the specific configuration options for the transition
+	type TransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 	type AccountId: Member + Codec;
 	type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
-	type Asset: Member + Parameter + MaxEncodedLen + TypeInfo;
+	type Asset: Member + Parameter + MaxEncodedLen + TypeInfo + GetId<Self::AssetId>;
 	/// An optional extra, which is simply forwarded to the `verify_rule` and `do_transition`
 	/// method. If you don't need custom arguments, you can define that type as `()`.
-	type Extra: Member + Parameter + MaxEncodedLen + TypeInfo;
+	type Extra: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 	fn verify_rule(
 		transition_id: &Self::TransitionId,

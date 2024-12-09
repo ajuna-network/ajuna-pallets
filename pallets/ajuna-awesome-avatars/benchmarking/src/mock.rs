@@ -28,8 +28,9 @@ use frame_support::{
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_ajuna_affiliates::{traits::AffiliateUnlockRules, BenchmarkHelper};
 use pallet_ajuna_awesome_avatars::{
+	benchmark_helper,
 	types::{AffiliateMethods, Avatar, SeasonId},
-	AvatarRankerFor,
+	AvatarIdOf, AvatarOf, AvatarRankerFor, Avatars, CurrentSeasonStatus, Owners,
 };
 use pallet_ajuna_tournament::{GoldenDuckConfig, TournamentConfig};
 use sp_runtime::{
@@ -214,6 +215,9 @@ impl
 		MockBlockNumber,
 		MockBalance,
 		AvatarRankerFor<Runtime>,
+		MockAccountId,
+		AvatarIdOf<Runtime>,
+		AvatarOf<Runtime>,
 	> for TournamentBenchmarkHelper
 {
 	fn create_category_id(id: u32) -> SeasonId {
@@ -234,6 +238,24 @@ impl
 			max_players: 4,
 			ranker: AvatarRankerFor::<Runtime>::default(),
 		}
+	}
+
+	fn create_entities(
+		owner: MockAccountId,
+		count: u32,
+	) -> Vec<(AvatarIdOf<Runtime>, AvatarOf<Runtime>)> {
+		benchmark_helper::create_avatars::<Runtime>(owner.clone(), count).unwrap();
+
+		let season_id = CurrentSeasonStatus::<Runtime>::get().season_id;
+		let avatar_ids = Owners::<Runtime>::get(owner, season_id);
+		let mut avatars = Vec::with_capacity(avatar_ids.len());
+
+		for avatar_id in avatar_ids.iter() {
+			let (_, avatar) = Avatars::<Runtime>::get(avatar_id).unwrap();
+			avatars.push(avatar);
+		}
+
+		avatar_ids.into_iter().zip(avatars).collect()
 	}
 }
 

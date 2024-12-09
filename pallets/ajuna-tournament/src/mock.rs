@@ -33,11 +33,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	MultiSignature,
 };
-use sp_std::{
-	cell::RefCell,
-	cmp::Ordering,
-	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
-};
+use sp_std::{cell::RefCell, cmp::Ordering, collections::btree_map::BTreeMap};
 
 pub type MockSignature = MultiSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -139,7 +135,6 @@ impl EntityRank for MockRanker {
 }
 
 thread_local! {
-	pub static WHITELISTED_ACCOUNTS: RefCell<BTreeMap<WhitelistKey ,BTreeSet<MockAccountId>>> = RefCell::new(BTreeMap::new());
 	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
 	pub static ASSETS: RefCell<BTreeMap<MockEntityId, MockEntity>> = RefCell::new(BTreeMap::new());
 	pub static OWNERS: RefCell<BTreeMap<MockAccountId, MockEntityId>> = RefCell::new(BTreeMap::new());
@@ -151,21 +146,6 @@ pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
 impl MockAccountManager {
-	#[cfg(feature = "runtime-benchmarks")]
-	pub(crate) fn try_add_to_whitelist(
-		identifier: &WhitelistKey,
-		account: &MockAccountId,
-	) -> Result<(), DispatchError> {
-		WHITELISTED_ACCOUNTS.with(|accounts| {
-			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
-				entry.insert(account.clone());
-				Ok(())
-			} else {
-				Err(DispatchError::Other("No account set for identifier"))
-			}
-		})
-	}
-
 	pub(crate) fn set_organizer(owner: MockAccountId) {
 		ORGANIZER.with(|maybe_account| {
 			*maybe_account.borrow_mut() = Some(owner);
@@ -187,27 +167,8 @@ impl AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(owner: Self::AccountId) {
-		MockAccountManager::set_organizer(owner);
-	}
-
-	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
-		WHITELISTED_ACCOUNTS.with(|accounts| {
-			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
-				entry.contains(account)
-			} else {
-				false
-			}
-		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_set_whitelisted_for(
-		identifier: &WhitelistKey,
-		account: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		Self::try_add_to_whitelist(identifier, account)
+	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
+		unimplemented!()
 	}
 }
 
@@ -287,11 +248,6 @@ impl AssetManager for MockAssetManager {
 	) -> Result<(), DispatchError> {
 		unimplemented!()
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		Self::create_assets(owner, count)
-	}
 }
 
 parameter_types! {
@@ -304,8 +260,16 @@ parameter_types! {
 pub struct TournamentBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<MockCategoryId, MockBlockNumber, MockBalance, MockRanker>
-	for TournamentBenchmarkHelper
+impl
+	BenchmarkHelper<
+		MockCategoryId,
+		MockBlockNumber,
+		MockBalance,
+		MockRanker,
+		MockAccountId,
+		MockEntityId,
+		MockEntity,
+	> for TournamentBenchmarkHelper
 {
 	fn create_category_id(id: u32) -> MockCategoryId {
 		id
@@ -325,6 +289,10 @@ impl BenchmarkHelper<MockCategoryId, MockBlockNumber, MockBalance, MockRanker>
 			max_players: 4,
 			ranker: MockRanker,
 		}
+	}
+
+	fn create_entities(owner: MockAccountId, count: u32) -> Vec<(MockEntityId, MockEntity)> {
+		MockAssetManager::create_assets(owner, count)
 	}
 }
 

@@ -36,16 +36,16 @@ fn buy_should_work() {
 		.build()
 		.execute_with(|| {
 			let season_config_0 =
-				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
+				<Test as Config<()>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
 					.expect("Should get season config");
 			let season_fees_0 = season_config_0.fee;
 
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 3);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 
-			let owned_by_alice = AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0))
+			let owned_by_alice = AssetOwners::<Test, ()>::iter_prefix((ALICE, SEASON_ID_0))
 				.map(|(asset_id, _)| asset_id)
 				.collect::<Vec<_>>();
-			let owned_by_bob = AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0))
+			let owned_by_bob = AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_0))
 				.map(|(asset_id, _)| asset_id)
 				.collect::<Vec<_>>();
 
@@ -67,34 +67,23 @@ fn buy_should_work() {
 
 			// check for ownership transfer
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::iter_prefix((ALICE, SEASON_ID_0)).count(),
+				AssetOwners::<Test, ()>::iter_prefix((ALICE, SEASON_ID_0)).count(),
 				owned_by_alice.len() + 1
 			);
 			assert_eq!(
-				AssetOwners::<Test, Instance1>::iter_prefix((BOB, SEASON_ID_0)).count(),
+				AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_0)).count(),
 				owned_by_bob.len() - 1
 			);
-			assert!(AssetOwners::<Test, Instance1>::contains_key((
-				ALICE,
-				SEASON_ID_0,
-				asset_for_sale
-			)));
-			assert!(!AssetOwners::<Test, Instance1>::contains_key((
-				BOB,
-				SEASON_ID_0,
-				asset_for_sale
-			)));
-			assert_eq!(Assets::<Test, Instance1>::get(asset_for_sale).unwrap().0, ALICE);
+			assert!(AssetOwners::<Test, ()>::contains_key((ALICE, SEASON_ID_0, asset_for_sale)));
+			assert!(!AssetOwners::<Test, ()>::contains_key((BOB, SEASON_ID_0, asset_for_sale)));
+			assert_eq!(Assets::<Test, ()>::get(asset_for_sale).unwrap().0, ALICE);
 
 			// check for removal from trade storage
-			assert_eq!(AssetTradePrices::<Test, Instance1>::get(SEASON_ID_0, asset_for_sale), None);
+			assert_eq!(AssetTradePrices::<Test, ()>::get(SEASON_ID_0, asset_for_sale), None);
 
 			// check for account stats
-			assert_eq!(
-				PlayerSeasonStats::<Test, Instance1>::get(ALICE, SEASON_ID_0).bought_amount,
-				1
-			);
-			assert_eq!(PlayerSeasonStats::<Test, Instance1>::get(BOB, SEASON_ID_0).sold_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(ALICE, SEASON_ID_0).bought_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(BOB, SEASON_ID_0).sold_amount, 1);
 
 			// check events
 			System::assert_last_event(RuntimeEvent::Sage(Event::AssetTraded {
@@ -113,14 +102,11 @@ fn buy_should_work() {
 				asset_price
 			));
 			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(CHARLIE), asset_for_sale, NATIVE));
-			assert_eq!(
-				PlayerSeasonStats::<Test, Instance1>::get(CHARLIE, SEASON_ID_0).bought_amount,
-				1
-			);
-			assert_eq!(PlayerSeasonStats::<Test, Instance1>::get(BOB, SEASON_ID_0).sold_amount, 2);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(CHARLIE, SEASON_ID_0).bought_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(BOB, SEASON_ID_0).sold_amount, 2);
 
 			// check season id
-			let asset_on_sale = create_assets::<Instance1>(SEASON_ID_1, ALICE, 1)[0];
+			let asset_on_sale = create_assets::<()>(SEASON_ID_1, ALICE, 1)[0];
 			let asset_price = 369;
 			assert_ok!(Sage::set_asset_price(
 				RuntimeOrigin::signed(ALICE),
@@ -130,28 +116,15 @@ fn buy_should_work() {
 			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(DAVE), asset_on_sale, NATIVE));
 			// Since the current season is SEASON_ID_0 the stat changes are applied to that season
 			// not SEASON_ID_1
-			let current_season_id =
-				<Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
-					.expect("Should get season id");
+			let current_season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
+				.expect("Should get season id");
 			assert_eq!(current_season_id, SEASON_ID_0);
 			// changes in SEASON_ID_0
-			assert_eq!(
-				PlayerSeasonStats::<Test, Instance1>::get(ALICE, SEASON_ID_0).sold_amount,
-				1
-			);
-			assert_eq!(
-				PlayerSeasonStats::<Test, Instance1>::get(DAVE, SEASON_ID_0).bought_amount,
-				1
-			);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(ALICE, SEASON_ID_0).sold_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(DAVE, SEASON_ID_0).bought_amount, 1);
 			// no changes were applied to SEASON_ID_1 stats
-			assert_eq!(
-				PlayerSeasonStats::<Test, Instance1>::get(ALICE, SEASON_ID_1).sold_amount,
-				0
-			);
-			assert_eq!(
-				PlayerSeasonStats::<Test, Instance1>::get(DAVE, SEASON_ID_1).bought_amount,
-				0
-			);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(ALICE, SEASON_ID_1).sold_amount, 0);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(DAVE, SEASON_ID_1).bought_amount, 0);
 		});
 }
 
@@ -164,11 +137,11 @@ fn buy_fee_should_be_calculated_correctly() {
 		.build()
 		.execute_with(|| {
 			let season_config_0 =
-				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
+				<Test as Config<()>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
 					.expect("Should get season config");
 			let season_fees_0 = season_config_0.fee;
 
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 2);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 2);
 
 			let asset_price = 9_999;
 			assert_ok!(Sage::set_asset_price(
@@ -216,10 +189,10 @@ fn buy_fee_should_be_calculated_correctly() {
 #[test]
 fn buy_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
-		GeneralConfigStore::<Test, Instance1>::mutate(|config| config.trade.open = false);
+		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
 			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random(), NATIVE),
-			Error::<Test, Instance1>::TradeClosed,
+			Error::<Test, ()>::TradeClosed,
 		);
 	});
 }
@@ -237,10 +210,10 @@ fn buy_should_reject_unsigned_calls() {
 #[test]
 fn buy_should_reject_unlisted_asset() {
 	ExtBuilder::default().build().execute_with(|| {
-		let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+		let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 		assert_noop!(
 			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], NATIVE),
-			Error::<Test, Instance1>::AssetNotInTrade,
+			Error::<Test, ()>::AssetNotInTrade,
 		);
 	});
 }
@@ -253,7 +226,7 @@ fn buy_should_reject_insufficient_balance() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 3);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 			let asset_for_sale = asset_ids[0];
 			let asset_price = alice_initial_balance + 1;
 
@@ -275,7 +248,7 @@ fn buy_should_reject_when_buyer_tries_to_buy_own_asset() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 3);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 			let asset_for_sale = asset_ids[0];
 			let asset_price = 749;
 
@@ -286,7 +259,7 @@ fn buy_should_reject_when_buyer_tries_to_buy_own_asset() {
 			));
 			assert_noop!(
 				Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_for_sale, NATIVE),
-				Error::<Test, Instance1>::AlreadyOwned
+				Error::<Test, ()>::AlreadyOwned
 			);
 		});
 }

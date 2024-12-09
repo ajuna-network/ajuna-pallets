@@ -24,12 +24,12 @@ fn state_transition_works() {
 		.balances(&[(ALICE, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let season_id = <Test as Config<Instance1>>::SeasonHandler::get_current_season_id()
+			let season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
 				.expect("Should get season_id");
 			let season_config =
-				<Test as Config<Instance1>>::SeasonHandler::get_season_config_for(&season_id)
+				<Test as Config<()>>::SeasonHandler::get_season_config_for(&season_id)
 					.expect("Should get season config");
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_eq!(Balances::free_balance(ALICE), initial_balance);
@@ -59,7 +59,7 @@ fn state_transition_should_reject_non_owned_assets() {
 		.balances(&[(ALICE, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
@@ -70,7 +70,7 @@ fn state_transition_should_reject_non_owned_assets() {
 					(),
 					NATIVE
 				),
-				Error::<Test, Instance1>::AssetNotOwned
+				Error::<Test, ()>::AssetNotOwned
 			);
 		})
 }
@@ -82,7 +82,7 @@ fn state_transition_should_reject_locked_assets() {
 		.balances(&[(ALICE, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let asset_id = asset_ids[0];
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
@@ -97,7 +97,7 @@ fn state_transition_should_reject_locked_assets() {
 					(),
 					NATIVE
 				),
-				Error::<Test, Instance1>::AssetLocked
+				Error::<Test, ()>::AssetLocked
 			);
 		})
 }
@@ -112,7 +112,7 @@ fn state_transition_should_reject_rule_verification_failure() {
 			// This test assumes that the rule for 'UpgradeAsset' in
 			// sage/example-transition/src/generic.rs
 			// requires the input assets to be of length 1
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 2);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 2);
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
@@ -123,7 +123,7 @@ fn state_transition_should_reject_rule_verification_failure() {
 					(),
 					NATIVE
 				),
-				Error::<Test, Instance1>::RuleNotSatisfied {
+				Error::<Test, ()>::RuleNotSatisfied {
 					code: sage_api::Error::InvalidAssetLength.as_error_code()
 				}
 			);
@@ -137,11 +137,8 @@ fn state_transition_should_reject_too_many_input_assets() {
 		.balances(&[(ALICE, initial_balance)])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(
-				SEASON_ID_0,
-				ALICE,
-				(MAX_ASSETS_IN_TRANSITION + 1) as u8,
-			);
+			let asset_ids =
+				create_assets::<()>(SEASON_ID_0, ALICE, (MAX_ASSETS_IN_TRANSITION + 1) as u8);
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
@@ -152,7 +149,7 @@ fn state_transition_should_reject_too_many_input_assets() {
 					(),
 					NATIVE
 				),
-				Error::<Test, Instance1>::TooManyAssetsInTransition
+				Error::<Test, ()>::TooManyAssetsInTransition
 			);
 		})
 }

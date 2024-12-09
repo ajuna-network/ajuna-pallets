@@ -49,14 +49,16 @@ pub trait WeightInfo {
 	fn update_general_config() -> Weight;
 	fn update_unlock_rule() -> Weight;
 	fn upgrade_asset_inventory() -> Weight;
-	fn update_asset_filter() -> Weight;
+	fn update_asset_trade_filter() -> Weight;
+	fn update_asset_transfer_filter() -> Weight;
 	fn transfer_asset() -> Weight;
 	fn set_asset_price() -> Weight;
 	fn remove_asset_price() -> Weight;
 	fn buy_asset() -> Weight;
 	fn lock_asset() -> Weight;
 	fn unlock_asset() -> Weight;
-	fn unlock_feature() -> Weight;
+	fn unlock_trade_asset_feature() -> Weight;
+	fn unlock_transfer_asset_feature() -> Weight;
     fn state_transition(n: u32, ) -> Weight;
 }
 
@@ -87,7 +89,13 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 
-	fn update_asset_filter() -> Weight {
+	fn update_asset_trade_filter() -> Weight {
+		// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn update_asset_transfer_filter() -> Weight {
 		// Minimum execution time: 26_582 nanoseconds.
 		Weight::from_parts(0, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -124,7 +132,12 @@ impl<T: frame_system::Config> WeightInfo for AjunaWeight<T> {
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 
-	fn unlock_feature() -> Weight {
+	fn unlock_trade_asset_feature() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+
+	fn unlock_transfer_asset_feature() -> Weight {
 		Weight::from_parts(0, 0)
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -157,7 +170,13 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 
-	fn update_asset_filter() -> Weight {
+	fn update_asset_trade_filter() -> Weight {
+		// Minimum execution time: 26_582 nanoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn update_asset_transfer_filter() -> Weight {
 		// Minimum execution time: 26_582 nanoseconds.
 		Weight::from_parts(0, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
@@ -193,7 +212,12 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 
-	fn unlock_feature() -> Weight {
+	fn unlock_trade_asset_feature() -> Weight {
+		Weight::from_parts(0, 0)
+			.saturating_add(RocksDbWeight::get().writes(1))
+	}
+
+	fn unlock_transfer_asset_feature() -> Weight {
 		Weight::from_parts(0, 0)
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}

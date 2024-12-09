@@ -26,7 +26,9 @@ pub mod config;
 mod pallet_impls;
 mod trait_impls;
 
-#[cfg(test)]
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+#[cfg(any(test, feature = "runtime-benchmarks"))]
 pub mod mock;
 #[cfg(test)]
 mod tests;
@@ -38,7 +40,10 @@ use ajuna_primitives::{
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
 };
-use sage_api::{traits::TransitionOutput, AsErrorCode, SageGameTransition};
+use sage_api::{
+	traits::{GetId, TransitionOutput},
+	AsErrorCode, SageGameTransition,
+};
 
 use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
 use frame_system::pallet_prelude::*;
@@ -61,7 +66,10 @@ pub const MAX_ASSETS_IN_TRANSITION: usize = 10;
 pub mod pallet {
 	use super::*;
 
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -73,9 +81,9 @@ pub mod pallet {
 	pub type TransitionIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
 	pub type ExtraOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Extra;
-	pub type TransitionConfigOf<T, I> = <T as Config<I>>::SageTransitionConfig;
-	pub type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
-
+	pub type TransitionConfigOf<T, I> =
+		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionConfig;
+	pub(crate) type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
 	pub type GeneralConfigOf<T, I> = GeneralConfig<TransitionConfigOf<T, I>>;
 	pub type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
@@ -91,6 +99,17 @@ pub mod pallet {
 
 	pub type PaymentAssetIdOf<T, I> = <<T as Config<I>>::FeeHandler as FeeHandler>::AssetId;
 
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<AccountId, SeasonId, AssetId, Asset, TransitionId> {
+		fn create_asset_for(account: &AccountId, season: &SeasonId, seed: u32) -> AssetId;
+
+		fn create_bench_transition_for(
+			account: &AccountId,
+			season: &SeasonId,
+			seed: u32,
+		) -> (TransitionId, Vec<AssetId>);
+	}
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// This pallet's id.
@@ -102,11 +121,6 @@ pub mod pallet {
 		/// The `SageGameTransition` that this pallet hosts, and whose state transition
 		/// are executed as part of the `state_transition` extrinsic.
 		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
-
-		/// Custom transition config.
-		///
-		/// Todo: Shouldn't this just be part of the `SageGameTranstion` trait?
-		type SageTransitionConfig: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
@@ -141,6 +155,15 @@ pub mod pallet {
 
 		/// The weight calculations
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type BenchmarkHelper: BenchmarkHelper<
+			AccountIdOf<Self>,
+			SeasonIdOf<Self, I>,
+			AssetIdOf<Self, I>,
+			AssetOf<Self, I>,
+			TransitionIdOf<Self, I>,
+		>;
 	}
 
 	/// Organizer of the game. Essentially the administrator with certain privileges.
@@ -393,7 +416,7 @@ pub mod pallet {
 
 		/// Updates an unlock rule for the given season.
 		///
-		/// It doesn't affect ulready unlocked features.
+		/// It doesn't affect already unlocked features.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::update_unlock_rule())]
 		pub fn update_unlock_rule(
@@ -465,7 +488,10 @@ pub mod pallet {
 
 		/// Updates the filter that assets need to pass for certain actions.
 		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::update_asset_filter())]
+		#[pallet::weight(
+			T::WeightInfo::update_asset_trade_filter()
+				.max(T::WeightInfo::update_asset_transfer_filter())
+		)]
 		pub fn update_asset_filter(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
@@ -524,7 +550,7 @@ pub mod pallet {
 
 			let transfer_filter = SeasonTransferFilters::<T, I>::get(&asset_season_id);
 			ensure!(
-				T::FilterHandler::is_transferable_using(&asset, &transfer_filter),
+				T::FilterHandler::can_be_transferred_using(&asset, &transfer_filter),
 				Error::<T, I>::AssetCannotBeTransfered
 			);
 
@@ -563,7 +589,7 @@ pub mod pallet {
 
 			let trade_filter = SeasonTradeFilters::<T, I>::get(&asset_season_id);
 			ensure!(
-				T::FilterHandler::is_tradeable_using(&asset, &trade_filter),
+				T::FilterHandler::can_be_traded_using(&asset, &trade_filter),
 				Error::<T, I>::AssetCannotBeTraded
 			);
 
@@ -665,7 +691,10 @@ pub mod pallet {
 
 		/// Attempts to unlock the selected feature for the `target`.
 		#[pallet::call_index(11)]
-		#[pallet::weight(T::WeightInfo::unlock_feature())]
+		#[pallet::weight(
+			T::WeightInfo::unlock_trade_asset_feature()
+				.max(T::WeightInfo::unlock_transfer_asset_feature())
+		)]
 		pub fn unlock_feature(
 			origin: OriginFor<T>,
 			target: UnlockTarget<AccountIdOf<T>>,
@@ -817,19 +846,18 @@ pub mod pallet {
 
 			for output in transition_results {
 				match output {
-					TransitionOutput::Minted(_asset) => {
+					TransitionOutput::Minted(asset) => {
 						minted_amount.saturating_inc();
 						player_asset_count.saturating_inc();
 						ensure!(
 							player_asset_count <= player_inventory_slots,
 							Error::<T, I>::MaxOwnershipReached
 						);
+						let asset_id = asset.get_id();
 
-						// TODO: Need a way to create new asset_id generically
-						// T::SeasonHandler::register_asset_in(asset_id, season_id)?;
-						// Assets::<T, I>::insert(asset_id, asset);
-						// AssetOwners::<T, I>::insert((player, season_id, asset_id);
-						// AssetsOwnedCount update
+						T::SeasonHandler::register_asset_in(&asset_id, season_id)?;
+						Assets::<T, I>::insert(&asset_id, (player, asset));
+						AssetOwners::<T, I>::insert((player, season_id, &asset_id), ());
 					},
 					TransitionOutput::Mutated(asset_id, asset) => {
 						mutated_amount.saturating_inc();

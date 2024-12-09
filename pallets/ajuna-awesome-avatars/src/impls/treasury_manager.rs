@@ -35,9 +35,4 @@ impl<T: Config> TreasuryManager for Pallet<T> {
 	fn get_treasurer_for(_key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError> {
 		Ok(Self::treasury_account_id())
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
-		unimplemented!()
-	}
 }

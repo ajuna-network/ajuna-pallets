@@ -156,11 +156,6 @@ impl AccountManager for MockAccountManager {
 		})
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(owner: Self::AccountId) {
-		MockAccountManager::set_organizer(owner);
-	}
-
 	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
 		WHITELISTED_ACCOUNTS.with(|accounts| {
 			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
@@ -169,14 +164,6 @@ impl AccountManager for MockAccountManager {
 				false
 			}
 		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_set_whitelisted_for(
-		identifier: &WhitelistKey,
-		account: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		Self::try_add_to_whitelist(identifier, account)
 	}
 }
 

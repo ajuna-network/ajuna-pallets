@@ -24,7 +24,7 @@ mod is_organizer {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
 				<Sage as AccountManager>::is_organizer(&CHARLIE),
-				Error::<Test, Instance1>::OrganizerNotSet
+				Error::<Test, ()>::OrganizerNotSet
 			);
 
 			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), ALICE));

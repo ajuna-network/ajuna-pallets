@@ -2046,6 +2046,7 @@ version = "0.15.0"
 dependencies = [
  "ajuna-primitives",
  "example-transition",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-assets",

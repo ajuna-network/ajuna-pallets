@@ -17,8 +17,11 @@
 #![cfg(feature = "runtime-benchmarks")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::{mock::Test, traits::IpfsUrl, *};
-use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
+use crate::{
+	mock::{MockAccountManager, System, Test},
+	traits::IpfsUrl,
+	*,
+};
 use frame_benchmarking::benchmarks;
 use frame_support::{pallet_prelude::DispatchError, traits::Currency};
 use frame_system::RawOrigin;
@@ -41,13 +44,6 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 	let index = 0;
 	let seed = 0;
 	frame_benchmarking::account(name, index, seed)
-}
-
-fn create_assets<T: Config>(owner: T::AccountId, count: u32) -> Vec<ItemIdOf<T>> {
-	T::AssetManager::create_assets(owner, count)
-		.into_iter()
-		.map(|(asset_id, _)| asset_id)
-		.collect()
 }
 
 fn create_service_account<T: Config>() -> T::AccountId {
@@ -79,7 +75,6 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 benchmarks! {
 	set_collection_id {
 		let organizer = account::<T>("organizer");
-		T::AccountManager::set_organizer(organizer.clone());
 		let collection_id = CollectionIdOf::<T>::from(u32::MAX);
 	}: _(RawOrigin::Signed(organizer), collection_id)
 	verify {
@@ -96,7 +91,7 @@ benchmarks! {
 	prepare_asset {
 		let name = "player";
 		let player = account::<T>(name);
-		let asset_id = create_assets::<T>(player.clone(), 1)[0];
+		let asset_id = T::BenchmarkHelper::create_items(player.clone(), 1)[0];
 		let _ = create_service_account::<T>();
 		enable_fee_payment::<T>(&player);
 	}: _(RawOrigin::Signed(player), asset_id)
@@ -107,7 +102,7 @@ benchmarks! {
 	unprepare_asset {
 		let name = "player";
 		let player = account::<T>(name);
-		let asset_id = create_assets::<T>(player.clone(), 1)[0];
+		let asset_id = T::BenchmarkHelper::create_items(player.clone(), 1)[0];
 		let _ = create_service_account_and_prepare_avatar::<T>(player.clone(), asset_id)?;
 	}: _(RawOrigin::Signed(player), asset_id)
 	verify {
@@ -117,7 +112,7 @@ benchmarks! {
 	prepare_ipfs {
 		let name = "player";
 		let player = account::<T>(name);
-		let asset_id = create_assets::<T>(player.clone(), 1)[0];
+		let asset_id = T::BenchmarkHelper::create_items(player.clone(), 1)[0];
 		let service_account = create_service_account_and_prepare_avatar::<T>(player, asset_id)?;
 		let url = IpfsUrl::try_from(b"ipfs://".to_vec()).unwrap();
 	}: _(RawOrigin::Signed(service_account), asset_id, url.clone())
@@ -134,5 +129,12 @@ benchmarks! {
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	sp_io::TestExternalities::new(t)
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| {
+		let organizer = account::<Test>("organizer");
+		MockAccountManager::set_organizer(organizer);
+	});
+
+	ext
 }
