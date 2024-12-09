@@ -173,7 +173,7 @@ where
 							"Could not deposit to affiliate account, it probably doesn't exist."
 						);
 
-						// Reabsorb the credit it can still be used.
+						// Reabsorb the credit; it can still be used.
 						let _ = final_fee.subsume(credit).defensive();
 					}
 				}
@@ -206,7 +206,7 @@ where
 					log::error!(
 						"Could not deposit to tournament account, it probably doesn't exist."
 					);
-					// Reabsorb the credit it can still be used.
+					// Reabsorb the credit; it can still be used.
 					let _ = final_fee.subsume(credit).defensive();
 				}
 			}
@@ -317,7 +317,7 @@ where
 						log::error!(
 							"Could not deposit to affiliate account, it probably doesn't exist."
 						);
-						// Reabsorb the credit it can still be used.
+						// Reabsorb the credit; it can still be used.
 						final_fee.subsume(credit);
 					}
 				}
@@ -350,7 +350,7 @@ where
 					log::error!(
 						"Could not deposit to tournament account, it probably doesn't exist."
 					);
-					// Reabsorb the credit it can still be used.
+					// Reabsorb the credit; it can still be used.
 					final_fee.subsume(credit);
 				}
 			}
