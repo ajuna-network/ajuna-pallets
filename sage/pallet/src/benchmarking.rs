@@ -15,17 +15,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	config::{InventoryTier, Locks},
-	mock::{Balances, RuntimeOrigin, System, Test, SEASON_ID_0},
+	config::InventoryTier,
 	pallet::{AssetFilterOf, TradeFilterOf, TransferFilterOf},
 	AssetTradePrices, BalanceOf, BenchmarkHelper, Call, Config, Event, ExtraOf, GeneralConfigOf,
-	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonUnlocks,
-	UnlockRule, UnlockTarget, SAGE_LOCK_ID,
+	LockableFeature, Pallet, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
 };
 use ajuna_primitives::{asset_manager::Lock, season_manager::SeasonManager};
 use frame_benchmarking::benchmarks;
 use frame_system::RawOrigin;
-use sp_runtime::BuildStorage;
 
 const ACC_1: &str = "acc_1";
 const ACC_2: &str = "acc_2";
@@ -254,41 +251,7 @@ benchmarks! {
 
 	impl_benchmark_test_suite!(
 		Pallet,
-		new_test_ext(),
-		Test
+		crate::mock::new_benchmark_ext(),
+		crate::mock::Test
 	);
-}
-
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext.execute_with(|| {
-		GeneralConfigStore::<Test, ()>::mutate(|config| {
-			config.trade.open = true;
-			config.transfer.open = true;
-		});
-		SeasonUnlocks::<Test, ()>::mutate(SEASON_ID_0, LockableFeature::TradeAsset, |rule| {
-			*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
-		});
-		SeasonUnlocks::<Test, ()>::mutate(SEASON_ID_0, LockableFeature::TransferAsset, |rule| {
-			*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
-		});
-
-		let acc_1 = account::<Test, ()>(ACC_1);
-		Organizer::<Test, ()>::put(acc_1);
-		PlayerSeasonConfigs::<Test, ()>::mutate(acc_1, SEASON_ID_0, |config| {
-			config.locks = Locks::all_unlocked();
-		});
-		Balances::force_set_balance(RuntimeOrigin::root(), acc_1, 100_000)
-			.expect("Should set balance");
-
-		let acc_2 = account::<Test, ()>(ACC_2);
-		PlayerSeasonConfigs::<Test, ()>::mutate(acc_2, SEASON_ID_0, |config| {
-			config.locks = Locks::all_unlocked();
-		});
-		Balances::force_set_balance(RuntimeOrigin::root(), acc_2, 100_000)
-			.expect("Should set balance");
-	});
-	ext
 }
