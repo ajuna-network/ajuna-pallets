@@ -276,7 +276,7 @@ pub fn new_benchmark_ext() -> sp_io::TestExternalities {
 			*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
 		});
 
-		let acc_1 = crate::benchmarking::account::<Test, ()>(crate::benchmarking::ACC_1);
+		let acc_1 = account::<Test, ()>(ACC_1);
 		Organizer::<Test, ()>::put(acc_1);
 		PlayerSeasonConfigs::<Test, ()>::mutate(acc_1, SEASON_ID_0, |config| {
 			config.locks = Locks::all_unlocked();
@@ -284,7 +284,7 @@ pub fn new_benchmark_ext() -> sp_io::TestExternalities {
 		Balances::force_set_balance(RuntimeOrigin::root(), acc_1, 100_000)
 			.expect("Should set balance");
 
-		let acc_2 = crate::benchmarking::account::<Test, ()>(crate::benchmarking::ACC_2);
+		let acc_2 = account::<Test, ()>(ACC_2);
 		PlayerSeasonConfigs::<Test, ()>::mutate(acc_2, SEASON_ID_0, |config| {
 			config.locks = Locks::all_unlocked();
 		});
