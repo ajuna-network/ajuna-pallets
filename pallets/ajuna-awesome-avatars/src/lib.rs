@@ -1326,7 +1326,6 @@ pub mod pallet {
 				MintPayment::Normal => {
 					let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
 
-					// Todo: there was this check before;
 					if affiliate_config.mode == AffiliateMode::Open &&
 						affiliate_config.enabled_in_mint
 					{
