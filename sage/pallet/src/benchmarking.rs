@@ -14,9 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use crate::{
 	config::{InventoryTier, Locks},
 	mock::{Balances, RuntimeOrigin, System, Test, SEASON_ID_0},
