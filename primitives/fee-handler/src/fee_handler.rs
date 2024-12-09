@@ -84,6 +84,8 @@ pub struct AssetGameFeeHandler<AccountId, Assets, WithdrawAsset, Affiliate, Tour
 impl<AccountId, Assets, W, Affiliate, Tournament> FeeHandler
 	for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, Tournament>
 where
+	// This is satisfied by the `pallet-assets`, `pallet-asset-conversion` and the `NativeAndAssets`
+	// struct.
 	Assets: fungibles::Inspect<AccountId, Balance = W::Balance, AssetId = W::AssetId>
 		+ fungibles::Balanced<AccountId>,
 
@@ -230,6 +232,7 @@ pub struct NativeGameFeeHandler<AccountId, Balances, WithdrawAsset, Affiliate, T
 impl<AccountId, Balances, W, Affiliate, Tournament> FeeHandler
 	for NativeGameFeeHandler<AccountId, Balances, W, Affiliate, Tournament>
 where
+	// This is satisfied by the `pallet-balances`.
 	Balances: fungible::Inspect<AccountId, Balance = W::Balance> + fungible::Balanced<AccountId>,
 
 	W: WithdrawCredit<
