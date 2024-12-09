@@ -42,20 +42,13 @@ where
 	(0..n)
 		.map(|i| {
 			let asset_id = AssetId::random();
-			ASSET_SEASONS.with(|store| {
-				store.borrow_mut().insert(asset_id, season_id);
+			ASSET_SEASONS.with_borrow_mut(|store| {
+				store.insert(asset_id, season_id);
 			});
+			let asset_instance = Asset::create(asset_id, 0, 0, 0, [i; 32], 0, Level::One);
 
 			let asset_id = AssetIdOf::<Test, I>::from(asset_id.0);
-			let asset = AssetOf::<Test, I>::from(Asset {
-				collection_id: 0,
-				asset_type: 0,
-				asset_sub_type: 0,
-				dna: [i; 32],
-				minted_at: 0,
-				level: Level::One,
-				consumed: false,
-			});
+			let asset = AssetOf::<Test, I>::from(asset_instance);
 			Assets::<Test, I>::insert(&asset_id, (account, asset));
 			AssetOwners::<Test, I>::insert((account, &casted_season_id, &asset_id), ());
 			asset_id

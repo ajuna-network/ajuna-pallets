@@ -32,7 +32,7 @@ mod lock_asset {
 			])
 			.build()
 			.execute_with(|| {
-				let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 				let asset_id = asset_ids[0];
 				let expected_lock = Lock { id: *TEST_LOCK_ID, locker: ALICE };
 
@@ -46,17 +46,13 @@ mod lock_asset {
 				// Ensure ownership transferred to technical account
 				let technical_account = Sage::technical_account_id();
 
-				assert!(!AssetOwners::<Test, Instance1>::contains_key((
-					ALICE,
-					SEASON_ID_0,
-					asset_id
-				)));
-				assert!(!AssetOwners::<Test, Instance1>::contains_key((
+				assert!(!AssetOwners::<Test, ()>::contains_key((ALICE, SEASON_ID_0, asset_id)));
+				assert!(!AssetOwners::<Test, ()>::contains_key((
 					technical_account,
 					SEASON_ID_0,
 					asset_id
 				)));
-				assert_eq!(Assets::<Test, Instance1>::get(asset_id).unwrap().0, technical_account);
+				assert_eq!(Assets::<Test, ()>::get(asset_id).unwrap().0, technical_account);
 			});
 	}
 
@@ -66,11 +62,11 @@ mod lock_asset {
 			.balances(&[(ALICE, 1_000), (BOB, 1_000)])
 			.build()
 			.execute_with(|| {
-				let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 				let asset_id = asset_ids[0];
 				assert_noop!(
 					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, ALICE, asset_id),
-					Error::<Test, Instance1>::AssetNotOwned
+					Error::<Test, ()>::AssetNotOwned
 				);
 			});
 	}
@@ -82,12 +78,12 @@ mod lock_asset {
 			.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
-				let asset_ids = create_assets::<Instance1>(SEASON_ID_0, CHARLIE, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, CHARLIE, 1);
 				let asset_id = asset_ids[0];
 				assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 1_000));
 				assert_noop!(
 					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, CHARLIE, asset_id),
-					Error::<Test, Instance1>::CannotLockAssetInTrade
+					Error::<Test, ()>::CannotLockAssetInTrade
 				);
 			});
 	}
@@ -95,7 +91,7 @@ mod lock_asset {
 	#[test]
 	fn cannot_lock_already_locked_asset() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, DAVE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, DAVE, 1);
 			let asset_id = asset_ids[0];
 			assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, DAVE, asset_id));
 			assert_noop!(
@@ -104,7 +100,7 @@ mod lock_asset {
 					Sage::technical_account_id(),
 					asset_id
 				),
-				Error::<Test, Instance1>::AssetLocked
+				Error::<Test, ()>::AssetLocked
 			);
 		});
 	}
@@ -116,13 +112,13 @@ mod unlock_asset {
 	#[test]
 	fn can_unlock_asset_successfully() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let asset_id = asset_ids[0];
 			let expected_lock = Lock { id: *TEST_LOCK_ID, locker: ALICE };
 
 			assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, ALICE, asset_id));
 			assert_eq!(
-				LockedAssets::<Test, Instance1>::get(asset_id),
+				LockedAssets::<Test, ()>::get(asset_id),
 				Some(Lock { id: *TEST_LOCK_ID, locker: ALICE })
 			);
 			assert_ok!(<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, ALICE, asset_id));
@@ -130,7 +126,7 @@ mod unlock_asset {
 				asset_id,
 				lock: expected_lock,
 			}));
-			assert_eq!(LockedAssets::<Test, Instance1>::get(asset_id), None);
+			assert_eq!(LockedAssets::<Test, ()>::get(asset_id), None);
 		});
 	}
 
@@ -140,12 +136,12 @@ mod unlock_asset {
 			.balances(&[(ALICE, 1_000), (BOB, 5_000)])
 			.build()
 			.execute_with(|| {
-				let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 				let asset_id = asset_ids[0];
 				assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, BOB, asset_id));
 				assert_noop!(
 					<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, ALICE, asset_id),
-					Error::<Test, Instance1>::AssetNotOwned
+					Error::<Test, ()>::AssetNotOwned
 				);
 			});
 	}
@@ -153,7 +149,7 @@ mod unlock_asset {
 	#[test]
 	fn cannot_unlock_asset_locked_by_other_application() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let asset_id = asset_ids[0];
 
 			let other_lock_id = b"otherapp";
@@ -161,7 +157,7 @@ mod unlock_asset {
 
 			assert_noop!(
 				<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, ALICE, asset_id),
-				Error::<Test, Instance1>::AssetLockedByOtherApplication
+				Error::<Test, ()>::AssetLockedByOtherApplication
 			);
 		});
 	}

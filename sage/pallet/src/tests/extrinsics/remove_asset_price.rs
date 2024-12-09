@@ -22,18 +22,15 @@ fn remove_price_should_work() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 2);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 2);
 			let asset_for_sale = asset_ids[0];
 			let price = 101;
 
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_for_sale, price));
 
-			assert_eq!(
-				AssetTradePrices::<Test, Instance1>::get(SEASON_ID_0, asset_for_sale),
-				Some(101)
-			);
+			assert_eq!(AssetTradePrices::<Test, ()>::get(SEASON_ID_0, asset_for_sale), Some(101));
 			assert_ok!(Sage::remove_asset_price(RuntimeOrigin::signed(BOB), asset_for_sale));
-			assert_eq!(AssetTradePrices::<Test, Instance1>::get(SEASON_ID_0, asset_for_sale), None);
+			assert_eq!(AssetTradePrices::<Test, ()>::get(SEASON_ID_0, asset_for_sale), None);
 			System::assert_last_event(RuntimeEvent::Sage(Event::AssetPriceUnset {
 				asset_id: asset_for_sale,
 			}));
@@ -43,10 +40,10 @@ fn remove_price_should_work() {
 #[test]
 fn remove_price_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
-		GeneralConfigStore::<Test, Instance1>::mutate(|config| config.trade.open = false);
+		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
 			Sage::remove_asset_price(RuntimeOrigin::signed(ALICE), AssetId::random()),
-			Error::<Test, Instance1>::TradeClosed,
+			Error::<Test, ()>::TradeClosed,
 		);
 	});
 }
@@ -67,13 +64,13 @@ fn remove_price_should_reject_incorrect_ownership() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 3);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 			let asset_for_sale = asset_ids[0];
 
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_for_sale, 123));
 			assert_noop!(
 				Sage::remove_asset_price(RuntimeOrigin::signed(CHARLIE), asset_for_sale),
-				Error::<Test, Instance1>::AssetNotOwned
+				Error::<Test, ()>::AssetNotOwned
 			);
 		});
 }
@@ -81,10 +78,10 @@ fn remove_price_should_reject_incorrect_ownership() {
 #[test]
 fn remove_price_should_reject_unlisted_asset() {
 	ExtBuilder::default().build().execute_with(|| {
-		let asset_ids = create_assets::<Instance1>(SEASON_ID_0, BOB, 1);
+		let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 		assert_noop!(
 			Sage::remove_asset_price(RuntimeOrigin::signed(CHARLIE), asset_ids[0]),
-			Error::<Test, Instance1>::AssetNotInTrade,
+			Error::<Test, ()>::AssetNotInTrade,
 		);
 	});
 }

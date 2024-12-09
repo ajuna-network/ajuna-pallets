@@ -25,7 +25,6 @@ use crate::{
 	},
 	Pallet as Tournament, *,
 };
-use ajuna_primitives::asset_manager::AssetManager;
 use frame_benchmarking::benchmarks_instance_pallet;
 use frame_system::RawOrigin;
 use sp_runtime::BuildStorage;
@@ -50,7 +49,7 @@ const ACC_1: &str = "acc_1";
 fn create_owned_entity<T: Config<I>, I: 'static>(
 	account: T::AccountId,
 ) -> (T::EntityId, T::RankedEntity) {
-	let mut assets = T::AssetManager::create_assets(account, 1);
+	let mut assets = T::BenchmarkHelper::create_entities(account, 1);
 	assets.pop().unwrap()
 }
 

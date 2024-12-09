@@ -41,6 +41,7 @@ where
 					.map_err(|_| sage_api::Error::InvalidTransitionId)?;
 				Ok(())
 			},
+			BenchTransition => Ok(()),
 		}
 	}
 
@@ -62,6 +63,7 @@ where
 			ConsumeAsset => {
 				consume_asset(&mut asset)?;
 			},
+			BenchTransition => {},
 		}
 
 		Ok(vec![TransitionOutput::Mutated(asset_ids[0], asset)])
@@ -74,6 +76,7 @@ where
 		+ AssetInspector<AssetId = AssetId, Asset = Asset>,
 {
 	type TransitionId = ExampleTransitionId;
+	type TransitionConfig = ();
 	type AccountId = AccountId;
 
 	type AssetId = AssetId;

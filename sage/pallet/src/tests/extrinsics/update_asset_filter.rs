@@ -22,7 +22,7 @@ fn update_asset_filter_should_work_for_trade_filter() {
 		let filter_core = MockFilter::from(13_u32);
 		let filter = AssetFilter::Trade(filter_core);
 
-		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), 0);
+		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), 0);
 
 		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTradeFilter {
@@ -30,7 +30,7 @@ fn update_asset_filter_should_work_for_trade_filter() {
 			filter: filter_core,
 		}));
 
-		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), filter_core);
+		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), filter_core);
 	});
 }
 
@@ -40,7 +40,7 @@ fn update_asset_filter_should_work_for_transfer_filter() {
 		let filter_core = MockFilter::from(13_u32);
 		let filter = AssetFilter::Transfer(filter_core);
 
-		assert_eq!(SeasonTradeFilters::<Test, Instance1>::get(SEASON_ID_0), 0);
+		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), 0);
 
 		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransferFilter {
@@ -48,7 +48,7 @@ fn update_asset_filter_should_work_for_transfer_filter() {
 			filter: filter_core,
 		}));
 
-		assert_eq!(SeasonTransferFilters::<Test, Instance1>::get(SEASON_ID_0), filter_core);
+		assert_eq!(SeasonTransferFilters::<Test, ()>::get(SEASON_ID_0), filter_core);
 	});
 }
 

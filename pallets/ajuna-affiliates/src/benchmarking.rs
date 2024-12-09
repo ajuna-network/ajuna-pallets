@@ -25,7 +25,6 @@ use crate::{
 	},
 	Pallet as Affiliates, *,
 };
-use ajuna_primitives::account_manager::AccountManager;
 use frame_benchmarking::benchmarks_instance_pallet;
 use frame_system::RawOrigin;
 use sp_runtime::BuildStorage;
@@ -90,8 +89,6 @@ benchmarks_instance_pallet! {
 		let acc_2 = account::<T, I>(ACC_2);
 		let acc_3 = account::<T, I>(ACC_3);
 		mark_as_affiliatable::<T, I>(&acc_3);
-		let key = T::WhitelistKey::get();
-		T::AccountManager::try_set_whitelisted_for(&key, &acc_1).expect("Set whitelisted");
 	}: _(RawOrigin::Signed(acc_1.clone()), Some(acc_2.clone()), 0)
 	verify {
 		assert_last_event::<T, I>(Event::AccountAffiliated { account: acc_2, to: acc_3 })
@@ -152,6 +149,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	ext.execute_with(|| {
 		let acc_1 = account::<Test, ()>(ACC_1);
 		MockAccountManager::set_organizer(acc_1);
+		MockAccountManager::try_add_to_whitelist(&AffiliateWhitelistKey::get(), &acc_1)
+			.expect("Should add to whitelist");
 	});
 	ext
 }

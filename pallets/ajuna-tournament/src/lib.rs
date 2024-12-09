@@ -75,34 +75,13 @@ pub mod pallet {
 	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker> {
+	pub trait BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker, AccountId, EntityId, Entity>
+	{
 		fn create_category_id(id: u32) -> CategoryId;
 
 		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker>;
-	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	impl<CategoryId: From<u32>, BlockNumber: From<u64>, Balance: From<u64>, Ranker: Default>
-		BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker> for ()
-	{
-		fn create_category_id(id: u32) -> CategoryId {
-			id.into()
-		}
-
-		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker> {
-			TournamentConfig {
-				start: 20_u64.into(),
-				active_end: 40_u64.into(),
-				claim_end: 50_u64.into(),
-				initial_reward: None,
-				max_reward: None,
-				take_fee_percentage: None,
-				reward_distribution: Default::default(),
-				golden_duck_config: Default::default(),
-				max_players: 0,
-				ranker: Ranker::default(),
-			}
-		}
+		fn create_entities(owner: AccountId, count: u32) -> sp_std::vec::Vec<(EntityId, Entity)>;
 	}
 
 	/// The current storage version.
@@ -157,6 +136,9 @@ pub mod pallet {
 			BlockNumberFor<Self>,
 			BalanceOf<Self, I>,
 			Self::EntityRanker,
+			AccountIdFor<Self>,
+			EntityIdFor<Self, I>,
+			Self::RankedEntity,
 		>;
 	}
 

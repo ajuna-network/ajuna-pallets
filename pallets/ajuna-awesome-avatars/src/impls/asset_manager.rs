@@ -88,20 +88,4 @@ impl<T: Config> AssetManager for Pallet<T> {
 		let Season { fee, .. } = Self::seasons(&asset.season_id)?;
 		T::Currency::transfer(player, fee_recipient, fee.prepare_avatar, AllowDeath)
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		benchmark_helper::create_avatars::<T>(owner.clone(), count).unwrap();
-
-		let season_id = CurrentSeasonStatus::<T>::get().season_id;
-		let avatar_ids = Owners::<T>::get(owner, season_id);
-		let mut avatars = Vec::with_capacity(avatar_ids.len());
-
-		for avatar_id in avatar_ids.iter() {
-			let (_, avatar) = Avatars::<T>::get(avatar_id).unwrap();
-			avatars.push(avatar);
-		}
-
-		avatar_ids.into_iter().zip(avatars).collect()
-	}
 }

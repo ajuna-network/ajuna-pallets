@@ -57,23 +57,26 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		Sage: pallet_sage::<Instance1> = 2,
+		Sage: pallet_sage = 2,
 	}
 );
 
 impl frame_system::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
+	type Nonce = u32;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = MockAccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
+	type Block = MockBlock;
 	type BlockHashCount = ConstU64<250>;
+	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<MockBalance>;
@@ -83,9 +86,6 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type Nonce = u32;
-	type Block = MockBlock;
-	type RuntimeTask = RuntimeTask;
 	type SingleBlockMigrations = ();
 	type MultiBlockMigrator = ();
 	type PreInherents = ();
@@ -98,24 +98,24 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = MockBalance;
-	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = MockExistentialDeposit;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type WeightInfo = ();
+	type Balance = MockBalance;
+	type DustRemoval = ();
+	type ExistentialDeposit = MockExistentialDeposit;
+	type AccountStore = System;
+	type ReserveIdentifier = [u8; 8];
+	type FreezeIdentifier = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type MaxFreezes = ();
 }
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
-	types::{Asset, AssetId, ExampleTransitionId},
+	types::{Asset, AssetId, ExampleTransitionId, Level},
 };
 
 parameter_types! {
@@ -123,6 +123,7 @@ parameter_types! {
 }
 
 thread_local! {
+	pub static ASSET_SEEDS: RefCell<u64> = RefCell::new(0);
 	pub static ASSET_SEASONS: RefCell<BTreeMap<AssetId, MockSeasonId>> = RefCell::new(BTreeMap::new());
 	pub static CURRENT_SEASON: RefCell<MockSeasonId> = RefCell::new(SEASON_ID_0)
 }
@@ -191,7 +192,7 @@ pub struct MockAffiliatesFeeProvider;
 
 impl FeeProvider for MockAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
-	type FeeIdentifier = AffiliateMethodsOf<Test, Instance1>;
+	type FeeIdentifier = AffiliateMethodsOf<Test, ()>;
 	type FeeCurrency = MockBalance;
 	type FeeOutput = Vec<(MockBalance, MockAccountId)>;
 
@@ -237,6 +238,7 @@ impl FeeProvider for MockTransitionFeeProvider {
 		match identifier {
 			ExampleTransitionId::UpgradeAsset => base_fee.saturating_mul(2),
 			ExampleTransitionId::ConsumeAsset => base_fee.saturating_mul(3),
+			ExampleTransitionId::BenchTransition => base_fee.saturating_mul(10),
 		}
 	}
 }
@@ -260,11 +262,6 @@ impl TreasuryManager for MockTreasuryManager {
 		Ok(TREASURER)
 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_treasurer_for(_key: Self::TreasuryPotKey, _owner: Self::AccountId) {
-		todo!()
-	}
-
 	fn deposit_into(
 		depository: &Self::AccountId,
 		_key: &Self::TreasuryPotKey,
@@ -282,7 +279,7 @@ impl TradeManager for MockFilterHandler {
 	type TradeFilter = MockFilter;
 	type Asset = Asset;
 
-	fn is_tradeable_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
+	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
 		asset.asset_type == *filter
 	}
 }
@@ -291,7 +288,7 @@ impl TransferManager for MockFilterHandler {
 	type TransferFilter = MockFilter;
 	type Asset = Asset;
 
-	fn is_transferable_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
+	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
 		asset.asset_type == *filter
 	}
 }
@@ -341,11 +338,6 @@ impl AssetManager for MockAssetMediator {
 	) -> Result<(), DispatchError> {
 		<Sage as AssetManager>::handle_asset_prepare_fee(asset, from, fees_recipient)
 	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn create_assets(owner: Self::AccountId, count: u32) -> Vec<(Self::AssetId, Self::Asset)> {
-		<Sage as AssetManager>::create_assets(owner, count)
-	}
 }
 
 impl AssetInspector for MockAssetMediator {
@@ -357,11 +349,45 @@ impl AssetInspector for MockAssetMediator {
 	}
 }
 
-pub type SageInstance1 = pallet_sage::Instance1;
-impl crate::Config<SageInstance1> for Test {
+#[cfg(feature = "runtime-benchmarks")]
+pub struct SageBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl BenchmarkHelper<MockAccountId, MockSeasonId, AssetId, Asset, ExampleTransitionId>
+	for SageBenchmarkHelper
+{
+	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
+		let asset_id = AssetId::from_low_u64_le(seed as u64);
+		let asset = Asset::create(asset_id, 0, 0, 0, [seed as u8; 32], 1, Level::One);
+
+		MockSeasonManager::register_asset_in(&asset_id, season_id)
+			.expect("Asset should be registered");
+		Assets::<Test, ()>::insert(asset_id, (account, asset));
+		AssetOwners::<Test, ()>::insert((account, season_id, &asset_id), ());
+
+		asset_id
+	}
+
+	fn create_bench_transition_for(
+		account: &MockAccountId,
+		season: &MockSeasonId,
+		seed: u32,
+	) -> (ExampleTransitionId, Vec<AssetId>) {
+		let asset_id_1 = Self::create_asset_for(account, season, seed);
+		let asset_id_2 = Self::create_asset_for(account, season, seed * 2);
+		let asset_id_3 = Self::create_asset_for(account, season, seed * 3);
+		let asset_id_4 = Self::create_asset_for(account, season, seed * 4);
+		let asset_id_5 = Self::create_asset_for(account, season, seed * 5);
+
+		let asset_vec = vec![asset_id_1, asset_id_2, asset_id_3, asset_id_4, asset_id_5];
+
+		(ExampleTransitionId::BenchTransition, asset_vec)
+	}
+}
+
+impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
-	type SageTransitionConfig = ();
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = GameFeeHandler<
 		MockAccountId,
@@ -375,6 +401,8 @@ impl crate::Config<SageInstance1> for Test {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = SageBenchmarkHelper;
 }
 
 #[derive(Default)]
@@ -412,13 +440,13 @@ impl ExtBuilder {
 			let _ = Balances::deposit_creating(&TREASURER, MockExistentialDeposit::get());
 
 			if let Some(organizer) = self.organizer {
-				Organizer::<Test, Instance1>::put(organizer);
+				Organizer::<Test, ()>::put(organizer);
 			}
 
 			if !self.locks.is_empty() {
 				for (account, season_id, lock) in self.locks {
 					let config = PlayerConfig { inventory_tier: InventoryTier::One, locks: lock };
-					PlayerSeasonConfigs::<Test, Instance1>::insert(account, season_id, config);
+					PlayerSeasonConfigs::<Test, ()>::insert(account, season_id, config);
 				}
 			}
 
@@ -428,7 +456,7 @@ impl ExtBuilder {
 				transfer: TransferConfig { open: true },
 				trade: TradeConfig { open: true },
 			};
-			GeneralConfigStore::<Test, Instance1>::put(config);
+			GeneralConfigStore::<Test, ()>::put(config);
 		});
 		ext
 	}

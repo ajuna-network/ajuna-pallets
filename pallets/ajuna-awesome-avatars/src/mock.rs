@@ -201,6 +201,9 @@ impl
 		MockBlockNumber,
 		MockBalance,
 		AvatarRankerFor<Test>,
+		MockAccountId,
+		AvatarIdOf<Test>,
+		AvatarOf<Test>,
 	> for TournamentBenchmarkHelper
 {
 	fn create_category_id(id: u32) -> SeasonId {
@@ -221,6 +224,24 @@ impl
 			max_players: 4,
 			ranker: AvatarRankerFor::<Test>::default(),
 		}
+	}
+
+	fn create_entities(
+		owner: MockAccountId,
+		count: u32,
+	) -> Vec<(AvatarIdOf<Test>, AvatarOf<Test>)> {
+		benchmark_helper::create_avatars::<Test>(owner, count).unwrap();
+
+		let season_id = CurrentSeasonStatus::<Test>::get().season_id;
+		let avatar_ids = Owners::<Test>::get(owner, season_id);
+		let mut avatars = Vec::with_capacity(avatar_ids.len());
+
+		for avatar_id in avatar_ids.iter() {
+			let (_, avatar) = Avatars::<Test>::get(avatar_id).unwrap();
+			avatars.push(avatar);
+		}
+
+		avatar_ids.into_iter().zip(avatars).collect()
 	}
 }
 
