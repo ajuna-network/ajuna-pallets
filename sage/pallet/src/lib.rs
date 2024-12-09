@@ -644,8 +644,7 @@ pub mod pallet {
 				let min_buy_fee = fee.buy_asset_min;
 				let percentage_fee = price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
 					MAX_PERCENTAGE.unique_saturated_into();
-				let base_fee = sp_std::cmp::max(min_buy_fee, percentage_fee);
-				base_fee
+				sp_std::cmp::max(min_buy_fee, percentage_fee)
 			};
 
 			T::FeeHandler::withdraw_and_pay_fees(
@@ -749,9 +748,7 @@ pub mod pallet {
 			let transition_fee = {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
-
-				let base_fee = fee.state_transition_base_fee;
-				base_fee
+				fee.state_transition_base_fee
 			};
 
 			T::FeeHandler::withdraw_and_pay_fees(

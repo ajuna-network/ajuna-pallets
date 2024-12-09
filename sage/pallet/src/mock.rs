@@ -102,7 +102,7 @@ pub const NATIVE: NativeOrWithId<u32> = NativeOrWithId::Native;
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
-	types::{Asset, AssetId, ExampleTransitionId, Level},
+	types::{Asset, AssetId, ExampleTransitionId},
 };
 
 parameter_types! {
@@ -261,6 +261,7 @@ impl BenchmarkHelper<MockAccountId, MockSeasonId, AssetId, Asset, ExampleTransit
 	for SageBenchmarkHelper
 {
 	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
+		use example_transition::Level;
 		let asset_id = AssetId::from_low_u64_le(seed as u64);
 		let asset = Asset::create(asset_id, 0, 0, 0, [seed as u8; 32], 1, Level::One);
 
@@ -354,13 +355,13 @@ impl DistributeFee for TestTournamentFeeProvider {
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
 	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
-		match identifier {
-			&PAYING => Some(
+		match *identifier {
+			PAYING => Some(
 				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 5 / 10)]
 					.try_into()
 					.expect("max distribution = 1; qed"),
 			),
-			&FREE => None,
+			FREE => None,
 			_ => panic!("Did not identify free or paying"),
 		}
 	}

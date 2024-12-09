@@ -1340,7 +1340,7 @@ pub mod pallet {
 						)?;
 					} else {
 						T::FeeHandler::withdraw_and_deposit_into_treasury(
-							&player,
+							player,
 							(),
 							&Self::treasury_account_id(),
 							base_fee,
