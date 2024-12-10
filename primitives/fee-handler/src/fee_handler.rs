@@ -1,13 +1,11 @@
 use crate::withdraw_credit::WithdrawCredit;
-use core::marker::PhantomData;
+use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
 	traits::{fungible, fungibles, ConstU32, Defensive, Imbalance},
 	BoundedVec,
-	__private::log,
 };
 use parity_scale_codec::{Decode, Encode};
-use std::fmt::Debug;
 
 /// Distributes shares of a base fee to some beneficiaries.
 pub trait DistributeFee {
