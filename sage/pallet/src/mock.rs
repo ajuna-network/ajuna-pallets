@@ -91,7 +91,7 @@ impl pallet_balances::Config for Test {
 impl pallet_assets::Config for Test {
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<MockAccountId>>;
-	type ForceOrigin = frame_system::EnsureRoot<u64>;
+	type ForceOrigin = frame_system::EnsureRoot<MockAccountId>;
 	type Freezer = ();
 	type CallbackHandle = ();
 }
