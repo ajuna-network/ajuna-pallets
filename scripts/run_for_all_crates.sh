@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 # Useful for checking individual crates for correctness, i.e., if they compile to wasm.
+#
+# Example usage: ./scripts/run_for_all_crates.sh check --no-default-features --target=wasm32-unknown-unknown
 
 set -e
 
