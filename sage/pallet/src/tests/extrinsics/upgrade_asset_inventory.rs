@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 
 #[test]
 fn upgrade_asset_inventory_should_work() {
@@ -40,7 +41,12 @@ fn upgrade_asset_inventory_should_work() {
 			);
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance);
 
-			assert_ok!(Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None));
+			assert_ok!(Sage::upgrade_asset_inventory(
+				RuntimeOrigin::signed(ALICE),
+				None,
+				None,
+				Some(NATIVE)
+			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
 				season_id: SEASON_ID_0,
@@ -59,7 +65,12 @@ fn upgrade_asset_inventory_should_work() {
 			);
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - upgrade_fee);
 
-			assert_ok!(Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None));
+			assert_ok!(Sage::upgrade_asset_inventory(
+				RuntimeOrigin::signed(ALICE),
+				None,
+				None,
+				Some(NATIVE)
+			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
 				season_id: SEASON_ID_0,
@@ -78,7 +89,12 @@ fn upgrade_asset_inventory_should_work() {
 			);
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - (upgrade_fee * 2));
 
-			assert_ok!(Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None));
+			assert_ok!(Sage::upgrade_asset_inventory(
+				RuntimeOrigin::signed(ALICE),
+				None,
+				None,
+				Some(NATIVE)
+			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
 				season_id: SEASON_ID_0,
@@ -97,7 +113,12 @@ fn upgrade_asset_inventory_should_work() {
 			);
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - (upgrade_fee * 3));
 
-			assert_ok!(Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None));
+			assert_ok!(Sage::upgrade_asset_inventory(
+				RuntimeOrigin::signed(ALICE),
+				None,
+				None,
+				Some(NATIVE)
+			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
 				season_id: SEASON_ID_0,
@@ -116,7 +137,12 @@ fn upgrade_asset_inventory_should_work() {
 			);
 			assert_eq!(Balances::free_balance(ALICE), alice_initial_balance - (upgrade_fee * 4));
 
-			assert_ok!(Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None));
+			assert_ok!(Sage::upgrade_asset_inventory(
+				RuntimeOrigin::signed(ALICE),
+				None,
+				None,
+				Some(NATIVE)
+			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
 				season_id: SEASON_ID_0,
@@ -156,7 +182,8 @@ fn upgrade_asset_inventory_should_work_on_different_beneficiary() {
 			assert_ok!(Sage::upgrade_asset_inventory(
 				RuntimeOrigin::signed(ALICE),
 				Some(BOB),
-				None
+				None,
+				Some(NATIVE)
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: BOB,
@@ -194,7 +221,8 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 			assert_ok!(Sage::upgrade_asset_inventory(
 				RuntimeOrigin::signed(ALICE),
 				None,
-				Some(SEASON_ID_1)
+				Some(SEASON_ID_1),
+				Some(NATIVE)
 			));
 
 			assert_eq!(
@@ -212,8 +240,8 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 fn upgrade_asset_inventory_should_reject_insufficient_balance() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None),
-			sp_runtime::TokenError::FundsUnavailable,
+			Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None, Some(NATIVE)),
+			Token(FundsUnavailable),
 		);
 	});
 }
@@ -231,7 +259,12 @@ fn upgrade_asset_inventory_should_reject_fully_upgraded_storage() {
 			});
 
 			assert_noop!(
-				Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None),
+				Sage::upgrade_asset_inventory(
+					RuntimeOrigin::signed(ALICE),
+					None,
+					None,
+					Some(NATIVE)
+				),
 				Error::<Test, ()>::MaxStorageTierReached
 			);
 		});

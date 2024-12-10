@@ -29,7 +29,6 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::BuildStorage;
 
 use sp_runtime::{
-	bounded_vec,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	MultiSignature,
@@ -285,7 +284,7 @@ impl
 			initial_reward: Some(10),
 			max_reward: None,
 			take_fee_percentage: None,
-			reward_distribution: bounded_vec![40, 30, 10],
+			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
 			golden_duck_config: GoldenDuckConfig::Enabled(10),
 			max_players: 4,
 			ranker: MockRanker,

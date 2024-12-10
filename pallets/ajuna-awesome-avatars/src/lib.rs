@@ -160,7 +160,8 @@ pub mod pallet {
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
-			FeeCurrency = BalanceOf<Self>,
+			Balance = BalanceOf<Self>,
+			AssetId = (),
 			AffiliateFeeIdentifier = AffiliateMethods,
 			TournamentFeeIdentifier = SeasonId,
 		>;
@@ -734,23 +735,28 @@ pub mod pallet {
 			let avatar = Self::ensure_ownership(&seller, &avatar_id)?;
 			let (current_season_id, Season { fee, .. }) = Self::current_season_with_id()?;
 
-			let trade_fee = {
-				let base_fee = fee.buy_minimum.max(
-					price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
-						MAX_PERCENTAGE.unique_saturated_into(),
-				);
+			let base_fee = fee.buy_minimum.max(
+				price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
+					MAX_PERCENTAGE.unique_saturated_into(),
+			);
 
-				if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
-					T::FeeHandler::try_propagate_chain_fee(
-						base_fee,
-						&buyer,
-						&AffiliateMethods::Buy,
-					)?
-				} else {
-					base_fee
-				}
-			};
-			Self::deposit_into_treasury(&buyer, &avatar.season_id, trade_fee)?;
+			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
+				T::FeeHandler::withdraw_and_pay_fees(
+					&buyer,
+					(),
+					base_fee,
+					&avatar.season_id,
+					&AffiliateMethods::Buy,
+					&Self::treasury_account_id(),
+				)?;
+			} else {
+				T::FeeHandler::withdraw_and_deposit_into_treasury(
+					&buyer,
+					(),
+					&Self::treasury_account_id(),
+					base_fee,
+				)?;
+			}
 
 			Self::do_transfer_avatar(&seller, &buyer, &avatar.season_id, &avatar_id)?;
 			Trade::<T>::remove(avatar.season_id, avatar_id);
@@ -801,24 +807,26 @@ pub mod pallet {
 				PlayerSeasonConfigs::<T>::get(&account_to_upgrade, season_id).storage_tier;
 			ensure!(storage_tier != StorageTier::Max, Error::<T>::MaxStorageTierReached);
 
-			let upgrade_fee = {
-				let base_fee = fee.upgrade_storage;
-				let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
+			let base_fee = fee.upgrade_storage;
+			let GlobalConfig { affiliate_config, .. } = GlobalConfigs::<T>::get();
 
-				if affiliate_config.mode == AffiliateMode::Open &&
-					affiliate_config.enabled_in_upgrade
-				{
-					T::FeeHandler::try_propagate_chain_fee(
-						base_fee,
-						&caller,
-						&AffiliateMethods::UpgradeStorage,
-					)?
-				} else {
-					base_fee
-				}
-			};
-
-			Self::deposit_into_treasury(&caller, &season_id, upgrade_fee)?;
+			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_upgrade {
+				T::FeeHandler::withdraw_and_pay_fees(
+					&caller,
+					(),
+					base_fee,
+					&season_id,
+					&AffiliateMethods::UpgradeStorage,
+					&Self::treasury_account_id(),
+				)?;
+			} else {
+				T::FeeHandler::withdraw_and_deposit_into_treasury(
+					&caller,
+					(),
+					&Self::treasury_account_id(),
+					base_fee,
+				)?;
+			}
 
 			PlayerSeasonConfigs::<T>::mutate(&account_to_upgrade, season_id, |account| {
 				account.storage_tier = storage_tier.upgrade()
@@ -1316,31 +1324,27 @@ pub mod pallet {
 			let GlobalConfig { mint, affiliate_config, .. } = GlobalConfigs::<T>::get();
 			match mint_option.payment {
 				MintPayment::Normal => {
-					let mint_fee = {
-						let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
+					let base_fee = season.fee.mint.fee_for(&mint_option.pack_size);
 
-						let updated_fee = if is_tournament_in_active_period {
-							T::FeeHandler::try_propagate_tournament_fee(
-								base_fee, player, &season_id,
-							)?
-						} else {
-							base_fee
-						};
-
-						if affiliate_config.mode == AffiliateMode::Open &&
-							affiliate_config.enabled_in_mint
-						{
-							T::FeeHandler::try_propagate_chain_fee(
-								updated_fee,
-								player,
-								&AffiliateMethods::Mint,
-							)?
-						} else {
-							updated_fee
-						}
-					};
-
-					Self::deposit_into_treasury(player, &season_id, mint_fee)?;
+					if affiliate_config.mode == AffiliateMode::Open &&
+						affiliate_config.enabled_in_mint
+					{
+						T::FeeHandler::withdraw_and_pay_fees(
+							player,
+							(),
+							base_fee,
+							&season_id,
+							&AffiliateMethods::Mint,
+							&Self::treasury_account_id(),
+						)?;
+					} else {
+						T::FeeHandler::withdraw_and_deposit_into_treasury(
+							player,
+							(),
+							&Self::treasury_account_id(),
+							base_fee,
+						)?;
+					}
 				},
 				MintPayment::Free => {
 					let mint_fee = (mint_option.pack_size.as_mint_count())

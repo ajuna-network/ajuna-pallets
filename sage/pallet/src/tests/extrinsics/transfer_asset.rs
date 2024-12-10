@@ -38,7 +38,12 @@ fn transfer_asset_works() {
 			let bob_asset_ids = create_assets::<()>(SEASON_ID_1, BOB, 6);
 			let asset_id = alice_asset_ids[0];
 
-			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id));
+			assert_ok!(Sage::transfer_asset(
+				RuntimeOrigin::signed(ALICE),
+				BOB,
+				asset_id,
+				Some(NATIVE)
+			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::AssetTransferred {
 				from: ALICE,
 				to: BOB,
@@ -101,7 +106,12 @@ fn transfer_asset_works() {
 			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 			Balances::make_free_balance_be(&BOB, transfer_fee + MockExistentialDeposit::get());
 			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), BOB));
-			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, bob_asset_ids[0]));
+			assert_ok!(Sage::transfer_asset(
+				RuntimeOrigin::signed(BOB),
+				CHARLIE,
+				bob_asset_ids[0],
+				Some(NATIVE)
+			));
 			assert_eq!(Balances::free_balance(BOB), MockExistentialDeposit::get());
 			assert_eq!(
 				AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_1)).count(),
@@ -116,7 +126,12 @@ fn transfer_asset_rejects_on_transfer_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 		assert_noop!(
-			Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, AssetId::random()),
+			Sage::transfer_asset(
+				RuntimeOrigin::signed(BOB),
+				CHARLIE,
+				AssetId::random(),
+				Some(NATIVE)
+			),
 			Error::<Test, ()>::TransferClosed
 		);
 	});
@@ -133,7 +148,12 @@ fn transfer_asset_works_on_transfer_closed_with_organizer() {
 			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 			let bob_asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 			let asset_id = bob_asset_ids[0];
-			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), DAVE, asset_id));
+			assert_ok!(Sage::transfer_asset(
+				RuntimeOrigin::signed(BOB),
+				DAVE,
+				asset_id,
+				Some(NATIVE)
+			));
 		});
 }
 
@@ -144,7 +164,7 @@ fn transfer_asset_rejects_transferring_to_self() {
 			let asset_ids = create_assets::<()>(SEASON_ID_0, who, 1);
 			let asset_id = asset_ids[0];
 			assert_noop!(
-				Sage::transfer_asset(RuntimeOrigin::signed(who), who, asset_id),
+				Sage::transfer_asset(RuntimeOrigin::signed(who), who, asset_id, Some(NATIVE)),
 				Error::<Test, ()>::CannotTransferToSelf
 			);
 		}
@@ -161,7 +181,7 @@ fn transfer_asset_rejects_asset_in_trade() {
 			let asset_id = asset_ids[0];
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 999));
 			assert_noop!(
-				Sage::transfer_asset(RuntimeOrigin::signed(CHARLIE), DAVE, asset_id),
+				Sage::transfer_asset(RuntimeOrigin::signed(CHARLIE), DAVE, asset_id, Some(NATIVE)),
 				Error::<Test, ()>::CannotTransferAssetInTrade
 			);
 		});
@@ -172,7 +192,7 @@ fn transfer_asset_rejects_unowned_assets() {
 	ExtBuilder::default().build().execute_with(|| {
 		let asset_id = create_assets::<()>(SEASON_ID_0, CHARLIE, 1)[0];
 		assert_noop!(
-			Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id),
+			Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id, Some(NATIVE)),
 			Error::<Test, ()>::AssetNotOwned
 		);
 	});
@@ -182,7 +202,12 @@ fn transfer_asset_rejects_unowned_assets() {
 fn transfer_asset_rejects_unknown_assets() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, AssetId::random()),
+			Sage::transfer_asset(
+				RuntimeOrigin::signed(ALICE),
+				BOB,
+				AssetId::random(),
+				Some(NATIVE)
+			),
 			Error::<Test, ()>::UnknownAsset
 		);
 	});
@@ -205,7 +230,7 @@ fn transfer_asset_rejects_on_full_asset_inventory_of_recipient() {
 
 			// Trying to send an asset to BOB while his inventory is already full
 			assert_noop!(
-				Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id),
+				Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, asset_id, Some(NATIVE)),
 				Error::<Test, ()>::MaxOwnershipReached
 			);
 		});
@@ -235,7 +260,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 			let (_, asset_1) = Assets::<Test, ()>::get(asset_id_1).expect("Should get asset");
 			assert_eq!(asset_1.asset_type, 0);
 			assert_noop!(
-				Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_1),
+				Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_1, Some(NATIVE)),
 				Error::<Test, ()>::AssetCannotBeTransfered
 			);
 
@@ -246,6 +271,11 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 					asset.asset_type = transfer_filter;
 				}
 			});
-			assert_ok!(Sage::transfer_asset(RuntimeOrigin::signed(BOB), ALICE, asset_id_2));
+			assert_ok!(Sage::transfer_asset(
+				RuntimeOrigin::signed(BOB),
+				ALICE,
+				asset_id_2,
+				Some(NATIVE)
+			));
 		});
 }

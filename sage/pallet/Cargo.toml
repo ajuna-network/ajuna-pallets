@@ -25,11 +25,15 @@ sage-api           = { workspace = true }
 # Benchmarking
 frame-benchmarking = { workspace = true, optional = true }
 example-transition = { workspace = true, optional = true }
+# todo: these pallets are not needed when we fix that the
+# mock doesn't need to be used in with the feature runtime-benchmarks
+pallet-assets    = { workspace = true, optional = true }
 pallet-balances    = { workspace = true, optional = true }
 
 [dev-dependencies]
 example-transition = { workspace = true, features = ["std"] }
 pallet-balances = { workspace = true, features = ["std"] }
+pallet-assets = { workspace = true, features = ["std"] }
 
 [features]
 default = [ "std" ]
@@ -45,10 +49,11 @@ std = [
     "sp-std/std",
     "pallet-balances/std",
     # Ajuna
-    "ajuna-primitives/std",
-    "sage-api/std",
+	"ajuna-primitives/std",
+	"sage-api/std",
     # Example
-    "example-transition/std",
+	"example-transition/std",
+	"pallet-assets/std"
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
@@ -57,11 +62,13 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     # Ajuna
-    "ajuna-primitives/runtime-benchmarks",
+	"ajuna-primitives/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks"
 ]
 try-runtime = [
-    "frame-support/try-runtime",
-    "frame-system/try-runtime",
-    "sp-runtime/try-runtime",
-    "pallet-balances/try-runtime",
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"sp-runtime/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-assets/try-runtime"
 ]

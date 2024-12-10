@@ -13,8 +13,11 @@ use sp_core::Pair;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, RuntimeAppPublic,
+	BuildStorage,
 };
+
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeAppPublic;
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockSignature = TestSignature;

@@ -13,6 +13,7 @@ members = [
     "pallets/ajuna-awesome-avatars/benchmarking",
     "pallets/ajuna-nft-staking/benchmarking",
     "primitives",
+    "primitives/fee-handler",
     "sage/example-transition",
     "sage/pallet",
     "sage/api",
@@ -46,6 +47,7 @@ sp-std                                     = { version = "14.0.0", default-featu
 orml-vesting = { version = "1.0.0", default-features = false }
 
 # Ajuna
+ajuna-fee-handler                         = { path = "primitives/fee-handler", default-features = false }
 ajuna-primitives                          = { path = "primitives", default-features = false }
 pallet-ajuna-affiliates                   = { path = "pallets/ajuna-affiliates", default-features = false }
 pallet-ajuna-awesome-avatars              = { path = "pallets/ajuna-awesome-avatars", default-features = false }

@@ -72,31 +72,32 @@ pub mod pallet {
 	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
+	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
 	pub type AssetIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
 	pub type AssetOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Asset;
-	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
-	pub type SeasonDataOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonData;
-	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 	pub type TransitionIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionId;
 	pub type ExtraOf<T, I> = <<T as Config<I>>::SageGameTransition as SageGameTransition>::Extra;
-	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	pub type TransitionConfigOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionConfig;
 	pub(crate) type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
 	pub type GeneralConfigOf<T, I> = GeneralConfig<TransitionConfigOf<T, I>>;
+	pub type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
-	pub(crate) type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
+	pub type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
+	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
+	pub type SeasonDataOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonData;
 
-	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
-
-	pub(crate) type TradeFilterOf<T, I> =
-		<<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
-	pub(crate) type TransferFilterOf<T, I> =
+	pub type TradeFilterOf<T, I> = <<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
+	pub type TransferFilterOf<T, I> =
 		<<T as Config<I>>::FilterHandler as TransferManager>::TransferFilter;
-	pub(crate) type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
-	pub(crate) type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
+	pub type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
+	pub type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
+
+	pub type PaymentAssetIdOf<T, I> = <<T as Config<I>>::FeeHandler as FeeHandler>::AssetId;
 
 	#[cfg(feature = "runtime-benchmarks")]
 	pub trait BenchmarkHelper<AccountId, SeasonId, AssetId, Asset, TransitionId> {
@@ -131,14 +132,13 @@ pub mod pallet {
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
-			FeeCurrency = BalanceOf<Self, I>,
+			Balance = BalanceOf<Self, I>,
+			AssetId = Self::PaymentAssetId,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
-			TransitionFeeIdentifier = TransitionIdOf<Self, I>,
-			// TODO: Define if we want this as a configurable parameter or some different fixed
-			// value
-			TreasuryKey = SeasonIdOf<Self, I>,
 		>;
+
+		type PaymentAssetId: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
 		/// `SeasonTransferFilters` storage.
@@ -333,7 +333,7 @@ pub mod pallet {
 		},
 	}
 
-	/// Error for the treasury pallet.
+	/// Error for the pallet-sage.
 	#[pallet::error]
 	pub enum Error<T, I = ()> {
 		/// There is no account set as the organizer
@@ -445,6 +445,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			beneficiary: Option<AccountIdOf<T>>,
 			in_season: Option<SeasonIdOf<T, I>>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
@@ -455,15 +456,15 @@ pub mod pallet {
 			};
 			let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
 
-			let upgrade_fee = {
-				let base_fee = fee.upgrade_asset_inventory;
-				T::FeeHandler::try_propagate_chain_fee(
-					base_fee,
-					&caller,
-					&AffiliateMethods::UpgradeAssetInventory,
-				)?
-			};
-			T::FeeHandler::deposit_fee_into_treasury(&caller, &season_id, upgrade_fee)?;
+			let base_fee = fee.upgrade_asset_inventory;
+			T::FeeHandler::withdraw_and_pay_fees(
+				&caller,
+				payment_asset_id.unwrap_or_default(),
+				base_fee,
+				&season_id,
+				&AffiliateMethods::UpgradeAssetInventory,
+				&Self::treasury_account_id(),
+			)?;
 
 			let account_to_upgrade = beneficiary.unwrap_or(caller);
 
@@ -523,6 +524,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 
@@ -553,7 +555,12 @@ pub mod pallet {
 			);
 
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
-			T::FeeHandler::deposit_fee_into_treasury(&from, &asset_season_id, fee.transfer_asset)?;
+			T::FeeHandler::withdraw_and_deposit_into_treasury(
+				&from,
+				payment_asset_id.unwrap_or_default(),
+				&Self::treasury_account_id(),
+				fee.transfer_asset,
+			)?;
 
 			Self::do_transfer_asset(&from, &to, &asset_season_id, &asset_id)?;
 			Self::deposit_event(Event::AssetTransferred { from, to, asset_id });
@@ -611,7 +618,11 @@ pub mod pallet {
 		/// Attempt to buy the selected asset.
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::buy_asset())]
-		pub fn buy_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
+		pub fn buy_asset(
+			origin: OriginFor<T>,
+			asset_id: AssetIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
+		) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			let GeneralConfig { trade, .. } = GeneralConfigStore::<T, I>::get();
 			ensure!(trade.open, Error::<T, I>::TradeClosed);
@@ -633,15 +644,17 @@ pub mod pallet {
 				let min_buy_fee = fee.buy_asset_min;
 				let percentage_fee = price.saturating_mul(fee.buy_percent.unique_saturated_into()) /
 					MAX_PERCENTAGE.unique_saturated_into();
-				let base_fee = sp_std::cmp::max(min_buy_fee, percentage_fee);
-
-				T::FeeHandler::try_propagate_chain_fee(
-					base_fee,
-					&buyer,
-					&AffiliateMethods::TradeAsset,
-				)?
+				sp_std::cmp::max(min_buy_fee, percentage_fee)
 			};
-			T::FeeHandler::deposit_fee_into_treasury(&buyer, &asset_season_id, trade_fee)?;
+
+			T::FeeHandler::withdraw_and_pay_fees(
+				&buyer,
+				payment_asset_id.unwrap_or_default(),
+				trade_fee,
+				&asset_season_id,
+				&AffiliateMethods::TradeAsset,
+				&Self::treasury_account_id(),
+			)?;
 
 			Self::do_transfer_asset(&seller, &buyer, &asset_season_id, &asset_id)?;
 			AssetTradePrices::<T, I>::remove(&asset_season_id, &asset_id);
@@ -686,15 +699,18 @@ pub mod pallet {
 			target: UnlockTarget<AccountIdOf<T>>,
 			feature: LockableFeature,
 			season_id: SeasonIdOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
 
+			let payment_asset = payment_asset_id.unwrap_or_default();
+
 			match feature {
 				LockableFeature::TradeAsset =>
-					Self::unlock_asset_trading_for(account, target, season_id),
+					Self::unlock_asset_trading_for(account, target, season_id, payment_asset),
 				LockableFeature::TransferAsset =>
-					Self::unlock_asset_transfer_for(account, target, season_id),
+					Self::unlock_asset_transfer_for(account, target, season_id, payment_asset),
 			}
 		}
 
@@ -706,6 +722,7 @@ pub mod pallet {
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
+			payment_asset_id: Option<PaymentAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -731,18 +748,17 @@ pub mod pallet {
 			let transition_fee = {
 				let SeasonConfigOf::<T, I> { fee, .. } =
 					T::SeasonHandler::get_season_config_for(&current_season_id)?;
-
-				let mut fee = fee.state_transition_base_fee;
-				fee =
-					T::FeeHandler::try_propagate_tournament_fee(fee, &sender, &current_season_id)?;
-				fee = T::FeeHandler::try_propagate_chain_fee(
-					fee,
-					&sender,
-					&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
-				)?;
-				T::FeeHandler::get_transition_fee_for(fee, &sender, &transition_id)?
+				fee.state_transition_base_fee
 			};
-			T::FeeHandler::deposit_fee_into_treasury(&sender, &current_season_id, transition_fee)?;
+
+			T::FeeHandler::withdraw_and_pay_fees(
+				&sender,
+				payment_asset_id.unwrap_or_default(),
+				transition_fee,
+				&current_season_id,
+				&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
+				&Self::treasury_account_id(),
+			)?;
 
 			Self::deposit_event(Event::TransitionExecuted { account: sender, id: transition_id });
 
@@ -751,6 +767,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		pub fn treasury_account_id() -> T::AccountId {
+			T::PalletId::get().into_account_truncating()
+		}
+
 		pub fn technical_account_id() -> T::AccountId {
 			T::PalletId::get().into_sub_account_truncating(b"technical")
 		}

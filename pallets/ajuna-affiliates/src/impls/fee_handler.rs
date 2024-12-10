@@ -1,21 +1,22 @@
 use super::*;
-use ajuna_primitives::fee_handler::FeeProvider;
+use ajuna_primitives::fee_handler::{DistributeFee, Payment};
+use frame_support::traits::Defensive;
 use sp_runtime::{traits::CheckedDiv, Saturating};
 
-impl<T: Config<I>, I: 'static> FeeProvider for Pallet<T, I> {
+impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 	type AccountId = AccountIdFor<T>;
 	type FeeIdentifier = RuleIdentifierFor<T, I>;
-	type FeeCurrency = BalanceOf<T, I>;
-	type FeeOutput = Vec<(Self::FeeCurrency, Self::AccountId)>;
+	type Balance = BalanceOf<T, I>;
+	type MaxDistributions = AffiliateMaxLevelFor<T, I>;
 
-	fn get_fee_from(
-		base_fee: Self::FeeCurrency,
+	fn distribute_fee(
+		base_fee: Self::Balance,
 		account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
+	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
 		if let Some(chain) = Self::get_affiliator_chain_for(account) {
 			if let Some(rule_chain) = Self::get_rule_for(identifier) {
-				rule_chain
+				let payments: Vec<_> = rule_chain
 					.into_iter()
 					.map(|rule_perc| {
 						base_fee
@@ -24,12 +25,15 @@ impl<T: Config<I>, I: 'static> FeeProvider for Pallet<T, I> {
 							.unwrap_or_default()
 					})
 					.zip(chain)
-					.collect()
+					.map(|(fee, account)| Payment::new(account, fee))
+					.collect();
+
+				Some(payments.try_into().defensive_unwrap_or_default())
 			} else {
-				Vec::with_capacity(0)
+				None
 			}
 		} else {
-			Vec::with_capacity(0)
+			None
 		}
 	}
 }

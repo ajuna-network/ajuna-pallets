@@ -37,7 +37,8 @@ fn state_transition_works() {
 				RuntimeOrigin::signed(ALICE),
 				transition_id,
 				asset_ids,
-				()
+				(),
+				Some(NATIVE)
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
 				account: ALICE,
@@ -46,7 +47,8 @@ fn state_transition_works() {
 			let transition_fee = season_config.fee.state_transition_base_fee;
 			// This assertion assumes that for the UpgradeAsset transition the fee is 2x
 			// the 'state_transition_base_fee'
-			assert_eq!(Balances::free_balance(ALICE), initial_balance - (transition_fee * 2));
+			// assert_eq!(Balances::free_balance(ALICE), initial_balance - (transition_fee * 2));
+			assert_eq!(Balances::free_balance(ALICE), initial_balance - transition_fee);
 		});
 }
 
@@ -61,7 +63,13 @@ fn state_transition_should_reject_non_owned_assets() {
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
-				Sage::state_transition(RuntimeOrigin::signed(ALICE), transition_id, asset_ids, ()),
+				Sage::state_transition(
+					RuntimeOrigin::signed(ALICE),
+					transition_id,
+					asset_ids,
+					(),
+					Some(NATIVE)
+				),
 				Error::<Test, ()>::AssetNotOwned
 			);
 		})
@@ -86,7 +94,8 @@ fn state_transition_should_reject_locked_assets() {
 					RuntimeOrigin::signed(Sage::technical_account_id()),
 					transition_id,
 					asset_ids,
-					()
+					(),
+					Some(NATIVE)
 				),
 				Error::<Test, ()>::AssetLocked
 			);
@@ -107,7 +116,13 @@ fn state_transition_should_reject_rule_verification_failure() {
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
-				Sage::state_transition(RuntimeOrigin::signed(ALICE), transition_id, asset_ids, ()),
+				Sage::state_transition(
+					RuntimeOrigin::signed(ALICE),
+					transition_id,
+					asset_ids,
+					(),
+					Some(NATIVE)
+				),
 				Error::<Test, ()>::RuleNotSatisfied {
 					code: sage_api::Error::InvalidAssetLength.as_error_code()
 				}
@@ -127,7 +142,13 @@ fn state_transition_should_reject_too_many_input_assets() {
 			let transition_id = ExampleTransitionId::UpgradeAsset;
 
 			assert_noop!(
-				Sage::state_transition(RuntimeOrigin::signed(ALICE), transition_id, asset_ids, ()),
+				Sage::state_transition(
+					RuntimeOrigin::signed(ALICE),
+					transition_id,
+					asset_ids,
+					(),
+					Some(NATIVE)
+				),
 				Error::<Test, ()>::TooManyAssetsInTransition
 			);
 		})

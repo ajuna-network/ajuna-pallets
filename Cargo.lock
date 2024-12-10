@@ -60,9 +60,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ajuna-fee-handler"
+version = "0.15.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "ajuna-primitives"
 version = "0.15.0"
 dependencies = [
+ "ajuna-fee-handler",
  "frame-support",
  "parity-scale-codec",
  "scale-info",
@@ -2034,6 +2050,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "sage-api",

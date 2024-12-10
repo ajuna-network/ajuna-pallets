@@ -41,7 +41,8 @@ fn unlock_feature_works_for_trade_asset_targets() {
 					RuntimeOrigin::signed(ALICE),
 					UnlockTarget::OneselfFree,
 					feature_to_unlock,
-					season_id
+					season_id,
+					Some(NATIVE)
 				),
 				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
@@ -53,7 +54,8 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				RuntimeOrigin::signed(ALICE),
 				UnlockTarget::OneselfFree,
 				feature_to_unlock,
-				season_id
+				season_id,
+				Some(NATIVE)
 			));
 
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
@@ -70,7 +72,8 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OneselfPaying,
 				feature_to_unlock,
-				season_id
+				season_id,
+				Some(NATIVE)
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,
@@ -89,7 +92,8 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OtherPaying(CHARLIE),
 				feature_to_unlock,
-				season_id
+				season_id,
+				Some(NATIVE),
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,
@@ -129,7 +133,8 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 					RuntimeOrigin::signed(ALICE),
 					UnlockTarget::OneselfFree,
 					feature_to_unlock,
-					season_id
+					season_id,
+					Some(NATIVE)
 				),
 				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
@@ -141,7 +146,8 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				RuntimeOrigin::signed(ALICE),
 				UnlockTarget::OneselfFree,
 				feature_to_unlock,
-				season_id
+				season_id,
+				Some(NATIVE)
 			));
 
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
@@ -158,7 +164,8 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OneselfPaying,
 				feature_to_unlock,
-				season_id
+				season_id,
+				Some(NATIVE)
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,
@@ -177,7 +184,8 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				RuntimeOrigin::signed(BOB),
 				UnlockTarget::OtherPaying(CHARLIE),
 				feature_to_unlock,
-				season_id
+				season_id,
+				Some(NATIVE)
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,

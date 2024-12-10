@@ -25,8 +25,11 @@ use sp_core::bounded_vec;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, RuntimeAppPublic,
+	BuildStorage,
 };
+
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeAppPublic;
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;

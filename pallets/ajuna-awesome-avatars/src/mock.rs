@@ -15,13 +15,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
-use ajuna_primitives::fee_handler::{FeeProvider, GameFeeHandler};
+use ajuna_primitives::fee_handler::{NativeGameFeeHandler, WithdrawNative};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
 	PalletId,
 };
-use sp_core::bounded_vec;
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
 	testing::TestSignature,
@@ -113,23 +112,6 @@ parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
-pub struct MockTransitionFeeProvider;
-
-impl FeeProvider for MockTransitionFeeProvider {
-	type AccountId = MockAccountId;
-	type FeeIdentifier = SeasonId;
-	type FeeCurrency = MockBalance;
-	type FeeOutput = MockBalance;
-
-	fn get_fee_from(
-		base_fee: Self::FeeCurrency,
-		_account: &Self::AccountId,
-		_identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
-		base_fee
-	}
-}
-
 impl pallet_ajuna_awesome_avatars::Config for Test {
 	type PalletId = AwesomeAvatarsPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -138,14 +120,8 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
-	type FeeHandler = GameFeeHandler<
-		MockAccountId,
-		Balances,
-		Affiliates,
-		Tournament,
-		MockTransitionFeeProvider,
-		AAvatars,
-	>;
+	type FeeHandler =
+		NativeGameFeeHandler<MockAccountId, Balances, WithdrawNative<Test>, Affiliates, Tournament>;
 	type WeightInfo = ();
 }
 
@@ -219,7 +195,7 @@ impl
 			initial_reward: Some(10),
 			max_reward: None,
 			take_fee_percentage: None,
-			reward_distribution: bounded_vec![40, 30, 10],
+			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
 			golden_duck_config: pallet_ajuna_tournament::GoldenDuckConfig::Enabled(10),
 			max_players: 4,
 			ranker: AvatarRankerFor::<Test>::default(),

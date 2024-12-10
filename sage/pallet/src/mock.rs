@@ -17,20 +17,25 @@
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	asset_manager::AssetInspector,
-	fee_handler::{FeeProvider, GameFeeHandler},
+	fee_handler::AssetGameFeeHandler,
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 	trade_manager::TradeManager,
-	treasury_manager::TreasuryManager,
 };
 
+use ajuna_primitives::fee_handler::{
+	AllowAllAssets, DistributeFee, Payment, WithdrawFungibles, WithdrawWhitelistedCredit,
+};
 use frame_support::{
-	parameter_types,
-	traits::{ConstU16, ConstU64, ExistenceRequirement},
+	derive_impl, parameter_types,
+	traits::{
+		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
+		AsEnsureOriginWithArg,
+	},
 	PalletId,
 };
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	testing::TestSignature,
+	traits::{IdentifyAccount, Verify},
 	BuildStorage, DispatchError,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
@@ -47,75 +52,57 @@ pub const BOB: MockAccountId = 2;
 pub const CHARLIE: MockAccountId = 3;
 pub const DAVE: MockAccountId = 4;
 
-pub const TREASURER: MockAccountId = 431;
+pub const TOURNAMENT_TREASURY: MockAccountId = 431;
 
 pub const SEASON_ID_0: MockSeasonId = 0;
 pub const SEASON_ID_1: MockSeasonId = 1;
+
+pub const MAIN_ASSET_ID: u32 = 0;
+pub const LOW_LIQUIDITY_ASSET_ID: u32 = 99;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		Sage: pallet_sage = 2,
+		PalletAssets: pallet_assets = 2,
+		Sage: pallet_sage = 3,
 	}
 );
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type RuntimeTask = RuntimeTask;
-	type Nonce = u32;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
 	type AccountId = MockAccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Block = MockBlock;
-	type BlockHashCount = ConstU64<250>;
-	type DbWeight = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<MockBalance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<42>;
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type SingleBlockMigrations = ();
-	type MultiBlockMigrator = ();
-	type PreInherents = ();
-	type PostInherents = ();
-	type PostTransactions = ();
+	type Block = MockBlock;
 }
 
 parameter_types! {
 	pub const MockExistentialDeposit: MockBalance = 3;
 }
 
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
 impl pallet_balances::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeHoldReason = ();
-	type RuntimeFreezeReason = ();
-	type WeightInfo = ();
-	type Balance = MockBalance;
-	type DustRemoval = ();
-	type ExistentialDeposit = MockExistentialDeposit;
 	type AccountStore = System;
-	type ReserveIdentifier = [u8; 8];
-	type FreezeIdentifier = ();
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type MaxFreezes = ();
+	type ExistentialDeposit = MockExistentialDeposit;
 }
+
+#[derive_impl(pallet_assets::config_preludes::TestDefaultConfig)]
+impl pallet_assets::Config for Test {
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<MockAccountId>>;
+	type ForceOrigin = frame_system::EnsureRoot<MockAccountId>;
+	type Freezer = ();
+	type CallbackHandle = ();
+}
+
+pub type NativeAndAssets =
+	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
+pub const NATIVE: NativeOrWithId<u32> = NativeOrWithId::Native;
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
-	types::{Asset, AssetId, ExampleTransitionId, Level},
+	types::{Asset, AssetId, ExampleTransitionId},
 };
 
 parameter_types! {
@@ -185,89 +172,6 @@ impl SeasonManager for MockSeasonManager {
 		});
 
 		Ok(())
-	}
-}
-
-pub struct MockAffiliatesFeeProvider;
-
-impl FeeProvider for MockAffiliatesFeeProvider {
-	type AccountId = MockAccountId;
-	type FeeIdentifier = AffiliateMethodsOf<Test, ()>;
-	type FeeCurrency = MockBalance;
-	type FeeOutput = Vec<(MockBalance, MockAccountId)>;
-
-	fn get_fee_from(
-		_base_fee: Self::FeeCurrency,
-		_account: &Self::AccountId,
-		_identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
-		Vec::with_capacity(0)
-	}
-}
-
-pub struct MockTournamentFeeProvider;
-
-impl FeeProvider for MockTournamentFeeProvider {
-	type AccountId = MockAccountId;
-	type FeeIdentifier = MockSeasonId;
-	type FeeCurrency = MockBalance;
-	type FeeOutput = (MockBalance, MockAccountId);
-
-	fn get_fee_from(
-		_base_fee: Self::FeeCurrency,
-		account: &Self::AccountId,
-		_identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
-		(0, *account)
-	}
-}
-
-pub struct MockTransitionFeeProvider;
-
-impl FeeProvider for MockTransitionFeeProvider {
-	type AccountId = MockAccountId;
-	type FeeIdentifier = ExampleTransitionId;
-	type FeeCurrency = MockBalance;
-	type FeeOutput = MockBalance;
-
-	fn get_fee_from(
-		base_fee: Self::FeeCurrency,
-		_account: &Self::AccountId,
-		identifier: &Self::FeeIdentifier,
-	) -> Self::FeeOutput {
-		match identifier {
-			ExampleTransitionId::UpgradeAsset => base_fee.saturating_mul(2),
-			ExampleTransitionId::ConsumeAsset => base_fee.saturating_mul(3),
-			ExampleTransitionId::BenchTransition => base_fee.saturating_mul(10),
-		}
-	}
-}
-
-pub struct MockTreasuryManager;
-
-impl TreasuryManager for MockTreasuryManager {
-	type AccountId = MockAccountId;
-	type Currency = MockBalance;
-	type TreasuryPotKey = MockSeasonId;
-
-	fn is_treasurer_for(
-		_key: Self::TreasuryPotKey,
-		account: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		ensure!(account == &TREASURER, DispatchError::BadOrigin);
-		Ok(())
-	}
-
-	fn get_treasurer_for(_key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError> {
-		Ok(TREASURER)
-	}
-
-	fn deposit_into(
-		depository: &Self::AccountId,
-		_key: &Self::TreasuryPotKey,
-		fee: Self::Currency,
-	) -> Result<(), DispatchError> {
-		Balances::transfer(depository, &TREASURER, fee, ExistenceRequirement::KeepAlive)
 	}
 }
 
@@ -357,6 +261,7 @@ impl BenchmarkHelper<MockAccountId, MockSeasonId, AssetId, Asset, ExampleTransit
 	for SageBenchmarkHelper
 {
 	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
+		use example_transition::types::Level;
 		let asset_id = AssetId::from_low_u64_le(seed as u64);
 		let asset = Asset::create(asset_id, 0, 0, 0, [seed as u8; 32], 1, Level::One);
 
@@ -389,20 +294,77 @@ impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
 	type SeasonHandler = MockSeasonManager;
-	type FeeHandler = GameFeeHandler<
+	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
-		Balances,
-		MockAffiliatesFeeProvider,
-		MockTournamentFeeProvider,
-		MockTransitionFeeProvider,
-		MockTreasuryManager,
+		NativeAndAssets,
+		WithdrawWhitelistedCredit<
+			AllowAllAssets<NativeOrWithId<u32>>,
+			WithdrawFungibles<NativeAndAssets, MockAccountId>,
+		>,
+		TestAffiliatesFeeProvider,
+		TestTournamentFeeProvider,
 	>;
+	type PaymentAssetId = NativeOrWithId<u32>;
 	type FilterHandler = MockFilterHandler;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = SageBenchmarkHelper;
+}
+
+pub struct TestAffiliatesFeeProvider;
+
+impl DistributeFee for TestAffiliatesFeeProvider {
+	type AccountId = MockAccountId;
+	type Balance = MockBalance;
+	type FeeIdentifier = AffiliateMethods<ExampleTransitionId>;
+	type MaxDistributions = ConstU32<3>;
+
+	fn distribute_fee(
+		_base_fee: Self::Balance,
+		_account: &Self::AccountId,
+		identifier: &Self::FeeIdentifier,
+	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+		match identifier {
+			AffiliateMethods::UpgradeAssetInventory => None,
+			AffiliateMethods::TradeAsset => None,
+			AffiliateMethods::StateTransition(_) => None,
+		}
+	}
+}
+
+pub struct TestTournamentFeeProvider;
+
+pub enum TournamentFeeId {
+	Paying,
+	Free,
+}
+
+pub const PAYING: u8 = 0;
+pub const FREE: u8 = 1;
+
+impl DistributeFee for TestTournamentFeeProvider {
+	type AccountId = MockAccountId;
+	type Balance = MockBalance;
+	type FeeIdentifier = MockSeasonId;
+	type MaxDistributions = ConstU32<1>;
+
+	fn distribute_fee(
+		base_fee: Self::Balance,
+		_account: &Self::AccountId,
+		identifier: &Self::FeeIdentifier,
+	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+		match *identifier {
+			PAYING => Some(
+				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 5 / 10)]
+					.try_into()
+					.expect("max distribution = 1; qed"),
+			),
+			FREE => None,
+			_ => panic!("Did not identify free or paying"),
+		}
+	}
 }
 
 #[derive(Default)]
@@ -432,12 +394,33 @@ impl ExtBuilder {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
 			balances: BalancesConfig { balances: self.balances },
+			pallet_assets: pallet_assets::GenesisConfig {
+				assets: vec![
+					// id, owner, is_sufficient, min_balance
+					(MAIN_ASSET_ID, ALICE, true, 1),
+					(LOW_LIQUIDITY_ASSET_ID, ALICE, true, 1),
+				],
+				metadata: vec![
+					// id, name, symbol, decimals
+					(MAIN_ASSET_ID, "Main Asset".into(), "MAIN".into(), 10),
+					(LOW_LIQUIDITY_ASSET_ID, "Main Asset".into(), "MAIN".into(), 10),
+				],
+				accounts: vec![
+					// id, account_id, balance
+					(MAIN_ASSET_ID, ALICE, 100),
+					(MAIN_ASSET_ID, BOB, 100),
+					(MAIN_ASSET_ID, CHARLIE, 100),
+					(MAIN_ASSET_ID, DAVE, 100),
+					(LOW_LIQUIDITY_ASSET_ID, ALICE, 1),
+				],
+				next_asset_id: None,
+			},
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext.execute_with(|| {
-			let _ = Balances::deposit_creating(&TREASURER, MockExistentialDeposit::get());
+			let _ = Balances::deposit_creating(&TOURNAMENT_TREASURY, MockExistentialDeposit::get());
 
 			if let Some(organizer) = self.organizer {
 				Organizer::<Test, ()>::put(organizer);

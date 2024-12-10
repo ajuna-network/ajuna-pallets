@@ -37,7 +37,7 @@ use sp_runtime::{
 	bounded_vec,
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
-	DispatchError, RuntimeAppPublic,
+	DispatchError,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
@@ -47,6 +47,9 @@ pub type MockAccountId = <MockAccountPublic as IdentifyAccount>::AccountId;
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 pub type MockCollectionId = u32;
+
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeAppPublic;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(

@@ -37,11 +37,4 @@ pub trait TreasuryManager {
 
 	/// Get the assigned holder of the treasury pot for the given key
 	fn get_treasurer_for(key: Self::TreasuryPotKey) -> Result<Self::AccountId, DispatchError>;
-
-	/// Deposit the given amount to the treasury pot for the given key
-	fn deposit_into(
-		depository: &Self::AccountId,
-		key: &Self::TreasuryPotKey,
-		fee: Self::Currency,
-	) -> Result<(), DispatchError>;
 }

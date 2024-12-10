@@ -22,8 +22,9 @@
 
 pub mod account_manager;
 pub mod asset_manager;
-pub mod fee_handler;
 pub mod runtime_types;
 pub mod season_manager;
 pub mod trade_manager;
 pub mod treasury_manager;
+
+pub use ajuna_fee_handler as fee_handler;

@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+ajuna-fee-handler = { workspace = true }
 # Substrate - SCALE codec
 parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
 scale-info         = { workspace = true, features = [ "derive" ] }
@@ -17,11 +18,13 @@ frame-support = { workspace = true }
 
 [features]
 std = [
+    "ajuna-fee-handler/std",
     "frame-support/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "sp-std/std",
 ]
 runtime-benchmarks = [
-    "frame-support/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"ajuna-fee-handler/runtime-benchmarks"
 ]
