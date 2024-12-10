@@ -1,3 +1,4 @@
+use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
 	traits::{
@@ -10,7 +11,6 @@ use frame_support::{
 };
 use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
-use std::{fmt::Debug, marker::PhantomData};
 
 /// Implements `WithdrawCredit`, but ensures that only whitelisted assets are withdrawn.
 pub struct WithdrawWhitelistedCredit<Whitelist, Withdraw>(PhantomData<(Whitelist, Withdraw)>);
