@@ -169,6 +169,10 @@ where
 
 					if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, affiliate_fee)
 					{
+						// We decide to continue here, because the error has nothing to do with the
+						// account sending the transaction. It would be a bad user experience if
+						// the transaction fails because we can't allocate the fees to the
+						// recipient.
 						log::error!(
 							"Could not deposit to affiliate account, it probably doesn't exist."
 						);
@@ -203,6 +207,9 @@ where
 
 				if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, tournament_credit)
 				{
+					// We decide to continue here, because the error has nothing to do with the
+					// account sending the transaction. It would be a bad user experience if
+					// the transaction fails because we can't allocate the fees to the recipient.
 					log::error!(
 						"Could not deposit to tournament account, it probably doesn't exist."
 					);
@@ -217,6 +224,9 @@ where
 
 	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
 		if let Err(_credit) = W::Assets::resolve(key, credit) {
+			// We decide to continue here, because the error has nothing to do with the
+			// account sending the transaction. It would be a bad user experience if
+			// the transaction fails because we can't allocate the fees to the recipient.
 			log::error!(
 				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
 			);
@@ -314,6 +324,10 @@ where
 					let affiliate_fee = final_fee.extract(allocation.amount);
 					if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, affiliate_fee)
 					{
+						// We decide to continue here, because the error has nothing to do with the
+						// account sending the transaction. It would be a bad user experience if
+						// the transaction fails because we can't allocate the fees to the
+						// recipient.
 						log::error!(
 							"Could not deposit to affiliate account, it probably doesn't exist."
 						);
@@ -347,6 +361,9 @@ where
 
 				if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, tournament_credit)
 				{
+					// We decide to continue here, because the error has nothing to do with the
+					// account sending the transaction. It would be a bad user experience if
+					// the transaction fails because we can't allocate the fees to the recipient.
 					log::error!(
 						"Could not deposit to tournament account, it probably doesn't exist."
 					);
@@ -361,6 +378,9 @@ where
 
 	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
 		if let Err(_credit) = W::Assets::resolve(key, credit) {
+			// We decide to continue here, because the error has nothing to do with the
+			// account sending the transaction. It would be a bad user experience if
+			// the transaction fails because we can't allocate the fees to the recipient.
 			log::error!(
 				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
 			);
