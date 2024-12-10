@@ -104,3 +104,24 @@ jobs:
         with:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  check-wasm:
+    if: ${{ !startsWith(github.head_ref, 'release/') }}
+    name: Check wasm build
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./.github/scripts/free_disk_space.sh
+      - run: sudo apt-get install -y protobuf-compiler
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-lint-
+      - run: ./scripts/run_for_all_crates.sh check --no-default-features --features runtime-benchmark --target=wasm32-unknown-unknown
