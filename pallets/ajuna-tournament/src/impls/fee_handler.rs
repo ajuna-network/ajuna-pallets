@@ -1,7 +1,6 @@
 use super::*;
 use ajuna_primitives::fee_handler::{DistributeFee, Payment};
 use sp_arithmetic::traits::{CheckedDiv, Saturating};
-use sp_std::vec;
 
 impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 	type AccountId = AccountIdFor<T>;

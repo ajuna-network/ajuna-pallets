@@ -491,7 +491,6 @@ mod native_fee_handler {
 			ExtBuilder.build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Balances::balance(&ALICE);
-				let alice_voucher_balance_before = VoucherBalances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
