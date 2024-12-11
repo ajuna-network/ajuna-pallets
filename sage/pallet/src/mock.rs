@@ -19,7 +19,8 @@ use ajuna_primitives::{
 	asset_manager::AssetInspector,
 	payment_handler::{
 		AffiliateFeeDistribution, AllowAllAssets, AssetGameFeeHandler, DistributeFee, PaymentFee,
-		WithdrawFungibles, WithdrawNative, WithdrawWhitelistedCredit,
+		VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind,
+		WithdrawWhitelistedCredit,
 	},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 	trade_manager::TradeManager,
@@ -104,8 +105,8 @@ impl pallet_assets::Config for Test {
 
 pub type NativeAndAssets =
 	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
-pub const NATIVE_PAYMENT: PaymentKind<NativeOrWithId<u32>> =
-	PaymentKind::Asset(NativeOrWithId::Native);
+pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<u32>> =
+	WithdrawKind::Payment(NativeOrWithId::Native);
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
@@ -271,7 +272,7 @@ impl
 		AssetId,
 		Asset,
 		ExampleTransitionId,
-		PaymentKind<NativeOrWithId<u32>>,
+		WithdrawKind<NativeOrWithId<u32>>,
 	> for SageBenchmarkHelper
 {
 	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
@@ -303,8 +304,22 @@ impl
 		(ExampleTransitionId::BenchTransition, asset_vec)
 	}
 
-	fn create_payment() -> PaymentKind<NativeOrWithId<u32>> {
-		PaymentKind::Asset(NativeOrWithId::Native)
+	fn create_payment() -> WithdrawKind<NativeOrWithId<u32>> {
+		WithdrawKind::Payment(NativeOrWithId::Native)
+	}
+}
+
+pub struct MockVoucherHandler;
+
+impl VoucherHandler for MockVoucherHandler {
+	type AccountId = MockAccountId;
+	type Balance = MockBalance;
+
+	fn consume_vouchers_from(
+		_account: &Self::AccountId,
+		_amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		Ok(())
 	}
 }
 
@@ -314,14 +329,14 @@ impl crate::Config for Test {
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
-		MockBalance,
 		NativeAndAssets,
-		WithdrawWhitelistedCredit<
-			AllowAllAssets<NativeOrWithId<u32>>,
-			WithdrawFungibles<NativeAndAssets, MockAccountId>,
+		WithdrawCreditOrVoucher<
+			WithdrawWhitelistedCredit<
+				AllowAllAssets<NativeOrWithId<u32>>,
+				WithdrawFungibles<NativeAndAssets, MockAccountId>,
+			>,
+			MockVoucherHandler,
 		>,
-		VoucherBalances,
-		WithdrawNative<Test, BalancesInstance1>,
 		TestAffiliatesFeeProvider,
 		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,

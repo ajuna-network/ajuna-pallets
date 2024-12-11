@@ -76,7 +76,7 @@ use crate::{types::*, weights::WeightInfo};
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	payment_handler::{FeeHandler, PaymentKind},
+	payment_handler::FeeHandler,
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
@@ -102,6 +102,7 @@ use sp_std::prelude::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use ajuna_primitives::payment_handler::WithdrawKind;
 	use pallet_ajuna_affiliates::traits::RuleExecutor;
 	use sp_std::collections::vec_deque::VecDeque;
 
@@ -160,7 +161,7 @@ pub mod pallet {
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
-			Payment = PaymentKind<()>,
+			Payment = WithdrawKind<()>,
 			Balance = BalanceOf<Self>,
 			AffiliateFeeIdentifier = AffiliateMethods,
 			TournamentFeeIdentifier = SeasonId,
@@ -743,7 +744,7 @@ pub mod pallet {
 			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
 				T::FeeHandler::withdraw_and_pay_fees(
 					&buyer,
-					PaymentKind::Asset(()),
+					WithdrawKind::Payment(()),
 					base_fee,
 					&avatar.season_id,
 					&AffiliateMethods::Buy,
@@ -752,7 +753,7 @@ pub mod pallet {
 			} else {
 				T::FeeHandler::withdraw_and_deposit_into_treasury(
 					&buyer,
-					PaymentKind::Asset(()),
+					WithdrawKind::Payment(()),
 					&Self::treasury_account_id(),
 					base_fee,
 				)?;
@@ -813,7 +814,7 @@ pub mod pallet {
 			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_upgrade {
 				T::FeeHandler::withdraw_and_pay_fees(
 					&caller,
-					PaymentKind::Asset(()),
+					WithdrawKind::Payment(()),
 					base_fee,
 					&season_id,
 					&AffiliateMethods::UpgradeStorage,
@@ -822,7 +823,7 @@ pub mod pallet {
 			} else {
 				T::FeeHandler::withdraw_and_deposit_into_treasury(
 					&caller,
-					PaymentKind::Asset(()),
+					WithdrawKind::Payment(()),
 					&Self::treasury_account_id(),
 					base_fee,
 				)?;
@@ -1331,7 +1332,7 @@ pub mod pallet {
 					{
 						T::FeeHandler::withdraw_and_pay_fees(
 							player,
-							PaymentKind::Asset(()),
+							WithdrawKind::Payment(()),
 							base_fee,
 							&season_id,
 							&AffiliateMethods::Mint,
@@ -1340,7 +1341,7 @@ pub mod pallet {
 					} else {
 						T::FeeHandler::withdraw_and_deposit_into_treasury(
 							player,
-							PaymentKind::Asset(()),
+							WithdrawKind::Payment(()),
 							&Self::treasury_account_id(),
 							base_fee,
 						)?;

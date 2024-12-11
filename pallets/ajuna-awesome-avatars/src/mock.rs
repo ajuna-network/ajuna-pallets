@@ -15,7 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
-use ajuna_primitives::payment_handler::{NativeGameFeeHandler, WithdrawNative};
+use ajuna_primitives::payment_handler::{
+	NativeGameFeeHandler, VoucherHandler, WithdrawCreditOrVoucher, WithdrawNative,
+};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
@@ -130,6 +132,20 @@ parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
+pub struct MockVoucherHandler;
+
+impl VoucherHandler for MockVoucherHandler {
+	type AccountId = MockAccountId;
+	type Balance = MockBalance;
+
+	fn consume_vouchers_from(
+		_account: &Self::AccountId,
+		_amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
+}
+
 impl pallet_ajuna_awesome_avatars::Config for Test {
 	type PalletId = AwesomeAvatarsPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -140,11 +156,8 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type TournamentHandler = Tournament;
 	type FeeHandler = NativeGameFeeHandler<
 		MockAccountId,
-		MockBalance,
 		Balances,
-		WithdrawNative<Test, ()>,
-		VoucherBalances,
-		WithdrawNative<Test, AffiliatesInstance1>,
+		WithdrawCreditOrVoucher<WithdrawNative<Test, ()>, MockVoucherHandler>,
 		Affiliates,
 		AffiliateMaxLevel,
 		Tournament,

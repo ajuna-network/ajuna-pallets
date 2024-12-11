@@ -1,10 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::traits::{fungible, fungibles, Imbalance};
+
 mod fee_handler;
 mod withdraw_credit;
 
 pub use fee_handler::*;
-use frame_support::traits::{fungible, fungibles, Imbalance};
+pub use voucher_handler::*;
 pub use withdraw_credit::*;
 
 #[cfg(test)]
@@ -60,7 +62,7 @@ where
 
 impl<AccountId, B> IntoFungibleCredit<AccountId, B> for Option<fungible::Credit<AccountId, B>>
 where
-	B: fungibles::Inspect<AccountId> + fungible::Balanced<AccountId>,
+	B: fungible::Inspect<AccountId> + fungible::Balanced<AccountId>,
 {
 	fn into_credit(self) -> fungible::Credit<AccountId, B> {
 		match self {

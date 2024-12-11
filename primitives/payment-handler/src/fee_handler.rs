@@ -305,7 +305,7 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 	// This is satisfied by the `pallet-balances`.
 	PaymentAsset:
 		fungible::Inspect<AccountId, Balance = WPA::Balance> + fungible::Balanced<AccountId>,
-	WPA: WithdrawCredit<AccountId = AccountId, AssetId = (), Assets = PaymentAsset>,
+	WPA: WithdrawCredit<AccountId = AccountId, Assets = PaymentAsset>,
 	WPA::Credit: IntoFungibleCredit<AccountId, PaymentAsset>,
 
 	Affiliate: DistributeFee<
@@ -365,7 +365,7 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 where
 	PaymentAsset:
 		fungible::Inspect<AccountId, Balance = WPA::Balance> + fungible::Balanced<AccountId>,
-	WPA: WithdrawCredit<AccountId = AccountId, AssetId = (), Assets = PaymentAsset>,
+	WPA: WithdrawCredit<AccountId = AccountId, Assets = PaymentAsset>,
 	WPA::Credit: IntoFungibleCredit<AccountId, PaymentAsset>,
 
 	Affiliate: DistributeFee<
