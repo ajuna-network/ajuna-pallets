@@ -45,7 +45,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -69,7 +69,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -93,7 +93,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -117,7 +117,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -141,7 +141,7 @@ fn upgrade_asset_inventory_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				None,
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: ALICE,
@@ -183,7 +183,7 @@ fn upgrade_asset_inventory_should_work_on_different_beneficiary() {
 				RuntimeOrigin::signed(ALICE),
 				Some(BOB),
 				None,
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::InventoryTierUpgraded {
 				account: BOB,
@@ -222,7 +222,7 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 				RuntimeOrigin::signed(ALICE),
 				None,
 				Some(SEASON_ID_1),
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 
 			assert_eq!(
@@ -240,7 +240,7 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 fn upgrade_asset_inventory_should_reject_insufficient_balance() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None, Some(NATIVE)),
+			Sage::upgrade_asset_inventory(RuntimeOrigin::signed(ALICE), None, None, NATIVE_PAYMENT),
 			Token(FundsUnavailable),
 		);
 	});
@@ -263,7 +263,7 @@ fn upgrade_asset_inventory_should_reject_fully_upgraded_storage() {
 					RuntimeOrigin::signed(ALICE),
 					None,
 					None,
-					Some(NATIVE)
+					NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::MaxStorageTierReached
 			);

@@ -15,9 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	pallet::PlayerStatsOf, AccountIdOf, Config, Error, Event, LockableFeature, Pallet,
-	PaymentAssetIdOf, PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks,
-	UnlockRule, UnlockTarget,
+	pallet::PlayerStatsOf, AccountIdOf, Config, Error, Event, LockableFeature, Pallet, PaymentOf,
+	PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget,
 };
 use ajuna_primitives::{fee_handler::FeeHandler, season_manager::SeasonManager};
 use frame_support::pallet_prelude::*;
@@ -27,18 +26,18 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		account: AccountIdOf<T>,
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
-		payment_asset_id: PaymentAssetIdOf<T, I>,
+		payment: PaymentOf<T, I>,
 	) -> DispatchResult {
-		Self::unlock(account, target, season_id, LockableFeature::TradeAsset, payment_asset_id)
+		Self::unlock(account, target, season_id, LockableFeature::TradeAsset, payment)
 	}
 
 	pub(crate) fn unlock_asset_transfer_for(
 		account: AccountIdOf<T>,
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
-		payment_asset_id: PaymentAssetIdOf<T, I>,
+		payment: PaymentOf<T, I>,
 	) -> DispatchResult {
-		Self::unlock(account, target, season_id, LockableFeature::TransferAsset, payment_asset_id)
+		Self::unlock(account, target, season_id, LockableFeature::TransferAsset, payment)
 	}
 
 	fn unlock(
@@ -46,14 +45,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
 		feature: LockableFeature,
-		payment_asset_id: PaymentAssetIdOf<T, I>,
+		payment: PaymentOf<T, I>,
 	) -> DispatchResult {
 		match target {
 			UnlockTarget::OneselfFree => Self::unlock_free(account, season_id, feature),
 			UnlockTarget::OneselfPaying =>
-				Self::unlock_paying(account.clone(), account, season_id, feature, payment_asset_id),
+				Self::unlock_paying(account.clone(), account, season_id, feature, payment),
 			UnlockTarget::OtherPaying(other) =>
-				Self::unlock_paying(account, other, season_id, feature, payment_asset_id),
+				Self::unlock_paying(account, other, season_id, feature, payment),
 		}
 	}
 
@@ -83,7 +82,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		target: AccountIdOf<T>,
 		season_id: SeasonIdOf<T, I>,
 		feature: LockableFeature,
-		payment_asset_id: PaymentAssetIdOf<T, I>,
+		payment: PaymentOf<T, I>,
 	) -> DispatchResult {
 		// first we pay
 		let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;
@@ -93,7 +92,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		};
 		T::FeeHandler::withdraw_and_deposit_into_treasury(
 			&payer,
-			payment_asset_id,
+			payment,
 			&Self::treasury_account_id(),
 			feature_fee,
 		)?;

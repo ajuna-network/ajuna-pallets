@@ -47,7 +47,8 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		Randomness: pallet_insecure_randomness_collective_flip = 2,
+		VoucherBalances: pallet_balances::<Instance1> = 2,
+		Randomness: pallet_insecure_randomness_collective_flip = 3,
 		AAvatars: pallet_ajuna_awesome_avatars = 4,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
 		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
@@ -106,6 +107,23 @@ impl pallet_balances::Config for Test {
 	type RuntimeFreezeReason = ();
 }
 
+pub(crate) type BalancesInstance1 = pallet_balances::Instance1;
+impl pallet_balances::Config<BalancesInstance1> for Test {
+	type Balance = MockBalance;
+	type DustRemoval = ();
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposit = MockExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
+}
+
 impl pallet_insecure_randomness_collective_flip::Config for Test {}
 
 parameter_types! {
@@ -120,8 +138,17 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 	type FeeChainMaxLength = AffiliateMaxLevel;
 	type AffiliateHandler = Affiliates;
 	type TournamentHandler = Tournament;
-	type FeeHandler =
-		NativeGameFeeHandler<MockAccountId, Balances, WithdrawNative<Test>, Affiliates, Tournament>;
+	type FeeHandler = NativeGameFeeHandler<
+		MockAccountId,
+		MockBalance,
+		Balances,
+		WithdrawNative<Test, ()>,
+		VoucherBalances,
+		WithdrawNative<Test, AffiliatesInstance1>,
+		Affiliates,
+		AffiliateMaxLevel,
+		Tournament,
+	>;
 	type WeightInfo = ();
 }
 

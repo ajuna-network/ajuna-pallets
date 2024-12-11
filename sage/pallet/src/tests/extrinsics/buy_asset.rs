@@ -56,7 +56,11 @@ fn buy_should_work() {
 				asset_for_sale,
 				asset_price
 			));
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale, Some(NATIVE)));
+			assert_ok!(Sage::buy_asset(
+				RuntimeOrigin::signed(ALICE),
+				asset_for_sale,
+				NATIVE_PAYMENT
+			));
 
 			// check for balance transfer
 			let price_fee = asset_price
@@ -104,7 +108,7 @@ fn buy_should_work() {
 			assert_ok!(Sage::buy_asset(
 				RuntimeOrigin::signed(CHARLIE),
 				asset_for_sale,
-				Some(NATIVE)
+				NATIVE_PAYMENT
 			));
 			assert_eq!(PlayerSeasonStats::<Test, ()>::get(CHARLIE, SEASON_ID_0).bought_amount, 1);
 			assert_eq!(PlayerSeasonStats::<Test, ()>::get(BOB, SEASON_ID_0).sold_amount, 2);
@@ -117,7 +121,7 @@ fn buy_should_work() {
 				asset_on_sale,
 				asset_price
 			));
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(DAVE), asset_on_sale, Some(NATIVE)));
+			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(DAVE), asset_on_sale, NATIVE_PAYMENT));
 			// Since the current season is SEASON_ID_0 the stat changes are applied to that season
 			// not SEASON_ID_1
 			let current_season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
@@ -159,7 +163,7 @@ fn buy_fee_should_be_calculated_correctly() {
 				.saturating_mul(season_fees_0.buy_percent as u64)
 				.saturating_div(MAX_PERCENTAGE as u64);
 			assert!(price_fee_1 > season_fees_0.buy_asset_min);
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], Some(NATIVE)));
+			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], NATIVE_PAYMENT));
 			// We check that the fees have been paid
 			assert_eq!(Balances::free_balance(BOB), initial_balance - asset_price - price_fee_1);
 			assert_eq!(Balances::free_balance(ALICE), initial_balance + asset_price);
@@ -176,7 +180,7 @@ fn buy_fee_should_be_calculated_correctly() {
 				.saturating_mul(season_fees_0.buy_percent as u64)
 				.saturating_div(MAX_PERCENTAGE as u64);
 			assert!(price_fee_2 < season_fees_0.buy_asset_min);
-			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[1], Some(NATIVE)));
+			assert_ok!(Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[1], NATIVE_PAYMENT));
 			assert_eq!(
 				Balances::free_balance(BOB),
 				initial_balance -
@@ -195,7 +199,7 @@ fn buy_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random(), Some(NATIVE)),
+			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random(), NATIVE_PAYMENT),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -205,7 +209,7 @@ fn buy_should_reject_when_trading_is_closed() {
 fn buy_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random(), Some(NATIVE)),
+			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random(), NATIVE_PAYMENT),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -216,7 +220,7 @@ fn buy_should_reject_unlisted_asset() {
 	ExtBuilder::default().build().execute_with(|| {
 		let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], Some(NATIVE)),
+			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], NATIVE_PAYMENT),
 			Error::<Test, ()>::AssetNotInTrade,
 		);
 	});
@@ -240,7 +244,7 @@ fn buy_should_reject_insufficient_balance() {
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale, Some(NATIVE)),
+				Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale, NATIVE_PAYMENT),
 				sp_runtime::TokenError::FundsUnavailable
 			);
 		});
@@ -262,7 +266,7 @@ fn buy_should_reject_when_buyer_tries_to_buy_own_asset() {
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_for_sale, Some(NATIVE)),
+				Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_for_sale, NATIVE_PAYMENT),
 				Error::<Test, ()>::AlreadyOwned
 			);
 		});

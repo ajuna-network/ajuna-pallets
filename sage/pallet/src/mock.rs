@@ -23,7 +23,8 @@ use ajuna_primitives::{
 };
 
 use ajuna_primitives::fee_handler::{
-	AllowAllAssets, DistributeFee, Payment, WithdrawFungibles, WithdrawWhitelistedCredit,
+	AffiliateFeeDistribution, AllowAllAssets, DistributeFee, Payment, PaymentKind,
+	WithdrawFungibles, WithdrawNative, WithdrawWhitelistedCredit,
 };
 use frame_support::{
 	derive_impl, parameter_types,
@@ -65,8 +66,9 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		PalletAssets: pallet_assets = 2,
-		Sage: pallet_sage = 3,
+		VoucherBalances: pallet_balances::<Instance1> = 2,
+		PalletAssets: pallet_assets = 3,
+		Sage: pallet_sage = 4,
 	}
 );
 
@@ -87,6 +89,12 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = MockExistentialDeposit;
 }
 
+pub(crate) type BalancesInstance1 = pallet_balances::Instance1;
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
+impl pallet_balances::Config<BalancesInstance1> for Test {
+	type AccountStore = System;
+}
+
 #[derive_impl(pallet_assets::config_preludes::TestDefaultConfig)]
 impl pallet_assets::Config for Test {
 	type Currency = Balances;
@@ -98,7 +106,8 @@ impl pallet_assets::Config for Test {
 
 pub type NativeAndAssets =
 	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
-pub const NATIVE: NativeOrWithId<u32> = NativeOrWithId::Native;
+pub const NATIVE_PAYMENT: PaymentKind<NativeOrWithId<u32>> =
+	PaymentKind::Asset(NativeOrWithId::Native);
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
@@ -257,8 +266,15 @@ impl AssetInspector for MockAssetMediator {
 pub struct SageBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<MockAccountId, MockSeasonId, AssetId, Asset, ExampleTransitionId>
-	for SageBenchmarkHelper
+impl
+	BenchmarkHelper<
+		MockAccountId,
+		MockSeasonId,
+		AssetId,
+		Asset,
+		ExampleTransitionId,
+		PaymentKind<NativeOrWithId<u32>>,
+	> for SageBenchmarkHelper
 {
 	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
 		use example_transition::types::Level;
@@ -288,6 +304,10 @@ impl BenchmarkHelper<MockAccountId, MockSeasonId, AssetId, Asset, ExampleTransit
 
 		(ExampleTransitionId::BenchTransition, asset_vec)
 	}
+
+	fn create_payment() -> PaymentKind<NativeOrWithId<u32>> {
+		PaymentKind::Asset(NativeOrWithId::Native)
+	}
 }
 
 impl crate::Config for Test {
@@ -296,15 +316,18 @@ impl crate::Config for Test {
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
+		MockBalance,
 		NativeAndAssets,
 		WithdrawWhitelistedCredit<
 			AllowAllAssets<NativeOrWithId<u32>>,
 			WithdrawFungibles<NativeAndAssets, MockAccountId>,
 		>,
+		VoucherBalances,
+		WithdrawNative<Test, BalancesInstance1>,
 		TestAffiliatesFeeProvider,
+		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,
 	>;
-	type PaymentAssetId = NativeOrWithId<u32>;
 	type FilterHandler = MockFilterHandler;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
@@ -315,17 +338,20 @@ impl crate::Config for Test {
 
 pub struct TestAffiliatesFeeProvider;
 
+pub type TestAffiliatesMaxDistribution = ConstU32<3>;
+
 impl DistributeFee for TestAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
 	type FeeIdentifier = AffiliateMethods<ExampleTransitionId>;
-	type MaxDistributions = ConstU32<3>;
+	type FeeDistribution =
+		AffiliateFeeDistribution<Self::AccountId, Self::Balance, TestAffiliatesMaxDistribution>;
 
 	fn distribute_fee(
 		_base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+	) -> Option<Self::FeeDistribution> {
 		match identifier {
 			AffiliateMethods::UpgradeAssetInventory => None,
 			AffiliateMethods::TradeAsset => None,
@@ -348,19 +374,15 @@ impl DistributeFee for TestTournamentFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
 	type FeeIdentifier = MockSeasonId;
-	type MaxDistributions = ConstU32<1>;
+	type FeeDistribution = Payment<Self::AccountId, Self::Balance>;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+	) -> Option<Self::FeeDistribution> {
 		match *identifier {
-			PAYING => Some(
-				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 5 / 10)]
-					.try_into()
-					.expect("max distribution = 1; qed"),
-			),
+			PAYING => Some(Payment::new(TOURNAMENT_TREASURY, base_fee * 5 / 10)),
 			FREE => None,
 			_ => panic!("Did not identify free or paying"),
 		}
@@ -372,6 +394,7 @@ pub struct ExtBuilder {
 	organizer: Option<MockAccountId>,
 	locks: Vec<(MockAccountId, MockSeasonId, Locks)>,
 	balances: Vec<(MockAccountId, MockBalance)>,
+	vouchers: Vec<(MockAccountId, MockBalance)>,
 }
 
 impl ExtBuilder {
@@ -390,10 +413,16 @@ impl ExtBuilder {
 		self
 	}
 
+	pub fn vouchers(mut self, vouchers: &[(MockAccountId, MockBalance)]) -> Self {
+		self.vouchers = vouchers.to_vec();
+		self
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
 			balances: BalancesConfig { balances: self.balances },
+			voucher_balances: VoucherBalancesConfig { balances: self.vouchers },
 			pallet_assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance

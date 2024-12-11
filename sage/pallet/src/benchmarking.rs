@@ -77,7 +77,8 @@ benchmarks! {
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		let in_season = Some(season_id.clone());
-	}: _(RawOrigin::Signed(acc_1), Some(acc_2.clone()), in_season, None)
+		let payment = T::BenchmarkHelper::create_payment();
+	}: _(RawOrigin::Signed(acc_1), Some(acc_2.clone()), in_season, payment)
 	verify {
 		assert_last_event::<T, ()>(Event::InventoryTierUpgraded {
 			account: acc_2,
@@ -120,7 +121,8 @@ benchmarks! {
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 2);
-	}: _(RawOrigin::Signed(acc_1.clone()), acc_2.clone(), asset_id.clone(), None)
+		let payment = T::BenchmarkHelper::create_payment();
+	}: _(RawOrigin::Signed(acc_1.clone()), acc_2.clone(), asset_id.clone(), payment)
 	verify {
 		assert_last_event::<T, ()>(Event::AssetTransferred {
 			from: acc_1,
@@ -165,7 +167,8 @@ benchmarks! {
 		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let price = BalanceOf::<T, ()>::from(45_242_u32);
 		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, price);
-	}: _(RawOrigin::Signed(acc_2.clone()), asset_id.clone(), None)
+		let payment = T::BenchmarkHelper::create_payment();
+	}: _(RawOrigin::Signed(acc_2.clone()), asset_id.clone(), payment)
 	verify {
 		assert_last_event::<T, ()>(Event::AssetTraded {
 			asset_id,
@@ -213,7 +216,8 @@ benchmarks! {
 		let feature = LockableFeature::TradeAsset;
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
-	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone(), None)
+		let payment = T::BenchmarkHelper::create_payment();
+	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone(), payment)
 	verify {
 		assert_last_event::<T, ()>(Event::FeatureUnlocked {
 			feature,
@@ -228,7 +232,8 @@ benchmarks! {
 		let feature = LockableFeature::TransferAsset;
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
-	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone(), None)
+		let payment = T::BenchmarkHelper::create_payment();
+	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone(), payment)
 	verify {
 		assert_last_event::<T, ()>(Event::FeatureUnlocked {
 			feature,
@@ -243,7 +248,8 @@ benchmarks! {
 			.expect("Should get current season");
 		let (transition_id, asset_ids) = T::BenchmarkHelper::create_bench_transition_for(&acc_1, &season_id, 99);
 		let extra = ExtraOf::<T, ()>::default();
-	}: _(RawOrigin::Signed(acc_1.clone()), transition_id.clone(), asset_ids, extra, None)
+		let payment = T::BenchmarkHelper::create_payment();
+	}: _(RawOrigin::Signed(acc_1.clone()), transition_id.clone(), asset_ids, extra, payment)
 	verify {
 		assert_last_event::<T, ()>(Event::TransitionExecuted {
 			account: acc_1,

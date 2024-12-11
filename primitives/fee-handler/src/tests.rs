@@ -2,8 +2,9 @@ use crate::{
 	fee_handler::FeeHandler,
 	mock::{
 		AffiliateFeeId, Assets, Balances, ExtBuilder, TestAssetFeeHandler, TestNativeFeeHandler,
-		TournamentFeeId, ALICE, BOB, CHARLIE, DAVE, FERDIE, NOT_WHITE_LISTED_ASSET_ID,
-		TOURNAMENT_TREASURY, WHITELISTED_ASSET_ID,
+		TournamentFeeId, ALICE, BOB, CHARLIE, DAVE, FERDIE, NATIVE_ASSET_PAYMENT,
+		NOT_WHITELISTED_ASSET_ID_PAYMENT, NOT_WHITE_LISTED_ASSET_ID, TOURNAMENT_TREASURY,
+		WHITELISTED_ASSET_ID, WHITELISTED_ASSET_ID_PAYMENT,
 	},
 };
 use frame_support::assert_noop;
@@ -24,7 +25,7 @@ mod asset_fee_handler {
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Free,
@@ -49,7 +50,7 @@ mod asset_fee_handler {
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Free,
@@ -97,7 +98,7 @@ mod asset_fee_handler {
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Paying,
@@ -140,7 +141,7 @@ mod asset_fee_handler {
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Paying,
@@ -189,14 +190,14 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						WHITELISTED_ASSET_ID,
+						WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
 						&fee_beneficiary,
 					),
 					DispatchError::Module(ModuleError {
-						index: 2,
+						index: 3,
 						error: [0, 0, 0, 0],
 						message: Some("BalanceLow")
 					})
@@ -216,7 +217,7 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						NOT_WHITE_LISTED_ASSET_ID,
+						NOT_WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -242,7 +243,7 @@ mod asset_fee_handler {
 
 				TestAssetFeeHandler::withdraw_and_deposit_into_treasury(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					&fee_beneficiary,
 					fee,
 				)
@@ -266,14 +267,14 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						WHITELISTED_ASSET_ID,
+						WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
 						&fee_beneficiary,
 					),
 					DispatchError::Module(ModuleError {
-						index: 2,
+						index: 3,
 						error: [0, 0, 0, 0],
 						message: Some("BalanceLow")
 					})
@@ -293,7 +294,7 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						NOT_WHITE_LISTED_ASSET_ID,
+						NOT_WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -324,7 +325,7 @@ mod native_fee_handler {
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Free,
@@ -346,7 +347,7 @@ mod native_fee_handler {
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Free,
@@ -384,7 +385,7 @@ mod native_fee_handler {
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Paying,
@@ -424,7 +425,7 @@ mod native_fee_handler {
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Paying,
@@ -467,7 +468,7 @@ mod native_fee_handler {
 				assert_noop!(
 					TestNativeFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						(),
+						NATIVE_ASSET_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -483,17 +484,19 @@ mod native_fee_handler {
 
 	mod withdraw_and_deposit_into_treasury {
 		use super::*;
+		use crate::mock::VoucherBalances;
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_works() {
 			ExtBuilder.build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Balances::balance(&ALICE);
+				let alice_voucher_balance_before = VoucherBalances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					&fee_beneficiary,
 					fee,
 				)
@@ -514,7 +517,7 @@ mod native_fee_handler {
 				assert_noop!(
 					TestNativeFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						(),
+						NATIVE_ASSET_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,

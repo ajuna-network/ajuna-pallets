@@ -17,12 +17,12 @@
 use crate::{
 	fee_handler::{AssetGameFeeHandler, DistributeFee, Payment},
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawWhitelistedCredit},
-	NativeGameFeeHandler, WithdrawAsset, WithdrawNative,
+	AffiliateFeeDistribution, NativeGameFeeHandler, PaymentKind, TournamentFeeDistribution,
+	WithdrawAsset, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
 	traits::{AsEnsureOriginWithArg, ConstU32},
-	BoundedVec,
 };
 use sp_runtime::{
 	testing::TestSignature,
@@ -46,14 +46,20 @@ pub const FERDIE: AccountId = 5;
 pub const TOURNAMENT_TREASURY: AccountId = 431;
 
 pub const WHITELISTED_ASSET_ID: AssetId = 888;
+pub const WHITELISTED_ASSET_ID_PAYMENT: PaymentKind<AssetId> =
+	PaymentKind::Asset(WHITELISTED_ASSET_ID);
 pub const NOT_WHITE_LISTED_ASSET_ID: AssetId = 999;
+pub const NOT_WHITELISTED_ASSET_ID_PAYMENT: PaymentKind<AssetId> =
+	PaymentKind::Asset(NOT_WHITE_LISTED_ASSET_ID);
+pub const NATIVE_ASSET_PAYMENT: PaymentKind<()> = PaymentKind::Asset(());
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		Assets: pallet_assets = 2,
+		VoucherBalances: pallet_balances::<Instance1> = 2,
+		Assets: pallet_assets = 3,
 	}
 );
 
@@ -66,6 +72,12 @@ impl frame_system::Config for Test {
 
 #[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
 impl pallet_balances::Config for Test {
+	type AccountStore = System;
+}
+
+pub(crate) type BalancesInstance1 = pallet_balances::Instance1;
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
+impl pallet_balances::Config<BalancesInstance1> for Test {
 	type AccountStore = System;
 }
 
@@ -82,6 +94,8 @@ impl pallet_assets::Config for Test {
 
 pub struct TestAffiliatesFeeProvider;
 
+pub type TestAffiliatesMaxDistribution = ConstU32<3>;
+
 pub enum AffiliateFeeId {
 	Paying,
 	Free,
@@ -91,13 +105,14 @@ impl DistributeFee for TestAffiliatesFeeProvider {
 	type AccountId = AccountId;
 	type Balance = Balance;
 	type FeeIdentifier = AffiliateFeeId;
-	type MaxDistributions = ConstU32<3>;
+	type FeeDistribution =
+		AffiliateFeeDistribution<Self::AccountId, Self::Balance, TestAffiliatesMaxDistribution>;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+	) -> Option<Self::FeeDistribution> {
 		match identifier {
 			AffiliateFeeId::Paying => Some(
 				vec![
@@ -124,19 +139,15 @@ impl DistributeFee for TestTournamentFeeProvider {
 	type AccountId = AccountId;
 	type Balance = Balance;
 	type FeeIdentifier = TournamentFeeId;
-	type MaxDistributions = ConstU32<1>;
+	type FeeDistribution = TournamentFeeDistribution<Self::AccountId, Self::Balance>;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+	) -> Option<Self::FeeDistribution> {
 		match identifier {
-			TournamentFeeId::Paying => Some(
-				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)]
-					.try_into()
-					.expect("max distribution = 1; qed"),
-			),
+			TournamentFeeId::Paying => Some(Payment::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)),
 			TournamentFeeId::Free => None,
 		}
 	}
@@ -144,17 +155,25 @@ impl DistributeFee for TestTournamentFeeProvider {
 
 pub type TestAssetFeeHandler = AssetGameFeeHandler<
 	AccountId,
+	Balance,
 	Assets,
 	WithdrawWhitelistedAssets,
+	VoucherBalances,
+	WithdrawNative<Test, BalancesInstance1>,
 	TestAffiliatesFeeProvider,
+	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
 >;
 
 pub type TestNativeFeeHandler = NativeGameFeeHandler<
 	AccountId,
+	Balance,
 	Balances,
-	WithdrawNative<Test>,
+	WithdrawNative<Test, ()>,
+	VoucherBalances,
+	WithdrawNative<Test, BalancesInstance1>,
 	TestAffiliatesFeeProvider,
+	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
 >;
 
@@ -182,7 +201,10 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: pallet_balances::GenesisConfig { balances: vec![(ALICE, 100)] },
+			balances: pallet_balances::GenesisConfig::<Test, ()> { balances: vec![(ALICE, 100)] },
+			voucher_balances: pallet_balances::GenesisConfig::<Test, BalancesInstance1> {
+				balances: vec![(ALICE, 5)],
+			},
 			assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance

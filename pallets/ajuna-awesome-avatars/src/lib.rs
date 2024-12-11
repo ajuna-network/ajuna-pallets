@@ -76,7 +76,7 @@ use crate::{types::*, weights::WeightInfo};
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	fee_handler::FeeHandler,
+	fee_handler::{FeeHandler, PaymentKind},
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
@@ -160,8 +160,8 @@ pub mod pallet {
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
+			Payment = PaymentKind<()>,
 			Balance = BalanceOf<Self>,
-			AssetId = (),
 			AffiliateFeeIdentifier = AffiliateMethods,
 			TournamentFeeIdentifier = SeasonId,
 		>;
@@ -743,7 +743,7 @@ pub mod pallet {
 			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_buy {
 				T::FeeHandler::withdraw_and_pay_fees(
 					&buyer,
-					(),
+					PaymentKind::Asset(()),
 					base_fee,
 					&avatar.season_id,
 					&AffiliateMethods::Buy,
@@ -752,7 +752,7 @@ pub mod pallet {
 			} else {
 				T::FeeHandler::withdraw_and_deposit_into_treasury(
 					&buyer,
-					(),
+					PaymentKind::Asset(()),
 					&Self::treasury_account_id(),
 					base_fee,
 				)?;
@@ -813,7 +813,7 @@ pub mod pallet {
 			if affiliate_config.mode == AffiliateMode::Open && affiliate_config.enabled_in_upgrade {
 				T::FeeHandler::withdraw_and_pay_fees(
 					&caller,
-					(),
+					PaymentKind::Asset(()),
 					base_fee,
 					&season_id,
 					&AffiliateMethods::UpgradeStorage,
@@ -822,7 +822,7 @@ pub mod pallet {
 			} else {
 				T::FeeHandler::withdraw_and_deposit_into_treasury(
 					&caller,
-					(),
+					PaymentKind::Asset(()),
 					&Self::treasury_account_id(),
 					base_fee,
 				)?;
@@ -1331,7 +1331,7 @@ pub mod pallet {
 					{
 						T::FeeHandler::withdraw_and_pay_fees(
 							player,
-							(),
+							PaymentKind::Asset(()),
 							base_fee,
 							&season_id,
 							&AffiliateMethods::Mint,
@@ -1340,7 +1340,7 @@ pub mod pallet {
 					} else {
 						T::FeeHandler::withdraw_and_deposit_into_treasury(
 							player,
-							(),
+							PaymentKind::Asset(()),
 							&Self::treasury_account_id(),
 							base_fee,
 						)?;
