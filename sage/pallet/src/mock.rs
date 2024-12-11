@@ -17,14 +17,12 @@
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	asset_manager::AssetInspector,
-	fee_handler::AssetGameFeeHandler,
+	payment_handler::{
+		AffiliateFeeDistribution, AllowAllAssets, AssetGameFeeHandler, DistributeFee, PaymentFee,
+		WithdrawFungibles, WithdrawNative, WithdrawWhitelistedCredit,
+	},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 	trade_manager::TradeManager,
-};
-
-use ajuna_primitives::fee_handler::{
-	AffiliateFeeDistribution, AllowAllAssets, DistributeFee, Payment, PaymentKind,
-	WithdrawFungibles, WithdrawNative, WithdrawWhitelistedCredit,
 };
 use frame_support::{
 	derive_impl, parameter_types,
@@ -374,7 +372,7 @@ impl DistributeFee for TestTournamentFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
 	type FeeIdentifier = MockSeasonId;
-	type FeeDistribution = Payment<Self::AccountId, Self::Balance>;
+	type FeeDistribution = PaymentFee<Self::AccountId, Self::Balance>;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
@@ -382,7 +380,7 @@ impl DistributeFee for TestTournamentFeeProvider {
 		identifier: &Self::FeeIdentifier,
 	) -> Option<Self::FeeDistribution> {
 		match *identifier {
-			PAYING => Some(Payment::new(TOURNAMENT_TREASURY, base_fee * 5 / 10)),
+			PAYING => Some(PaymentFee::new(TOURNAMENT_TREASURY, base_fee * 5 / 10)),
 			FREE => None,
 			_ => panic!("Did not identify free or paying"),
 		}

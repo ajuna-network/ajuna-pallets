@@ -1,12 +1,13 @@
+use crate::voucher_handler::VoucherHandler;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
-	pallet_prelude::DispatchError,
+	pallet_prelude::{DispatchError, Encode},
 	traits::{
 		fungible,
-		fungible::Balanced,
+		fungible::Balanced as AssetBalanced,
 		fungibles,
-		fungibles::{Balanced as AssetsBalanced, Credit},
-		tokens::{Balance, Fortitude, Precision, Preservation},
+		fungibles::Balanced as AssetsBalanced,
+		tokens::{Balance as TokenBalance, Fortitude, Precision, Preservation},
 	},
 };
 use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
@@ -61,7 +62,7 @@ pub trait WithdrawCredit {
 	type AssetId: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
 
 	type Assets;
-	type Balance: Balance;
+	type Balance: TokenBalance;
 
 	type Credit;
 
@@ -111,7 +112,7 @@ impl<T: pallet_assets::Config + frame_system::Config> WithdrawCredit for Withdra
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError> {
+	) -> Result<Self::Credit, DispatchError> {
 		let asset_fee_credit = Self::Assets::withdraw(
 			asset_id.clone(),
 			who,
@@ -141,7 +142,7 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Credit<Self::AccountId, Self::Assets>, DispatchError> {
+	) -> Result<Self::Credit, DispatchError> {
 		let asset_fee_credit = Self::Assets::withdraw(
 			asset_id.clone(),
 			who,
@@ -152,5 +153,39 @@ where
 		)?;
 
 		Ok(asset_fee_credit)
+	}
+}
+
+#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo)]
+pub enum WithdrawKind<AssetId> {
+	Payment(AssetId),
+	Voucher,
+}
+
+pub struct WithdrawCreditOrVoucher<W, V>(PhantomData<(W, V)>);
+
+impl<AccountId, Balance, W, V> WithdrawCredit for WithdrawCreditOrVoucher<W, V>
+where
+	Balance: TokenBalance,
+	W: WithdrawCredit<AccountId = AccountId, Balance = Balance>,
+	W::AssetId: 'static,
+	V: VoucherHandler<AccountId = AccountId, Balance = Balance>,
+{
+	type AccountId = AccountId;
+	type AssetId = WithdrawKind<W::AssetId>;
+	type Assets = W::Assets;
+	type Balance = Balance;
+	type Credit = Option<W::Credit>;
+
+	fn withdraw_credit(
+		who: &Self::AccountId,
+		asset_id: Self::AssetId,
+		credit: Self::Balance,
+	) -> Result<Self::Credit, DispatchError> {
+		match asset_id {
+			WithdrawKind::Payment(payment_asset_id) =>
+				W::withdraw_credit(who, payment_asset_id, credit).map(Some),
+			WithdrawKind::Voucher => V::consume_vouchers_from(who, credit).map(|_| None),
+		}
 	}
 }

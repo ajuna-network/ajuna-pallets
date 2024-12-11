@@ -1,5 +1,5 @@
 use super::*;
-use ajuna_primitives::fee_handler::{AffiliateFeeDistribution, DistributeFee, Payment};
+use ajuna_primitives::payment_handler::{AffiliateFeeDistribution, DistributeFee, PaymentFee};
 use frame_support::traits::Defensive;
 use sp_runtime::{traits::CheckedDiv, Saturating};
 
@@ -26,7 +26,7 @@ impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 							.unwrap_or_default()
 					})
 					.zip(chain)
-					.map(|(fee, account)| Payment::new(account, fee))
+					.map(|(fee, account)| PaymentFee::new(account, fee))
 					.collect();
 
 				Some(payments.try_into().defensive_unwrap_or_default())

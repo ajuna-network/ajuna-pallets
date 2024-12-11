@@ -60,7 +60,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ajuna-fee-handler"
+name = "ajuna-payment-handler"
 version = "0.15.0"
 dependencies = [
  "frame-support",
@@ -78,7 +78,7 @@ dependencies = [
 name = "ajuna-primitives"
 version = "0.15.0"
 dependencies = [
- "ajuna-fee-handler",
+ "ajuna-payment-handler",
  "frame-support",
  "parity-scale-codec",
  "scale-info",

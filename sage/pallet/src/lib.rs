@@ -36,7 +36,7 @@ mod tests;
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	fee_handler::FeeHandler,
+	payment_handler::FeeHandler,
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
 };

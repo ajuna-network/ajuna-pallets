@@ -27,4 +27,4 @@ pub mod season_manager;
 pub mod trade_manager;
 pub mod treasury_manager;
 
-pub use ajuna_fee_handler as fee_handler;
+pub use ajuna_payment_handler as payment_handler;

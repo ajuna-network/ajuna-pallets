@@ -15,10 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	fee_handler::{AssetGameFeeHandler, DistributeFee, Payment},
+	fee_handler::{AssetGameFeeHandler, DistributeFee, PaymentFee},
+	voucher_handler::VoucherHandler,
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawWhitelistedCredit},
-	AffiliateFeeDistribution, NativeGameFeeHandler, PaymentKind, TournamentFeeDistribution,
-	WithdrawAsset, WithdrawNative,
+	AffiliateFeeDistribution, NativeGameFeeHandler, TournamentFeeDistribution, WithdrawAsset,
+	WithdrawCreditOrVoucher, WithdrawKind, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
@@ -46,12 +47,12 @@ pub const FERDIE: AccountId = 5;
 pub const TOURNAMENT_TREASURY: AccountId = 431;
 
 pub const WHITELISTED_ASSET_ID: AssetId = 888;
-pub const WHITELISTED_ASSET_ID_PAYMENT: PaymentKind<AssetId> =
-	PaymentKind::Asset(WHITELISTED_ASSET_ID);
+pub const WHITELISTED_ASSET_ID_PAYMENT: WithdrawKind<AssetId> =
+	WithdrawKind::Payment(WHITELISTED_ASSET_ID);
 pub const NOT_WHITE_LISTED_ASSET_ID: AssetId = 999;
-pub const NOT_WHITELISTED_ASSET_ID_PAYMENT: PaymentKind<AssetId> =
-	PaymentKind::Asset(NOT_WHITE_LISTED_ASSET_ID);
-pub const NATIVE_ASSET_PAYMENT: PaymentKind<()> = PaymentKind::Asset(());
+pub const NOT_WHITELISTED_ASSET_ID_PAYMENT: WithdrawKind<AssetId> =
+	WithdrawKind::Payment(NOT_WHITE_LISTED_ASSET_ID);
+pub const NATIVE_ASSET_PAYMENT: WithdrawKind<()> = WithdrawKind::Payment(());
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -116,9 +117,9 @@ impl DistributeFee for TestAffiliatesFeeProvider {
 		match identifier {
 			AffiliateFeeId::Paying => Some(
 				vec![
-					Payment::new(BOB, base_fee * 4 / 20),
-					Payment::new(CHARLIE, base_fee * 3 / 20),
-					Payment::new(DAVE, base_fee * 2 / 20),
+					PaymentFee::new(BOB, base_fee * 4 / 20),
+					PaymentFee::new(CHARLIE, base_fee * 3 / 20),
+					PaymentFee::new(DAVE, base_fee * 2 / 20),
 				]
 				.try_into()
 				.expect("max distributions = 3; qed"),
@@ -147,19 +148,31 @@ impl DistributeFee for TestTournamentFeeProvider {
 		identifier: &Self::FeeIdentifier,
 	) -> Option<Self::FeeDistribution> {
 		match identifier {
-			TournamentFeeId::Paying => Some(Payment::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)),
+			TournamentFeeId::Paying =>
+				Some(PaymentFee::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)),
 			TournamentFeeId::Free => None,
 		}
 	}
 }
 
+pub struct MockVoucherHandler;
+
+impl VoucherHandler for MockVoucherHandler {
+	type AccountId = AccountId;
+	type Balance = Balance;
+
+	fn consume_vouchers_from(
+		_account: &Self::AccountId,
+		_amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
+}
+
 pub type TestAssetFeeHandler = AssetGameFeeHandler<
 	AccountId,
-	Balance,
 	Assets,
-	WithdrawWhitelistedAssets,
-	VoucherBalances,
-	WithdrawNative<Test, BalancesInstance1>,
+	WithdrawCreditOrVoucher<WithdrawWhitelistedAssets, MockVoucherHandler>,
 	TestAffiliatesFeeProvider,
 	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
@@ -167,11 +180,8 @@ pub type TestAssetFeeHandler = AssetGameFeeHandler<
 
 pub type TestNativeFeeHandler = NativeGameFeeHandler<
 	AccountId,
-	Balance,
 	Balances,
-	WithdrawNative<Test, ()>,
-	VoucherBalances,
-	WithdrawNative<Test, BalancesInstance1>,
+	WithdrawCreditOrVoucher<WithdrawNative<Test, ()>, MockVoucherHandler>,
 	TestAffiliatesFeeProvider,
 	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,

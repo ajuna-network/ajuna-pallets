@@ -76,7 +76,7 @@ use crate::{types::*, weights::WeightInfo};
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	fee_handler::{FeeHandler, PaymentKind},
+	payment_handler::{FeeHandler, PaymentKind},
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{

@@ -18,7 +18,7 @@
 
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
-	fee_handler::{NativeGameFeeHandler, WithdrawNative},
+	payment_handler::{NativeGameFeeHandler, WithdrawNative},
 };
 use frame_support::{
 	parameter_types,

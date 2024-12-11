@@ -1,12 +1,12 @@
 use super::*;
-use ajuna_primitives::fee_handler::{DistributeFee, Payment};
+use ajuna_primitives::payment_handler::{DistributeFee, PaymentFee};
 use sp_arithmetic::traits::{CheckedDiv, Saturating};
 
 impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 	type AccountId = AccountIdFor<T>;
 	type Balance = BalanceOf<T, I>;
 	type FeeIdentifier = TournamentCategoryIdFor<T, I>;
-	type FeeDistribution = Payment<Self::AccountId, Self::Balance>;
+	type FeeDistribution = PaymentFee<Self::AccountId, Self::Balance>;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
@@ -29,7 +29,7 @@ impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 					.checked_div(&100_u32.into())
 					.unwrap_or_default();
 
-				Some(Payment::new(tournament_account, tournament_fee))
+				Some(PaymentFee::new(tournament_account, tournament_fee))
 			},
 			_ => None,
 		}
