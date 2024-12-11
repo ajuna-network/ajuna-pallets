@@ -484,7 +484,6 @@ mod native_fee_handler {
 
 	mod withdraw_and_deposit_into_treasury {
 		use super::*;
-		use crate::mock::VoucherBalances;
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_works() {
