@@ -3,10 +3,8 @@ use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::{DispatchError, Encode},
 	traits::{
-		fungible,
-		fungible::Balanced,
-		fungibles,
-		fungibles::Balanced as AssetsBalanced,
+		fungible, fungibles,
+		fungibles::Balanced,
 		tokens::{Balance, Fortitude, Precision, Preservation},
 	},
 };
@@ -73,29 +71,24 @@ pub trait WithdrawCredit {
 	) -> Result<Self::Credit, DispatchError>;
 }
 
-pub struct WithdrawNative<T, I>(PhantomData<(T, I)>);
+pub struct WithdrawNative<AccountId, T>(PhantomData<(AccountId, T)>);
 
-impl<T: pallet_balances::Config<I> + frame_system::Config, I: 'static> WithdrawCredit
-	for WithdrawNative<T, I>
+impl<AccountId, T> WithdrawCredit for WithdrawNative<AccountId, T>
+where
+	T: fungible::Balanced<AccountId>,
 {
-	type AccountId = T::AccountId;
+	type AccountId = AccountId;
 	type AssetId = ();
-	type Assets = pallet_balances::Pallet<T, I>;
+	type Assets = T;
 	type Balance = T::Balance;
-	type Credit = fungible::Credit<Self::AccountId, pallet_balances::Pallet<T, I>>;
+	type Credit = fungible::Credit<AccountId, T>;
 
 	fn withdraw_credit(
 		who: &Self::AccountId,
 		_: Self::AssetId,
 		credit: Self::Balance,
 	) -> Result<Self::Credit, DispatchError> {
-		pallet_balances::Pallet::<T, I>::withdraw(
-			who,
-			credit,
-			Precision::Exact,
-			Preservation::Preserve,
-			Fortitude::Polite,
-		)
+		T::withdraw(who, credit, Precision::Exact, Preservation::Preserve, Fortitude::Polite)
 	}
 }
 

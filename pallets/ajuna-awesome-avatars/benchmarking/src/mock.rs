@@ -18,9 +18,7 @@
 
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
-	payment_handler::{
-		NativeGameFeeHandler, VoucherHandler, WithdrawCreditOrVoucher, WithdrawNative,
-	},
+	payment_handler::{NativeGameFeeHandler, WithdrawNative},
 };
 use frame_support::{
 	parameter_types,
@@ -135,20 +133,6 @@ parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
-pub struct MockVoucherHandler;
-
-impl VoucherHandler for MockVoucherHandler {
-	type AccountId = MockAccountId;
-	type Balance = MockBalance;
-
-	fn consume_vouchers_from(
-		_account: &Self::AccountId,
-		_amount: Self::Balance,
-	) -> Result<(), DispatchError> {
-		Ok(())
-	}
-}
-
 impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type PalletId = AwesomeAvatarsPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -160,7 +144,7 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type FeeHandler = NativeGameFeeHandler<
 		MockAccountId,
 		Balances,
-		WithdrawCreditOrVoucher<WithdrawNative<Runtime, ()>, MockVoucherHandler>,
+		WithdrawNative<MockAccountId, Balances>,
 		Affiliates,
 		AffiliateMaxLevel,
 		Tournament,

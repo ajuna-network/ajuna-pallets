@@ -187,7 +187,7 @@ pub type TestAssetFeeHandler = AssetGameFeeHandler<
 pub type TestNativeFeeHandler = NativeGameFeeHandler<
 	AccountId,
 	Balances,
-	WithdrawCreditOrVoucher<WithdrawNative<Test, ()>, MockVoucherHandler>,
+	WithdrawCreditOrVoucher<WithdrawNative<AccountId, Balances>, MockVoucherHandler>,
 	TestAffiliatesFeeProvider,
 	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
