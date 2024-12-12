@@ -1,4 +1,5 @@
-use crate::{withdraw_credit::WithdrawCredit, IntoFungibleCredit, IntoFungiblesCredit};
+use crate::withdraw_credit::WithdrawCredit;
+
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
@@ -111,8 +112,11 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 	// `NativeAndAssets` struct.
 	PaymentAssets:
 		fungibles::Inspect<AccountId, Balance = WPA::Balance> + fungibles::Balanced<AccountId>,
-	WPA: WithdrawCredit<AccountId = AccountId, Assets = PaymentAssets>,
-	WPA::Credit: IntoFungiblesCredit<AccountId, PaymentAssets>,
+	WPA: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = PaymentAssets,
+		Credit = fungibles::Credit<AccountId, PaymentAssets>,
+	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,
@@ -144,15 +148,17 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		let fee_credit = WPA::withdraw_credit(payer, payment.clone(), base_fee)?.into_credit();
+		if let Some(fee_credit) = WPA::withdraw_credit(payer, payment.clone(), base_fee)? {
+			let remaining_credit =
+				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
-		let remaining_credit =
-			Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
+			let remaining_credit2 =
+				Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
 
-		let remaining_credit2 =
-			Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
-
-		Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+			Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+		} else {
+			Ok(())
+		}
 	}
 
 	fn withdraw_and_deposit_into_treasury(
@@ -161,8 +167,11 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		let credit = WPA::withdraw_credit(who, payment, amount)?.into_credit();
-		Self::deposit_into_treasury(treasury_pot, credit)
+		if let Some(credit) = WPA::withdraw_credit(who, payment, amount)? {
+			Self::deposit_into_treasury(treasury_pot, credit)
+		} else {
+			Ok(())
+		}
 	}
 }
 
@@ -171,8 +180,11 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 where
 	PaymentAssets:
 		fungibles::Inspect<AccountId, Balance = WPA::Balance> + fungibles::Balanced<AccountId>,
-	WPA: WithdrawCredit<AccountId = AccountId, Assets = PaymentAssets>,
-	WPA::Credit: IntoFungiblesCredit<AccountId, PaymentAssets>,
+	WPA: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = PaymentAssets,
+		Credit = fungibles::Credit<AccountId, PaymentAssets>,
+	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,
@@ -305,8 +317,11 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 	// This is satisfied by the `pallet-balances`.
 	PaymentAsset:
 		fungible::Inspect<AccountId, Balance = WPA::Balance> + fungible::Balanced<AccountId>,
-	WPA: WithdrawCredit<AccountId = AccountId, Assets = PaymentAsset>,
-	WPA::Credit: IntoFungibleCredit<AccountId, PaymentAsset>,
+	WPA: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = PaymentAsset,
+		Credit = fungible::Credit<AccountId, PaymentAsset>,
+	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,
@@ -338,15 +353,17 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		let fee_credit = WPA::withdraw_credit(payer, payment, base_fee)?.into_credit();
+		if let Some(fee_credit) = WPA::withdraw_credit(payer, payment, base_fee)? {
+			let remaining_credit =
+				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
-		let remaining_credit =
-			Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
+			let remaining_credit2 =
+				Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
 
-		let remaining_credit2 =
-			Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
-
-		Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+			Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+		} else {
+			Ok(())
+		}
 	}
 
 	fn withdraw_and_deposit_into_treasury(
@@ -355,8 +372,11 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		let credit = WPA::withdraw_credit(who, payment, amount)?.into_credit();
-		Self::deposit_into_treasury(treasury_pot, credit)
+		if let Some(credit) = WPA::withdraw_credit(who, payment, amount)? {
+			Self::deposit_into_treasury(treasury_pot, credit)
+		} else {
+			Ok(())
+		}
 	}
 }
 
@@ -365,8 +385,11 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 where
 	PaymentAsset:
 		fungible::Inspect<AccountId, Balance = WPA::Balance> + fungible::Balanced<AccountId>,
-	WPA: WithdrawCredit<AccountId = AccountId, Assets = PaymentAsset>,
-	WPA::Credit: IntoFungibleCredit<AccountId, PaymentAsset>,
+	WPA: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = PaymentAsset,
+		Credit = fungible::Credit<AccountId, PaymentAsset>,
+	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,

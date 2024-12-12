@@ -4,7 +4,6 @@ use frame_support::{
 	pallet_prelude::{DispatchError, Encode},
 	traits::{
 		fungible, fungibles,
-		fungibles::Balanced,
 		tokens::{Balance, Fortitude, Precision, Preservation},
 	},
 };
@@ -43,7 +42,7 @@ impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: W
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Self::Credit, DispatchError> {
+	) -> Result<Option<Self::Credit>, DispatchError> {
 		Whitelist::ensure_whitelisted(&asset_id)?;
 		Withdraw::withdraw_credit(who, asset_id, credit)
 	}
@@ -68,7 +67,7 @@ pub trait WithdrawCredit {
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Self::Credit, DispatchError>;
+	) -> Result<Option<Self::Credit>, DispatchError>;
 }
 
 pub struct WithdrawNative<AccountId, T>(PhantomData<(AccountId, T)>);
@@ -87,43 +86,23 @@ where
 		who: &Self::AccountId,
 		_: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Self::Credit, DispatchError> {
-		T::withdraw(who, credit, Precision::Exact, Preservation::Preserve, Fortitude::Polite)
-	}
-}
-
-pub struct WithdrawAsset<T>(PhantomData<T>);
-
-impl<T: pallet_assets::Config + frame_system::Config> WithdrawCredit for WithdrawAsset<T> {
-	type AccountId = T::AccountId;
-	type AssetId = T::AssetId;
-	type Assets = pallet_assets::Pallet<T>;
-	type Balance = T::Balance;
-	type Credit = fungibles::Credit<Self::AccountId, pallet_assets::Pallet<T>>;
-
-	fn withdraw_credit(
-		who: &Self::AccountId,
-		asset_id: Self::AssetId,
-		credit: Self::Balance,
-	) -> Result<Self::Credit, DispatchError> {
-		let asset_fee_credit = Self::Assets::withdraw(
-			asset_id.clone(),
+	) -> Result<Option<Self::Credit>, DispatchError> {
+		Self::Assets::withdraw(
 			who,
 			credit,
 			Precision::Exact,
 			Preservation::Preserve,
 			Fortitude::Polite,
-		)?;
-
-		Ok(asset_fee_credit)
+		)
+		.map(Some)
 	}
 }
 
-pub struct WithdrawFungibles<Fungibles, AccountId>(PhantomData<(Fungibles, AccountId)>);
+pub struct WithdrawFungibles<AccountId, Fungibles>(PhantomData<(AccountId, Fungibles)>);
 
-impl<Fungibles, AccountId> WithdrawCredit for WithdrawFungibles<Fungibles, AccountId>
+impl<AccountId, Fungibles> WithdrawCredit for WithdrawFungibles<AccountId, Fungibles>
 where
-	Fungibles: fungibles::Inspect<AccountId> + fungibles::Balanced<AccountId>,
+	Fungibles: fungibles::Balanced<AccountId>,
 {
 	type AccountId = AccountId;
 	type AssetId = Fungibles::AssetId;
@@ -135,17 +114,16 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Self::Credit, DispatchError> {
-		let asset_fee_credit = Self::Assets::withdraw(
+	) -> Result<Option<Self::Credit>, DispatchError> {
+		Self::Assets::withdraw(
 			asset_id.clone(),
 			who,
 			credit,
 			Precision::Exact,
 			Preservation::Preserve,
 			Fortitude::Polite,
-		)?;
-
-		Ok(asset_fee_credit)
+		)
+		.map(Some)
 	}
 }
 
@@ -168,16 +146,16 @@ where
 	type AssetId = WithdrawKind<W::AssetId>;
 	type Assets = W::Assets;
 	type Balance = B;
-	type Credit = Option<W::Credit>;
+	type Credit = W::Credit;
 
 	fn withdraw_credit(
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-	) -> Result<Self::Credit, DispatchError> {
+	) -> Result<Option<Self::Credit>, DispatchError> {
 		match asset_id {
 			WithdrawKind::Payment(payment_asset_id) =>
-				W::withdraw_credit(who, payment_asset_id, credit).map(Some),
+				W::withdraw_credit(who, payment_asset_id, credit),
 			WithdrawKind::Voucher => V::consume_vouchers_from(who, credit).map(|_| None),
 		}
 	}

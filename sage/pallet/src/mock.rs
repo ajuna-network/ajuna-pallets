@@ -65,7 +65,6 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		VoucherBalances: pallet_balances::<Instance1> = 2,
 		PalletAssets: pallet_assets = 3,
 		Sage: pallet_sage = 4,
 	}
@@ -86,12 +85,6 @@ parameter_types! {
 impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type ExistentialDeposit = MockExistentialDeposit;
-}
-
-pub(crate) type BalancesInstance1 = pallet_balances::Instance1;
-#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
-impl pallet_balances::Config<BalancesInstance1> for Test {
-	type AccountStore = System;
 }
 
 #[derive_impl(pallet_assets::config_preludes::TestDefaultConfig)]
@@ -333,7 +326,7 @@ impl crate::Config for Test {
 		WithdrawCreditOrVoucher<
 			WithdrawWhitelistedCredit<
 				AllowAllAssets<NativeOrWithId<u32>>,
-				WithdrawFungibles<NativeAndAssets, MockAccountId>,
+				WithdrawFungibles<MockAccountId, NativeAndAssets>,
 			>,
 			MockVoucherHandler,
 		>,
@@ -435,7 +428,6 @@ impl ExtBuilder {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
 			balances: BalancesConfig { balances: self.balances },
-			voucher_balances: VoucherBalancesConfig { balances: self.vouchers },
 			pallet_assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance

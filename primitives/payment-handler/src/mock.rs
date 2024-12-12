@@ -18,8 +18,8 @@ use crate::{
 	fee_handler::{AssetGameFeeHandler, DistributeFee, PaymentFee},
 	voucher_handler::VoucherHandler,
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawWhitelistedCredit},
-	AffiliateFeeDistribution, NativeGameFeeHandler, TournamentFeeDistribution, WithdrawAsset,
-	WithdrawCreditOrVoucher, WithdrawKind, WithdrawNative,
+	AffiliateFeeDistribution, NativeGameFeeHandler, TournamentFeeDistribution,
+	WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
@@ -194,7 +194,7 @@ pub type TestNativeFeeHandler = NativeGameFeeHandler<
 >;
 
 pub type WithdrawWhitelistedAssets =
-	WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawAsset<Test>>;
+	WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawFungibles<AccountId, Assets>>;
 
 pub struct WhitelistedAssets;
 
