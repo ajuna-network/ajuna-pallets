@@ -4,10 +4,10 @@ use frame_support::{
 	pallet_prelude::{DispatchError, Encode},
 	traits::{
 		fungible,
-		fungible::Balanced as AssetBalanced,
+		fungible::Balanced,
 		fungibles,
 		fungibles::Balanced as AssetsBalanced,
-		tokens::{Balance as TokenBalance, Fortitude, Precision, Preservation},
+		tokens::{Balance, Fortitude, Precision, Preservation},
 	},
 };
 use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
@@ -62,7 +62,7 @@ pub trait WithdrawCredit {
 	type AssetId: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
 
 	type Assets;
-	type Balance: TokenBalance;
+	type Balance: Balance;
 
 	type Credit;
 
@@ -164,17 +164,17 @@ pub enum WithdrawKind<AssetId> {
 
 pub struct WithdrawCreditOrVoucher<W, V>(PhantomData<(W, V)>);
 
-impl<AccountId, Balance, W, V> WithdrawCredit for WithdrawCreditOrVoucher<W, V>
+impl<AccountId, B, W, V> WithdrawCredit for WithdrawCreditOrVoucher<W, V>
 where
-	Balance: TokenBalance,
-	W: WithdrawCredit<AccountId = AccountId, Balance = Balance>,
+	B: Balance,
+	W: WithdrawCredit<AccountId = AccountId, Balance = B>,
 	W::AssetId: 'static,
-	V: VoucherHandler<AccountId = AccountId, Balance = Balance>,
+	V: VoucherHandler<AccountId = AccountId, Balance = B>,
 {
 	type AccountId = AccountId;
 	type AssetId = WithdrawKind<W::AssetId>;
 	type Assets = W::Assets;
-	type Balance = Balance;
+	type Balance = B;
 	type Credit = Option<W::Credit>;
 
 	fn withdraw_credit(

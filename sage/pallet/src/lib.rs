@@ -97,7 +97,7 @@ pub mod pallet {
 	pub type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
 	pub type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
-	pub type PaymentOf<T, I> = <<T as Config<I>>::FeeHandler as FeeHandler>::Payment;
+	pub type PaymentOf<T, I> = <<T as Config<I>>::FeeHandler as FeeHandler>::PaymentKind;
 
 	#[cfg(feature = "runtime-benchmarks")]
 	pub trait BenchmarkHelper<AccountId, SeasonId, AssetId, Asset, TransitionId, Payment> {

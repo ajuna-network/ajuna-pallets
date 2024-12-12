@@ -161,7 +161,7 @@ pub mod pallet {
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
-			Payment = WithdrawKind<()>,
+			PaymentKind = WithdrawKind<()>,
 			Balance = BalanceOf<Self>,
 			AffiliateFeeIdentifier = AffiliateMethods,
 			TournamentFeeIdentifier = SeasonId,

@@ -47,7 +47,7 @@ impl<AccountId, Balance> PaymentFee<AccountId, Balance> {
 pub trait FeeHandler {
 	type AccountId;
 
-	type Payment: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
+	type PaymentKind: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
 
 	/// Scalar type of the fee balance.
 	type Balance;
@@ -59,7 +59,7 @@ pub trait FeeHandler {
 	/// the affiliate, tournament, and treasury if implemented.
 	fn withdraw_and_pay_fees(
 		payer: &Self::AccountId,
-		payment: Self::Payment,
+		payment: Self::PaymentKind,
 		base_fee: Self::Balance,
 		tournament_id: &Self::TournamentFeeIdentifier,
 		affiliate_id: &Self::AffiliateFeeIdentifier,
@@ -70,7 +70,7 @@ pub trait FeeHandler {
 	/// `treasury_pot`.
 	fn withdraw_and_deposit_into_treasury(
 		who: &Self::AccountId,
-		payment: Self::Payment,
+		payment: Self::PaymentKind,
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
@@ -130,14 +130,14 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 	>,
 {
 	type AccountId = AccountId;
-	type Payment = WPA::AssetId;
+	type PaymentKind = WPA::AssetId;
 	type Balance = WPA::Balance;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 
 	fn withdraw_and_pay_fees(
 		payer: &Self::AccountId,
-		payment: Self::Payment,
+		payment: Self::PaymentKind,
 		base_fee: Self::Balance,
 		tournament_id: &Self::TournamentFeeIdentifier,
 		affiliate_id: &Self::AffiliateFeeIdentifier,
@@ -157,7 +157,7 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 
 	fn withdraw_and_deposit_into_treasury(
 		who: &Self::AccountId,
-		payment: Self::Payment,
+		payment: Self::PaymentKind,
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
@@ -324,14 +324,14 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 	>,
 {
 	type AccountId = AccountId;
-	type Payment = WPA::AssetId;
+	type PaymentKind = WPA::AssetId;
 	type Balance = WPA::Balance;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 
 	fn withdraw_and_pay_fees(
 		payer: &Self::AccountId,
-		payment: Self::Payment,
+		payment: Self::PaymentKind,
 		base_fee: Self::Balance,
 		tournament_id: &Self::TournamentFeeIdentifier,
 		affiliate_id: &Self::AffiliateFeeIdentifier,
@@ -351,7 +351,7 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 
 	fn withdraw_and_deposit_into_treasury(
 		who: &Self::AccountId,
-		payment: Self::Payment,
+		payment: Self::PaymentKind,
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
