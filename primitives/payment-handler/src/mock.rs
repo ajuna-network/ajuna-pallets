@@ -226,7 +226,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: pallet_balances::GenesisConfig::<Test, ()> { balances: vec![(ALICE, 100)] },
+			balances: pallet_balances::GenesisConfig { balances: vec![(ALICE, 100)] },
 			assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance

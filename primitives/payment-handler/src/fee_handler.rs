@@ -81,61 +81,36 @@ pub type AffiliateFeeDistribution<AccountId, Balance, MaxDistribution> =
 	BoundedVec<PaymentFee<AccountId, Balance>, MaxDistribution>;
 pub type TournamentFeeDistribution<AccountId, Balance> = PaymentFee<AccountId, Balance>;
 
-pub struct AssetGameFeeHandler<
-	AccountId,
-	PaymentAssets,
-	WithdrawPaymentAssets,
-	Affiliate,
-	AffiliateMaxDistribution,
-	Tournament,
-> {
-	_phantom: PhantomData<(
-		AccountId,
-		PaymentAssets,
-		WithdrawPaymentAssets,
-		Affiliate,
-		AffiliateMaxDistribution,
-		Tournament,
-	)>,
+pub struct AssetGameFeeHandler<AccountId, Assets, Withdraw, Affiliate, MaxAffiliates, Tournament> {
+	_phantom: PhantomData<(AccountId, Assets, Withdraw, Affiliate, MaxAffiliates, Tournament)>,
 }
 
-impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournament> FeeHandler
-	for AssetGameFeeHandler<
-		AccountId,
-		PaymentAssets,
-		WPA,
-		Affiliate,
-		AffiliateMaxDistribution,
-		Tournament,
-	> where
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament> FeeHandler
+	for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+where
 	// This is satisfied by the `pallet-assets`, `pallet-asset-conversion` and the
 	// `NativeAndAssets` struct.
-	PaymentAssets:
-		fungibles::Inspect<AccountId, Balance = WPA::Balance> + fungibles::Balanced<AccountId>,
-	WPA: WithdrawCredit<
+	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
 		AccountId = AccountId,
-		Assets = PaymentAssets,
-		Credit = fungibles::Credit<AccountId, PaymentAssets>,
+		Assets = Assets,
+		Credit = fungibles::Credit<AccountId, Assets>,
 	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = AffiliateFeeDistribution<
-			AccountId,
-			WPA::Balance,
-			AffiliateMaxDistribution,
-		>,
+		Balance = W::Balance,
+		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
 	>,
 	Tournament: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, WPA::Balance>,
+		Balance = W::Balance,
+		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
 {
 	type AccountId = AccountId;
-	type PaymentKind = WPA::AssetId;
-	type Balance = WPA::Balance;
+	type PaymentKind = W::AssetId;
+	type Balance = W::Balance;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 
@@ -148,7 +123,7 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = WPA::withdraw_credit(payer, payment.clone(), base_fee)? {
+		if let Some(fee_credit) = W::withdraw_credit(payer, payment.clone(), base_fee)? {
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
@@ -167,7 +142,7 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = WPA::withdraw_credit(who, payment, amount)? {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
 			Self::deposit_into_treasury(treasury_pot, credit)
 		} else {
 			Ok(())
@@ -175,40 +150,35 @@ impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournam
 	}
 }
 
-impl<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournament>
-	AssetGameFeeHandler<AccountId, PaymentAssets, WPA, Affiliate, AffiliateMaxDistribution, Tournament>
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+	AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
 where
-	PaymentAssets:
-		fungibles::Inspect<AccountId, Balance = WPA::Balance> + fungibles::Balanced<AccountId>,
-	WPA: WithdrawCredit<
+	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
 		AccountId = AccountId,
-		Assets = PaymentAssets,
-		Credit = fungibles::Credit<AccountId, PaymentAssets>,
+		Assets = Assets,
+		Credit = fungibles::Credit<AccountId, Assets>,
 	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = AffiliateFeeDistribution<
-			AccountId,
-			WPA::Balance,
-			AffiliateMaxDistribution,
-		>,
+		Balance = W::Balance,
+		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
 	>,
 	Tournament: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, WPA::Balance>,
+		Balance = W::Balance,
+		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		fee_credit: fungibles::Credit<AccountId, PaymentAssets>,
+		fee_credit: fungibles::Credit<AccountId, Assets>,
 		account: &AccountId,
 		identifier: &Affiliate::FeeIdentifier,
-	) -> Result<fungibles::Credit<AccountId, PaymentAssets>, DispatchError> {
+	) -> Result<fungibles::Credit<AccountId, Assets>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
@@ -216,8 +186,7 @@ where
 				if allocation.amount > 0_u32.into() {
 					let affiliate_fee = final_fee.extract(allocation.amount);
 
-					if let Err(credit) =
-						WPA::Assets::resolve(&allocation.beneficiary, affiliate_fee)
+					if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, affiliate_fee)
 					{
 						// We decide to continue here, because the error has nothing to do with the
 						// account sending the transaction. It would be a bad user experience if
@@ -242,10 +211,10 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		fee_credit: fungibles::Credit<AccountId, PaymentAssets>,
+		fee_credit: fungibles::Credit<AccountId, Assets>,
 		account: &AccountId,
 		identifier: &Tournament::FeeIdentifier,
-	) -> Result<fungibles::Credit<AccountId, PaymentAssets>, DispatchError> {
+	) -> Result<fungibles::Credit<AccountId, Assets>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(allocation) = Tournament::distribute_fee(final_fee.peek(), account, identifier)
@@ -253,8 +222,7 @@ where
 			if allocation.amount > 0_u32.into() {
 				let tournament_credit = final_fee.extract(allocation.amount);
 
-				if let Err(credit) =
-					WPA::Assets::resolve(&allocation.beneficiary, tournament_credit)
+				if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, tournament_credit)
 				{
 					// We decide to continue here, because the error has nothing to do with the
 					// account sending the transaction. It would be a bad user experience if
@@ -272,10 +240,10 @@ where
 	}
 
 	fn deposit_into_treasury(
-		key: &WPA::AccountId,
-		credit: fungibles::Credit<AccountId, PaymentAssets>,
+		key: &W::AccountId,
+		credit: fungibles::Credit<AccountId, Assets>,
 	) -> Result<(), DispatchError> {
-		if let Err(_credit) = WPA::Assets::resolve(key, credit) {
+		if let Err(_credit) = W::Assets::resolve(key, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
 			// the transaction fails because we can't allocate the fees to the recipient.
@@ -287,60 +255,37 @@ where
 	}
 }
 
-pub struct NativeGameFeeHandler<
-	AccountId,
-	PaymentAsset,
-	WithdrawPaymentAsset,
-	Affiliate,
-	AffiliateMaxDistribution,
-	Tournament,
-> {
-	_phantom: PhantomData<(
-		AccountId,
-		PaymentAsset,
-		WithdrawPaymentAsset,
-		Affiliate,
-		AffiliateMaxDistribution,
-		Tournament,
-	)>,
+pub struct NativeGameFeeHandler<AccountId, Balances, Withdraw, Affiliate, MaxAffiliates, Tournament>
+{
+	_phantom: PhantomData<(AccountId, Balances, Withdraw, Affiliate, MaxAffiliates, Tournament)>,
 }
 
-impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tournament> FeeHandler
-	for NativeGameFeeHandler<
-		AccountId,
-		PaymentAsset,
-		WPA,
-		Affiliate,
-		AffiliateMaxDistribution,
-		Tournament,
-	> where
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament> FeeHandler
+	for NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+where
 	// This is satisfied by the `pallet-balances`.
-	PaymentAsset:
-		fungible::Inspect<AccountId, Balance = WPA::Balance> + fungible::Balanced<AccountId>,
-	WPA: WithdrawCredit<
+	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
 		AccountId = AccountId,
-		Assets = PaymentAsset,
-		Credit = fungible::Credit<AccountId, PaymentAsset>,
+		Assets = Balances,
+		Credit = fungible::Credit<AccountId, Balances>,
 	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = AffiliateFeeDistribution<
-			AccountId,
-			WPA::Balance,
-			AffiliateMaxDistribution,
-		>,
+		Balance = W::Balance,
+		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
 	>,
 	Tournament: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, WPA::Balance>,
+		Balance = W::Balance,
+		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
 {
 	type AccountId = AccountId;
-	type PaymentKind = WPA::AssetId;
-	type Balance = WPA::Balance;
+	// If not vouchers are to be used this can be ()
+	type PaymentKind = W::AssetId;
+	type Balance = W::Balance;
 	type AffiliateFeeIdentifier = Affiliate::FeeIdentifier;
 	type TournamentFeeIdentifier = Tournament::FeeIdentifier;
 
@@ -353,7 +298,7 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = WPA::withdraw_credit(payer, payment, base_fee)? {
+		if let Some(fee_credit) = W::withdraw_credit(payer, payment, base_fee)? {
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
@@ -372,7 +317,7 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = WPA::withdraw_credit(who, payment, amount)? {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
 			Self::deposit_into_treasury(treasury_pot, credit)
 		} else {
 			Ok(())
@@ -380,48 +325,42 @@ impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tourname
 	}
 }
 
-impl<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tournament>
-	NativeGameFeeHandler<AccountId, PaymentAsset, WPA, Affiliate, AffiliateMaxDistribution, Tournament>
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+	NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
 where
-	PaymentAsset:
-		fungible::Inspect<AccountId, Balance = WPA::Balance> + fungible::Balanced<AccountId>,
-	WPA: WithdrawCredit<
+	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
 		AccountId = AccountId,
-		Assets = PaymentAsset,
-		Credit = fungible::Credit<AccountId, PaymentAsset>,
+		Assets = Balances,
+		Credit = fungible::Credit<AccountId, Balances>,
 	>,
 
 	Affiliate: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = AffiliateFeeDistribution<
-			AccountId,
-			WPA::Balance,
-			AffiliateMaxDistribution,
-		>,
+		Balance = W::Balance,
+		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
 	>,
 	Tournament: DistributeFee<
 		AccountId = AccountId,
-		Balance = WPA::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, WPA::Balance>,
+		Balance = W::Balance,
+		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		fee_credit: fungible::Credit<AccountId, PaymentAsset>,
+		fee_credit: fungible::Credit<AccountId, Balances>,
 		account: &AccountId,
 		identifier: &Affiliate::FeeIdentifier,
-	) -> Result<fungible::Credit<AccountId, PaymentAsset>, DispatchError> {
+	) -> Result<fungible::Credit<AccountId, Balances>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
 			for allocation in a {
 				if allocation.amount > 0_u32.into() {
 					let affiliate_fee = final_fee.extract(allocation.amount);
-					if let Err(credit) =
-						WPA::Assets::resolve(&allocation.beneficiary, affiliate_fee)
+					if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, affiliate_fee)
 					{
 						// We decide to continue here, because the error has nothing to do with the
 						// account sending the transaction. It would be a bad user experience if
@@ -445,10 +384,10 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		fee_credit: fungible::Credit<AccountId, PaymentAsset>,
+		fee_credit: fungible::Credit<AccountId, Balances>,
 		account: &AccountId,
 		identifier: &Tournament::FeeIdentifier,
-	) -> Result<fungible::Credit<AccountId, PaymentAsset>, DispatchError> {
+	) -> Result<fungible::Credit<AccountId, Balances>, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(allocation) = Tournament::distribute_fee(final_fee.peek(), account, identifier)
@@ -456,8 +395,7 @@ where
 			if allocation.amount > 0_u32.into() {
 				let tournament_credit = final_fee.extract(allocation.amount);
 
-				if let Err(credit) =
-					WPA::Assets::resolve(&allocation.beneficiary, tournament_credit)
+				if let Err(credit) = W::Assets::resolve(&allocation.beneficiary, tournament_credit)
 				{
 					// We decide to continue here, because the error has nothing to do with the
 					// account sending the transaction. It would be a bad user experience if
@@ -476,9 +414,9 @@ where
 
 	fn deposit_into_treasury(
 		key: &AccountId,
-		credit: fungible::Credit<AccountId, PaymentAsset>,
+		credit: fungible::Credit<AccountId, Balances>,
 	) -> Result<(), DispatchError> {
-		if let Err(_credit) = WPA::Assets::resolve(key, credit) {
+		if let Err(_credit) = W::Assets::resolve(key, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
 			// the transaction fails because we can't allocate the fees to the recipient.
