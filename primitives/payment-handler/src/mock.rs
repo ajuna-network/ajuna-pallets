@@ -30,6 +30,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	BuildStorage, DispatchError, TokenError,
 };
+use std::{cell::RefCell, collections::HashMap};
 
 pub type Signature = TestSignature;
 pub type AccountSignature = <Signature as Verify>::Signer;
@@ -52,15 +53,16 @@ pub const WHITELISTED_ASSET_ID_PAYMENT: WithdrawKind<AssetId> =
 pub const NOT_WHITE_LISTED_ASSET_ID: AssetId = 999;
 pub const NOT_WHITELISTED_ASSET_ID_PAYMENT: WithdrawKind<AssetId> =
 	WithdrawKind::Payment(NOT_WHITE_LISTED_ASSET_ID);
+pub const VOUCHER_ASSET_PAYMENT: WithdrawKind<AssetId> = WithdrawKind::Voucher;
 pub const NATIVE_ASSET_PAYMENT: WithdrawKind<()> = WithdrawKind::Payment(());
+pub const VOUCHER_NATIVE_PAYMENT: WithdrawKind<()> = WithdrawKind::Voucher;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		VoucherBalances: pallet_balances::<Instance1> = 2,
-		Assets: pallet_assets = 3,
+		Assets: pallet_assets = 2,
 	}
 );
 
@@ -73,12 +75,6 @@ impl frame_system::Config for Test {
 
 #[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
 impl pallet_balances::Config for Test {
-	type AccountStore = System;
-}
-
-pub(crate) type BalancesInstance1 = pallet_balances::Instance1;
-#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
-impl pallet_balances::Config<BalancesInstance1> for Test {
 	type AccountStore = System;
 }
 
@@ -155,6 +151,10 @@ impl DistributeFee for TestTournamentFeeProvider {
 	}
 }
 
+thread_local! {
+	pub static VOUCHERS: RefCell<HashMap<AccountId, Balance>> = RefCell::new(HashMap::new());
+}
+
 pub struct MockVoucherHandler;
 
 impl VoucherHandler for MockVoucherHandler {
@@ -162,10 +162,16 @@ impl VoucherHandler for MockVoucherHandler {
 	type Balance = Balance;
 
 	fn consume_vouchers_from(
-		_account: &Self::AccountId,
-		_amount: Self::Balance,
+		account: &Self::AccountId,
+		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		Ok(())
+		VOUCHERS.with_borrow_mut(|voucher_store| match voucher_store.get(account) {
+			Some(voucher_amt) if *voucher_amt >= amount => {
+				voucher_store.insert(*account, voucher_amt.saturating_sub(amount));
+				Ok(())
+			},
+			_ => Err(DispatchError::Token(TokenError::FundsUnavailable)),
+		})
 	}
 }
 
@@ -205,16 +211,22 @@ impl EnsureWhitelistedAsset for WhitelistedAssets {
 }
 
 #[derive(Default)]
-pub struct ExtBuilder;
+pub struct ExtBuilder {
+	vouchers: Vec<(AccountId, Balance)>,
+}
+
+impl ExtBuilder {
+	pub fn vouchers(mut self, vouchers: &[(AccountId, Balance)]) -> Self {
+		self.vouchers = vouchers.to_vec();
+		self
+	}
+}
 
 impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
 			balances: pallet_balances::GenesisConfig::<Test, ()> { balances: vec![(ALICE, 100)] },
-			voucher_balances: pallet_balances::GenesisConfig::<Test, BalancesInstance1> {
-				balances: vec![(ALICE, 5)],
-			},
 			assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance
@@ -237,6 +249,15 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			if !self.vouchers.is_empty() {
+				for (account, voucher_amt) in self.vouchers.iter().copied() {
+					VOUCHERS.with_borrow_mut(|voucher_store| {
+						voucher_store.insert(account, voucher_amt);
+					});
+				}
+			}
+		});
 		ext
 	}
 }

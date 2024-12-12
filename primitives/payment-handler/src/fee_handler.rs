@@ -268,7 +268,7 @@ where
 			// account sending the transaction. It would be a bad user experience if
 			// the transaction fails because we can't allocate the fees to the recipient.
 			log::error!(
-				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
+				"Could not deposit to treasury, it probably doesn't exist, burning the credit..."
 			);
 		}
 		Ok(())
