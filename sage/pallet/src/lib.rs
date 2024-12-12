@@ -97,10 +97,11 @@ pub mod pallet {
 	pub type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
 	pub type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
-	pub type PaymentOf<T, I> = <<T as Config<I>>::FeeHandler as FeeHandler>::PaymentKind;
+	pub type PaymentOf<T, I> = <T as Config<I>>::PaymentKind;
+	pub type MaybePaymentOf<T, I> = Option<PaymentOf<T, I>>;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<AccountId, SeasonId, AssetId, Asset, TransitionId, Payment> {
+	pub trait BenchmarkHelper<AccountId, SeasonId, AssetId, Asset, TransitionId, PaymentKind> {
 		fn create_asset_for(account: &AccountId, season: &SeasonId, seed: u32) -> AssetId;
 
 		fn create_bench_transition_for(
@@ -109,7 +110,7 @@ pub mod pallet {
 			seed: u32,
 		) -> (TransitionId, Vec<AssetId>);
 
-		fn create_payment() -> Payment;
+		fn create_payment_kind() -> PaymentKind;
 	}
 
 	#[pallet::config]
@@ -134,10 +135,13 @@ pub mod pallet {
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
+			PaymentKind = PaymentOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
 		>;
+
+		type PaymentKind: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
 		/// `SeasonTransferFilters` storage.
@@ -445,7 +449,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			beneficiary: Option<AccountIdOf<T>>,
 			in_season: Option<SeasonIdOf<T, I>>,
-			payment: PaymentOf<T, I>,
+			payment: MaybePaymentOf<T, I>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
@@ -459,7 +463,7 @@ pub mod pallet {
 			let base_fee = fee.upgrade_asset_inventory;
 			T::FeeHandler::withdraw_and_pay_fees(
 				&caller,
-				payment,
+				payment.unwrap_or_default(),
 				base_fee,
 				&season_id,
 				&AffiliateMethods::UpgradeAssetInventory,
@@ -524,7 +528,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment: PaymentOf<T, I>,
+			payment: MaybePaymentOf<T, I>,
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 
@@ -557,7 +561,7 @@ pub mod pallet {
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::withdraw_and_deposit_into_treasury(
 				&from,
-				payment,
+				payment.unwrap_or_default(),
 				&Self::treasury_account_id(),
 				fee.transfer_asset,
 			)?;
@@ -621,7 +625,7 @@ pub mod pallet {
 		pub fn buy_asset(
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment: PaymentOf<T, I>,
+			payment: MaybePaymentOf<T, I>,
 		) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			let GeneralConfig { trade, .. } = GeneralConfigStore::<T, I>::get();
@@ -649,7 +653,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&buyer,
-				payment,
+				payment.unwrap_or_default(),
 				trade_fee,
 				&asset_season_id,
 				&AffiliateMethods::TradeAsset,
@@ -699,10 +703,11 @@ pub mod pallet {
 			target: UnlockTarget<AccountIdOf<T>>,
 			feature: LockableFeature,
 			season_id: SeasonIdOf<T, I>,
-			payment: PaymentOf<T, I>,
+			payment: MaybePaymentOf<T, I>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
+			let payment = payment.unwrap_or_default();
 
 			match feature {
 				LockableFeature::TradeAsset =>
@@ -720,7 +725,7 @@ pub mod pallet {
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
-			payment: PaymentOf<T, I>,
+			payment: Option<PaymentOf<T, I>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -751,7 +756,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&sender,
-				payment,
+				payment.unwrap_or_default(),
 				transition_fee,
 				&current_season_id,
 				&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),

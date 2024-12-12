@@ -127,9 +127,10 @@ where
 	}
 }
 
-#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo, Default)]
 pub enum WithdrawKind<AssetId> {
 	Payment(AssetId),
+	#[default]
 	Voucher,
 }
 

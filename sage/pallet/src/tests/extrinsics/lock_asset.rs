@@ -57,14 +57,14 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 					RuntimeOrigin::signed(technical_account),
 					BOB,
 					asset_id,
-					NATIVE_PAYMENT,
+					MAYBE_NATIVE_PAYMENT,
 				),
 				Sage::state_transition(
 					RuntimeOrigin::signed(technical_account),
 					ExampleTransitionId::UpgradeAsset,
 					vec![asset_id],
 					(),
-					NATIVE_PAYMENT,
+					MAYBE_NATIVE_PAYMENT,
 				),
 			] {
 				assert_noop!(extrinsic, Error::<Test, ()>::AssetLocked);

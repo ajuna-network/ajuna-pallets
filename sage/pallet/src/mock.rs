@@ -100,6 +100,7 @@ pub type NativeAndAssets =
 	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
 pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<u32>> =
 	WithdrawKind::Payment(NativeOrWithId::Native);
+pub const MAYBE_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<u32>>> = Some(NATIVE_PAYMENT);
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,
@@ -297,7 +298,7 @@ impl
 		(ExampleTransitionId::BenchTransition, asset_vec)
 	}
 
-	fn create_payment() -> WithdrawKind<NativeOrWithId<u32>> {
+	fn create_payment_kind() -> WithdrawKind<NativeOrWithId<u32>> {
 		WithdrawKind::Payment(NativeOrWithId::Native)
 	}
 }
@@ -334,6 +335,7 @@ impl crate::Config for Test {
 		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,
 	>;
+	type PaymentKind = WithdrawKind<NativeOrWithId<u32>>;
 	type FilterHandler = MockFilterHandler;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
