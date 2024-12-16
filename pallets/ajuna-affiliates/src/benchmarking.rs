@@ -51,7 +51,6 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
-// Todo: these functions should exist with runtime-benchmarks enabled.
 fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {
 	T::AccountManager::try_add_to_whitelist(&T::WhitelistKey::get(), organizer.clone())
 		.expect("Should add to whitelist");
