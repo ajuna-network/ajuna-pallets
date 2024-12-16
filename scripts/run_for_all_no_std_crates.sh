@@ -2,7 +2,7 @@
 
 # Useful for checking individual crates for correctness, i.e., if they compile to wasm.
 #
-# Example usage: ./scripts/run_for_all_crates.sh check --no-default-features --target=wasm32-unknown-unknown
+# Example usage: ./scripts/run_for_all_no_std_crates.sh check --no-default-features --target=wasm32-unknown-unknown
 
 set -e
 
@@ -15,7 +15,13 @@ find . -name "Cargo.toml" | while read -r CARGO_TOML; do
   DIR=$(dirname "$CARGO_TOML")
   echo "Checking in directory: $DIR"
 
-  if grep -q "\[features\]" "$CARGO_TOML" && grep -q "runtime-benchmarks" "$CARGO_TOML"; then
+  # Skip the loop if the crate does not have a feature `std`
+  if ! grep -q "\[features\]" "$CARGO_TOML" || ! grep -q "std = \[" "$CARGO_TOML"; then
+      echo "Feature 'std' not found in $CARGO_TOML. Skipping."
+      continue
+  fi
+
+  if grep -q "\[features\]" "$CARGO_TOML" && grep -q "runtime-benchmarks = \[" "$CARGO_TOML"; then
       echo "Feature 'runtime-benchmarks' found, adding this feature."
       cargo $COMMAND $@ --features runtime-benchmarks --manifest-path "$CARGO_TOML"
   else
