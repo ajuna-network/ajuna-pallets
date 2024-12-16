@@ -14,33 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-#![cfg_attr(not(feature = "std"), no_std)]
-
-use crate::{
-	mock::{
-		run_to_block, Balances, MockAccountManager, MockAssetId, MockSeasonData, MockSeasonId,
-		RuntimeEvent, SeasonsBenchmarkHelper, System, Test,
-	},
-	Pallet as Seasons, *,
-};
+use crate::{Pallet as Seasons, *};
 use ajuna_primitives::season_manager::SeasonFeeConfig;
 
 use frame_benchmarking::benchmarks_instance_pallet;
 use frame_support::BoundedVec;
 use frame_system::RawOrigin;
-use sp_runtime::BuildStorage;
-
-impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type SeasonId = MockSeasonId;
-	type SeasonData = MockSeasonData;
-	type AssetId = MockAssetId;
-	type AccountHandler = MockAccountManager;
-	type Currency = Balances;
-	type WeightInfo = ();
-	type BenchmarkHelper = SeasonsBenchmarkHelper;
-}
+use sp_runtime::Saturating;
 
 const ACC_1: &str = "acc_1";
 
@@ -55,10 +35,29 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
+fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {
+	T::AccountHandler::set_organizer(organizer);
+}
+
+fn run_to_block<T: Config<I>, I: 'static>(n: BlockNumberFor<T>) {
+	while frame_system::Pallet::<T>::block_number() < n {
+		let mut current_block = frame_system::Pallet::<T>::block_number();
+		if current_block > 1_u32.into() {
+			frame_system::Pallet::<T>::on_finalize(current_block);
+			crate::Pallet::<T, I>::on_finalize(current_block);
+		}
+		current_block = current_block.saturating_add(1_u32.into());
+		frame_system::Pallet::<T>::set_block_number(current_block);
+		frame_system::Pallet::<T>::on_initialize(current_block);
+		crate::Pallet::<T, I>::on_initialize(current_block);
+	}
+}
+
 benchmarks_instance_pallet! {
 	update_season {
 		let season_id = T::BenchmarkHelper::create_season_id(1_u32);
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
 		let config = SeasonConfigOf::<T, I> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u32.into(),
@@ -94,6 +93,7 @@ benchmarks_instance_pallet! {
 	interrupt_active_season {
 		let season_id = T::BenchmarkHelper::create_season_id(2_u32);
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
 		let config = SeasonConfigOf::<T, I> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u32.into(),
@@ -123,7 +123,7 @@ benchmarks_instance_pallet! {
 			Some(metadata),
 			Some(schedule)
 		).expect("Should update season");
-		run_to_block(25_u32.into());
+		run_to_block::<T, I>(25_u32.into());
 	}: _(RawOrigin::Signed(acc_1))
 	verify {
 		assert_last_event::<T, I>(Event::SeasonEarlyEnded {
@@ -133,19 +133,7 @@ benchmarks_instance_pallet! {
 
 	impl_benchmark_test_suite!(
 		Seasons,
-		new_test_ext(),
-		Test
+		crate::mock::new_test_ext(),
+		crate::mock::Test
 	);
-}
-
-#[allow(dead_code)]
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext.execute_with(|| {
-		let acc_1 = account::<Test, ()>(ACC_1);
-		MockAccountManager::set_organizer(acc_1);
-	});
-	ext
 }

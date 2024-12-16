@@ -25,13 +25,10 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-#[cfg(test)]
-use sp_runtime::BuildStorage;
-
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	MultiSignature,
+	BuildStorage, MultiSignature,
 };
 use sp_std::{cell::RefCell, cmp::Ordering, collections::btree_map::BTreeMap};
 
@@ -330,6 +327,22 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl Config for Test {
+	type PalletId = TournamentPalletId1;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type TournamentCategoryId = MockCategoryId;
+	type EntityId = MockEntityId;
+	type RankedEntity = MockEntity;
+	type EntityRanker = MockRanker;
+	type AccountManager = MockAccountManager;
+	type AssetManager = MockAssetManager;
+	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+	type WeightInfo = ();
+	type BenchmarkHelper = TournamentBenchmarkHelper;
+}
+
 #[cfg(test)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
@@ -379,6 +392,10 @@ impl ExtBuilder {
 		});
 		ext
 	}
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	ExtBuilder::default().build()
 }
 
 pub fn run_to_block(n: u64) {

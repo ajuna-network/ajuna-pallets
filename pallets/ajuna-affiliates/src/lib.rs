@@ -18,7 +18,7 @@
 
 pub use pallet::*;
 
-#[cfg(any(test))]
+#[cfg(test)]
 mod mock;
 
 #[cfg(test)]

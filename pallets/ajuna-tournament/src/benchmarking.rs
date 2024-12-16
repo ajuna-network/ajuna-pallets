@@ -14,35 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-#![cfg_attr(not(feature = "std"), no_std)]
-
-use crate::{
-	mock::{
-		run_to_block, Balances, MinimumTournamentPhaseDuration, MockAccountManager,
-		MockAssetManager, MockCategoryId, MockEntity, MockEntityId, MockRanker, RuntimeEvent,
-		RuntimeOrigin, System, Test, TournamentBenchmarkHelper, TournamentPalletId1,
-	},
-	Pallet as Tournament, *,
-};
+use crate::{Pallet as Tournament, *};
+use ajuna_primitives::account_manager::AccountManager;
 use frame_benchmarking::benchmarks_instance_pallet;
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use sp_runtime::BuildStorage;
-
-impl Config for Test {
-	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type TournamentCategoryId = MockCategoryId;
-	type EntityId = MockEntityId;
-	type RankedEntity = MockEntity;
-	type EntityRanker = MockRanker;
-	type AccountManager = MockAccountManager;
-	type AssetManager = MockAssetManager;
-	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
-	type WeightInfo = ();
-	type BenchmarkHelper = TournamentBenchmarkHelper;
-}
+use sp_arithmetic::traits::Saturating;
 
 const ACC_1: &str = "acc_1";
 
@@ -64,9 +41,33 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
+fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {
+	T::AccountManager::set_organizer(organizer);
+}
+
+fn set_account_balance<T: Config<I>, I: 'static>(account: &T::AccountId, balance: BalanceOf<T, I>) {
+	let _ = T::Currency::deposit_creating(account, balance);
+}
+
+fn run_to_block<T: Config<I>, I: 'static>(n: BlockNumberFor<T>) {
+	while frame_system::Pallet::<T>::block_number() < n {
+		let mut current_block = frame_system::Pallet::<T>::block_number();
+		if current_block > 1_u32.into() {
+			frame_system::Pallet::<T>::on_finalize(current_block);
+			crate::Pallet::<T, I>::on_finalize(current_block);
+		}
+		current_block = current_block.saturating_add(1_u32.into());
+		frame_system::Pallet::<T>::set_block_number(current_block);
+		frame_system::Pallet::<T>::on_initialize(current_block);
+		crate::Pallet::<T, I>::on_initialize(current_block);
+	}
+}
+
 benchmarks_instance_pallet! {
 	create_tournament {
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
+		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
 	}: _(RawOrigin::Signed(acc_1), category_id, tournament_config)
@@ -76,6 +77,8 @@ benchmarks_instance_pallet! {
 
 	remove_latest_tournament {
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
+		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
 		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
@@ -86,15 +89,17 @@ benchmarks_instance_pallet! {
 
 	claim_tournament_reward_for {
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
+		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let (entity_id, entity) = create_owned_entity::<T, I>(acc_1.clone());
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
 		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
-		run_to_block(20);
+		run_to_block::<T, I>(20_u32.into());
 		<Tournament<T, I> as TournamentRanker<T::TournamentCategoryId, T::RankedEntity, T::EntityId>>::try_rank_entity_in_tournament_for(
 			&category_id, &entity_id, &entity
 		)?;
-		run_to_block(60);
+		run_to_block::<T, I>(60_u32.into());
 	}: _(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone())
 	verify {
 		assert_last_event::<T, I>(Event::RankingRewardClaimed { category_id, tournament_id: 0, entity_id ,account: acc_1 })
@@ -102,15 +107,17 @@ benchmarks_instance_pallet! {
 
 	claim_golden_duck_for {
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
+		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let (entity_id, _) = create_owned_entity::<T, I>(acc_1.clone());
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
 		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
-		run_to_block(20);
+		run_to_block::<T, I>(20_u32.into());
 		<Tournament<T, I> as TournamentRanker<T::TournamentCategoryId, T::RankedEntity, T::EntityId>>::try_rank_entity_for_golden_duck(
 			&category_id, &entity_id
 		)?;
-		run_to_block(60);
+		run_to_block::<T, I>(60_u32.into());
 	}: _(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone())
 	verify {
 		assert_last_event::<T, I>(Event::GoldenDuckRewardClaimed { category_id, tournament_id: 0, entity_id ,account: acc_1 })
@@ -118,20 +125,7 @@ benchmarks_instance_pallet! {
 
 	impl_benchmark_test_suite!(
 		Tournament,
-		new_test_ext(),
-		Test
+		crate::mock::new_test_ext(),
+		crate::mock::Test
 	);
-}
-
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext.execute_with(|| {
-		let acc_1 = account::<Test, ()>(ACC_1);
-		Balances::force_set_balance(RuntimeOrigin::root(), acc_1.clone(), 1_000)
-			.expect("Should set balance");
-		MockAccountManager::set_organizer(acc_1);
-	});
-	ext
 }
