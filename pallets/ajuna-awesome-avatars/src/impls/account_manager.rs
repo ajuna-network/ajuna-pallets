@@ -30,12 +30,12 @@ impl<T: Config> AccountManager for Pallet<T> {
 		WhitelistedAccounts::<T>::get().contains(account)
 	}
 
-	#[cfg(features = "runtime-benchmarks")]
+	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(_account: Self::AccountId) {
 		todo!()
 	}
 
-	#[cfg(features = "runtime-benchmarks")]
+	#[cfg(feature = "runtime-benchmarks")]
 	fn try_add_to_whitelist(
 		_identifier: &WhitelistKey,
 		_account: Self::AccountId,
