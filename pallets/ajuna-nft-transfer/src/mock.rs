@@ -451,10 +451,12 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 		unimplemented!()
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(account: Self::AccountId) {
 		ORGANIZER.with_borrow_mut(|maybe_organizer| *maybe_organizer = Some(account))
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
 	fn try_add_to_whitelist(
 		_identifier: &WhitelistKey,
 		_account: Self::AccountId,

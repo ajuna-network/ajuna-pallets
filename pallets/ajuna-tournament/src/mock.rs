@@ -160,12 +160,14 @@ impl AccountManager for MockAccountManager {
 		unimplemented!()
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(account: Self::AccountId) {
 		ORGANIZER.with(|maybe_account| {
 			*maybe_account.borrow_mut() = Some(account);
 		});
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
 	fn try_add_to_whitelist(
 		_identifier: &WhitelistKey,
 		_account: Self::AccountId,
