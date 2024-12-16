@@ -124,6 +124,20 @@ impl MockAccountManager {
 			*maybe_account.borrow_mut() = Some(owner);
 		});
 	}
+
+	pub fn try_add_to_whitelist(
+		identifier: &WhitelistKey,
+		account: MockAccountId,
+	) -> Result<(), DispatchError> {
+		WHITELISTED_ACCOUNTS.with(|accounts| {
+			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
+				entry.insert(account);
+				Ok(())
+			} else {
+				Err(DispatchError::Other("No account set for identifier"))
+			}
+		})
+	}
 }
 
 impl AccountManager for MockAccountManager {
@@ -160,14 +174,7 @@ impl AccountManager for MockAccountManager {
 		identifier: &WhitelistKey,
 		account: Self::AccountId,
 	) -> Result<(), DispatchError> {
-		WHITELISTED_ACCOUNTS.with(|accounts| {
-			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
-				entry.insert(account);
-				Ok(())
-			} else {
-				Err(DispatchError::Other("No account set for identifier"))
-			}
-		})
+		MockAccountManager::try_add_to_whitelist(identifier, account)
 	}
 }
 
