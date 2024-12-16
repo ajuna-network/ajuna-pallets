@@ -76,7 +76,7 @@ use crate::{types::*, weights::WeightInfo};
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
-	fee_handler::FeeHandler,
+	payment_handler::FeeHandler,
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
@@ -85,7 +85,9 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use pallet_ajuna_affiliates::traits::{AffiliateInspector, AffiliateMutator, RuleInspector};
+use pallet_ajuna_affiliates::traits::{
+	AffiliateInspector, AffiliateMutator, RuleExecutor, RuleInspector,
+};
 use pallet_ajuna_tournament::{
 	config::{TournamentConfig, TournamentState},
 	traits::{TournamentInspector, TournamentRanker},
@@ -97,13 +99,11 @@ use sp_runtime::{
 	},
 	ArithmeticError,
 };
-use sp_std::prelude::*;
+use sp_std::{collections::vec_deque::VecDeque, prelude::*};
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use pallet_ajuna_affiliates::traits::RuleExecutor;
-	use sp_std::collections::vec_deque::VecDeque;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type SeasonOf<T> = Season<BlockNumberFor<T>, BalanceOf<T>>;
@@ -160,8 +160,8 @@ pub mod pallet {
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,
+			PaymentKind = (),
 			Balance = BalanceOf<Self>,
-			AssetId = (),
 			AffiliateFeeIdentifier = AffiliateMethods,
 			TournamentFeeIdentifier = SeasonId,
 		>;

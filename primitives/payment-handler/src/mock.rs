@@ -15,20 +15,22 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	fee_handler::{AssetGameFeeHandler, DistributeFee, Payment},
+	fee_handler::{AssetGameFeeHandler, DistributeFee, PaymentFee},
+	voucher_handler::VoucherHandler,
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawWhitelistedCredit},
-	NativeGameFeeHandler, WithdrawAsset, WithdrawNative,
+	AffiliateFeeDistribution, NativeGameFeeHandler, TournamentFeeDistribution,
+	WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
 	traits::{AsEnsureOriginWithArg, ConstU32},
-	BoundedVec,
 };
 use sp_runtime::{
 	testing::TestSignature,
 	traits::{IdentifyAccount, Verify},
 	BuildStorage, DispatchError, TokenError,
 };
+use std::{cell::RefCell, collections::HashMap};
 
 pub type Signature = TestSignature;
 pub type AccountSignature = <Signature as Verify>::Signer;
@@ -46,7 +48,14 @@ pub const FERDIE: AccountId = 5;
 pub const TOURNAMENT_TREASURY: AccountId = 431;
 
 pub const WHITELISTED_ASSET_ID: AssetId = 888;
+pub const WHITELISTED_ASSET_ID_PAYMENT: WithdrawKind<AssetId> =
+	WithdrawKind::Payment(WHITELISTED_ASSET_ID);
 pub const NOT_WHITE_LISTED_ASSET_ID: AssetId = 999;
+pub const NOT_WHITELISTED_ASSET_ID_PAYMENT: WithdrawKind<AssetId> =
+	WithdrawKind::Payment(NOT_WHITE_LISTED_ASSET_ID);
+pub const VOUCHER_ASSET_PAYMENT: WithdrawKind<AssetId> = WithdrawKind::Voucher;
+pub const NATIVE_ASSET_PAYMENT: WithdrawKind<()> = WithdrawKind::Payment(());
+pub const VOUCHER_NATIVE_PAYMENT: WithdrawKind<()> = WithdrawKind::Voucher;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -82,6 +91,8 @@ impl pallet_assets::Config for Test {
 
 pub struct TestAffiliatesFeeProvider;
 
+pub type TestAffiliatesMaxDistribution = ConstU32<3>;
+
 pub enum AffiliateFeeId {
 	Paying,
 	Free,
@@ -91,19 +102,20 @@ impl DistributeFee for TestAffiliatesFeeProvider {
 	type AccountId = AccountId;
 	type Balance = Balance;
 	type FeeIdentifier = AffiliateFeeId;
-	type MaxDistributions = ConstU32<3>;
+	type FeeDistribution =
+		AffiliateFeeDistribution<Self::AccountId, Self::Balance, TestAffiliatesMaxDistribution>;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+	) -> Option<Self::FeeDistribution> {
 		match identifier {
 			AffiliateFeeId::Paying => Some(
 				vec![
-					Payment::new(BOB, base_fee * 4 / 20),
-					Payment::new(CHARLIE, base_fee * 3 / 20),
-					Payment::new(DAVE, base_fee * 2 / 20),
+					PaymentFee::new(BOB, base_fee * 4 / 20),
+					PaymentFee::new(CHARLIE, base_fee * 3 / 20),
+					PaymentFee::new(DAVE, base_fee * 2 / 20),
 				]
 				.try_into()
 				.expect("max distributions = 3; qed"),
@@ -124,42 +136,65 @@ impl DistributeFee for TestTournamentFeeProvider {
 	type AccountId = AccountId;
 	type Balance = Balance;
 	type FeeIdentifier = TournamentFeeId;
-	type MaxDistributions = ConstU32<1>;
+	type FeeDistribution = TournamentFeeDistribution<Self::AccountId, Self::Balance>;
 
 	fn distribute_fee(
 		base_fee: Self::Balance,
 		_account: &Self::AccountId,
 		identifier: &Self::FeeIdentifier,
-	) -> Option<BoundedVec<Payment<Self::AccountId, Self::Balance>, Self::MaxDistributions>> {
+	) -> Option<Self::FeeDistribution> {
 		match identifier {
-			TournamentFeeId::Paying => Some(
-				vec![Payment::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)]
-					.try_into()
-					.expect("max distribution = 1; qed"),
-			),
+			TournamentFeeId::Paying =>
+				Some(PaymentFee::new(TOURNAMENT_TREASURY, base_fee * 2 / 10)),
 			TournamentFeeId::Free => None,
 		}
+	}
+}
+
+thread_local! {
+	pub static VOUCHERS: RefCell<HashMap<AccountId, Balance>> = RefCell::new(HashMap::new());
+}
+
+pub struct MockVoucherHandler;
+
+impl VoucherHandler for MockVoucherHandler {
+	type AccountId = AccountId;
+	type Balance = Balance;
+
+	fn consume_vouchers_from(
+		account: &Self::AccountId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		VOUCHERS.with_borrow_mut(|voucher_store| match voucher_store.get(account) {
+			Some(voucher_amt) if *voucher_amt >= amount => {
+				voucher_store.insert(*account, voucher_amt.saturating_sub(amount));
+				Ok(())
+			},
+			_ => Err(DispatchError::Token(TokenError::FundsUnavailable)),
+		})
 	}
 }
 
 pub type TestAssetFeeHandler = AssetGameFeeHandler<
 	AccountId,
 	Assets,
-	WithdrawWhitelistedAssets,
+	WithdrawCreditOrVoucher<WithdrawWhitelistedAssets, MockVoucherHandler>,
 	TestAffiliatesFeeProvider,
+	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
 >;
 
 pub type TestNativeFeeHandler = NativeGameFeeHandler<
 	AccountId,
 	Balances,
-	WithdrawNative<Test>,
+	WithdrawCreditOrVoucher<WithdrawNative<AccountId, Balances>, MockVoucherHandler>,
 	TestAffiliatesFeeProvider,
+	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
 >;
 
 pub type WithdrawWhitelistedAssets =
-	WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawAsset<Test>>;
+	WithdrawWhitelistedCredit<WhitelistedAssets, WithdrawFungibles<AccountId, Assets>>;
 
 pub struct WhitelistedAssets;
 
@@ -176,7 +211,16 @@ impl EnsureWhitelistedAsset for WhitelistedAssets {
 }
 
 #[derive(Default)]
-pub struct ExtBuilder;
+pub struct ExtBuilder {
+	vouchers: Vec<(AccountId, Balance)>,
+}
+
+impl ExtBuilder {
+	pub fn vouchers(mut self, vouchers: &[(AccountId, Balance)]) -> Self {
+		self.vouchers = vouchers.to_vec();
+		self
+	}
+}
 
 impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
@@ -205,6 +249,15 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| {
+			if !self.vouchers.is_empty() {
+				for (account, voucher_amt) in self.vouchers.iter().copied() {
+					VOUCHERS.with_borrow_mut(|voucher_store| {
+						voucher_store.insert(account, voucher_amt);
+					});
+				}
+			}
+		});
 		ext
 	}
 }

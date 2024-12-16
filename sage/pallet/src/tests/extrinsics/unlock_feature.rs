@@ -42,7 +42,7 @@ fn unlock_feature_works_for_trade_asset_targets() {
 					UnlockTarget::OneselfFree,
 					feature_to_unlock,
 					season_id,
-					Some(NATIVE)
+					SOME_NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
@@ -55,7 +55,7 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				UnlockTarget::OneselfFree,
 				feature_to_unlock,
 				season_id,
-				Some(NATIVE)
+				SOME_NATIVE_PAYMENT
 			));
 
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
@@ -73,7 +73,7 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				UnlockTarget::OneselfPaying,
 				feature_to_unlock,
 				season_id,
-				Some(NATIVE)
+				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,
@@ -93,7 +93,7 @@ fn unlock_feature_works_for_trade_asset_targets() {
 				UnlockTarget::OtherPaying(CHARLIE),
 				feature_to_unlock,
 				season_id,
-				Some(NATIVE),
+				SOME_NATIVE_PAYMENT,
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,
@@ -134,7 +134,7 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 					UnlockTarget::OneselfFree,
 					feature_to_unlock,
 					season_id,
-					Some(NATIVE)
+					SOME_NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
@@ -147,7 +147,7 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				UnlockTarget::OneselfFree,
 				feature_to_unlock,
 				season_id,
-				Some(NATIVE)
+				SOME_NATIVE_PAYMENT
 			));
 
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
@@ -165,7 +165,7 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				UnlockTarget::OneselfPaying,
 				feature_to_unlock,
 				season_id,
-				Some(NATIVE)
+				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,
@@ -185,7 +185,7 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				UnlockTarget::OtherPaying(CHARLIE),
 				feature_to_unlock,
 				season_id,
-				Some(NATIVE)
+				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::FeatureUnlocked {
 				feature: feature_to_unlock,

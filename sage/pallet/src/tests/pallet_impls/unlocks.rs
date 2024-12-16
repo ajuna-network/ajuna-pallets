@@ -27,7 +27,7 @@ mod unlock_asset_trading_for {
 					DAVE,
 					UnlockTarget::OneselfFree,
 					SEASON_ID_0,
-					NATIVE
+					NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::FeatureUnavailableInSeason
 			);
@@ -55,7 +55,7 @@ mod unlock_asset_trading_for {
 					DAVE,
 					UnlockTarget::OneselfFree,
 					SEASON_ID_0,
-					NATIVE
+					NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
@@ -71,7 +71,7 @@ mod unlock_asset_trading_for {
 				DAVE,
 				UnlockTarget::OneselfFree,
 				SEASON_ID_0,
-				NATIVE
+				NATIVE_PAYMENT
 			));
 		});
 	}
@@ -88,7 +88,7 @@ mod unlock_asset_trading_for {
 					DAVE,
 					UnlockTarget::OneselfFree,
 					SEASON_ID_0,
-					NATIVE
+					NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::FeatureUnavailableInSeason
 			);
@@ -99,7 +99,7 @@ mod unlock_asset_trading_for {
 				DAVE,
 				UnlockTarget::OneselfPaying,
 				SEASON_ID_0,
-				NATIVE
+				NATIVE_PAYMENT
 			));
 			let player_config = PlayerSeasonConfigs::<Test, ()>::get(DAVE, SEASON_ID_0);
 			assert!(player_config.locks.asset_trade);
@@ -110,7 +110,7 @@ mod unlock_asset_trading_for {
 				DAVE,
 				UnlockTarget::OtherPaying(BOB),
 				SEASON_ID_0,
-				NATIVE
+				NATIVE_PAYMENT
 			));
 			let player_config = PlayerSeasonConfigs::<Test, ()>::get(BOB, SEASON_ID_0);
 			assert!(player_config.locks.asset_trade);
@@ -129,7 +129,7 @@ mod unlock_asset_transfer_for {
 					DAVE,
 					UnlockTarget::OneselfFree,
 					SEASON_ID_0,
-					NATIVE
+					NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::FeatureUnavailableInSeason
 			);
@@ -157,7 +157,7 @@ mod unlock_asset_transfer_for {
 					DAVE,
 					UnlockTarget::OneselfFree,
 					SEASON_ID_0,
-					NATIVE
+					NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::UnlockCriteriaNotFulfilled
 			);
@@ -173,7 +173,7 @@ mod unlock_asset_transfer_for {
 				DAVE,
 				UnlockTarget::OneselfFree,
 				SEASON_ID_0,
-				NATIVE
+				NATIVE_PAYMENT
 			));
 		});
 	}
@@ -190,7 +190,7 @@ mod unlock_asset_transfer_for {
 					DAVE,
 					UnlockTarget::OneselfFree,
 					SEASON_ID_0,
-					NATIVE
+					NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::FeatureUnavailableInSeason
 			);
@@ -201,7 +201,7 @@ mod unlock_asset_transfer_for {
 				DAVE,
 				UnlockTarget::OneselfPaying,
 				SEASON_ID_0,
-				NATIVE
+				NATIVE_PAYMENT
 			));
 			let player_config = PlayerSeasonConfigs::<Test, ()>::get(DAVE, SEASON_ID_0);
 			assert!(player_config.locks.asset_transfer);
@@ -212,7 +212,7 @@ mod unlock_asset_transfer_for {
 				DAVE,
 				UnlockTarget::OtherPaying(BOB),
 				SEASON_ID_0,
-				NATIVE
+				NATIVE_PAYMENT
 			));
 			let player_config = PlayerSeasonConfigs::<Test, ()>::get(BOB, SEASON_ID_0);
 			assert!(player_config.locks.asset_transfer);

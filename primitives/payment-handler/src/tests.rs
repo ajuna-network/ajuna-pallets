@@ -2,8 +2,9 @@ use crate::{
 	fee_handler::FeeHandler,
 	mock::{
 		AffiliateFeeId, Assets, Balances, ExtBuilder, TestAssetFeeHandler, TestNativeFeeHandler,
-		TournamentFeeId, ALICE, BOB, CHARLIE, DAVE, FERDIE, NOT_WHITE_LISTED_ASSET_ID,
-		TOURNAMENT_TREASURY, WHITELISTED_ASSET_ID,
+		TournamentFeeId, ALICE, BOB, CHARLIE, DAVE, FERDIE, NATIVE_ASSET_PAYMENT,
+		NOT_WHITELISTED_ASSET_ID_PAYMENT, NOT_WHITE_LISTED_ASSET_ID, TOURNAMENT_TREASURY,
+		WHITELISTED_ASSET_ID, WHITELISTED_ASSET_ID_PAYMENT,
 	},
 };
 use frame_support::assert_noop;
@@ -14,17 +15,18 @@ mod asset_fee_handler {
 
 	mod withdraw_and_pay_fees {
 		use super::*;
+		use crate::mock::{VOUCHERS, VOUCHER_ASSET_PAYMENT};
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Free,
@@ -42,14 +44,14 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_into_tournament_and_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 2;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Free,
@@ -90,14 +92,14 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_affiliates_and_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Paying,
@@ -133,14 +135,14 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_tournament_affiliates_and_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestAssetFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Paying,
@@ -180,8 +182,49 @@ mod asset_fee_handler {
 		}
 
 		#[test]
+		fn withdraw_and_pay_fee_deposits_to_tournament_affiliates_and_treasury_works_with_vouchers()
+		{
+			ExtBuilder::default().vouchers(&[(ALICE, 5)]).build().execute_with(|| {
+				let fee = 2;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				TestAssetFeeHandler::withdraw_and_pay_fees(
+					&ALICE,
+					VOUCHER_ASSET_PAYMENT,
+					fee,
+					&TournamentFeeId::Paying,
+					&AffiliateFeeId::Paying,
+					&fee_beneficiary,
+				)
+				.unwrap();
+
+				// check that the fee has not been deducted from the payer
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+
+				// check that no tournament allocation has occurred
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, TOURNAMENT_TREASURY), 0);
+
+				// check that no fee has also been allocated to the affiliates
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, BOB), 0);
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, CHARLIE), 0);
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, DAVE), 0);
+
+				// check that the requested vouchers have been deducted from storage
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers - fee);
+			});
+		}
+
+		#[test]
 		fn withdraw_and_pay_fee_fails_if_missing_funds() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -189,7 +232,7 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						WHITELISTED_ASSET_ID,
+						WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -208,7 +251,7 @@ mod asset_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_fails_for_not_whitelisted_asset() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 2;
 				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -216,7 +259,7 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						NOT_WHITE_LISTED_ASSET_ID,
+						NOT_WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -228,21 +271,55 @@ mod asset_fee_handler {
 				assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
 			});
 		}
+
+		#[test]
+		fn withdraw_and_pay_fee_fails_if_missing_vouchers() {
+			ExtBuilder::default().vouchers(&[(ALICE, 10)]).build().execute_with(|| {
+				let fee = 101;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				assert_noop!(
+					TestAssetFeeHandler::withdraw_and_pay_fees(
+						&ALICE,
+						VOUCHER_ASSET_PAYMENT,
+						fee,
+						&TournamentFeeId::Free,
+						&AffiliateFeeId::Free,
+						&fee_beneficiary,
+					),
+					DispatchError::Token(TokenError::FundsUnavailable)
+				);
+
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+
+				// check that the vouchers have been untouched
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_initial_vouchers, alice_current_vouchers);
+			});
+		}
 	}
 
 	mod withdraw_and_deposit_into_treasury {
 		use super::*;
+		use crate::mock::{VOUCHERS, VOUCHER_ASSET_PAYMENT};
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_works() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestAssetFeeHandler::withdraw_and_deposit_into_treasury(
 					&ALICE,
-					WHITELISTED_ASSET_ID,
+					WHITELISTED_ASSET_ID_PAYMENT,
 					&fee_beneficiary,
 					fee,
 				)
@@ -257,8 +334,41 @@ mod asset_fee_handler {
 		}
 
 		#[test]
+		fn withdraw_and_deposit_into_treasury_with_vouchers_does_not_err() {
+			// This test is meant to show how using vouchers with the
+			// 'withdraw_and_deposit_into_treasury' does not actually store anything in the
+			// treasury, but that it also does not fail.
+			ExtBuilder::default().vouchers(&[(ALICE, 15)]).build().execute_with(|| {
+				let fee = 15;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				TestAssetFeeHandler::withdraw_and_deposit_into_treasury(
+					&ALICE,
+					VOUCHER_ASSET_PAYMENT,
+					&fee_beneficiary,
+					fee,
+				)
+				.unwrap();
+
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), 0);
+
+				// check that the requested vouchers have been deducted from storage
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers - fee);
+			});
+		}
+
+		#[test]
 		fn withdraw_and_deposit_into_treasury_fails_if_missing_funds() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -266,7 +376,7 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						WHITELISTED_ASSET_ID,
+						WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -284,8 +394,41 @@ mod asset_fee_handler {
 		}
 
 		#[test]
+		fn withdraw_and_deposit_into_treasury_fails_if_missing_vouchers() {
+			ExtBuilder::default().vouchers(&[(ALICE, 10)]).build().execute_with(|| {
+				let fee = 101;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				assert_noop!(
+					TestAssetFeeHandler::withdraw_and_pay_fees(
+						&ALICE,
+						VOUCHER_ASSET_PAYMENT,
+						fee,
+						&TournamentFeeId::Free,
+						&AffiliateFeeId::Free,
+						&fee_beneficiary,
+					),
+					DispatchError::Token(TokenError::FundsUnavailable)
+				);
+
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+
+				// check that the vouchers have been untouched
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers);
+			});
+		}
+
+		#[test]
 		fn withdraw_and_deposit_into_treasury_for_not_whitelisted_asset() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
@@ -293,7 +436,7 @@ mod asset_fee_handler {
 				assert_noop!(
 					TestAssetFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						NOT_WHITE_LISTED_ASSET_ID,
+						NOT_WHITELISTED_ASSET_ID_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -314,17 +457,18 @@ mod native_fee_handler {
 
 	mod withdraw_and_pay_fees {
 		use super::*;
+		use crate::mock::{VOUCHERS, VOUCHER_NATIVE_PAYMENT};
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Free,
@@ -339,14 +483,14 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_into_tournament_and_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 2;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Free,
@@ -377,14 +521,14 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_affiliates_and_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Free,
 					&AffiliateFeeId::Paying,
@@ -417,14 +561,14 @@ mod native_fee_handler {
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_to_tournament_affiliates_and_treasury() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 10;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestNativeFeeHandler::withdraw_and_pay_fees(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					fee,
 					&TournamentFeeId::Paying,
 					&AffiliateFeeId::Paying,
@@ -458,8 +602,49 @@ mod native_fee_handler {
 		}
 
 		#[test]
+		fn withdraw_and_pay_fee_deposits_to_tournament_affiliates_and_treasury_works_with_vouchers()
+		{
+			ExtBuilder::default().vouchers(&[(ALICE, 3)]).build().execute_with(|| {
+				let fee = 2;
+				let alice_balance_before = Balances::balance(&ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				TestNativeFeeHandler::withdraw_and_pay_fees(
+					&ALICE,
+					VOUCHER_NATIVE_PAYMENT,
+					fee,
+					&TournamentFeeId::Paying,
+					&AffiliateFeeId::Paying,
+					&fee_beneficiary,
+				)
+				.unwrap();
+
+				// check that the fee has not been deducted from the payer's balance
+				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
+
+				// check no tournament allocation happened
+				assert_eq!(Balances::balance(&TOURNAMENT_TREASURY), 0);
+
+				// check no affiliation allocation happened
+				assert_eq!(Balances::balance(&BOB), 0);
+				assert_eq!(Balances::balance(&CHARLIE), 0);
+				assert_eq!(Balances::balance(&DAVE), 0);
+
+				// check that the requested vouchers have been deducted from storage
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers - fee);
+			});
+		}
+
+		#[test]
 		fn withdraw_and_pay_fee_fails_if_missing_funds() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -467,7 +652,7 @@ mod native_fee_handler {
 				assert_noop!(
 					TestNativeFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						(),
+						NATIVE_ASSET_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -479,21 +664,55 @@ mod native_fee_handler {
 				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
 			});
 		}
+
+		#[test]
+		fn withdraw_and_pay_fee_fails_if_missing_vouchers() {
+			ExtBuilder::default().vouchers(&[(ALICE, 45)]).build().execute_with(|| {
+				let fee = 101;
+				let alice_balance_before = Balances::balance(&ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				assert_noop!(
+					TestNativeFeeHandler::withdraw_and_pay_fees(
+						&ALICE,
+						VOUCHER_NATIVE_PAYMENT,
+						fee,
+						&TournamentFeeId::Free,
+						&AffiliateFeeId::Free,
+						&fee_beneficiary,
+					),
+					DispatchError::Token(TokenError::FundsUnavailable)
+				);
+
+				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
+
+				// check that the vouchers have been untouched
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers);
+			});
+		}
 	}
 
 	mod withdraw_and_deposit_into_treasury {
 		use super::*;
+		use crate::mock::{VOUCHERS, VOUCHER_NATIVE_PAYMENT};
 
 		#[test]
 		fn withdraw_and_deposit_into_treasury_works() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
 					&ALICE,
-					(),
+					NATIVE_ASSET_PAYMENT,
 					&fee_beneficiary,
 					fee,
 				)
@@ -505,8 +724,41 @@ mod native_fee_handler {
 		}
 
 		#[test]
+		fn withdraw_and_deposit_into_treasury_with_vouchers_does_not_err() {
+			// This test is meant to show how using vouchers with the
+			// 'withdraw_and_deposit_into_treasury' does not actually store anything in the
+			// treasury, but that it also does not fail.
+			ExtBuilder::default().vouchers(&[(ALICE, 8)]).build().execute_with(|| {
+				let fee = 1;
+				let alice_balance_before = Balances::balance(&ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
+					&ALICE,
+					VOUCHER_NATIVE_PAYMENT,
+					&fee_beneficiary,
+					fee,
+				)
+				.unwrap();
+
+				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
+				assert_eq!(Balances::balance(&fee_beneficiary), 0);
+
+				// check that the requested vouchers have been deducted from storage
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers - fee);
+			});
+		}
+
+		#[test]
 		fn withdraw_and_deposit_into_treasury_fails_if_missing_funds() {
-			ExtBuilder.build().execute_with(|| {
+			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
@@ -514,7 +766,7 @@ mod native_fee_handler {
 				assert_noop!(
 					TestNativeFeeHandler::withdraw_and_pay_fees(
 						&ALICE,
-						(),
+						NATIVE_ASSET_PAYMENT,
 						fee,
 						&TournamentFeeId::Free,
 						&AffiliateFeeId::Free,
@@ -524,6 +776,39 @@ mod native_fee_handler {
 				);
 
 				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
+			});
+		}
+
+		#[test]
+		fn withdraw_and_deposit_into_treasury_fails_if_missing_vouchers() {
+			ExtBuilder::default().vouchers(&[(ALICE, 99)]).build().execute_with(|| {
+				let fee = 101;
+				let alice_balance_before = Balances::balance(&ALICE);
+				let fee_beneficiary = FERDIE;
+
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+
+				assert_noop!(
+					TestNativeFeeHandler::withdraw_and_pay_fees(
+						&ALICE,
+						NATIVE_ASSET_PAYMENT,
+						fee,
+						&TournamentFeeId::Free,
+						&AffiliateFeeId::Free,
+						&fee_beneficiary,
+					),
+					DispatchError::Token(TokenError::FundsUnavailable)
+				);
+
+				assert_eq!(Balances::balance(&ALICE), alice_balance_before);
+
+				// check that the vouchers have been untouched
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers);
 			});
 		}
 	}

@@ -4,9 +4,11 @@ mod fee_handler;
 mod withdraw_credit;
 
 pub use fee_handler::*;
+pub use voucher_handler::*;
 pub use withdraw_credit::*;
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+mod voucher_handler;

@@ -18,7 +18,7 @@
 
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
-	fee_handler::{NativeGameFeeHandler, WithdrawNative},
+	payment_handler::{NativeGameFeeHandler, WithdrawNative},
 };
 use frame_support::{
 	parameter_types,
@@ -144,8 +144,9 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type FeeHandler = NativeGameFeeHandler<
 		MockAccountId,
 		Balances,
-		WithdrawNative<Runtime>,
+		WithdrawNative<MockAccountId, Balances>,
 		Affiliates,
+		AffiliateMaxLevel,
 		Tournament,
 	>;
 	type WeightInfo = ();
