@@ -29,4 +29,15 @@ impl<T: Config> AccountManager for Pallet<T> {
 	fn is_whitelisted_for(_identifier: &WhitelistKey, account: &Self::AccountId) -> bool {
 		WhitelistedAccounts::<T>::get().contains(account)
 	}
+
+	fn set_organizer(_account: Self::AccountId) {
+		todo!()
+	}
+
+	fn try_add_to_whitelist(
+		_identifier: &WhitelistKey,
+		_account: Self::AccountId,
+	) -> Result<(), DispatchError> {
+		todo!()
+	}
 }

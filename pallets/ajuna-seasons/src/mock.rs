@@ -134,8 +134,8 @@ impl AccountManager for MockAccountManager {
 	}
 
 	fn try_add_to_whitelist(
-		identifier: &WhitelistKey,
-		account: Self::AccountId,
+		_identifier: &WhitelistKey,
+		_account: Self::AccountId,
 	) -> Result<(), DispatchError> {
 		unimplemented!()
 	}

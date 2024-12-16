@@ -480,3 +480,43 @@ impl ExtBuilder {
 		ext
 	}
 }
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	ExtBuilder::default().build()
+}
+
+/*pub fn new_benchmark_ext() -> sp_io::TestExternalities {
+	use crate::mock::{Balances, RuntimeOrigin, System, Test, SEASON_ID_0};
+
+	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext.execute_with(|| {
+		GeneralConfigStore::<Test, ()>::mutate(|config| {
+			config.trade.open = true;
+			config.transfer.open = true;
+		});
+		SeasonUnlocks::<Test, ()>::mutate(SEASON_ID_0, LockableFeature::TradeAsset, |rule| {
+			*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
+		});
+		SeasonUnlocks::<Test, ()>::mutate(SEASON_ID_0, LockableFeature::TransferAsset, |rule| {
+			*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
+		});
+
+		let acc_1 = crate::benchmarking::account::<Test, ()>(crate::benchmarking::ACC_1);
+		Organizer::<Test, ()>::put(acc_1);
+		PlayerSeasonConfigs::<Test, ()>::mutate(acc_1, SEASON_ID_0, |config| {
+			config.locks = Locks::all_unlocked();
+		});
+		Balances::force_set_balance(RuntimeOrigin::root(), acc_1, 100_000)
+			.expect("Should set balance");
+
+		let acc_2 = crate::benchmarking::account::<Test, ()>(crate::benchmarking::ACC_2);
+		PlayerSeasonConfigs::<Test, ()>::mutate(acc_2, SEASON_ID_0, |config| {
+			config.locks = Locks::all_unlocked();
+		});
+		Balances::force_set_balance(RuntimeOrigin::root(), acc_2, 100_000)
+			.expect("Should set balance");
+	});
+	ext
+}*/

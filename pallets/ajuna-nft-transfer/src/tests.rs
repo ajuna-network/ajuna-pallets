@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{mock::*, traits::*, Error, *};
+use ajuna_primitives::account_manager::AccountManager;
 use frame_support::{
 	assert_err, assert_noop, assert_ok,
 	traits::tokens::nonfungibles_v2::{Create, Inspect},
@@ -69,7 +70,7 @@ mod set_collection_id {
 	fn set_collection_id_works() {
 		ExtBuilder::default().build().execute_with(|| {
 			let collection_id = 369;
-			MockAccountManager::set_organizer(ALICE);
+			<MockAccountManager as AccountManager>::set_organizer(ALICE);
 			assert_ok!(NftTransfer::set_collection_id(RuntimeOrigin::signed(ALICE), collection_id));
 			assert_eq!(CollectionId::<Test>::get(), Some(collection_id));
 		});

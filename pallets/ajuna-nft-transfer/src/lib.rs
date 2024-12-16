@@ -18,7 +18,7 @@
 
 pub use pallet::*;
 
-#[cfg(any(test, feature = "runtime-benchmarks"))]
+#[cfg(test)]
 mod mock;
 
 #[cfg(test)]
@@ -60,6 +60,8 @@ pub mod pallet {
 	#[cfg(feature = "runtime-benchmarks")]
 	pub trait BenchmarkHelper<AccountId, ItemId> {
 		fn create_items(owner: AccountId, count: u32) -> sp_std::vec::Vec<ItemId>;
+
+		fn set_account_balance(account: &AccountId, balance: u32);
 	}
 
 	#[pallet::pallet]

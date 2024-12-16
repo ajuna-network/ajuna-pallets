@@ -142,14 +142,6 @@ pub struct MockAccountManager;
 pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
-impl MockAccountManager {
-	pub(crate) fn set_organizer(owner: MockAccountId) {
-		ORGANIZER.with(|maybe_account| {
-			*maybe_account.borrow_mut() = Some(owner);
-		});
-	}
-}
-
 impl AccountManager for MockAccountManager {
 	type AccountId = MockAccountId;
 
@@ -165,6 +157,19 @@ impl AccountManager for MockAccountManager {
 	}
 
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
+		unimplemented!()
+	}
+
+	fn set_organizer(account: Self::AccountId) {
+		ORGANIZER.with(|maybe_account| {
+			*maybe_account.borrow_mut() = Some(account);
+		});
+	}
+
+	fn try_add_to_whitelist(
+		_identifier: &WhitelistKey,
+		_account: Self::AccountId,
+	) -> Result<(), DispatchError> {
 		unimplemented!()
 	}
 }

@@ -28,7 +28,7 @@ mod trait_impls;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
-#[cfg(any(test, feature = "runtime-benchmarks"))]
+#[cfg(test)]
 pub mod mock;
 #[cfg(test)]
 mod tests;
@@ -398,8 +398,9 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_organizer())]
 		pub fn set_organizer(origin: OriginFor<T>, organizer: AccountIdOf<T>) -> DispatchResult {
 			ensure_root(origin)?;
-			Organizer::<T, I>::put(&organizer);
-			Self::deposit_event(Event::OrganizerSet { organizer });
+
+			<Self as AccountManager>::set_organizer(organizer);
+
 			Ok(())
 		}
 

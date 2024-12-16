@@ -18,13 +18,13 @@ use crate::{
 	config::{InventoryTier, Locks},
 	pallet::{AssetFilterOf, TradeFilterOf, TransferFilterOf},
 	AssetTradePrices, BalanceOf, BenchmarkHelper, Call, Config, Event, ExtraOf, GeneralConfigOf,
-	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonUnlocks,
-	UnlockRule, UnlockTarget, SAGE_LOCK_ID,
+	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonIdOf,
+	SeasonUnlocks, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
 };
 use ajuna_primitives::{asset_manager::Lock, season_manager::SeasonManager};
 use frame_benchmarking::benchmarks;
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use sp_runtime::BuildStorage;
 
 const ACC_1: &str = "acc_1";
 const ACC_2: &str = "acc_2";
@@ -40,6 +40,36 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
+fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {
+	Organizer::<T, I>::set(Some(organizer));
+}
+
+fn set_account_balance<T: Config<I>, I: 'static>(account: &T::AccountId, balance: BalanceOf<T, I>) {
+	let _ = T::Currency::deposit_creating(account, balance);
+}
+
+fn unlock_season_features_for<T: Config<I>, I: 'static>(season_id: &SeasonIdOf<T, I>) {
+	GeneralConfigStore::<T, I>::mutate(|config| {
+		config.trade.open = true;
+		config.transfer.open = true;
+	});
+	SeasonUnlocks::<T, I>::mutate(season_id, LockableFeature::TradeAsset, |rule| {
+		*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
+	});
+	SeasonUnlocks::<T, I>::mutate(season_id, LockableFeature::TransferAsset, |rule| {
+		*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
+	});
+}
+
+fn unlock_player_features_for<T: Config<I>, I: 'static>(
+	account: &T::AccountId,
+	season_id: &SeasonIdOf<T, I>,
+) {
+	PlayerSeasonConfigs::<T, I>::mutate(account, season_id, |config| {
+		config.locks = Locks::all_unlocked();
+	});
+}
+
 benchmarks! {
 	set_organizer {
 		let acc_2 = account::<T, ()>(ACC_2);
@@ -50,6 +80,7 @@ benchmarks! {
 
 	update_general_config {
 		let acc_1 = account::<T, ()>(ACC_1);
+		setup_organizer::<T, ()>(acc_1.clone());
 		let general_config = GeneralConfigOf::<T, ()>::default();
 	}: _(RawOrigin::Signed(acc_1), general_config.clone())
 	verify {
@@ -58,6 +89,7 @@ benchmarks! {
 
 	update_unlock_rule {
 		let acc_1 = account::<T, ()>(ACC_1);
+		setup_organizer::<T, ()>(acc_1.clone());
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		let feature = LockableFeature::TradeAsset;
@@ -73,6 +105,8 @@ benchmarks! {
 
 	upgrade_asset_inventory {
 		let acc_1 = account::<T, ()>(ACC_1);
+		setup_organizer::<T, ()>(acc_1.clone());
+		set_account_balance::<T, ()>(&acc_1, 100_u32.into());
 		let acc_2 = account::<T, ()>(ACC_2);
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
@@ -89,6 +123,7 @@ benchmarks! {
 
 	update_asset_trade_filter {
 		let acc_1 = account::<T, ()>(ACC_1);
+		setup_organizer::<T, ()>(acc_1.clone());
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		let filter = TradeFilterOf::<T, ()>::default();
@@ -103,6 +138,7 @@ benchmarks! {
 
 	update_asset_transfer_filter {
 		let acc_1 = account::<T, ()>(ACC_1);
+		setup_organizer::<T, ()>(acc_1.clone());
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		let filter = TransferFilterOf::<T, ()>::default();
@@ -117,9 +153,12 @@ benchmarks! {
 
 	transfer_asset {
 		let acc_1 = account::<T, ()>(ACC_1);
+		set_account_balance::<T, ()>(&acc_1, 100_u32.into());
 		let acc_2 = account::<T, ()>(ACC_2);
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
+		unlock_season_features_for::<T, ()>(&season_id);
+		unlock_player_features_for::<T, ()>(&acc_1, &season_id);
 		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 2);
 		let payment = T::BenchmarkHelper::create_payment_kind();
 	}: _(RawOrigin::Signed(acc_1.clone()), acc_2.clone(), asset_id.clone(), Some(payment))
@@ -135,6 +174,8 @@ benchmarks! {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
+		unlock_season_features_for::<T, ()>(&season_id);
+		unlock_player_features_for::<T, ()>(&acc_1, &season_id);
 		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let price = 45_242_u32;
 	}: _(RawOrigin::Signed(acc_1), asset_id.clone(), price.into())
@@ -149,6 +190,7 @@ benchmarks! {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
+		unlock_season_features_for::<T, ()>(&season_id);
 		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
 		let price = BalanceOf::<T, ()>::from(45_242_u32);
 		AssetTradePrices::<T, ()>::insert(&season_id, &asset_id, price);
@@ -162,6 +204,7 @@ benchmarks! {
 	buy_asset {
 		let acc_1 = account::<T, ()>(ACC_1);
 		let acc_2 = account::<T, ()>(ACC_2);
+		set_account_balance::<T, ()>(&acc_2, 100_000_u32.into());
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
@@ -216,6 +259,7 @@ benchmarks! {
 		let feature = LockableFeature::TradeAsset;
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
+		unlock_season_features_for::<T, ()>(&season_id);
 		let payment = T::BenchmarkHelper::create_payment_kind();
 	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone(), Some(payment))
 	verify {
@@ -232,6 +276,7 @@ benchmarks! {
 		let feature = LockableFeature::TransferAsset;
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
+		unlock_season_features_for::<T, ()>(&season_id);
 		let payment = T::BenchmarkHelper::create_payment_kind();
 	}: unlock_feature(RawOrigin::Signed(acc_1.clone()), target, feature, season_id.clone(), Some(payment))
 	verify {
@@ -244,6 +289,7 @@ benchmarks! {
 
 	state_transition {
 		let acc_1 = account::<T, ()>(ACC_1);
+		set_account_balance::<T, ()>(&acc_1, 100_u32.into());
 		let season_id = <T as Config<()>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		let (transition_id, asset_ids) = T::BenchmarkHelper::create_bench_transition_for(&acc_1, &season_id, 99);
@@ -259,43 +305,7 @@ benchmarks! {
 
 	impl_benchmark_test_suite!(
 		Pallet,
-		new_benchmark_ext(),
+		crate::mock::new_test_ext(),
 		crate::mock::Test
 	);
-}
-
-pub fn new_benchmark_ext() -> sp_io::TestExternalities {
-	use crate::mock::{Balances, RuntimeOrigin, System, Test, SEASON_ID_0};
-
-	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext.execute_with(|| {
-		GeneralConfigStore::<Test, ()>::mutate(|config| {
-			config.trade.open = true;
-			config.transfer.open = true;
-		});
-		SeasonUnlocks::<Test, ()>::mutate(SEASON_ID_0, LockableFeature::TradeAsset, |rule| {
-			*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
-		});
-		SeasonUnlocks::<Test, ()>::mutate(SEASON_ID_0, LockableFeature::TransferAsset, |rule| {
-			*rule = Some(UnlockRule::from([0, 0, 0, 0, 0]));
-		});
-
-		let acc_1 = account::<Test, ()>(ACC_1);
-		Organizer::<Test, ()>::put(acc_1);
-		PlayerSeasonConfigs::<Test, ()>::mutate(acc_1, SEASON_ID_0, |config| {
-			config.locks = Locks::all_unlocked();
-		});
-		Balances::force_set_balance(RuntimeOrigin::root(), acc_1, 100_000)
-			.expect("Should set balance");
-
-		let acc_2 = account::<Test, ()>(ACC_2);
-		PlayerSeasonConfigs::<Test, ()>::mutate(acc_2, SEASON_ID_0, |config| {
-			config.locks = Locks::all_unlocked();
-		});
-		Balances::force_set_balance(RuntimeOrigin::root(), acc_2, 100_000)
-			.expect("Should set balance");
-	});
-	ext
 }
