@@ -59,7 +59,7 @@ fn buy_should_work() {
 			assert_ok!(Sage::buy_asset(
 				RuntimeOrigin::signed(ALICE),
 				asset_for_sale,
-				MAYBE_NATIVE_PAYMENT
+				SOME_NATIVE_PAYMENT
 			));
 
 			// check for balance transfer
@@ -108,7 +108,7 @@ fn buy_should_work() {
 			assert_ok!(Sage::buy_asset(
 				RuntimeOrigin::signed(CHARLIE),
 				asset_for_sale,
-				MAYBE_NATIVE_PAYMENT
+				SOME_NATIVE_PAYMENT
 			));
 			assert_eq!(PlayerSeasonStats::<Test, ()>::get(CHARLIE, SEASON_ID_0).bought_amount, 1);
 			assert_eq!(PlayerSeasonStats::<Test, ()>::get(BOB, SEASON_ID_0).sold_amount, 2);
@@ -124,7 +124,7 @@ fn buy_should_work() {
 			assert_ok!(Sage::buy_asset(
 				RuntimeOrigin::signed(DAVE),
 				asset_on_sale,
-				MAYBE_NATIVE_PAYMENT
+				SOME_NATIVE_PAYMENT
 			));
 			// Since the current season is SEASON_ID_0 the stat changes are applied to that season
 			// not SEASON_ID_1
@@ -170,7 +170,7 @@ fn buy_fee_should_be_calculated_correctly() {
 			assert_ok!(Sage::buy_asset(
 				RuntimeOrigin::signed(BOB),
 				asset_ids[0],
-				MAYBE_NATIVE_PAYMENT
+				SOME_NATIVE_PAYMENT
 			));
 			// We check that the fees have been paid
 			assert_eq!(Balances::free_balance(BOB), initial_balance - asset_price - price_fee_1);
@@ -191,7 +191,7 @@ fn buy_fee_should_be_calculated_correctly() {
 			assert_ok!(Sage::buy_asset(
 				RuntimeOrigin::signed(BOB),
 				asset_ids[1],
-				MAYBE_NATIVE_PAYMENT
+				SOME_NATIVE_PAYMENT
 			));
 			assert_eq!(
 				Balances::free_balance(BOB),
@@ -211,7 +211,7 @@ fn buy_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random(), MAYBE_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random(), SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -221,7 +221,7 @@ fn buy_should_reject_when_trading_is_closed() {
 fn buy_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random(), MAYBE_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random(), SOME_NATIVE_PAYMENT),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -232,7 +232,7 @@ fn buy_should_reject_unlisted_asset() {
 	ExtBuilder::default().build().execute_with(|| {
 		let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], MAYBE_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::AssetNotInTrade,
 		);
 	});
@@ -256,7 +256,7 @@ fn buy_should_reject_insufficient_balance() {
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale, MAYBE_NATIVE_PAYMENT),
+				Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale, SOME_NATIVE_PAYMENT),
 				sp_runtime::TokenError::FundsUnavailable
 			);
 		});
@@ -278,7 +278,7 @@ fn buy_should_reject_when_buyer_tries_to_buy_own_asset() {
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_for_sale, MAYBE_NATIVE_PAYMENT),
+				Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_for_sale, SOME_NATIVE_PAYMENT),
 				Error::<Test, ()>::AlreadyOwned
 			);
 		});

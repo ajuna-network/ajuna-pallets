@@ -70,17 +70,17 @@ pub trait WithdrawCredit {
 	) -> Result<Option<Self::Credit>, DispatchError>;
 }
 
-pub struct WithdrawNative<AccountId, T>(PhantomData<(AccountId, T)>);
+pub struct WithdrawNative<AccountId, Fungible>(PhantomData<(AccountId, Fungible)>);
 
-impl<AccountId, T> WithdrawCredit for WithdrawNative<AccountId, T>
+impl<AccountId, Fungible> WithdrawCredit for WithdrawNative<AccountId, Fungible>
 where
-	T: fungible::Balanced<AccountId>,
+	Fungible: fungible::Balanced<AccountId>,
 {
 	type AccountId = AccountId;
 	type AssetId = ();
-	type Assets = T;
-	type Balance = T::Balance;
-	type Credit = fungible::Credit<AccountId, T>;
+	type Assets = Fungible;
+	type Balance = Fungible::Balance;
+	type Credit = fungible::Credit<AccountId, Fungible>;
 
 	fn withdraw_credit(
 		who: &Self::AccountId,

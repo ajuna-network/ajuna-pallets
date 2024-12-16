@@ -175,10 +175,10 @@ where
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		fee_credit: fungibles::Credit<AccountId, Assets>,
+		fee_credit: W::Credit,
 		account: &AccountId,
 		identifier: &Affiliate::FeeIdentifier,
-	) -> Result<fungibles::Credit<AccountId, Assets>, DispatchError> {
+	) -> Result<W::Credit, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
@@ -211,10 +211,10 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		fee_credit: fungibles::Credit<AccountId, Assets>,
+		fee_credit: W::Credit,
 		account: &AccountId,
 		identifier: &Tournament::FeeIdentifier,
-	) -> Result<fungibles::Credit<AccountId, Assets>, DispatchError> {
+	) -> Result<W::Credit, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(allocation) = Tournament::distribute_fee(final_fee.peek(), account, identifier)
@@ -239,10 +239,7 @@ where
 		Ok(final_fee)
 	}
 
-	fn deposit_into_treasury(
-		key: &W::AccountId,
-		credit: fungibles::Credit<AccountId, Assets>,
-	) -> Result<(), DispatchError> {
+	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
 		if let Err(_credit) = W::Assets::resolve(key, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
@@ -350,10 +347,10 @@ where
 	///
 	/// Returns the remaining `fee_credit` after this operation.
 	fn try_propagate_chain_fee(
-		fee_credit: fungible::Credit<AccountId, Balances>,
+		fee_credit: W::Credit,
 		account: &AccountId,
 		identifier: &Affiliate::FeeIdentifier,
-	) -> Result<fungible::Credit<AccountId, Balances>, DispatchError> {
+	) -> Result<W::Credit, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(a) = Affiliate::distribute_fee(final_fee.peek(), account, identifier) {
@@ -384,10 +381,10 @@ where
 	///
 	/// Returns the remaining credit after taking the fee.
 	fn try_propagate_tournament_fee(
-		fee_credit: fungible::Credit<AccountId, Balances>,
+		fee_credit: W::Credit,
 		account: &AccountId,
 		identifier: &Tournament::FeeIdentifier,
-	) -> Result<fungible::Credit<AccountId, Balances>, DispatchError> {
+	) -> Result<W::Credit, DispatchError> {
 		let mut final_fee = fee_credit;
 
 		if let Some(allocation) = Tournament::distribute_fee(final_fee.peek(), account, identifier)
@@ -412,10 +409,7 @@ where
 		Ok(final_fee)
 	}
 
-	fn deposit_into_treasury(
-		key: &AccountId,
-		credit: fungible::Credit<AccountId, Balances>,
-	) -> Result<(), DispatchError> {
+	fn deposit_into_treasury(key: &AccountId, credit: W::Credit) -> Result<(), DispatchError> {
 		if let Err(_credit) = W::Assets::resolve(key, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if

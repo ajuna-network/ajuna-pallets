@@ -65,8 +65,8 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		PalletAssets: pallet_assets = 3,
-		Sage: pallet_sage = 4,
+		PalletAssets: pallet_assets = 2,
+		Sage: pallet_sage = 3,
 	}
 );
 
@@ -100,7 +100,7 @@ pub type NativeAndAssets =
 	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
 pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<u32>> =
 	WithdrawKind::Payment(NativeOrWithId::Native);
-pub const MAYBE_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<u32>>> = Some(NATIVE_PAYMENT);
+pub const SOME_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<u32>>> = Some(NATIVE_PAYMENT);
 
 use example_transition::{
 	generic::ExampleTransitionGeneric,

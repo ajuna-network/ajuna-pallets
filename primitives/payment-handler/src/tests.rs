@@ -334,7 +334,10 @@ mod asset_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_works_with_vouchers() {
+		fn withdraw_and_deposit_into_treasury_with_vouchers_does_not_err() {
+			// This test is meant to show how using vouchers with the
+			// 'withdraw_and_deposit_into_treasury' does not actually store anything in the
+			// treasury, but that it also does not fail.
 			ExtBuilder::default().vouchers(&[(ALICE, 15)]).build().execute_with(|| {
 				let fee = 15;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
@@ -721,7 +724,10 @@ mod native_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_works_with_vouchers() {
+		fn withdraw_and_deposit_into_treasury_with_vouchers_does_not_err() {
+			// This test is meant to show how using vouchers with the
+			// 'withdraw_and_deposit_into_treasury' does not actually store anything in the
+			// treasury, but that it also does not fail.
 			ExtBuilder::default().vouchers(&[(ALICE, 8)]).build().execute_with(|| {
 				let fee = 1;
 				let alice_balance_before = Balances::balance(&ALICE);
