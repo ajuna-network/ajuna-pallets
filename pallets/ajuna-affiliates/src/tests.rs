@@ -49,7 +49,7 @@ mod extrinsic {
 			.affiliators(&[ALICE])
 			.build()
 			.execute_with(|| {
-				MockAccountManager::try_add_to_whitelist(&AffiliateWhitelistKey::get(), &CHARLIE)
+				MockAccountManager::try_add_to_whitelist(&AffiliateWhitelistKey::get(), CHARLIE)
 					.expect("Should be whitelisted");
 
 				assert_ok!(AffiliatesAlpha::add_affiliation(
