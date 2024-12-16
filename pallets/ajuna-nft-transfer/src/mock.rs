@@ -430,6 +430,12 @@ impl AssetManager for MockAssetManager {
 /// Hence, we implement our own little account manager here.
 pub struct MockAccountManager;
 
+impl MockAccountManager {
+	pub fn set_organizer(account: Self::AccountId) {
+		ORGANIZER.with_borrow_mut(|maybe_organizer| *maybe_organizer = Some(account))
+	}
+}
+
 pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
@@ -453,7 +459,7 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn set_organizer(account: Self::AccountId) {
-		ORGANIZER.with_borrow_mut(|maybe_organizer| *maybe_organizer = Some(account))
+		MockAccountManager::set_organizer(account);
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
