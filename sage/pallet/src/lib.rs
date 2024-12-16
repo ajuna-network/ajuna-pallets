@@ -398,9 +398,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_organizer())]
 		pub fn set_organizer(origin: OriginFor<T>, organizer: AccountIdOf<T>) -> DispatchResult {
 			ensure_root(origin)?;
-
-			<Self as AccountManager>::set_organizer(organizer);
-
+			Organizer::<T, I>::put(&organizer);
+			Self::deposit_event(Event::OrganizerSet { organizer });
 			Ok(())
 		}
 

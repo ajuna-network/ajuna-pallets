@@ -29,11 +29,13 @@ impl<T: Config<I>, I: 'static> AccountManager for Pallet<T, I> {
 		unimplemented!()
 	}
 
+	#[cfg(features = "runtime-benchmarks")]
 	fn set_organizer(account: Self::AccountId) {
 		Organizer::<T, I>::put(&account);
 		Self::deposit_event(Event::OrganizerSet { organizer: account });
 	}
 
+	#[cfg(features = "runtime-benchmarks")]
 	fn try_add_to_whitelist(
 		_identifier: &WhitelistKey,
 		_account: Self::AccountId,
