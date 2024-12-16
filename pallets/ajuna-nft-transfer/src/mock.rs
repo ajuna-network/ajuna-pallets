@@ -431,7 +431,7 @@ impl AssetManager for MockAssetManager {
 pub struct MockAccountManager;
 
 impl MockAccountManager {
-	pub fn set_organizer(account: Self::AccountId) {
+	pub fn set_organizer(account: MockAccountId) {
 		ORGANIZER.with_borrow_mut(|maybe_organizer| *maybe_organizer = Some(account))
 	}
 }
