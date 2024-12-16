@@ -27,4 +27,13 @@ pub trait AccountManager {
 	fn is_organizer(account: &Self::AccountId) -> Result<(), DispatchError>;
 
 	fn is_whitelisted_for(identifier: &WhitelistKey, account: &Self::AccountId) -> bool;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(account: Self::AccountId);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_add_to_whitelist(
+		identifier: &WhitelistKey,
+		account: Self::AccountId,
+	) -> Result<(), DispatchError>;
 }
