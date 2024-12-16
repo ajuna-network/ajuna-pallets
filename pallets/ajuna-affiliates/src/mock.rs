@@ -118,6 +118,14 @@ pub struct MockAccountManager;
 pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
+impl MockAccountManager {
+	pub fn set_organizer(owner: MockAccountId) {
+		ORGANIZER.with(|maybe_account| {
+			*maybe_account.borrow_mut() = Some(owner);
+		});
+	}
+}
+
 impl AccountManager for MockAccountManager {
 	type AccountId = MockAccountId;
 
@@ -143,16 +151,14 @@ impl AccountManager for MockAccountManager {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn set_organizer(owner: MockAccountId) {
-		ORGANIZER.with(|maybe_account| {
-			*maybe_account.borrow_mut() = Some(owner);
-		});
+	fn set_organizer(owner: Self::AccountId) {
+		MockAccountManager::set_organizer(owner);
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn try_add_to_whitelist(
 		identifier: &WhitelistKey,
-		account: MockAccountId,
+		account: Self::AccountId,
 	) -> Result<(), DispatchError> {
 		WHITELISTED_ACCOUNTS.with(|accounts| {
 			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
