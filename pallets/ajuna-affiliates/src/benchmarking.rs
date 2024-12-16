@@ -14,33 +14,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-#![cfg_attr(not(feature = "std"), no_std)]
-
-use crate::{
-	mock::{
-		AffiliateBenchmarkHelper, AffiliateMaxLevel, AffiliateWhitelistKey, Balances,
-		MockAccountManager, MockAffiliateRules, MockRuleId, MockUnlockParameter, RuntimeEvent,
-		System, Test,
-	},
-	Pallet as Affiliates, *,
-};
+use crate::{Pallet as Affiliates, *};
 use frame_benchmarking::benchmarks_instance_pallet;
 use frame_system::RawOrigin;
-use sp_runtime::BuildStorage;
-
-impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type WhitelistKey = AffiliateWhitelistKey;
-	type AccountManager = MockAccountManager;
-	type RuleIdentifier = MockRuleId;
-	type AffiliateMaxLevel = AffiliateMaxLevel;
-	type UnlockParameters = MockUnlockParameter;
-	type AffiliatesUnlockRules = MockAffiliateRules;
-	type WeightInfo = ();
-	type BenchmarkHelper = AffiliateBenchmarkHelper;
-}
+use sp_std::prelude::*;
 
 const ACC_1: &str = "acc_1";
 const ACC_2: &str = "acc_2";
@@ -74,6 +51,13 @@ fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
+// Todo: these functions should exist with runtime-benchmarks enabled.
+fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {
+	T::AccountManager::try_add_to_whitelist(&T::WhitelistKey::get(), &organizer)
+		.expect("Should add to whitelist");
+	T::AccountManager::set_organizer(organizer);
+}
+
 benchmarks_instance_pallet! {
 	enable_affiliator {
 		let acc_1 = account::<T, I>(ACC_1);
@@ -88,6 +72,7 @@ benchmarks_instance_pallet! {
 		let acc_1 = account::<T, I>(ACC_1);
 		let acc_2 = account::<T, I>(ACC_2);
 		let acc_3 = account::<T, I>(ACC_3);
+		setup_organizer::<T, I>(acc_1.clone());
 		mark_as_affiliatable::<T, I>(&acc_3);
 	}: _(RawOrigin::Signed(acc_1.clone()), Some(acc_2.clone()), 0)
 	verify {
@@ -96,6 +81,7 @@ benchmarks_instance_pallet! {
 
 	remove_affiliation {
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
 		mark_as_affiliatable::<T, I>(&acc_1);
 		let acc_2 = account::<T, I>(ACC_2);
 		mark_as_affiliatable::<T, I>(&acc_2);
@@ -116,6 +102,7 @@ benchmarks_instance_pallet! {
 
 	set_rule_for {
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
 		let rule_id = T::BenchmarkHelper::create_rule_id(1);
 		let rule = FeePropagationOf::<T,I>::try_from(vec![60, 20]).expect("Should create fee propagation");
 	}: _(RawOrigin::Signed(acc_1.clone()), rule_id.clone(), rule)
@@ -125,6 +112,7 @@ benchmarks_instance_pallet! {
 
 	clear_rule_for {
 		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
 		let rule_id = T::BenchmarkHelper::create_rule_id(1);
 		let rule = FeePropagationOf::<T,I>::try_from(vec![70, 15]).expect("Should create fee propagation");
 		<Affiliates<T, I> as RuleMutator<RuleIdentifierFor<T, I>, T::AffiliateMaxLevel>>::try_add_rule_for(
@@ -136,21 +124,8 @@ benchmarks_instance_pallet! {
 	}
 
 	impl_benchmark_test_suite!(
-		Affiliates,
-		new_test_ext(),
-		Test
+		Pallet,
+		crate::mock::new_test_ext(),
+		crate::mock::Test
 	);
-}
-
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext.execute_with(|| {
-		let acc_1 = account::<Test, ()>(ACC_1);
-		MockAccountManager::set_organizer(acc_1);
-		MockAccountManager::try_add_to_whitelist(&AffiliateWhitelistKey::get(), &acc_1)
-			.expect("Should add to whitelist");
-	});
-	ext
 }
