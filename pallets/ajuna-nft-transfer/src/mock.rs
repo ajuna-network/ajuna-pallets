@@ -34,12 +34,11 @@ use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	bounded_vec,
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
-	DispatchError,
+	DispatchError, RuntimeAppPublic,
 };
-use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
+use sp_std::{cell::RefCell, collections::btree_map::BTreeMap, vec, vec::Vec};
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -48,8 +47,7 @@ pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockBalance = u64;
 pub type MockCollectionId = u32;
 
-#[cfg(feature = "runtime-benchmarks")]
-use sp_runtime::RuntimeAppPublic;
+use crate::tests::ExtBuilder;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -260,14 +258,27 @@ impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
 	const IPFS_URL_CODE: &'static [u8] = &[21];
 
 	fn get_attribute_codes() -> Vec<NFTAttribute<KeyLimit>> {
-		vec![bounded_vec![111], bounded_vec![222], bounded_vec![240]]
+		vec![
+			BoundedVec::try_from(vec![111]).expect("Should create vec"),
+			BoundedVec::try_from(vec![222]).expect("Should create vec"),
+			BoundedVec::try_from(vec![240]).expect("Should create vec"),
+		]
 	}
 
 	fn get_encoded_attributes(&self) -> Vec<(NFTAttribute<KeyLimit>, NFTAttribute<ValueLimit>)> {
 		vec![
-			(bounded_vec![111], BoundedVec::try_from(self.field_1.clone()).unwrap()),
-			(bounded_vec![222], BoundedVec::try_from(self.field_2.to_le_bytes().to_vec()).unwrap()),
-			(bounded_vec![240], BoundedVec::try_from(vec![self.field_3 as u8]).unwrap()),
+			(
+				BoundedVec::try_from(vec![111]).expect("Should create vec"),
+				BoundedVec::try_from(self.field_1.clone()).unwrap(),
+			),
+			(
+				BoundedVec::try_from(vec![222]).expect("Should create vec"),
+				BoundedVec::try_from(self.field_2.to_le_bytes().to_vec()).unwrap(),
+			),
+			(
+				BoundedVec::try_from(vec![240]).expect("Should create vec"),
+				BoundedVec::try_from(vec![self.field_3 as u8]).unwrap(),
+			),
 		]
 	}
 }
@@ -414,14 +425,14 @@ impl AssetManager for MockAssetManager {
 /// Hence, we implement our own little account manager here.
 pub struct MockAccountManager;
 
-pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
-pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
-
 impl MockAccountManager {
-	pub fn set_organizer(organizer: MockAccountId) {
-		ORGANIZER.with(|o| *o.borrow_mut() = Some(organizer))
+	pub fn set_organizer(account: MockAccountId) {
+		ORGANIZER.with_borrow_mut(|maybe_organizer| *maybe_organizer = Some(account))
 	}
 }
+
+pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
+pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
 impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 	type AccountId = MockAccountId;
@@ -440,4 +451,21 @@ impl ajuna_primitives::account_manager::AccountManager for MockAccountManager {
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
 		unimplemented!()
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(account: Self::AccountId) {
+		MockAccountManager::set_organizer(account);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_add_to_whitelist(
+		_identifier: &WhitelistKey,
+		_account: Self::AccountId,
+	) -> Result<(), DispatchError> {
+		unimplemented!()
+	}
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	ExtBuilder::default().build()
 }

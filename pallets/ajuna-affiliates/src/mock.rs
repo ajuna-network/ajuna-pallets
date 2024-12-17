@@ -20,12 +20,10 @@ use frame_support::{
 	ensure, parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-#[cfg(test)]
-use sp_runtime::BuildStorage;
 use sp_runtime::{
 	testing::{TestSignature, H256},
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	DispatchError,
+	BuildStorage, DispatchError,
 };
 use sp_std::{
 	cell::RefCell,
@@ -121,24 +119,24 @@ pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
 impl MockAccountManager {
-	pub(crate) fn try_add_to_whitelist(
+	pub fn set_organizer(owner: MockAccountId) {
+		ORGANIZER.with(|maybe_account| {
+			*maybe_account.borrow_mut() = Some(owner);
+		});
+	}
+
+	pub fn try_add_to_whitelist(
 		identifier: &WhitelistKey,
-		account: &MockAccountId,
+		account: MockAccountId,
 	) -> Result<(), DispatchError> {
 		WHITELISTED_ACCOUNTS.with(|accounts| {
 			if let Some(entry) = accounts.borrow_mut().get_mut(identifier) {
-				entry.insert(*account);
+				entry.insert(account);
 				Ok(())
 			} else {
 				Err(DispatchError::Other("No account set for identifier"))
 			}
 		})
-	}
-
-	pub(crate) fn set_organizer(owner: MockAccountId) {
-		ORGANIZER.with(|maybe_account| {
-			*maybe_account.borrow_mut() = Some(owner);
-		});
 	}
 }
 
@@ -164,6 +162,19 @@ impl AccountManager for MockAccountManager {
 				false
 			}
 		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(owner: Self::AccountId) {
+		MockAccountManager::set_organizer(owner);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_add_to_whitelist(
+		identifier: &WhitelistKey,
+		account: Self::AccountId,
+	) -> Result<(), DispatchError> {
+		MockAccountManager::try_add_to_whitelist(identifier, account)
 	}
 }
 
@@ -232,7 +243,20 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 	type BenchmarkHelper = AffiliateBenchmarkHelper;
 }
 
-#[cfg(test)]
+#[cfg(feature = "runtime-benchmarks")]
+impl Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type WhitelistKey = AffiliateWhitelistKey;
+	type AccountManager = MockAccountManager;
+	type RuleIdentifier = MockRuleId;
+	type AffiliateMaxLevel = AffiliateMaxLevel;
+	type UnlockParameters = MockUnlockParameter;
+	type AffiliatesUnlockRules = MockAffiliateRules;
+	type WeightInfo = ();
+	type BenchmarkHelper = AffiliateBenchmarkHelper;
+}
+
 #[derive(Default)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
@@ -240,7 +264,10 @@ pub struct ExtBuilder {
 	affiliators: Vec<MockAccountId>,
 }
 
-#[cfg(test)]
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	ExtBuilder::default().build()
+}
+
 impl ExtBuilder {
 	pub fn balances(mut self, balances: &[(MockAccountId, MockBalance)]) -> Self {
 		self.balances = balances.to_vec();

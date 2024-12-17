@@ -19,7 +19,6 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-#[cfg(test)]
 use sp_runtime::BuildStorage;
 
 use ajuna_primitives::{account_manager::WhitelistKey, season_manager::Validate};
@@ -107,16 +106,16 @@ thread_local! {
 
 pub struct MockAccountManager;
 
-pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
-pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
-
 impl MockAccountManager {
-	pub(crate) fn set_organizer(owner: MockAccountId) {
+	pub fn set_organizer(owner: MockAccountId) {
 		ORGANIZER.with(|maybe_account| {
 			*maybe_account.borrow_mut() = Some(owner);
 		});
 	}
 }
+
+pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
+pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
 impl AccountManager for MockAccountManager {
 	type AccountId = MockAccountId;
@@ -133,6 +132,19 @@ impl AccountManager for MockAccountManager {
 	}
 
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
+		unimplemented!()
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(account: Self::AccountId) {
+		MockAccountManager::set_organizer(account);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_add_to_whitelist(
+		_identifier: &WhitelistKey,
+		_account: Self::AccountId,
+	) -> Result<(), DispatchError> {
 		unimplemented!()
 	}
 }
@@ -177,6 +189,18 @@ impl pallet_ajuna_seasons::Config<SeasonsInstance1> for Test {
 	type BenchmarkHelper = SeasonsBenchmarkHelper;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type SeasonId = MockSeasonId;
+	type SeasonData = MockSeasonData;
+	type AssetId = MockAssetId;
+	type AccountHandler = MockAccountManager;
+	type Currency = Balances;
+	type WeightInfo = ();
+	type BenchmarkHelper = SeasonsBenchmarkHelper;
+}
+
 #[cfg(test)]
 #[derive(Default)]
 pub struct ExtBuilder {
@@ -203,6 +227,10 @@ impl ExtBuilder {
 		});
 		ext
 	}
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	ExtBuilder::default().build()
 }
 
 pub fn run_to_block(n: u64) {

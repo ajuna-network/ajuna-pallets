@@ -33,10 +33,10 @@ use pallet_ajuna_nft_staking::{
 };
 use pallet_nfts::{BenchmarkHelper, ItemConfig};
 use sp_runtime::{
-	bounded_vec,
 	traits::{One, UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchError,
 };
+use sp_std::{vec, vec::Vec};
 
 // Creator's collections.
 const CONTRACT_COLLECTION: u16 = 0;
@@ -305,7 +305,8 @@ benchmarks! {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
 		let creator = create_creator::<T>(None)?;
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Tokens(123_u64.unique_saturated_into())];
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+			.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 	}: create(RawOrigin::Signed(creator), contract_id, contract, None, None)
@@ -317,10 +318,10 @@ benchmarks! {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
 		let reward_nft_item = 123_u16;
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Nft(NftId(
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))];
+		))]).expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 		let creator = create_creator::<T>(Some(vec![reward_nft_item]))?;
@@ -332,7 +333,8 @@ benchmarks! {
 	remove_token_reward {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Tokens(123_u64.unique_saturated_into())];
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+			.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 		let creator = create_creator::<T>(None)?;
@@ -346,10 +348,10 @@ benchmarks! {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
 		let reward_nft_item = 2_u16;
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Nft(NftId(
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))];
+		))]).expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 		let creator = create_creator::<T>(Some(vec![reward_nft_item]))?;
@@ -362,7 +364,8 @@ benchmarks! {
 	accept_token_reward {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Tokens(123_u64.unique_saturated_into())];
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+			.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
@@ -381,10 +384,10 @@ benchmarks! {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
 		let reward_nft_item = 2_u16;
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Nft(
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(
 			NftId(REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))];
+		))]).expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
@@ -402,7 +405,8 @@ benchmarks! {
 	cancel_token_reward {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Tokens(123_u64.unique_saturated_into())];
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+			.expect("Should create rewards");
 		let mut contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		contract.stake_duration = 100_u32.unique_saturated_into();
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
@@ -422,10 +426,10 @@ benchmarks! {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
 		let reward_nft_item = 2_u16;
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Nft(NftId(
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))];
+		))]).expect("Should create rewards");
 		let mut contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		contract.stake_duration = 100_u32.unique_saturated_into();
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
@@ -444,7 +448,8 @@ benchmarks! {
 	claim_token_reward {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Tokens(123_u64.unique_saturated_into())];
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+			.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
@@ -463,10 +468,10 @@ benchmarks! {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
 		let reward_nft_item = 2_u16;
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Nft(NftId(
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))];
+		))]).expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
@@ -484,7 +489,8 @@ benchmarks! {
 	snipe_token_reward {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Tokens(123_u64.unique_saturated_into())];
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+			.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
@@ -517,18 +523,18 @@ benchmarks! {
 		let m in 0..T::MaxStakingClauses::get();
 		let n in 0..T::MaxFeeClauses::get();
 		let reward_nft_item = 2_u16;
-		let rewards: BoundedRewardsOf<T> = bounded_vec![Reward::Nft(NftId(
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))];
+		))]).expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
 		let sniper_reward_nft_item = 123_u16;
-		let sniper_rewards = bounded_vec![Reward::Nft(NftId(
+		let sniper_rewards = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(sniper_reward_nft_item),
-		))];
+		))]).expect("Should create rewards");
 		let mut sniper_contract = contract_with::<T>(m, n, sniper_rewards, Mode::Sniper);
 		sniper_contract.stake_duration = 100_u32.unique_saturated_into();
 		let sniper_contract_id = T::BenchmarkHelper::item_id(1_u16);

@@ -25,13 +25,10 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-#[cfg(test)]
-use sp_runtime::BuildStorage;
-
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	MultiSignature,
+	BuildStorage, MultiSignature,
 };
 use sp_std::{cell::RefCell, cmp::Ordering, collections::btree_map::BTreeMap};
 
@@ -146,10 +143,8 @@ pub const ACCOUNT_IS_NOT_ORGANIZER: &str = "ACCOUNT_IS_NOT_ORGANIZER";
 pub const NO_ORGANIZER_SET: &str = "NO_ORGANIZER_SET";
 
 impl MockAccountManager {
-	pub(crate) fn set_organizer(owner: MockAccountId) {
-		ORGANIZER.with(|maybe_account| {
-			*maybe_account.borrow_mut() = Some(owner);
-		});
+	pub fn set_organizer(account: MockAccountId) {
+		ORGANIZER.with_borrow_mut(|maybe_organizer| *maybe_organizer = Some(account))
 	}
 }
 
@@ -168,6 +163,19 @@ impl AccountManager for MockAccountManager {
 	}
 
 	fn is_whitelisted_for(_identifier: &WhitelistKey, _account: &Self::AccountId) -> bool {
+		unimplemented!()
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_organizer(account: Self::AccountId) {
+		MockAccountManager::set_organizer(account);
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_add_to_whitelist(
+		_identifier: &WhitelistKey,
+		_account: Self::AccountId,
+	) -> Result<(), DispatchError> {
 		unimplemented!()
 	}
 }
@@ -330,6 +338,22 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type BenchmarkHelper = TournamentBenchmarkHelper;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl Config for Test {
+	type PalletId = TournamentPalletId1;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type TournamentCategoryId = MockCategoryId;
+	type EntityId = MockEntityId;
+	type RankedEntity = MockEntity;
+	type EntityRanker = MockRanker;
+	type AccountManager = MockAccountManager;
+	type AssetManager = MockAssetManager;
+	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
+	type WeightInfo = ();
+	type BenchmarkHelper = TournamentBenchmarkHelper;
+}
+
 #[cfg(test)]
 pub struct ExtBuilder {
 	balances: Vec<(MockAccountId, MockBalance)>,
@@ -379,6 +403,10 @@ impl ExtBuilder {
 		});
 		ext
 	}
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	ExtBuilder::default().build()
 }
 
 pub fn run_to_block(n: u64) {

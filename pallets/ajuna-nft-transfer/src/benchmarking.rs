@@ -14,31 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-#![cfg_attr(not(feature = "std"), no_std)]
-
-use crate::{
-	mock::{MockAccountManager, System, Test},
-	traits::IpfsUrl,
-	*,
-};
+use crate::{traits::IpfsUrl, *};
+use ajuna_primitives::account_manager::AccountManager;
 use frame_benchmarking::benchmarks;
 use frame_support::{pallet_prelude::DispatchError, traits::Currency};
 use frame_system::RawOrigin;
-use sp_runtime::{BuildStorage, SaturatedConversion};
+use sp_runtime::SaturatedConversion;
 
 type CurrencyOf<T> = <T as pallet_nfts::Config>::Currency;
 type CollectionIdOf<T> = <T as crate::Config>::CollectionId;
 type ItemIdOf<T> = <T as crate::Config>::ItemId;
-
-pub struct Pallet<T: Config>(crate::Pallet<T>);
-
-// Todo: If we can't get rid of the pallet-nfts constraint here
-// we can just as well make the pallet-ajuna-nft-transfer depend
-// on it.
-pub trait Config: pallet_nfts::Config + crate::Config {}
-
-impl Config for Test {}
 
 fn account<T: Config>(name: &'static str) -> T::AccountId {
 	let index = 0;
@@ -52,7 +37,7 @@ fn create_service_account<T: Config>() -> T::AccountId {
 	service_account
 }
 
-fn create_service_account_and_prepare_avatar<T: Config>(
+fn create_service_account_and_prepare_avatar<T: Config + pallet_nfts::Config>(
 	player: T::AccountId,
 	asset_id: ItemIdOf<T>,
 ) -> Result<T::AccountId, DispatchError> {
@@ -62,7 +47,7 @@ fn create_service_account_and_prepare_avatar<T: Config>(
 	Ok(service_account)
 }
 
-fn enable_fee_payment<T: Config>(player: &T::AccountId) {
+fn enable_fee_payment<T: Config + pallet_nfts::Config>(player: &T::AccountId) {
 	let prepare_fee = 100_000_000_000_000u128;
 	CurrencyOf::<T>::make_free_balance_be(player, prepare_fee.saturated_into());
 }
@@ -73,9 +58,12 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 }
 
 benchmarks! {
+	where_clause { where T: pallet_nfts::Config }
+
 	set_collection_id {
 		let organizer = account::<T>("organizer");
 		let collection_id = CollectionIdOf::<T>::from(u32::MAX);
+		T::AccountManager::set_organizer(organizer.clone());
 	}: _(RawOrigin::Signed(organizer), collection_id)
 	verify {
 		assert_last_event::<T>(Event::CollectionIdSet { collection_id })
@@ -122,19 +110,7 @@ benchmarks! {
 
 	impl_benchmark_test_suite!(
 		Pallet,
-		crate::benchmarking::new_test_ext(),
+		crate::mock::new_test_ext(),
 		crate::mock::Test
 	);
-}
-
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext.execute_with(|| {
-		let organizer = account::<Test>("organizer");
-		MockAccountManager::set_organizer(organizer);
-	});
-
-	ext
 }
