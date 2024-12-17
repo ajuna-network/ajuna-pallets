@@ -17,10 +17,11 @@
 use crate::{traits::IpfsUrl, *};
 use ajuna_primitives::account_manager::AccountManager;
 use frame_benchmarking::benchmarks;
-use frame_support::pallet_prelude::DispatchError;
+use frame_support::{pallet_prelude::DispatchError, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::SaturatedConversion;
 
+type CurrencyOf<T> = <T as pallet_nfts::Config>::Currency;
 type CollectionIdOf<T> = <T as crate::Config>::CollectionId;
 type ItemIdOf<T> = <T as crate::Config>::ItemId;
 
@@ -36,7 +37,7 @@ fn create_service_account<T: Config>() -> T::AccountId {
 	service_account
 }
 
-fn create_service_account_and_prepare_avatar<T: Config>(
+fn create_service_account_and_prepare_avatar<T: Config + pallet_nfts::Config>(
 	player: T::AccountId,
 	asset_id: ItemIdOf<T>,
 ) -> Result<T::AccountId, DispatchError> {
@@ -46,9 +47,9 @@ fn create_service_account_and_prepare_avatar<T: Config>(
 	Ok(service_account)
 }
 
-fn enable_fee_payment<T: Config>(player: &T::AccountId) {
+fn enable_fee_payment<T: Config + pallet_nfts::Config>(player: &T::AccountId) {
 	let prepare_fee = 100_000_000_000_000u128;
-	T::BenchmarkHelper::set_account_balance(player, prepare_fee.saturated_into());
+	CurrencyOf::<T>::make_free_balance_be(player, prepare_fee.saturated_into());
 }
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
@@ -57,6 +58,8 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 }
 
 benchmarks! {
+	where_clause { where T: pallet_nfts::Config }
+
 	set_collection_id {
 		let organizer = account::<T>("organizer");
 		let collection_id = CollectionIdOf::<T>::from(u32::MAX);

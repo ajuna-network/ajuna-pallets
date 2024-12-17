@@ -215,11 +215,6 @@ impl crate::BenchmarkHelper<MockAccountId, ItemId> for NftTransferBenchmarkHelpe
 	fn create_items(owner: MockAccountId, count: u32) -> Vec<ItemId> {
 		MockAssetManager::create_items(owner, count)
 	}
-
-	fn set_account_balance(account: &MockAccountId, balance: u32) {
-		Balances::force_set_balance(RuntimeOrigin::root(), *account, balance as u64)
-			.expect("Should set balance");
-	}
 }
 
 impl pallet_ajuna_nft_transfer::Config for Test {
