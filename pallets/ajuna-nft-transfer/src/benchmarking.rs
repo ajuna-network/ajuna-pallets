@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-
 use crate::{traits::IpfsUrl, *};
 use ajuna_primitives::account_manager::AccountManager;
 use frame_benchmarking::benchmarks;
