@@ -101,20 +101,19 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 
 fn create_creator<T: Config>(reward_item: Option<Vec<u16>>) -> Result<T::AccountId, DispatchError> {
 	let creator = account::<T>("creator");
-	create_contract_collection::<T>(&creator).expect("Account should be created"); // reserve CONTRACT_COLLECTION
-	create_collections::<T>(&creator, 1).expect("Account should be created"); // reserve REWARD_COLLECTION
+	create_contract_collection::<T>(&creator)?; // reserve CONTRACT_COLLECTION
+	create_collections::<T>(&creator, 1)?; // reserve REWARD_COLLECTION
 	if let Some(item_ids) = reward_item {
 		item_ids
 			.into_iter()
-			.try_for_each(|item_id| mint_item::<T>(&creator, REWARD_COLLECTION, item_id))
-			.expect("Account should be created");
+			.try_for_each(|item_id| mint_item::<T>(&creator, REWARD_COLLECTION, item_id))?;
 	}
 	Creator::<T>::put(&creator);
 	Ok(creator)
 }
 
 fn create_contract_collection<T: Config>(creator: &T::AccountId) -> DispatchResult {
-	create_collection::<T>(creator).expect("Account should be created");
+	create_collection::<T>(creator)?;
 	ContractCollectionId::<T>::put(CollectionIdOf::<T>::from(CONTRACT_COLLECTION));
 	Ok(())
 }
@@ -133,8 +132,7 @@ fn create_collection<T: Config>(owner: &T::AccountId) -> DispatchResult {
 			max_supply: Default::default(),
 			mint_settings: Default::default(),
 		},
-	)
-	.expect("Account should be created");
+	)?;
 	Ok(())
 }
 
@@ -159,8 +157,7 @@ fn accept_contract<T: Config>(
 	contract_id: ItemIdOf<T>,
 	mode: Mode,
 ) -> DispatchResult {
-	let (stakes, fees) = stakes_and_fees::<T>(num_stake_clauses, num_fee_clauses, &staker, mode)
-		.expect("Account should be created");
+	let (stakes, fees) = stakes_and_fees::<T>(num_stake_clauses, num_fee_clauses, &staker, mode)?;
 	pallet_ajuna_nft_staking::Pallet::<T>::accept(
 		RawOrigin::Signed(staker).into(),
 		contract_id,
@@ -179,8 +176,7 @@ fn mint_item<T: Config>(owner: &T::AccountId, collection_id: u16, item_id: u16) 
 		owner,
 		&ItemConfig::default(),
 		false,
-	)
-	.expect("Account should be created");
+	)?;
 	Ok(())
 }
 
@@ -197,8 +193,7 @@ fn set_attribute<T: Config>(
 		item_id,
 		&[key],
 		&[value],
-	)
-	.expect("Account should be created");
+	)?;
 	Ok(())
 }
 
@@ -214,9 +209,8 @@ fn stakes_and_fees<T: Config>(
 	for i in 0..num_stake_clauses {
 		let item_id = i as u16;
 		let attr_key = i;
-		mint_item::<T>(who, stake_collection, item_id).expect("Account should be created");
-		set_attribute::<T>(stake_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)
-			.expect("Account should be created");
+		mint_item::<T>(who, stake_collection, item_id)?;
+		set_attribute::<T>(stake_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)?;
 		stakes.push(NftId(
 			CollectionIdOf::<T>::unique_saturated_from(stake_collection),
 			T::BenchmarkHelper::item_id(item_id),
@@ -225,9 +219,8 @@ fn stakes_and_fees<T: Config>(
 	for i in num_stake_clauses..num_stake_clauses + num_fee_clauses {
 		let item_id = i as u16;
 		let attr_key = i;
-		mint_item::<T>(who, fee_collection, item_id).expect("Account should be created");
-		set_attribute::<T>(fee_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)
-			.expect("Account should be created");
+		mint_item::<T>(who, fee_collection, item_id)?;
+		set_attribute::<T>(fee_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)?;
 		fees.push(NftId(
 			CollectionIdOf::<T>::unique_saturated_from(fee_collection),
 			T::BenchmarkHelper::item_id(item_id),
