@@ -17,7 +17,7 @@
 use crate::{Pallet as Seasons, *};
 use ajuna_primitives::season_manager::SeasonFeeConfig;
 
-use frame_benchmarking::benchmarks_instance_pallet;
+use frame_benchmarking::v2::*;
 use frame_support::BoundedVec;
 use frame_system::RawOrigin;
 use sp_runtime::Saturating;
@@ -53,87 +53,91 @@ fn run_to_block<T: Config<I>, I: 'static>(n: BlockNumberFor<T>) {
 	}
 }
 
-benchmarks_instance_pallet! {
-	update_season {
+#[instance_benchmarks]
+mod benchmarks {
+	use super::*;
+
+	#[benchmark]
+	fn update_season() {
 		let season_id = T::BenchmarkHelper::create_season_id(1_u32);
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		let config = SeasonConfigOf::<T, I> {
-				fee: SeasonFeeConfig {
-					transfer_asset: 10_u32.into(),
-					buy_asset_min: 5_u32.into(),
-					buy_percent: 10,
-					upgrade_asset_inventory: 5_u32.into(),
-					unlock_trade_asset: 9_u32.into(),
-					unlock_transfer_asset: 13_u32.into(),
-					state_transition_base_fee: 20_u32.into(),
-				},
-				data: T::BenchmarkHelper::create_default_season_data(),
-			};
+			fee: SeasonFeeConfig {
+				transfer_asset: 10_u32.into(),
+				buy_asset_min: 5_u32.into(),
+				buy_percent: 10,
+				upgrade_asset_inventory: 5_u32.into(),
+				unlock_trade_asset: 9_u32.into(),
+				unlock_transfer_asset: 13_u32.into(),
+				state_transition_base_fee: 20_u32.into(),
+			},
+			data: T::BenchmarkHelper::create_default_season_data(),
+		};
 		let metadata = SeasonMetadata {
 			name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),
 			description: BoundedVec::try_from(b"The first season".to_vec())
 				.expect("Should create vec"),
 		};
-		let schedule = SeasonSchedule {
-			early_start: 20_u32.into(),
-			start: 25_u32.into(),
-			end: 30_u32.into()
-		};
-	}: _(RawOrigin::Signed(acc_1), season_id.clone(), Some(config.clone()), Some(metadata.clone()), Some(schedule.clone()))
-	verify {
+		let schedule =
+			SeasonSchedule { early_start: 20_u32.into(), start: 25_u32.into(), end: 30_u32.into() };
+
+		#[extrinsic_call]
+		_(
+			RawOrigin::Signed(acc_1),
+			season_id.clone(),
+			Some(config.clone()),
+			Some(metadata.clone()),
+			Some(schedule.clone()),
+		);
+
 		assert_last_event::<T, I>(Event::UpdatedSeason {
 			season_id,
 			config: Some(config),
 			metadata: Some(metadata),
-			schedule: Some(schedule)
-		})
+			schedule: Some(schedule),
+		});
 	}
 
-	interrupt_active_season {
+	#[benchmark]
+	fn interrupt_active_season() {
 		let season_id = T::BenchmarkHelper::create_season_id(2_u32);
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		let config = SeasonConfigOf::<T, I> {
-				fee: SeasonFeeConfig {
-					transfer_asset: 10_u32.into(),
-					buy_asset_min: 5_u32.into(),
-					buy_percent: 10,
-					upgrade_asset_inventory: 5_u32.into(),
-					unlock_trade_asset: 9_u32.into(),
-					unlock_transfer_asset: 13_u32.into(),
-					state_transition_base_fee: 20_u32.into(),
-				},
-				data: T::BenchmarkHelper::create_default_season_data(),
-			};
+			fee: SeasonFeeConfig {
+				transfer_asset: 20_u32.into(),
+				buy_asset_min: 5_u32.into(),
+				buy_percent: 10,
+				upgrade_asset_inventory: 5_u32.into(),
+				unlock_trade_asset: 9_u32.into(),
+				unlock_transfer_asset: 13_u32.into(),
+				state_transition_base_fee: 20_u32.into(),
+			},
+			data: T::BenchmarkHelper::create_default_season_data(),
+		};
 		let metadata = SeasonMetadata {
 			name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),
 			description: BoundedVec::try_from(b"The first season".to_vec())
 				.expect("Should create vec"),
 		};
-		let schedule = SeasonSchedule {
-			early_start: 20_u32.into(),
-			start: 25_u32.into(),
-			end: 30_u32.into()
-		};
+		let schedule =
+			SeasonSchedule { early_start: 20_u32.into(), start: 25_u32.into(), end: 30_u32.into() };
 		Seasons::<T, I>::update_season(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			season_id.clone(),
 			Some(config),
 			Some(metadata),
-			Some(schedule)
-		).expect("Should update season");
+			Some(schedule),
+		)
+		.expect("Should update season");
 		run_to_block::<T, I>(25_u32.into());
-	}: _(RawOrigin::Signed(acc_1))
-	verify {
-		assert_last_event::<T, I>(Event::SeasonEarlyEnded {
-			season_id,
-		})
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1));
+
+		assert_last_event::<T, I>(Event::SeasonEarlyEnded { season_id });
 	}
 
-	impl_benchmark_test_suite!(
-		Seasons,
-		crate::mock::new_test_ext(),
-		crate::mock::Test
-	);
+	impl_benchmark_test_suite!(Seasons, crate::mock::new_test_ext(), crate::mock::Test);
 }

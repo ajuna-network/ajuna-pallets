@@ -19,7 +19,7 @@
 
 mod mock;
 
-use frame_benchmarking::benchmarks;
+use frame_benchmarking::v2::*;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -101,19 +101,20 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 
 fn create_creator<T: Config>(reward_item: Option<Vec<u16>>) -> Result<T::AccountId, DispatchError> {
 	let creator = account::<T>("creator");
-	create_contract_collection::<T>(&creator)?; // reserve CONTRACT_COLLECTION
-	create_collections::<T>(&creator, 1)?; // reserve REWARD_COLLECTION
+	create_contract_collection::<T>(&creator).expect("Account should be created"); // reserve CONTRACT_COLLECTION
+	create_collections::<T>(&creator, 1).expect("Account should be created"); // reserve REWARD_COLLECTION
 	if let Some(item_ids) = reward_item {
 		item_ids
 			.into_iter()
-			.try_for_each(|item_id| mint_item::<T>(&creator, REWARD_COLLECTION, item_id))?;
+			.try_for_each(|item_id| mint_item::<T>(&creator, REWARD_COLLECTION, item_id))
+			.expect("Account should be created");
 	}
 	Creator::<T>::put(&creator);
 	Ok(creator)
 }
 
 fn create_contract_collection<T: Config>(creator: &T::AccountId) -> DispatchResult {
-	create_collection::<T>(creator)?;
+	create_collection::<T>(creator).expect("Account should be created");
 	ContractCollectionId::<T>::put(CollectionIdOf::<T>::from(CONTRACT_COLLECTION));
 	Ok(())
 }
@@ -132,7 +133,8 @@ fn create_collection<T: Config>(owner: &T::AccountId) -> DispatchResult {
 			max_supply: Default::default(),
 			mint_settings: Default::default(),
 		},
-	)?;
+	)
+	.expect("Account should be created");
 	Ok(())
 }
 
@@ -157,7 +159,8 @@ fn accept_contract<T: Config>(
 	contract_id: ItemIdOf<T>,
 	mode: Mode,
 ) -> DispatchResult {
-	let (stakes, fees) = stakes_and_fees::<T>(num_stake_clauses, num_fee_clauses, &staker, mode)?;
+	let (stakes, fees) = stakes_and_fees::<T>(num_stake_clauses, num_fee_clauses, &staker, mode)
+		.expect("Account should be created");
 	pallet_ajuna_nft_staking::Pallet::<T>::accept(
 		RawOrigin::Signed(staker).into(),
 		contract_id,
@@ -176,7 +179,8 @@ fn mint_item<T: Config>(owner: &T::AccountId, collection_id: u16, item_id: u16) 
 		owner,
 		&ItemConfig::default(),
 		false,
-	)?;
+	)
+	.expect("Account should be created");
 	Ok(())
 }
 
@@ -193,7 +197,8 @@ fn set_attribute<T: Config>(
 		item_id,
 		&[key],
 		&[value],
-	)?;
+	)
+	.expect("Account should be created");
 	Ok(())
 }
 
@@ -209,8 +214,9 @@ fn stakes_and_fees<T: Config>(
 	for i in 0..num_stake_clauses {
 		let item_id = i as u16;
 		let attr_key = i;
-		mint_item::<T>(who, stake_collection, item_id)?;
-		set_attribute::<T>(stake_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)?;
+		mint_item::<T>(who, stake_collection, item_id).expect("Account should be created");
+		set_attribute::<T>(stake_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)
+			.expect("Account should be created");
 		stakes.push(NftId(
 			CollectionIdOf::<T>::unique_saturated_from(stake_collection),
 			T::BenchmarkHelper::item_id(item_id),
@@ -219,8 +225,9 @@ fn stakes_and_fees<T: Config>(
 	for i in num_stake_clauses..num_stake_clauses + num_fee_clauses {
 		let item_id = i as u16;
 		let attr_key = i;
-		mint_item::<T>(who, fee_collection, item_id)?;
-		set_attribute::<T>(fee_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)?;
+		mint_item::<T>(who, fee_collection, item_id).expect("Account should be created");
+		set_attribute::<T>(fee_collection, item_id, (attr_key as u8) * 3, ATTRIBUTE_VALUE)
+			.expect("Account should be created");
 		fees.push(NftId(
 			CollectionIdOf::<T>::unique_saturated_from(fee_collection),
 			T::BenchmarkHelper::item_id(item_id),
@@ -276,221 +283,299 @@ fn contract_with<T: Config>(
 	}
 }
 
-benchmarks! {
-	set_creator {
+#[benchmarks]
+mod benchmarks {
+	use super::*;
+
+	#[benchmark]
+	fn set_creator() {
 		let creator = account::<T>("creator");
-	}: _(RawOrigin::Root, creator.clone())
-	verify {
-		assert_last_event::<T>(Event::CreatorSet { creator })
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, creator.clone());
+
+		assert_last_event::<T>(Event::CreatorSet { creator });
 	}
 
-	set_contract_collection_id {
-		let creator = create_creator::<T>(None)?;
+	#[benchmark]
+	fn set_contract_collection_id() {
+		let creator = create_creator::<T>(None).expect("Account should be created");
 		let collection_id = CollectionIdOf::<T>::unique_saturated_from(0_u32);
 		ContractCollectionId::<T>::kill();
-	}: _(RawOrigin::Signed(creator), collection_id)
-	verify {
-		assert_last_event::<T>(Event::ContractCollectionSet { collection_id })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(creator), collection_id);
+
+		assert_last_event::<T>(Event::ContractCollectionSet { collection_id });
 	}
 
-	set_global_config {
-		let creator = create_creator::<T>(None)?;
+	#[benchmark]
+	fn set_global_config() {
+		let creator = create_creator::<T>(None).expect("Account should be created");
 		let new_config = GlobalConfig::default();
-	}: _(RawOrigin::Signed(creator), new_config)
-	verify {
-		assert_last_event::<T>(Event::SetGlobalConfig { new_config })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(creator), new_config);
+
+		assert_last_event::<T>(Event::SetGlobalConfig { new_config });
 	}
 
-	create_token_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
-		let creator = create_creator::<T>(None)?;
-		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
-			.expect("Should create rewards");
+	#[benchmark]
+	fn create_token_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
+		let creator = create_creator::<T>(None).expect("Account should be created");
+		let rewards: BoundedRewardsOf<T> =
+			BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+				.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
-	}: create(RawOrigin::Signed(creator), contract_id, contract, None, None)
-	verify {
-		assert_last_event::<T>(Event::Created { contract_id })
+
+		#[extrinsic_call]
+		create(RawOrigin::Signed(creator), contract_id, contract, None, None);
+
+		assert_last_event::<T>(Event::Created { contract_id });
 	}
 
-	create_nft_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
+	#[benchmark]
+	fn create_nft_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
 		let reward_nft_item = 123_u16;
 		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))]).expect("Should create rewards");
+		))])
+		.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
-		let creator = create_creator::<T>(Some(vec![reward_nft_item]))?;
-	}: create(RawOrigin::Signed(creator), contract_id, contract, None, None)
-	verify {
-		assert_last_event::<T>(Event::Created { contract_id })
+		let creator =
+			create_creator::<T>(Some(vec![reward_nft_item])).expect("Account should be created");
+
+		#[extrinsic_call]
+		create(RawOrigin::Signed(creator), contract_id, contract, None, None);
+
+		assert_last_event::<T>(Event::Created { contract_id });
 	}
 
-	remove_token_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
-			.expect("Should create rewards");
+	#[benchmark]
+	fn remove_token_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
+		let rewards: BoundedRewardsOf<T> =
+			BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+				.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
-		let creator = create_creator::<T>(None)?;
-		create_contract::<T>(creator.clone(), contract_id, contract)?;
-	}: remove(RawOrigin::Signed(creator), contract_id)
-	verify {
-		assert_last_event::<T>(Event::Removed { contract_id })
+		let creator = create_creator::<T>(None).expect("Account should be created");
+		create_contract::<T>(creator.clone(), contract_id, contract)
+			.expect("Contract should be created");
+
+		#[extrinsic_call]
+		remove(RawOrigin::Signed(creator), contract_id);
+
+		assert_last_event::<T>(Event::Removed { contract_id });
 	}
 
-	remove_nft_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
+	#[benchmark]
+	fn remove_nft_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
 		let reward_nft_item = 2_u16;
 		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))]).expect("Should create rewards");
+		))])
+		.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
-		let creator = create_creator::<T>(Some(vec![reward_nft_item]))?;
-		create_contract::<T>(creator.clone(), contract_id, contract)?;
-	}: remove(RawOrigin::Signed(creator), contract_id)
-	verify {
-		assert_last_event::<T>(Event::Removed { contract_id })
+		let creator =
+			create_creator::<T>(Some(vec![reward_nft_item])).expect("Account should be created");
+		create_contract::<T>(creator.clone(), contract_id, contract)
+			.expect("Contract should be created");
+
+		#[extrinsic_call]
+		remove(RawOrigin::Signed(creator), contract_id);
+
+		assert_last_event::<T>(Event::Removed { contract_id });
 	}
 
-	accept_token_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
-			.expect("Should create rewards");
+	#[benchmark]
+	fn accept_token_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
+		let rewards: BoundedRewardsOf<T> =
+			BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+				.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
-		let creator = create_creator::<T>(None)?;
-		create_contract::<T>(creator, contract_id, contract)?;
+		let creator = create_creator::<T>(None).expect("Account should be created");
+		create_contract::<T>(creator, contract_id, contract).expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		let (stakes, fees) = stakes_and_fees::<T>(m, n, &by, Mode::Staker)?;
-	}: accept(RawOrigin::Signed(by.clone()), contract_id, stakes, fees)
-	verify {
-		assert_last_event::<T>(Event::Accepted { by, contract_id })
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		let (stakes, fees) = stakes_and_fees::<T>(m, n, &by, Mode::Staker)
+			.expect("Stakes and fees should be created");
+
+		#[extrinsic_call]
+		accept(RawOrigin::Signed(by.clone()), contract_id, stakes, fees);
+
+		assert_last_event::<T>(Event::Accepted { by, contract_id });
 	}
 
-	accept_nft_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
+	#[benchmark]
+	fn accept_nft_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
 		let reward_nft_item = 2_u16;
-		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(
-			NftId(REWARD_COLLECTION.unique_saturated_into(),
+		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
+			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))]).expect("Should create rewards");
+		))])
+		.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
-		let creator = create_creator::<T>(Some(vec![reward_nft_item]))?;
-		create_contract::<T>(creator, contract_id, contract)?;
+		let creator =
+			create_creator::<T>(Some(vec![reward_nft_item])).expect("Account should be created");
+		create_contract::<T>(creator, contract_id, contract).expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		let (stakes, fees) = stakes_and_fees::<T>(m, n, &by, Mode::Staker)?;
-	}: accept(RawOrigin::Signed(by.clone()), contract_id, stakes, fees)
-	verify {
-		assert_last_event::<T>(Event::Accepted { by, contract_id })
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		let (stakes, fees) = stakes_and_fees::<T>(m, n, &by, Mode::Staker)
+			.expect("Stakes and fees should be created");
+
+		#[extrinsic_call]
+		accept(RawOrigin::Signed(by.clone()), contract_id, stakes, fees);
+
+		assert_last_event::<T>(Event::Accepted { by, contract_id });
 	}
 
-	cancel_token_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
-			.expect("Should create rewards");
+	#[benchmark]
+	fn cancel_token_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
+		let rewards: BoundedRewardsOf<T> =
+			BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+				.expect("Should create rewards");
 		let mut contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		contract.stake_duration = 100_u32.unique_saturated_into();
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
-		let creator = create_creator::<T>(None)?;
-		create_contract::<T>(creator, contract_id, contract)?;
+		let creator = create_creator::<T>(None).expect("Account should be created");
+		create_contract::<T>(creator, contract_id, contract).expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: cancel(RawOrigin::Signed(by.clone()), contract_id)
-	verify {
-		assert_last_event::<T>(Event::Cancelled { by, contract_id })
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)
+			.expect("Contract should be accepted");
+
+		#[extrinsic_call]
+		cancel(RawOrigin::Signed(by.clone()), contract_id);
+
+		assert_last_event::<T>(Event::Cancelled { by, contract_id });
 	}
 
-	cancel_nft_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
+	#[benchmark]
+	fn cancel_nft_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
 		let reward_nft_item = 2_u16;
 		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))]).expect("Should create rewards");
+		))])
+		.expect("Should create rewards");
 		let mut contract = contract_with::<T>(m, n, rewards, Mode::Staker);
 		contract.stake_duration = 100_u32.unique_saturated_into();
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
-		let creator = create_creator::<T>(Some(vec![reward_nft_item]))?;
-		create_contract::<T>(creator, contract_id, contract)?;
+		let creator =
+			create_creator::<T>(Some(vec![reward_nft_item])).expect("Account should be created");
+		create_contract::<T>(creator, contract_id, contract).expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: cancel(RawOrigin::Signed(by.clone()), contract_id)
-	verify {
-		assert_last_event::<T>(Event::Cancelled { by, contract_id })
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)
+			.expect("Contract should be accepted");
+
+		#[extrinsic_call]
+		cancel(RawOrigin::Signed(by.clone()), contract_id);
+
+		assert_last_event::<T>(Event::Cancelled { by, contract_id });
 	}
 
-	claim_token_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
-			.expect("Should create rewards");
+	#[benchmark]
+	fn claim_token_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
+		let rewards: BoundedRewardsOf<T> =
+			BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+				.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
-		let creator = create_creator::<T>(None)?;
-		create_contract::<T>(creator, contract_id, contract)?;
+		let creator = create_creator::<T>(None).expect("Account should be created");
+		create_contract::<T>(creator, contract_id, contract).expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: claim(RawOrigin::Signed(by.clone()), contract_id, None)
-	verify {
-		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards })
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)
+			.expect("Contract should be accepted");
+
+		#[extrinsic_call]
+		claim(RawOrigin::Signed(by.clone()), contract_id, None);
+
+		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards });
 	}
 
-	claim_nft_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
+	#[benchmark]
+	fn claim_nft_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
 		let reward_nft_item = 2_u16;
 		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))]).expect("Should create rewards");
+		))])
+		.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
-		let creator = create_creator::<T>(Some(vec![reward_nft_item]))?;
-		create_contract::<T>(creator, contract_id, contract)?;
+		let creator =
+			create_creator::<T>(Some(vec![reward_nft_item])).expect("Account should be created");
+		create_contract::<T>(creator, contract_id, contract).expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)?;
-	}: claim(RawOrigin::Signed(by.clone()), contract_id, None)
-	verify {
-		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards })
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, by.clone(), contract_id, Mode::Staker)
+			.expect("Contract should be accepted");
+
+		#[extrinsic_call]
+		claim(RawOrigin::Signed(by.clone()), contract_id, None);
+
+		assert_last_event::<T>(Event::Claimed { by, contract_id, rewards });
 	}
 
-	snipe_token_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
-		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
-			.expect("Should create rewards");
+	#[benchmark]
+	fn snipe_token_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
+		let rewards: BoundedRewardsOf<T> =
+			BoundedVec::try_from(vec![Reward::Tokens(123_u64.unique_saturated_into())])
+				.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
@@ -498,35 +583,44 @@ benchmarks! {
 		sniper_contract.stake_duration = 100_u32.unique_saturated_into();
 		let sniper_contract_id = T::BenchmarkHelper::item_id(1_u16);
 
-		let creator = create_creator::<T>(None)?;
-		create_contract::<T>(creator.clone(), contract_id, contract.clone())?;
-		create_contract::<T>(creator, sniper_contract_id, sniper_contract)?;
+		let creator = create_creator::<T>(None).expect("Account should be created");
+		create_contract::<T>(creator.clone(), contract_id, contract.clone())
+			.expect("Contract should be created");
+		create_contract::<T>(creator, sniper_contract_id, sniper_contract)
+			.expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		accept_contract::<T>(m, n, by, contract_id, Mode::Staker)?;
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, by, contract_id, Mode::Staker)
+			.expect("Contract should be accepted");
 
 		let sniper = account::<T>("sniper");
-		create_collections::<T>(&sniper, 2)?;
-		accept_contract::<T>(m, n, sniper.clone(), sniper_contract_id, Mode::Sniper)?;
+		create_collections::<T>(&sniper, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, sniper.clone(), sniper_contract_id, Mode::Sniper)
+			.expect("Contract should be accepted");
 
 		// Advance block past contract expiry.
 		frame_system::Pallet::<T>::set_block_number(
-			contract.stake_duration + contract.claim_duration + One::one()
+			contract.stake_duration + contract.claim_duration + One::one(),
 		);
-	}: snipe(RawOrigin::Signed(sniper.clone()), contract_id)
-	verify {
-		assert_last_event::<T>(Event::Sniped { by: sniper, contract_id, rewards })
+
+		#[extrinsic_call]
+		snipe(RawOrigin::Signed(sniper.clone()), contract_id);
+
+		assert_last_event::<T>(Event::Sniped { by: sniper, contract_id, rewards });
 	}
 
-	snipe_nft_reward {
-		let m in 0..T::MaxStakingClauses::get();
-		let n in 0..T::MaxFeeClauses::get();
+	#[benchmark]
+	fn snipe_nft_reward(
+		m: Linear<0, { T::MaxStakingClauses::get() }>,
+		n: Linear<0, { T::MaxFeeClauses::get() }>,
+	) {
 		let reward_nft_item = 2_u16;
 		let rewards: BoundedRewardsOf<T> = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(reward_nft_item),
-		))]).expect("Should create rewards");
+		))])
+		.expect("Should create rewards");
 		let contract = contract_with::<T>(m, n, rewards.clone(), Mode::Staker);
 		let contract_id = T::BenchmarkHelper::item_id(0_u16);
 
@@ -534,35 +628,39 @@ benchmarks! {
 		let sniper_rewards = BoundedVec::try_from(vec![Reward::Nft(NftId(
 			REWARD_COLLECTION.unique_saturated_into(),
 			T::BenchmarkHelper::item_id(sniper_reward_nft_item),
-		))]).expect("Should create rewards");
+		))])
+		.expect("Should create rewards");
 		let mut sniper_contract = contract_with::<T>(m, n, sniper_rewards, Mode::Sniper);
 		sniper_contract.stake_duration = 100_u32.unique_saturated_into();
 		let sniper_contract_id = T::BenchmarkHelper::item_id(1_u16);
 
-		let creator = create_creator::<T>(Some(vec![reward_nft_item, sniper_reward_nft_item]))?;
-		create_contract::<T>(creator.clone(), contract_id, contract.clone())?;
-		create_contract::<T>(creator, sniper_contract_id, sniper_contract)?;
+		let creator = create_creator::<T>(Some(vec![reward_nft_item, sniper_reward_nft_item]))
+			.expect("Account should be created");
+		create_contract::<T>(creator.clone(), contract_id, contract.clone())
+			.expect("Contract should be created");
+		create_contract::<T>(creator, sniper_contract_id, sniper_contract)
+			.expect("Contract should be created");
 
 		let by = account::<T>("staker");
-		create_collections::<T>(&by, 2)?;
-		accept_contract::<T>(m, n, by, contract_id, Mode::Staker)?;
+		create_collections::<T>(&by, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, by, contract_id, Mode::Staker)
+			.expect("Contract should be accepted");
 
 		let sniper = account::<T>("sniper");
-		create_collections::<T>(&sniper, 2)?;
-		accept_contract::<T>(m, n, sniper.clone(), sniper_contract_id, Mode::Sniper)?;
+		create_collections::<T>(&sniper, 2).expect("Collections should be created");
+		accept_contract::<T>(m, n, sniper.clone(), sniper_contract_id, Mode::Sniper)
+			.expect("Contract should be accepted");
 
 		// Advance block past contract expiry.
 		frame_system::Pallet::<T>::set_block_number(
-			contract.stake_duration + contract.claim_duration + One::one()
+			contract.stake_duration + contract.claim_duration + One::one(),
 		);
-	}: snipe(RawOrigin::Signed(sniper.clone()), contract_id)
-	verify {
-		assert_last_event::<T>(Event::Sniped { by: sniper, contract_id, rewards })
+
+		#[extrinsic_call]
+		snipe(RawOrigin::Signed(sniper.clone()), contract_id);
+
+		assert_last_event::<T>(Event::Sniped { by: sniper, contract_id, rewards });
 	}
 
-	impl_benchmark_test_suite!(
-		Pallet,
-		crate::mock::new_test_ext(),
-		crate::mock::Runtime
-	);
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Runtime);
 }
