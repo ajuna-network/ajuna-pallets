@@ -232,18 +232,6 @@ impl AssetManager for MockAssetMediator {
 	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
 		<Sage as AssetManager>::is_locked(asset)
 	}
-
-	fn nft_transfer_open() -> bool {
-		<Sage as AssetManager>::nft_transfer_open()
-	}
-
-	fn handle_asset_prepare_fee(
-		asset: &Self::Asset,
-		from: &Self::AccountId,
-		fees_recipient: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		<Sage as AssetManager>::handle_asset_prepare_fee(asset, from, fees_recipient)
-	}
 }
 
 impl AssetInspector for MockAssetMediator {

@@ -80,18 +80,6 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	fn is_locked(asset_id: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
 		LockedAssets::<T, I>::get(asset_id)
 	}
-
-	fn nft_transfer_open() -> bool {
-		todo!()
-	}
-
-	fn handle_asset_prepare_fee(
-		_asset: &Self::Asset,
-		_player: &Self::AccountId,
-		_fee_recipient: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		todo!()
-	}
 }
 
 impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {

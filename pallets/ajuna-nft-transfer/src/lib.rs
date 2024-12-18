@@ -16,8 +16,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use pallet::*;
-
 #[cfg(test)]
 mod mock;
 
@@ -26,26 +24,32 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
+pub mod config;
 pub mod traits;
 pub mod weights;
 
 use crate::weights::WeightInfo;
+use ajuna_primitives::{
+	account_manager::AccountManager, asset_manager::AssetManager, nft_fee_handler::NftFeeHandler,
+};
+use frame_support::{
+	pallet_prelude::*,
+	traits::{
+		tokens::nonfungibles_v2::{Inspect, Mutate},
+		Locker,
+	},
+	PalletId,
+};
+use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
+use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned};
+
+pub use config::*;
+pub use pallet::*;
+pub use traits::*;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::traits::*;
-	use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
-	use frame_support::{
-		pallet_prelude::*,
-		traits::{
-			tokens::nonfungibles_v2::{Inspect, Mutate},
-			Locker,
-		},
-		PalletId,
-	};
-	use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
-	use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned};
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -93,6 +97,8 @@ pub mod pallet {
 
 		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 
+		type NftFeeHandler: NftFeeHandler<AccountId = AccountIdFor<Self>, Asset = Self::Item>;
+
 		/// The maximum length of an attribute key.
 		#[pallet::constant]
 		type KeyLimit: Get<u32>;
@@ -111,6 +117,10 @@ pub mod pallet {
 		type BenchmarkHelper: BenchmarkHelper<AccountIdFor<Self>, Self::ItemId>;
 	}
 
+	/// Tracks global configuration values that can be changed by the organizer only.
+	#[pallet::storage]
+	pub type GeneralConfigStore<T: Config> = StorageValue<_, GeneralConfig, ValueQuery>;
+
 	#[pallet::storage]
 	pub type CollectionId<T: Config> = StorageValue<_, T::CollectionId, OptionQuery>;
 
@@ -127,6 +137,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// General configuration updated.
+		UpdatedGeneralConfig { updated_config: GeneralConfig },
 		/// A collection ID has been set.
 		CollectionIdSet { collection_id: T::CollectionId },
 		/// A service account has been set.
@@ -174,13 +186,28 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Update general configuration.
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::update_general_config())]
+		pub fn update_general_config(
+			origin: OriginFor<T>,
+			new_config: GeneralConfig,
+		) -> DispatchResult {
+			let account = ensure_signed(origin)?;
+			T::AccountManager::is_organizer(&account)?;
+
+			GeneralConfigStore::<T>::put(&new_config);
+			Self::deposit_event(Event::UpdatedGeneralConfig { updated_config: new_config });
+			Ok(())
+		}
+
 		/// Set the collection ID to associate assets with.
 		///
 		/// Externally created collection ID for assets must be set in the `CollectionId` storage
 		/// to serve as a lookup for locking and unlocking assets as NFTs.
 		///
 		/// Weight: `O(1)`
-		#[pallet::call_index(0)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::set_collection_id())]
 		pub fn set_collection_id(
 			origin: OriginFor<T>,
@@ -200,7 +227,7 @@ pub mod pallet {
 		/// the `prepare_ipfs` extrinsic.
 		///
 		/// Weight: `O(1)`
-		#[pallet::call_index(1)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::set_service_account())]
 		pub fn set_service_account(
 			origin: OriginFor<T>,
@@ -213,7 +240,7 @@ pub mod pallet {
 		}
 
 		/// Store the origin's asset that has been prepared as an NFT.
-		#[pallet::call_index(2)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::lock_asset())]
 		pub fn store_prepared_as_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -229,7 +256,7 @@ pub mod pallet {
 		}
 
 		/// Removes the NFT representation of an asset owned by the origin and unlock it.
-		#[pallet::call_index(3)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::unlock_asset())]
 		pub fn recover_asset_from_nft(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -249,18 +276,18 @@ pub mod pallet {
 		}
 
 		/// Prepare an asset owned by the origin to be uploaded to IPFS.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::prepare_asset())]
 		pub fn prepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 			Self::ensure_unprepared(&asset_id)?;
-			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
+			ensure!(GeneralConfigStore::<T>::get().open, Error::<T>::NftTransferClosed);
 
 			let asset =
 				T::AssetManager::lock_asset(T::PalletId::get().0, player.clone(), asset_id)?;
 
 			let service_account = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
-			T::AssetManager::handle_asset_prepare_fee(&asset, &player, &service_account)?;
+			T::NftFeeHandler::handle_asset_prepare_fee(&asset, &player, &service_account)?;
 
 			Preparation::<T>::insert(asset_id, IpfsUrl::default());
 			Self::deposit_event(Event::PreparedAsset { asset_id });
@@ -268,12 +295,12 @@ pub mod pallet {
 		}
 
 		/// Unprepare an asset owned by the origin to be detached from IPFS.
-		#[pallet::call_index(5)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::unprepare_asset())]
 		pub fn unprepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 			let _ = T::AssetManager::ensure_ownership(&player, &asset_id)?;
-			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
+			ensure!(GeneralConfigStore::<T>::get().open, Error::<T>::NftTransferClosed);
 			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::AssetUnprepared);
 
 			Preparation::<T>::remove(asset_id);
@@ -287,7 +314,7 @@ pub mod pallet {
 		/// to an IPFS storage and stores its CID. A third-party service subscribes for the
 		/// `PreparedAvatar` events which triggers preparing assets, their upload to IPFS and
 		/// storing their CIDs.
-		#[pallet::call_index(6)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::prepare_ipfs())]
 		pub fn prepare_ipfs(
 			origin: OriginFor<T>,
@@ -296,7 +323,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _ = Self::ensure_service_account(origin)?;
 
-			ensure!(T::AssetManager::nft_transfer_open(), Error::<T>::NftTransferClosed);
+			ensure!(GeneralConfigStore::<T>::get().open, Error::<T>::NftTransferClosed);
 			ensure!(Preparation::<T>::contains_key(asset_id), Error::<T>::AssetUnprepared);
 			ensure!(!url.is_empty(), Error::<T>::EmptyIpfsUrl);
 			Preparation::<T>::insert(asset_id, &url);

@@ -14,10 +14,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod account_manager;
-mod affiliate_unlock_rules;
-mod asset_manager;
-mod nft_fee_handler;
-mod treasury_manager;
+use frame_support::pallet_prelude::{DispatchError, Member};
+use parity_scale_codec::Codec;
 
-pub use affiliate_unlock_rules::AffiliateUnlockParams;
+pub trait NftFeeHandler {
+	type AccountId: Member + Codec;
+	type Asset: Member + Codec;
+
+	/// Handles the fee from preparing an asset for transfer
+	fn handle_asset_prepare_fee(
+		asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError>;
+}

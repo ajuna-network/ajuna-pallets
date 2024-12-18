@@ -76,6 +76,7 @@ use crate::{types::*, weights::WeightInfo};
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
+	nft_fee_handler::NftFeeHandler,
 	payment_handler::FeeHandler,
 	treasury_manager::TreasuryManager,
 };

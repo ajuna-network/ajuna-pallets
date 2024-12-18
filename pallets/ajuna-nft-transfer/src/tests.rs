@@ -58,7 +58,47 @@ impl ExtBuilder {
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
+		ext.execute_with(|| GeneralConfigStore::<Test>::mutate(|config| config.open = true));
 		ext
+	}
+}
+
+mod update_general_config {
+	use super::*;
+
+	#[test]
+	fn update_general_config_works() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_eq!(GeneralConfigStore::<Test>::get(), GeneralConfig { open: true });
+
+			let new_config = GeneralConfig { open: false };
+			assert_ok!(NftTransfer::update_general_config(
+				RuntimeOrigin::signed(ALICE),
+				new_config.clone()
+			));
+
+			System::assert_last_event(mock::RuntimeEvent::NftTransfer(
+				crate::Event::UpdatedGeneralConfig { updated_config: new_config.clone() },
+			));
+
+			assert_eq!(GeneralConfigStore::<Test>::get(), new_config);
+		});
+	}
+
+	#[test]
+	fn update_general_config_rejects_non_organizer_calls() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_eq!(GeneralConfigStore::<Test>::get(), GeneralConfig { open: true });
+			assert_ok!(MockAccountManager::is_organizer(&ALICE));
+
+			let new_config = GeneralConfig { open: false };
+			assert_noop!(
+				NftTransfer::update_general_config(RuntimeOrigin::signed(BOB), new_config),
+				DispatchError::Other("ACCOUNT_IS_NOT_ORGANIZER")
+			);
+
+			assert_eq!(GeneralConfigStore::<Test>::get(), GeneralConfig { open: true });
+		});
 	}
 }
 

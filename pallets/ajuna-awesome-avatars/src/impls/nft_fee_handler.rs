@@ -14,10 +14,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod account_manager;
-mod affiliate_unlock_rules;
-mod asset_manager;
-mod nft_fee_handler;
-mod treasury_manager;
+use crate::*;
 
-pub use affiliate_unlock_rules::AffiliateUnlockParams;
+impl<T: Config> NftFeeHandler for Pallet<T> {
+	type AccountId = AccountIdFor<T>;
+	type Asset = AvatarOf<T>;
+
+	fn handle_asset_prepare_fee(
+		asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		let Season { fee, .. } = Self::seasons(&asset.season_id)?;
+		T::Currency::transfer(from, fees_recipient, fee.prepare_avatar, AllowDeath)
+	}
+}
