@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{Pallet as Affiliates, *};
-use frame_benchmarking::benchmarks_instance_pallet;
+use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 use sp_std::prelude::*;
 
@@ -57,28 +57,41 @@ fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {
 	T::AccountManager::set_organizer(organizer);
 }
 
-benchmarks_instance_pallet! {
-	enable_affiliator {
+#[instance_benchmarks]
+mod benchmarks {
+	use super::*;
+
+	#[benchmark]
+	fn enable_affiliator() {
 		let acc_1 = account::<T, I>(ACC_1);
 		let acc_2 = account::<T, I>(ACC_2);
 		let params = T::BenchmarkHelper::create_params(1);
-	}: _(RawOrigin::Signed(acc_1), Some(acc_2.clone()), params)
-	verify {
-		assert_last_event::<T, I>(Event::AccountMarkedAsAffiliatable { account: acc_2, affiliate_id: 0 })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1), Some(acc_2.clone()), params);
+
+		assert_last_event::<T, I>(Event::AccountMarkedAsAffiliatable {
+			account: acc_2,
+			affiliate_id: 0,
+		});
 	}
 
-	add_affiliation {
+	#[benchmark]
+	fn add_affiliation() {
 		let acc_1 = account::<T, I>(ACC_1);
 		let acc_2 = account::<T, I>(ACC_2);
 		let acc_3 = account::<T, I>(ACC_3);
 		setup_organizer::<T, I>(acc_1.clone());
 		mark_as_affiliatable::<T, I>(&acc_3);
-	}: _(RawOrigin::Signed(acc_1.clone()), Some(acc_2.clone()), 0)
-	verify {
-		assert_last_event::<T, I>(Event::AccountAffiliated { account: acc_2, to: acc_3 })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1.clone()), Some(acc_2.clone()), 0);
+
+		assert_last_event::<T, I>(Event::AccountAffiliated { account: acc_2, to: acc_3 });
 	}
 
-	remove_affiliation {
+	#[benchmark]
+	fn remove_affiliation() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		mark_as_affiliatable::<T, I>(&acc_1);
@@ -89,42 +102,47 @@ benchmarks_instance_pallet! {
 		let acc_4 = account::<T, I>(ACC_4);
 		mark_as_affiliatable::<T, I>(&acc_4);
 		let acc_5 = account::<T, I>(ACC_5);
-		let key = T::WhitelistKey::get();
 		affiliate_account_to::<T, I>(&acc_1, &acc_2);
 		affiliate_account_to::<T, I>(&acc_2, &acc_3);
 		affiliate_account_to::<T, I>(&acc_3, &acc_4);
 		affiliate_account_to::<T, I>(&acc_4, &acc_5);
-	}: _(RawOrigin::Signed(acc_1.clone()), acc_5.clone())
-	verify {
-		assert_last_event::<T, I>(Event::AccountUnaffiliated { account: acc_5 })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1.clone()), acc_5.clone());
+
+		assert_last_event::<T, I>(Event::AccountUnaffiliated { account: acc_5 });
 	}
 
-	set_rule_for {
+	#[benchmark]
+	fn set_rule_for() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		let rule_id = T::BenchmarkHelper::create_rule_id(1);
-		let rule = FeePropagationOf::<T,I>::try_from(vec![60, 20]).expect("Should create fee propagation");
-	}: _(RawOrigin::Signed(acc_1.clone()), rule_id.clone(), rule)
-	verify {
-		assert_last_event::<T, I>(Event::RuleAdded { rule_id })
+		let rule = FeePropagationOf::<T, I>::try_from(vec![60, 20])
+			.expect("Should create fee propagation");
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1.clone()), rule_id.clone(), rule);
+
+		assert_last_event::<T, I>(Event::RuleAdded { rule_id });
 	}
 
-	clear_rule_for {
+	#[benchmark]
+	fn clear_rule_for() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		let rule_id = T::BenchmarkHelper::create_rule_id(1);
-		let rule = FeePropagationOf::<T,I>::try_from(vec![70, 15]).expect("Should create fee propagation");
+		let rule = FeePropagationOf::<T, I>::try_from(vec![70, 15])
+			.expect("Should create fee propagation");
 		<Affiliates<T, I> as RuleMutator<RuleIdentifierFor<T, I>, T::AffiliateMaxLevel>>::try_add_rule_for(
 			rule_id.clone(), rule
 		).expect("Should be able to add rule");
-	}: _(RawOrigin::Signed(acc_1.clone()), rule_id.clone())
-	verify {
-		assert_last_event::<T, I>(Event::RuleCleared { rule_id })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1.clone()), rule_id.clone());
+
+		assert_last_event::<T, I>(Event::RuleCleared { rule_id });
 	}
 
-	impl_benchmark_test_suite!(
-		Pallet,
-		crate::mock::new_test_ext(),
-		crate::mock::Test
-	);
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
 }

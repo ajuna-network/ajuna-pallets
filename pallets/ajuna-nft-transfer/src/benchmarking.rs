@@ -16,7 +16,7 @@
 
 use crate::{traits::IpfsUrl, *};
 use ajuna_primitives::account_manager::AccountManager;
-use frame_benchmarking::benchmarks;
+use frame_benchmarking::v2::*;
 use frame_support::{pallet_prelude::DispatchError, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::SaturatedConversion;
@@ -57,60 +57,74 @@ fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
-benchmarks! {
-	where_clause { where T: pallet_nfts::Config }
+#[benchmarks(where T: pallet_nfts::Config)]
+mod benchmarks {
+	use super::*;
 
-	set_collection_id {
+	#[benchmark]
+	fn set_collection_id() {
 		let organizer = account::<T>("organizer");
 		let collection_id = CollectionIdOf::<T>::from(u32::MAX);
 		T::AccountManager::set_organizer(organizer.clone());
-	}: _(RawOrigin::Signed(organizer), collection_id)
-	verify {
-		assert_last_event::<T>(Event::CollectionIdSet { collection_id })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(organizer), collection_id);
+
+		assert_last_event::<T>(Event::CollectionIdSet { collection_id });
 	}
 
-	set_service_account {
+	#[benchmark]
+	fn set_service_account() {
 		let service_account = account::<T>("sa");
-	}: _(RawOrigin::Root, service_account.clone())
-	verify {
-		assert_last_event::<T>(Event::<T>::ServiceAccountSet { service_account })
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, service_account.clone());
+
+		assert_last_event::<T>(Event::<T>::ServiceAccountSet { service_account });
 	}
 
-	prepare_asset {
+	#[benchmark]
+	fn prepare_asset() {
 		let name = "player";
 		let player = account::<T>(name);
 		let asset_id = T::BenchmarkHelper::create_items(player.clone(), 1)[0];
 		let _ = create_service_account::<T>();
 		enable_fee_payment::<T>(&player);
-	}: _(RawOrigin::Signed(player), asset_id)
-	verify {
-		assert_last_event::<T>(Event::<T>::PreparedAsset { asset_id })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(player), asset_id);
+
+		assert_last_event::<T>(Event::<T>::PreparedAsset { asset_id });
 	}
 
-	unprepare_asset {
+	#[benchmark]
+	fn unprepare_asset() {
 		let name = "player";
 		let player = account::<T>(name);
 		let asset_id = T::BenchmarkHelper::create_items(player.clone(), 1)[0];
-		let _ = create_service_account_and_prepare_avatar::<T>(player.clone(), asset_id)?;
-	}: _(RawOrigin::Signed(player), asset_id)
-	verify {
-		assert_last_event::<T>(Event::<T>::UnpreparedAsset { asset_id })
+		let _ = create_service_account_and_prepare_avatar::<T>(player.clone(), asset_id)
+			.expect("Should create account");
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(player), asset_id);
+
+		assert_last_event::<T>(Event::<T>::UnpreparedAsset { asset_id });
 	}
 
-	prepare_ipfs {
+	#[benchmark]
+	fn prepare_ipfs() {
 		let name = "player";
 		let player = account::<T>(name);
 		let asset_id = T::BenchmarkHelper::create_items(player.clone(), 1)[0];
-		let service_account = create_service_account_and_prepare_avatar::<T>(player, asset_id)?;
+		let service_account = create_service_account_and_prepare_avatar::<T>(player, asset_id)
+			.expect("Should create account");
 		let url = IpfsUrl::try_from(b"ipfs://".to_vec()).unwrap();
-	}: _(RawOrigin::Signed(service_account), asset_id, url.clone())
-	verify {
-		assert_last_event::<T>(Event::<T>::PreparedIpfsUrl { url })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(service_account), asset_id, url.clone());
+
+		assert_last_event::<T>(Event::<T>::PreparedIpfsUrl { url });
 	}
 
-	impl_benchmark_test_suite!(
-		Pallet,
-		crate::mock::new_test_ext(),
-		crate::mock::Test
-	);
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
 }

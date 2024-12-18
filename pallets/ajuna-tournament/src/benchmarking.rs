@@ -16,7 +16,7 @@
 
 use crate::{Pallet as Tournament, *};
 use ajuna_primitives::account_manager::AccountManager;
-use frame_benchmarking::benchmarks_instance_pallet;
+use frame_benchmarking::v2::*;
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use sp_arithmetic::traits::Saturating;
@@ -63,69 +63,111 @@ fn run_to_block<T: Config<I>, I: 'static>(n: BlockNumberFor<T>) {
 	}
 }
 
-benchmarks_instance_pallet! {
-	create_tournament {
+#[instance_benchmarks]
+mod benchmarks {
+	use super::*;
+
+	#[benchmark]
+	fn create_tournament() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
-	}: _(RawOrigin::Signed(acc_1), category_id, tournament_config)
-	verify {
-		assert_last_event::<T, I>(Event::TournamentCreated { category_id, tournament_id: 0 })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1), category_id, tournament_config);
+
+		assert_last_event::<T, I>(Event::TournamentCreated { category_id, tournament_id: 0 });
 	}
 
-	remove_latest_tournament {
+	#[benchmark]
+	fn remove_latest_tournament() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
-		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
-	}: _(RawOrigin::Signed(acc_1), category_id)
-	verify {
-		assert_last_event::<T, I>(Event::TournamentRemoved { category_id, tournament_id: 0 })
+		Tournament::<T, I>::create_tournament(
+			RawOrigin::Signed(acc_1.clone()).into(),
+			category_id,
+			tournament_config,
+		)
+		.expect("Should create tournament");
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1), category_id);
+
+		assert_last_event::<T, I>(Event::TournamentRemoved { category_id, tournament_id: 0 });
 	}
 
-	claim_tournament_reward_for {
+	#[benchmark]
+	fn claim_tournament_reward_for() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let (entity_id, entity) = create_owned_entity::<T, I>(acc_1.clone());
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
-		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
+		Tournament::<T, I>::create_tournament(
+			RawOrigin::Signed(acc_1.clone()).into(),
+			category_id,
+			tournament_config,
+		)
+		.expect("Should create tournament");
 		run_to_block::<T, I>(20_u32.into());
-		<Tournament<T, I> as TournamentRanker<T::TournamentCategoryId, T::RankedEntity, T::EntityId>>::try_rank_entity_in_tournament_for(
-			&category_id, &entity_id, &entity
-		)?;
+		<Tournament<T, I> as TournamentRanker<
+			T::TournamentCategoryId,
+			T::RankedEntity,
+			T::EntityId,
+		>>::try_rank_entity_in_tournament_for(&category_id, &entity_id, &entity)
+		.expect("Should rank entity");
 		run_to_block::<T, I>(60_u32.into());
-	}: _(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone())
-	verify {
-		assert_last_event::<T, I>(Event::RankingRewardClaimed { category_id, tournament_id: 0, entity_id ,account: acc_1 })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone());
+
+		assert_last_event::<T, I>(Event::RankingRewardClaimed {
+			category_id,
+			tournament_id: 0,
+			entity_id,
+			account: acc_1,
+		});
 	}
 
-	claim_golden_duck_for {
+	#[benchmark]
+	fn claim_golden_duck_for() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id(1);
 		let (entity_id, _) = create_owned_entity::<T, I>(acc_1.clone());
 		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
-		Tournament::<T, I>::create_tournament(RawOrigin::Signed(acc_1.clone()).into(), category_id, tournament_config)?;
+		Tournament::<T, I>::create_tournament(
+			RawOrigin::Signed(acc_1.clone()).into(),
+			category_id,
+			tournament_config,
+		)
+		.expect("Should create tournament");
 		run_to_block::<T, I>(20_u32.into());
-		<Tournament<T, I> as TournamentRanker<T::TournamentCategoryId, T::RankedEntity, T::EntityId>>::try_rank_entity_for_golden_duck(
-			&category_id, &entity_id
-		)?;
+		<Tournament<T, I> as TournamentRanker<
+			T::TournamentCategoryId,
+			T::RankedEntity,
+			T::EntityId,
+		>>::try_rank_entity_for_golden_duck(&category_id, &entity_id)
+		.expect("Should rank entity");
 		run_to_block::<T, I>(60_u32.into());
-	}: _(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone())
-	verify {
-		assert_last_event::<T, I>(Event::GoldenDuckRewardClaimed { category_id, tournament_id: 0, entity_id ,account: acc_1 })
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1.clone()), category_id, entity_id.clone());
+
+		assert_last_event::<T, I>(Event::GoldenDuckRewardClaimed {
+			category_id,
+			tournament_id: 0,
+			entity_id,
+			account: acc_1,
+		});
 	}
 
-	impl_benchmark_test_suite!(
-		Tournament,
-		crate::mock::new_test_ext(),
-		crate::mock::Test
-	);
+	impl_benchmark_test_suite!(Tournament, crate::mock::new_test_ext(), crate::mock::Test);
 }

@@ -38,9 +38,6 @@ std = [
     "sp-std/std",
     "sp-runtime/std",
 ]
-# Note: Either the `benchmarks!` or the `define_benchmarks!` macro demand the
-# existence of this feature flag. Otherwise, the benchmarks can't be found in the
-# node.
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
