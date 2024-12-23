@@ -18,12 +18,12 @@ use crate::{
 	fee_handler::{AssetGameFeeHandler, DistributeFee, PaymentFee},
 	voucher_handler::VoucherHandler,
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawWhitelistedCredit},
-	AffiliateFeeDistribution, NativeGameFeeHandler, TournamentFeeDistribution,
+	AffiliateFeeDistribution, ComputeFee, NativeGameFeeHandler, TournamentFeeDistribution,
 	WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
-	traits::{AsEnsureOriginWithArg, ConstU32},
+	traits::{fungible, fungibles, AsEnsureOriginWithArg, ConstU32},
 };
 use sp_runtime::{
 	testing::TestSignature,
@@ -151,6 +151,36 @@ impl DistributeFee for TestTournamentFeeProvider {
 	}
 }
 
+pub struct MockNftFeeAssetComputer;
+
+impl ComputeFee for MockNftFeeAssetComputer {
+	type AccountId = AccountId;
+	type FeeIdentifier = u8;
+	type FeeCalculation = fungibles::Credit<Self::AccountId, Assets>;
+
+	fn compute_fee(
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Option<Self::FeeCalculation> {
+		None
+	}
+}
+
+pub struct MockNftFeeNativeComputer;
+
+impl ComputeFee for MockNftFeeNativeComputer {
+	type AccountId = AccountId;
+	type FeeIdentifier = u8;
+	type FeeCalculation = fungible::Credit<Self::AccountId, Balances>;
+
+	fn compute_fee(
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Option<Self::FeeCalculation> {
+		None
+	}
+}
+
 thread_local! {
 	pub static VOUCHERS: RefCell<HashMap<AccountId, Balance>> = RefCell::new(HashMap::new());
 }
@@ -182,6 +212,7 @@ pub type TestAssetFeeHandler = AssetGameFeeHandler<
 	TestAffiliatesFeeProvider,
 	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
+	MockNftFeeAssetComputer,
 >;
 
 pub type TestNativeFeeHandler = NativeGameFeeHandler<
@@ -191,6 +222,7 @@ pub type TestNativeFeeHandler = NativeGameFeeHandler<
 	TestAffiliatesFeeProvider,
 	TestAffiliatesMaxDistribution,
 	TestTournamentFeeProvider,
+	MockNftFeeNativeComputer,
 >;
 
 pub type WithdrawWhitelistedAssets =

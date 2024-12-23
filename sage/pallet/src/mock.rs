@@ -18,8 +18,8 @@ use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	asset_manager::AssetInspector,
 	payment_handler::{
-		AffiliateFeeDistribution, AllowAllAssets, AssetGameFeeHandler, DistributeFee, PaymentFee,
-		VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind,
+		AffiliateFeeDistribution, AllowAllAssets, AssetGameFeeHandler, ComputeFee, DistributeFee,
+		PaymentFee, VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind,
 		WithdrawWhitelistedCredit,
 	},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
@@ -29,7 +29,7 @@ use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
 		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
-		AsEnsureOriginWithArg,
+		fungibles, AsEnsureOriginWithArg,
 	},
 	PalletId,
 };
@@ -305,6 +305,21 @@ impl VoucherHandler for MockVoucherHandler {
 	}
 }
 
+pub struct MockNftFeeNativeComputer;
+
+impl ComputeFee for MockNftFeeNativeComputer {
+	type AccountId = MockAccountId;
+	type FeeIdentifier = u8;
+	type FeeCalculation = fungibles::Credit<Self::AccountId, NativeAndAssets>;
+
+	fn compute_fee(
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Option<Self::FeeCalculation> {
+		None
+	}
+}
+
 impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
@@ -322,6 +337,7 @@ impl crate::Config for Test {
 		TestAffiliatesFeeProvider,
 		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,
+		MockNftFeeNativeComputer,
 	>;
 	type PaymentKind = WithdrawKind<NativeOrWithId<u32>>;
 	type FilterHandler = MockFilterHandler;

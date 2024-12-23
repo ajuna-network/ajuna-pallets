@@ -8,6 +8,7 @@ use frame_support::{
 };
 use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::TokenError;
 
 /// Distributes shares of a base fee to some beneficiaries.
 pub trait DistributeFee {
@@ -41,6 +42,22 @@ impl<AccountId, Balance> PaymentFee<AccountId, Balance> {
 	pub fn new(beneficiary: AccountId, amount: Balance) -> Self {
 		Self { beneficiary, amount }
 	}
+}
+
+pub trait ComputeFee {
+	/// AccountId type used.
+	type AccountId;
+
+	/// Fee identifier used to derive the fee calculation.
+	type FeeIdentifier;
+
+	/// Type of the fee
+	type FeeCalculation;
+
+	fn compute_fee(
+		account: &Self::AccountId,
+		identifier: &Self::FeeIdentifier,
+	) -> Option<Self::FeeCalculation>;
 }
 
 /// Abstraction of withdrawing fees in one asset and return allocating the fees in the same or
@@ -77,16 +94,38 @@ pub trait FeeHandler {
 	) -> Result<(), DispatchError>;
 }
 
+pub trait NftFeeHandler {
+	type AccountId;
+
+	type Asset;
+
+	/// Handles the fee from preparing an asset for transfer
+	fn handle_asset_prepare_fee(
+		asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError>;
+}
+
 pub type AffiliateFeeDistribution<AccountId, Balance, MaxDistribution> =
 	BoundedVec<PaymentFee<AccountId, Balance>, MaxDistribution>;
 pub type TournamentFeeDistribution<AccountId, Balance> = PaymentFee<AccountId, Balance>;
 
-pub struct AssetGameFeeHandler<AccountId, Assets, Withdraw, Affiliate, MaxAffiliates, Tournament> {
-	_phantom: PhantomData<(AccountId, Assets, Withdraw, Affiliate, MaxAffiliates, Tournament)>,
+pub struct AssetGameFeeHandler<
+	AccountId,
+	Assets,
+	Withdraw,
+	Affiliate,
+	MaxAffiliates,
+	Tournament,
+	NftFee,
+> {
+	_phantom:
+		PhantomData<(AccountId, Assets, Withdraw, Affiliate, MaxAffiliates, Tournament, NftFee)>,
 }
 
-impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament> FeeHandler
-	for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament, NftFee> FeeHandler
+	for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament, NftFee>
 where
 	// This is satisfied by the `pallet-assets`, `pallet-asset-conversion` and the
 	// `NativeAndAssets` struct.
@@ -107,6 +146,7 @@ where
 		Balance = W::Balance,
 		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
+	NftFee: ComputeFee<AccountId = AccountId, FeeCalculation = W::Credit>,
 {
 	type AccountId = AccountId;
 	type PaymentKind = W::AssetId;
@@ -150,8 +190,49 @@ where
 	}
 }
 
-impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
-	AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament, NftFee> NftFeeHandler
+	for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament, NftFee>
+where
+	// This is satisfied by the `pallet-assets`, `pallet-asset-conversion` and the
+	// `NativeAndAssets` struct.
+	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Assets,
+		Credit = fungibles::Credit<AccountId, Assets>,
+	>,
+
+	Affiliate: DistributeFee<
+		AccountId = AccountId,
+		Balance = W::Balance,
+		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
+	>,
+	Tournament: DistributeFee<
+		AccountId = AccountId,
+		Balance = W::Balance,
+		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
+	>,
+	NftFee: ComputeFee<AccountId = AccountId, FeeCalculation = W::Credit>,
+{
+	type AccountId = AccountId;
+	type Asset = NftFee::FeeIdentifier;
+
+	fn handle_asset_prepare_fee(
+		asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		if let Some(fee) = NftFee::compute_fee(from, asset) {
+			W::Assets::resolve(fees_recipient, fee)
+				.map_err(|_| DispatchError::Token(TokenError::FundsUnavailable))?;
+		}
+
+		Ok(())
+	}
+}
+
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament, NftFee>
+	AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament, NftFee>
 where
 	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
@@ -170,6 +251,7 @@ where
 		Balance = W::Balance,
 		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
+	NftFee: ComputeFee<AccountId = AccountId, FeeCalculation = W::Credit>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///
@@ -252,13 +334,21 @@ where
 	}
 }
 
-pub struct NativeGameFeeHandler<AccountId, Balances, Withdraw, Affiliate, MaxAffiliates, Tournament>
-{
-	_phantom: PhantomData<(AccountId, Balances, Withdraw, Affiliate, MaxAffiliates, Tournament)>,
+pub struct NativeGameFeeHandler<
+	AccountId,
+	Balances,
+	Withdraw,
+	Affiliate,
+	MaxAffiliates,
+	Tournament,
+	NftFee,
+> {
+	_phantom:
+		PhantomData<(AccountId, Balances, Withdraw, Affiliate, MaxAffiliates, Tournament, NftFee)>,
 }
 
-impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament> FeeHandler
-	for NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament, NftFee> FeeHandler
+	for NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament, NftFee>
 where
 	// This is satisfied by the `pallet-balances`.
 	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
@@ -278,6 +368,7 @@ where
 		Balance = W::Balance,
 		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
+	NftFee: ComputeFee<AccountId = AccountId, FeeCalculation = W::Credit>,
 {
 	type AccountId = AccountId;
 	// If not vouchers are to be used this can be ()
@@ -322,8 +413,8 @@ where
 	}
 }
 
-impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
-	NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament, NftFee> NftFeeHandler
+	for NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament, NftFee>
 where
 	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
@@ -342,6 +433,46 @@ where
 		Balance = W::Balance,
 		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
 	>,
+	NftFee: ComputeFee<AccountId = AccountId, FeeCalculation = W::Credit>,
+{
+	type AccountId = AccountId;
+	type Asset = NftFee::FeeIdentifier;
+
+	fn handle_asset_prepare_fee(
+		asset: &Self::Asset,
+		from: &Self::AccountId,
+		fees_recipient: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		if let Some(fee) = NftFee::compute_fee(from, asset) {
+			W::Assets::resolve(fees_recipient, fee)
+				.map_err(|_| DispatchError::Token(TokenError::FundsUnavailable))?;
+		}
+
+		Ok(())
+	}
+}
+
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament, NftFee>
+	NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament, NftFee>
+where
+	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Balances,
+		Credit = fungible::Credit<AccountId, Balances>,
+	>,
+
+	Affiliate: DistributeFee<
+		AccountId = AccountId,
+		Balance = W::Balance,
+		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
+	>,
+	Tournament: DistributeFee<
+		AccountId = AccountId,
+		Balance = W::Balance,
+		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
+	>,
+	NftFee: ComputeFee<AccountId = AccountId, FeeCalculation = W::Credit>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///

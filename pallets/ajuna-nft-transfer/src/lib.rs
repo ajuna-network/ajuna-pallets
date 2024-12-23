@@ -30,7 +30,7 @@ pub mod weights;
 
 use crate::weights::WeightInfo;
 use ajuna_primitives::{
-	account_manager::AccountManager, asset_manager::AssetManager, nft_fee_handler::NftFeeHandler,
+	account_manager::AccountManager, asset_manager::AssetManager, payment_handler::NftFeeHandler,
 };
 use frame_support::{
 	pallet_prelude::*,

@@ -22,7 +22,7 @@ use crate::{
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
 	asset_manager::{AssetManager, Lock},
-	nft_fee_handler::NftFeeHandler,
+	payment_handler::NftFeeHandler,
 };
 use frame_support::{
 	ensure, parameter_types,

@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
-use ajuna_primitives::payment_handler::{NativeGameFeeHandler, WithdrawNative};
+use ajuna_primitives::payment_handler::{ComputeFee, NativeGameFeeHandler, WithdrawNative};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
@@ -112,6 +112,21 @@ parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
+pub struct MockNftFeeNativeComputer;
+
+impl ComputeFee for MockNftFeeNativeComputer {
+	type AccountId = MockAccountId;
+	type FeeIdentifier = AvatarOf<Test>;
+	type FeeCalculation = frame_support::traits::fungible::Credit<Self::AccountId, Balances>;
+
+	fn compute_fee(
+		_account: &Self::AccountId,
+		_identifier: &Self::FeeIdentifier,
+	) -> Option<Self::FeeCalculation> {
+		None
+	}
+}
+
 impl pallet_ajuna_awesome_avatars::Config for Test {
 	type PalletId = AwesomeAvatarsPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -127,6 +142,7 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 		Affiliates,
 		AffiliateMaxLevel,
 		Tournament,
+		MockNftFeeNativeComputer,
 	>;
 	type WeightInfo = ();
 }

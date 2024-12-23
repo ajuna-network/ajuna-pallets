@@ -17,7 +17,6 @@
 mod account_manager;
 mod affiliate_unlock_rules;
 mod asset_manager;
-mod nft_fee_handler;
 mod treasury_manager;
 
 pub use affiliate_unlock_rules::AffiliateUnlockParams;
