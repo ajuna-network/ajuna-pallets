@@ -22,13 +22,10 @@ use crate::{
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
 	asset_manager::{AssetManager, Lock},
-	payment_handler::NftFeeHandler,
 };
 use frame_support::{
 	ensure, parameter_types,
-	traits::{
-		AsEnsureOriginWithArg, ConstU16, ConstU64, Currency, ExistenceRequirement, LockIdentifier,
-	},
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, LockIdentifier},
 	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
@@ -228,7 +225,7 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 	type ItemConfig = pallet_nfts::ItemConfig;
 	type AssetManager = MockAssetManager;
 	type AccountManager = MockAccountManager;
-	type NftFeeHandler = MockNftFeeHandler;
+	type FeeHandler = Balances;
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
@@ -294,31 +291,6 @@ thread_local! {
 	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = RefCell::new(BTreeMap::new());
 	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(Some(ALICE));
 	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
-}
-
-pub struct MockNftFeeHandler;
-
-impl NftFeeHandler for MockNftFeeHandler {
-	type AccountId = MockAccountId;
-	type Asset = MockItem;
-
-	fn handle_asset_prepare_fee(
-		_asset: &Self::Asset,
-		from: &Self::AccountId,
-		fees_recipient: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		PREPARE_FEE.with(|fee| {
-			let f = *fee.borrow();
-			<Balances as Currency<MockAccountId>>::transfer(
-				from,
-				fees_recipient,
-				f,
-				ExistenceRequirement::AllowDeath,
-			)
-		})?;
-
-		Ok(())
-	}
 }
 
 /// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this

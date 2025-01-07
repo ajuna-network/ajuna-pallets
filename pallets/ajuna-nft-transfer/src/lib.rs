@@ -28,20 +28,24 @@ pub mod config;
 pub mod traits;
 pub mod weights;
 
-use crate::weights::WeightInfo;
-use ajuna_primitives::{
-	account_manager::AccountManager, asset_manager::AssetManager, payment_handler::NftFeeHandler,
-};
+use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		tokens::nonfungibles_v2::{Inspect, Mutate},
+		fungible::{Inspect as InspectFungible, Mutate as MutateFungible},
+		tokens::{
+			nonfungibles_v2::{Inspect, Mutate},
+			Preservation,
+		},
 		Locker,
 	},
 	PalletId,
 };
+
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned};
+
+use crate::weights::WeightInfo;
 
 pub use config::*;
 pub use pallet::*;
@@ -52,6 +56,9 @@ pub mod pallet {
 	use super::*;
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
+	pub(crate) type BalanceOf<T> =
+		<<T as Config>::FeeHandler as InspectFungible<AccountIdFor<T>>>::Balance;
+	pub(crate) type GeneralConfigOf<T> = GeneralConfig<BalanceOf<T>>;
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
 	pub enum NftStatus {
@@ -97,7 +104,7 @@ pub mod pallet {
 
 		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 
-		type NftFeeHandler: NftFeeHandler<AccountId = AccountIdFor<Self>, Asset = Self::Item>;
+		type FeeHandler: InspectFungible<AccountIdFor<Self>> + MutateFungible<AccountIdFor<Self>>;
 
 		/// The maximum length of an attribute key.
 		#[pallet::constant]
@@ -119,7 +126,7 @@ pub mod pallet {
 
 	/// Tracks global configuration values that can be changed by the organizer only.
 	#[pallet::storage]
-	pub type GeneralConfigStore<T: Config> = StorageValue<_, GeneralConfig, ValueQuery>;
+	pub type GeneralConfigStore<T: Config> = StorageValue<_, GeneralConfigOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	pub type CollectionId<T: Config> = StorageValue<_, T::CollectionId, OptionQuery>;
@@ -138,7 +145,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// General configuration updated.
-		UpdatedGeneralConfig { updated_config: GeneralConfig },
+		UpdatedGeneralConfig { updated_config: GeneralConfigOf<T> },
 		/// A collection ID has been set.
 		CollectionIdSet { collection_id: T::CollectionId },
 		/// A service account has been set.
@@ -191,7 +198,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::update_general_config())]
 		pub fn update_general_config(
 			origin: OriginFor<T>,
-			new_config: GeneralConfig,
+			new_config: GeneralConfigOf<T>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::AccountManager::is_organizer(&account)?;
@@ -281,13 +288,20 @@ pub mod pallet {
 		pub fn prepare_asset(origin: OriginFor<T>, asset_id: T::ItemId) -> DispatchResult {
 			let player = ensure_signed(origin)?;
 			Self::ensure_unprepared(&asset_id)?;
-			ensure!(GeneralConfigStore::<T>::get().open, Error::<T>::NftTransferClosed);
 
-			let asset =
+			let general_config = GeneralConfigStore::<T>::get();
+			ensure!(general_config.open, Error::<T>::NftTransferClosed);
+
+			let _asset =
 				T::AssetManager::lock_asset(T::PalletId::get().0, player.clone(), asset_id)?;
 
 			let service_account = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
-			T::NftFeeHandler::handle_asset_prepare_fee(&asset, &player, &service_account)?;
+			T::FeeHandler::transfer(
+				&player,
+				&service_account,
+				general_config.transfer_fee,
+				Preservation::Preserve,
+			)?;
 
 			Preparation::<T>::insert(asset_id, IpfsUrl::default());
 			Self::deposit_event(Event::PreparedAsset { asset_id });

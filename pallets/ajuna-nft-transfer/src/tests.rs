@@ -69,9 +69,12 @@ mod update_general_config {
 	#[test]
 	fn update_general_config_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_eq!(GeneralConfigStore::<Test>::get(), GeneralConfig { open: true });
+			assert_eq!(
+				GeneralConfigStore::<Test>::get(),
+				GeneralConfig { open: true, transfer_fee: 0 }
+			);
 
-			let new_config = GeneralConfig { open: false };
+			let new_config = GeneralConfig { open: false, transfer_fee: 13 };
 			assert_ok!(NftTransfer::update_general_config(
 				RuntimeOrigin::signed(ALICE),
 				new_config.clone()
@@ -88,16 +91,22 @@ mod update_general_config {
 	#[test]
 	fn update_general_config_rejects_non_organizer_calls() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_eq!(GeneralConfigStore::<Test>::get(), GeneralConfig { open: true });
+			assert_eq!(
+				GeneralConfigStore::<Test>::get(),
+				GeneralConfig { open: true, transfer_fee: 0 }
+			);
 			assert_ok!(MockAccountManager::is_organizer(&ALICE));
 
-			let new_config = GeneralConfig { open: false };
+			let new_config = GeneralConfig { open: false, transfer_fee: 0 };
 			assert_noop!(
 				NftTransfer::update_general_config(RuntimeOrigin::signed(BOB), new_config),
 				DispatchError::Other("ACCOUNT_IS_NOT_ORGANIZER")
 			);
 
-			assert_eq!(GeneralConfigStore::<Test>::get(), GeneralConfig { open: true });
+			assert_eq!(
+				GeneralConfigStore::<Test>::get(),
+				GeneralConfig { open: true, transfer_fee: 0 }
+			);
 		});
 	}
 }
@@ -321,6 +330,12 @@ mod prepare_asset {
 			.balances(&[(ALICE, initial_balance)])
 			.build()
 			.execute_with(|| {
+				let new_config = GeneralConfig { open: true, transfer_fee: prepare_fee };
+				assert_ok!(NftTransfer::update_general_config(
+					RuntimeOrigin::signed(ALICE),
+					new_config
+				));
+
 				let asset_id = MockAssetManager::create_items(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_eq!(Balances::free_balance(ALICE), initial_balance);
@@ -400,6 +415,11 @@ mod prepare_asset {
 			.balances(&[(ALICE, MockExistentialDeposit::get()), (BOB, 999_999)])
 			.build()
 			.execute_with(|| {
+				let new_config = GeneralConfig { open: true, transfer_fee: 100 };
+				assert_ok!(NftTransfer::update_general_config(
+					RuntimeOrigin::signed(ALICE),
+					new_config
+				));
 				let asset_id = MockAssetManager::create_items(ALICE, 1)[0];
 				assert_ok!(NftTransfer::set_service_account(RuntimeOrigin::root(), BOB));
 				assert_noop!(

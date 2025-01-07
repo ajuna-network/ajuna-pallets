@@ -18,7 +18,7 @@
 
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
-	payment_handler::{ComputeFee, NativeGameFeeHandler, WithdrawNative},
+	payment_handler::{NativeGameFeeHandler, WithdrawNative},
 };
 use frame_support::{
 	parameter_types,
@@ -133,21 +133,6 @@ parameter_types! {
 	pub const AwesomeAvatarsPalletId: PalletId = PalletId(*b"aj/aaatr");
 }
 
-pub struct MockNftFeeNativeComputer;
-
-impl ComputeFee for MockNftFeeNativeComputer {
-	type AccountId = MockAccountId;
-	type FeeIdentifier = AvatarOf<Runtime>;
-	type FeeCalculation = frame_support::traits::fungible::Credit<Self::AccountId, Balances>;
-
-	fn compute_fee(
-		_account: &Self::AccountId,
-		_identifier: &Self::FeeIdentifier,
-	) -> Option<Self::FeeCalculation> {
-		None
-	}
-}
-
 impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type PalletId = AwesomeAvatarsPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -163,7 +148,6 @@ impl pallet_ajuna_awesome_avatars::Config for Runtime {
 		Affiliates,
 		AffiliateMaxLevel,
 		Tournament,
-		MockNftFeeNativeComputer,
 	>;
 	type WeightInfo = ();
 }
