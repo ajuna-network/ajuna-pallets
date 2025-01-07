@@ -57,7 +57,7 @@ pub mod pallet {
 
 	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type BalanceOf<T> =
-		<<T as Config>::FeeHandler as InspectFungible<AccountIdFor<T>>>::Balance;
+		<<T as Config>::Fungible as InspectFungible<AccountIdFor<T>>>::Balance;
 	pub(crate) type GeneralConfigOf<T> = GeneralConfig<BalanceOf<T>>;
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
@@ -104,7 +104,7 @@ pub mod pallet {
 
 		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 
-		type FeeHandler: InspectFungible<AccountIdFor<Self>> + MutateFungible<AccountIdFor<Self>>;
+		type Fungible: InspectFungible<AccountIdFor<Self>> + MutateFungible<AccountIdFor<Self>>;
 
 		/// The maximum length of an attribute key.
 		#[pallet::constant]
@@ -296,7 +296,7 @@ pub mod pallet {
 				T::AssetManager::lock_asset(T::PalletId::get().0, player.clone(), asset_id)?;
 
 			let service_account = ServiceAccount::<T>::get().ok_or(Error::<T>::NoServiceAccount)?;
-			T::FeeHandler::transfer(
+			T::Fungible::transfer(
 				&player,
 				&service_account,
 				general_config.transfer_fee,

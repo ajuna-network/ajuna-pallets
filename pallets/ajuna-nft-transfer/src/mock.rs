@@ -225,7 +225,7 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 	type ItemConfig = pallet_nfts::ItemConfig;
 	type AssetManager = MockAssetManager;
 	type AccountManager = MockAccountManager;
-	type FeeHandler = Balances;
+	type Fungible = Balances;
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
