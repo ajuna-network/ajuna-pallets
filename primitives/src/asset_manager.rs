@@ -68,16 +68,6 @@ pub trait AssetManager {
 	) -> Result<Self::Asset, DispatchError>;
 
 	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>>;
-
-	/// This should probably be moved from the global config into the nft-transfer-pallet?
-	fn nft_transfer_open() -> bool;
-
-	/// This should als be extracted to a separate fee handler component.
-	fn handle_asset_prepare_fee(
-		asset: &Self::Asset,
-		from: &Self::AccountId,
-		fees_recipient: &Self::AccountId,
-	) -> Result<(), DispatchError>;
 }
 
 pub trait AssetInspector {

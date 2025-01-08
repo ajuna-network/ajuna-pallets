@@ -75,17 +75,4 @@ impl<T: Config> AssetManager for Pallet<T> {
 	fn is_locked(asset_id: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
 		LockedAvatars::<T>::get(asset_id)
 	}
-
-	fn nft_transfer_open() -> bool {
-		GlobalConfigs::<T>::get().nft_transfer.open
-	}
-
-	fn handle_asset_prepare_fee(
-		asset: &Self::Asset,
-		player: &Self::AccountId,
-		fee_recipient: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		let Season { fee, .. } = Self::seasons(&asset.season_id)?;
-		T::Currency::transfer(player, fee_recipient, fee.prepare_avatar, AllowDeath)
-	}
 }

@@ -17,6 +17,7 @@
 use crate::{
 	self as pallet_ajuna_nft_transfer,
 	traits::{NFTAttribute, NftConvertible},
+	GeneralConfigStore,
 };
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
@@ -24,9 +25,7 @@ use ajuna_primitives::{
 };
 use frame_support::{
 	ensure, parameter_types,
-	traits::{
-		AsEnsureOriginWithArg, ConstU16, ConstU64, Currency, ExistenceRequirement, LockIdentifier,
-	},
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, LockIdentifier},
 	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
@@ -226,6 +225,7 @@ impl pallet_ajuna_nft_transfer::Config for Test {
 	type ItemConfig = pallet_nfts::ItemConfig;
 	type AssetManager = MockAssetManager;
 	type AccountManager = MockAccountManager;
+	type Fungible = Balances;
 	type KeyLimit = KeyLimit;
 	type ValueLimit = ValueLimit;
 	type NftHelper = Nft;
@@ -290,7 +290,6 @@ thread_local! {
 	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
 	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = RefCell::new(BTreeMap::new());
 	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(Some(ALICE));
-	pub static NFT_TRANSFER_OPEN: RefCell<bool> = RefCell::new(true);
 	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
 }
 
@@ -319,7 +318,7 @@ impl MockAssetManager {
 	}
 
 	pub fn set_nft_transfer_open(open: bool) {
-		NFT_TRANSFER_OPEN.with(|is_open| *is_open.borrow_mut() = open)
+		GeneralConfigStore::<Test>::mutate(|config| config.open = open);
 	}
 
 	pub fn set_prepare_fee(fee: MockBalance) {
@@ -394,28 +393,6 @@ impl AssetManager for MockAssetManager {
 
 	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
 		LOCKED_ASSETS.with(|locked| locked.borrow().get(asset).cloned())
-	}
-
-	fn nft_transfer_open() -> bool {
-		NFT_TRANSFER_OPEN.with(|locked| *locked.borrow())
-	}
-
-	fn handle_asset_prepare_fee(
-		_asset: &Self::Asset,
-		from: &Self::AccountId,
-		fees_recipient: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		PREPARE_FEE.with(|fee| {
-			let f = *fee.borrow();
-			<Balances as Currency<MockAccountId>>::transfer(
-				from,
-				fees_recipient,
-				f,
-				ExistenceRequirement::AllowDeath,
-			)
-		})?;
-
-		Ok(())
 	}
 }
 

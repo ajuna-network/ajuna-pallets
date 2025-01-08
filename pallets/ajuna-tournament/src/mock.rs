@@ -244,18 +244,6 @@ impl AssetManager for MockAssetManager {
 	fn is_locked(_asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
 		unimplemented!()
 	}
-
-	fn nft_transfer_open() -> bool {
-		unimplemented!()
-	}
-
-	fn handle_asset_prepare_fee(
-		_asset: &Self::Asset,
-		_from: &Self::AccountId,
-		_fees_recipient: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		unimplemented!()
-	}
 }
 
 parameter_types! {
