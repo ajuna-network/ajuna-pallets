@@ -71,9 +71,12 @@ pub trait AssetManager {
 }
 
 pub trait AssetInspector {
+	type AccountId: Member + Codec;
 	type AssetId: Member + Codec;
 
 	type Asset: Member + Codec;
 
 	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError>;
+
+	fn iter_assets_from(account_id: &Self::AccountId) -> impl Iterator<Item = Self::Asset>;
 }
