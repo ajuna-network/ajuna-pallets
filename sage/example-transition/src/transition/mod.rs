@@ -1,8 +1,12 @@
 use crate::asset;
 
 use ajuna_primitives::asset_manager::{AssetInspector, AssetManager};
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use sage_api::{traits::TransitionOutput, Error, SageGameTransition};
+
+use ajuna_primitives::chain_inspector::ChainInspector;
+use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use parity_scale_codec::Codec;
+use sp_runtime::traits::{BlockNumber as BlockNumberT, Member};
 use std::marker::PhantomData;
 
 pub mod hero_jam;
@@ -12,12 +16,25 @@ pub enum TransitionIdentifier {
 	HeroJam(hero_jam::HeroAction),
 }
 
-pub struct GameTransition<AccountId, BlockNumber, AssetHandler> {
-	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler)>,
+pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler> {
+	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler)>,
 }
 
-impl<AccountId, BlockNumber, AssetHandler> SageGameTransition
-	for GameTransition<AccountId, BlockNumber, AssetHandler>
+impl<AccountId, BlockNumber, AssetHandler, ChainHandler> SageGameTransition
+	for GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler>
+where
+	AccountId: Member + Codec,
+	BlockNumber: BlockNumberT,
+	AssetHandler: AssetManager<
+			AccountId = AccountId,
+			AssetId = asset::AssetId,
+			Asset = asset::Asset<BlockNumber>,
+		> + AssetInspector<
+			AccountId = AccountId,
+			AssetId = asset::AssetId,
+			Asset = asset::Asset<BlockNumber>,
+		>,
+	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
 {
 	type TransitionId = TransitionIdentifier;
 	type TransitionConfig = ();
@@ -33,8 +50,17 @@ impl<AccountId, BlockNumber, AssetHandler> SageGameTransition
 		extra: &Self::Extra,
 	) -> Result<(), Error> {
 		match transition_id {
-			TransitionIdentifier::HeroJam(hero_action) =>
-				hero_jam::HeroJamTransition::verify_rule(hero_action, account_id, asset_ids, extra),
+			TransitionIdentifier::HeroJam(hero_action) => hero_jam::HeroJamTransition::<
+				AccountId,
+				BlockNumber,
+				AssetHandler,
+				ChainHandler,
+			>::verify_rule(
+				hero_action,
+				account_id,
+				asset_ids,
+				extra,
+			),
 		}
 	}
 
@@ -44,16 +70,18 @@ impl<AccountId, BlockNumber, AssetHandler> SageGameTransition
 		assets_ids: &[Self::AssetId],
 		extra: &Self::Extra,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, Error> {
-		let outputs = match transition_id {
-			TransitionIdentifier::HeroJam(hero_action) =>
-				hero_jam::HeroJamTransition::do_transition(
-					hero_action,
-					account_id,
-					assets_ids,
-					extra,
-				),
-		};
-
-		outputs.map(|outputs| outputs.into_iter().map(TransitionOutput::into).collect())
+		match transition_id {
+			TransitionIdentifier::HeroJam(hero_action) => hero_jam::HeroJamTransition::<
+				AccountId,
+				BlockNumber,
+				AssetHandler,
+				ChainHandler,
+			>::do_transition(
+				hero_action,
+				account_id,
+				assets_ids,
+				extra,
+			),
+		}
 	}
 }

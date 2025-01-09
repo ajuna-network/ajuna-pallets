@@ -126,12 +126,7 @@ fn transfer_asset_rejects_on_transfer_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 		assert_noop!(
-			Sage::transfer_asset(
-				RuntimeOrigin::signed(BOB),
-				CHARLIE,
-				AssetId::random(),
-				SOME_NATIVE_PAYMENT
-			),
+			Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, 13, SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::TransferClosed
 		);
 	});
@@ -212,12 +207,7 @@ fn transfer_asset_rejects_unowned_assets() {
 fn transfer_asset_rejects_unknown_assets() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::transfer_asset(
-				RuntimeOrigin::signed(ALICE),
-				BOB,
-				AssetId::random(),
-				SOME_NATIVE_PAYMENT
-			),
+			Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, 13, SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::UnknownAsset
 		);
 	});
@@ -260,7 +250,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let transfer_filter = MockFilter::from(2_u32);
+			let transfer_filter = AssetType::None;
 			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,
@@ -273,7 +263,11 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 
 			// Since asset_id_1 doest have its type match the filter we cannot set price for it
 			let (_, asset_1) = Assets::<Test, ()>::get(asset_id_1).expect("Should get asset");
-			assert_eq!(asset_1.asset_type, 0);
+			match &asset_1.asset_variant {
+				HeroJam(hero_jam_asset) => {
+					assert_eq!(hero_jam_asset.asset_type, AssetType::Hero);
+				},
+			}
 			assert_noop!(
 				Sage::transfer_asset(
 					RuntimeOrigin::signed(BOB),
@@ -288,7 +282,11 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 			// sale
 			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
 				if let Some((_, ref mut asset)) = maybe_asset {
-					asset.asset_type = transfer_filter;
+					match asset.asset_variant {
+						HeroJam(ref mut hero_jam_asset) => {
+							hero_jam_asset.asset_type = transfer_filter;
+						},
+					}
 				}
 			});
 			assert_ok!(Sage::transfer_asset(

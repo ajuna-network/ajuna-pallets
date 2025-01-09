@@ -13,9 +13,12 @@
 
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 use super::*;
-use example_transition::types::ExampleTransitionId;
+
+use example_transition::transition::{
+	hero_jam::{ActionTime, HeroAction},
+	TransitionIdentifier,
+};
 
 #[test]
 fn state_transition_works() {
@@ -30,7 +33,7 @@ fn state_transition_works() {
 				<Test as Config<()>>::SeasonHandler::get_season_config_for(&season_id)
 					.expect("Should get season config");
 			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
-			let transition_id = ExampleTransitionId::UpgradeAsset;
+			let transition_id = TransitionIdentifier::HeroJam(HeroAction::Create);
 
 			assert_eq!(Balances::free_balance(ALICE), initial_balance);
 			assert_ok!(Sage::state_transition(
@@ -60,7 +63,7 @@ fn state_transition_should_reject_non_owned_assets() {
 		.build()
 		.execute_with(|| {
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
-			let transition_id = ExampleTransitionId::UpgradeAsset;
+			let transition_id = TransitionIdentifier::HeroJam(HeroAction::Sleep(ActionTime::Short));
 
 			assert_noop!(
 				Sage::state_transition(
@@ -84,7 +87,7 @@ fn state_transition_should_reject_locked_assets() {
 		.execute_with(|| {
 			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let asset_id = asset_ids[0];
-			let transition_id = ExampleTransitionId::UpgradeAsset;
+			let transition_id = TransitionIdentifier::HeroJam(HeroAction::Sleep(ActionTime::Short));
 
 			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(ALICE), asset_id));
 			// This call should not be possible in the real world, but we simulate it to demonstrate
@@ -113,7 +116,7 @@ fn state_transition_should_reject_rule_verification_failure() {
 			// sage/example-transition/src/generic.rs
 			// requires the input assets to be of length 1
 			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 2);
-			let transition_id = ExampleTransitionId::UpgradeAsset;
+			let transition_id = TransitionIdentifier::HeroJam(HeroAction::Sleep(ActionTime::Short));
 
 			assert_noop!(
 				Sage::state_transition(
@@ -139,7 +142,7 @@ fn state_transition_should_reject_too_many_input_assets() {
 		.execute_with(|| {
 			let asset_ids =
 				create_assets::<()>(SEASON_ID_0, ALICE, (MAX_ASSETS_IN_TRANSITION + 1) as u8);
-			let transition_id = ExampleTransitionId::UpgradeAsset;
+			let transition_id = TransitionIdentifier::HeroJam(HeroAction::Sleep(ActionTime::Short));
 
 			assert_noop!(
 				Sage::state_transition(

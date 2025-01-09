@@ -211,7 +211,7 @@ fn buy_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random(), SOME_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::signed(ALICE), 14, SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -221,7 +221,7 @@ fn buy_should_reject_when_trading_is_closed() {
 fn buy_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random(), SOME_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::none(), 14, SOME_NATIVE_PAYMENT),
 			DispatchError::BadOrigin,
 		);
 	});

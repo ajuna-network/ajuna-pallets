@@ -83,6 +83,7 @@ impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 }
 
 impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {
+	type AccountId = AccountIdOf<T>;
 	type AssetId = AssetIdOf<T, I>;
 	type Asset = AssetOf<T, I>;
 
@@ -90,5 +91,9 @@ impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {
 		Assets::<T, I>::get(asset_id)
 			.map(|(_, asset)| asset)
 			.ok_or(Error::<T, I>::UnknownAsset.into())
+	}
+
+	fn iter_assets_from(_account_id: &Self::AccountId) -> impl Iterator<Item = Self::Asset> {
+		Vec::with_capacity(0).into_iter()
 	}
 }

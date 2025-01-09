@@ -39,9 +39,8 @@ fn set_price_should_work() {
 fn set_price_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
-		let asset_id = AssetId::random();
 		assert_noop!(
-			Sage::set_asset_price(RuntimeOrigin::signed(ALICE), asset_id, 1),
+			Sage::set_asset_price(RuntimeOrigin::signed(ALICE), 13, 1),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -50,11 +49,7 @@ fn set_price_should_reject_when_trading_is_closed() {
 #[test]
 fn set_price_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
-		let asset_id = AssetId::random();
-		assert_noop!(
-			Sage::set_asset_price(RuntimeOrigin::none(), asset_id, 1),
-			DispatchError::BadOrigin,
-		);
+		assert_noop!(Sage::set_asset_price(RuntimeOrigin::none(), 13, 1), DispatchError::BadOrigin,);
 	});
 }
 
@@ -79,7 +74,7 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let trade_filter = MockFilter::from(2_u32);
+			let trade_filter = AssetType::None;
 			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,
@@ -92,7 +87,12 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 
 			// Since asset_id_1 doest have its type match the filter we cannot set price for it
 			let (_, asset_1) = Assets::<Test, ()>::get(asset_id_1).expect("Should get asset");
-			assert_eq!(asset_1.asset_type, 0);
+			match &asset_1.asset_variant {
+				HeroJam(hero_jam_asset) => {
+					assert_eq!(hero_jam_asset.asset_type, AssetType::Hero);
+				},
+			}
+
 			assert_noop!(
 				Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_id_1, 101),
 				Error::<Test, ()>::AssetCannotBeTraded
@@ -102,7 +102,11 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 			// sale
 			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
 				if let Some((_, ref mut asset)) = maybe_asset {
-					asset.asset_type = trade_filter;
+					match asset.asset_variant {
+						HeroJam(ref mut hero_jam_asset) => {
+							hero_jam_asset.asset_type = trade_filter;
+						},
+					}
 				}
 			});
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_id_2, 101));

@@ -42,7 +42,7 @@ fn remove_price_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::remove_asset_price(RuntimeOrigin::signed(ALICE), AssetId::random()),
+			Sage::remove_asset_price(RuntimeOrigin::signed(ALICE), 13),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -51,10 +51,7 @@ fn remove_price_should_reject_when_trading_is_closed() {
 #[test]
 fn remove_price_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_noop!(
-			Sage::remove_asset_price(RuntimeOrigin::none(), AssetId::random()),
-			DispatchError::BadOrigin,
-		);
+		assert_noop!(Sage::remove_asset_price(RuntimeOrigin::none(), 13), DispatchError::BadOrigin,);
 	});
 }
 

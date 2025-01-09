@@ -1,3 +1,5 @@
+use sage_api::traits::GetId;
+
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 
 pub mod hero_jam;
@@ -12,6 +14,14 @@ pub struct Asset<BlockNumber> {
 impl<BlockNumber> From<hero_jam::HeroJamAsset<BlockNumber>> for Asset<BlockNumber> {
 	fn from(value: hero_jam::HeroJamAsset<BlockNumber>) -> Self {
 		Self { asset_variant: AssetVariant::HeroJam(value) }
+	}
+}
+
+impl<BlockNumber> GetId<AssetId> for Asset<BlockNumber> {
+	fn get_id(&self) -> AssetId {
+		match &self.asset_variant {
+			AssetVariant::HeroJam(asset) => asset.get_id(),
+		}
 	}
 }
 
