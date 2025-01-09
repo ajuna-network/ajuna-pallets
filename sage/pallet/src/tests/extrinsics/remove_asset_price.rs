@@ -19,9 +19,17 @@ use super::*;
 #[test]
 fn remove_price_should_work() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 2);
 			let asset_for_sale = asset_ids[0];
 			let price = 101;
@@ -58,9 +66,17 @@ fn remove_price_should_reject_unsigned_calls() {
 #[test]
 fn remove_price_should_reject_incorrect_ownership() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 			let asset_for_sale = asset_ids[0];
 

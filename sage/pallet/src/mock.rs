@@ -285,7 +285,7 @@ impl
 		let asset_id = AssetId::from(seed);
 		let asset = Asset {
 			asset_variant: HeroJam(HeroJamAsset {
-				asset_type: AssetType::Hero,
+				asset_type: AssetType::None,
 				asset_subtype: AssetSubType::None,
 				energy: 0,
 				fatigue: 0,
@@ -306,19 +306,11 @@ impl
 	}
 
 	fn create_bench_transition_for(
-		account: &MockAccountId,
-		season: &MockSeasonId,
-		seed: u32,
+		_account: &MockAccountId,
+		_season: &MockSeasonId,
+		_seed: u32,
 	) -> (TransitionIdentifier, Vec<AssetId>) {
-		let asset_id_1 = Self::create_asset_for(account, season, seed);
-		let asset_id_2 = Self::create_asset_for(account, season, seed * 2);
-		let asset_id_3 = Self::create_asset_for(account, season, seed * 3);
-		let asset_id_4 = Self::create_asset_for(account, season, seed * 4);
-		let asset_id_5 = Self::create_asset_for(account, season, seed * 5);
-
-		let asset_vec = vec![asset_id_1, asset_id_2, asset_id_3, asset_id_4, asset_id_5];
-
-		(TransitionIdentifier::HeroJam(HeroAction::Create), asset_vec)
+		(TransitionIdentifier::HeroJam(HeroAction::Create), vec![])
 	}
 
 	fn create_payment_kind() -> WithdrawKind<NativeOrWithId<u32>> {

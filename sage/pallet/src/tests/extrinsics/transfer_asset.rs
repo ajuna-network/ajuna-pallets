@@ -20,6 +20,7 @@ use super::*;
 fn transfer_asset_works() {
 	let alice_initial_balance = MockExistentialDeposit::get() * 100;
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.balances(&[(ALICE, alice_initial_balance)])
 		.locks(&[
 			(ALICE, SEASON_ID_0, Locks::all_unlocked()),
@@ -29,6 +30,18 @@ fn transfer_asset_works() {
 		])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Transfer(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				filter
+			));
+
 			let season_config =
 				<Test as Config<()>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
 					.expect("Should get season config");
@@ -140,6 +153,9 @@ fn transfer_asset_works_on_transfer_closed_with_organizer() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Transfer(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(BOB), SEASON_ID_0, filter));
+
 			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 			let bob_asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 			let asset_id = bob_asset_ids[0];
@@ -174,9 +190,17 @@ fn transfer_asset_rejects_transferring_to_self() {
 #[test]
 fn transfer_asset_rejects_asset_in_trade() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, CHARLIE, 1);
 			let asset_id = asset_ids[0];
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 999));
@@ -216,10 +240,18 @@ fn transfer_asset_rejects_unknown_assets() {
 #[test]
 fn transfer_asset_rejects_on_full_asset_inventory_of_recipient() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.balances(&[(ALICE, 1_000)])
 		.locks(&[(ALICE, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Transfer(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			PlayerSeasonConfigs::<Test, ()>::mutate(BOB, SEASON_ID_0, |config| {
 				config.inventory_tier = InventoryTier::Three
 			});

@@ -74,12 +74,21 @@ mod lock_asset {
 	#[test]
 	fn cannot_lock_asset_on_trade() {
 		ExtBuilder::default()
+			.organizer(ALICE)
 			.balances(&[(ALICE, 1_000)])
 			.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
+				let filter = AssetFilter::Trade(AssetType::Hero);
+				assert_ok!(Sage::update_asset_filter(
+					RuntimeOrigin::signed(ALICE),
+					SEASON_ID_0,
+					filter
+				));
+
 				let asset_ids = create_assets::<()>(SEASON_ID_0, CHARLIE, 1);
 				let asset_id = asset_ids[0];
+
 				assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 1_000));
 				assert_noop!(
 					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, CHARLIE, asset_id),

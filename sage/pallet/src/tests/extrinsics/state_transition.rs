@@ -32,14 +32,13 @@ fn state_transition_works() {
 			let season_config =
 				<Test as Config<()>>::SeasonHandler::get_season_config_for(&season_id)
 					.expect("Should get season config");
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
 			let transition_id = TransitionIdentifier::HeroJam(HeroAction::Create);
 
 			assert_eq!(Balances::free_balance(ALICE), initial_balance);
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(ALICE),
 				transition_id,
-				asset_ids,
+				vec![],
 				(),
 				SOME_NATIVE_PAYMENT
 			));

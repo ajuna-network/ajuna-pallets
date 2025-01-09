@@ -39,6 +39,8 @@ pub struct HeroJamAsset<BlockNumber> {
 
 impl<BlockNumber> GetId<AssetId> for HeroJamAsset<BlockNumber> {
 	fn get_id(&self) -> AssetId {
-		todo!()
+		// TODO: Improve
+		// TODO: Maybe we should rethink the whole 'GetId' trait?
+		0
 	}
 }

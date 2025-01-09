@@ -19,9 +19,17 @@ use super::*;
 #[test]
 fn set_price_should_work() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_for_sale = create_assets::<()>(SEASON_ID_0, BOB, 1)[0];
 			let price = 7357;
 
