@@ -1,7 +1,7 @@
 use crate::asset;
 
 use ajuna_primitives::asset_manager::{AssetInspector, AssetManager};
-use sage_api::{traits::TransitionOutput, Error, SageGameTransition};
+use sage_api::{traits::TransitionOutput, RuleError, SageGameTransition, TransitionError};
 
 use ajuna_primitives::chain_inspector::ChainInspector;
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
@@ -48,7 +48,7 @@ where
 		account_id: &Self::AccountId,
 		asset_ids: &[Self::AssetId],
 		extra: &Self::Extra,
-	) -> Result<(), Error> {
+	) -> Result<(), RuleError> {
 		match transition_id {
 			TransitionIdentifier::HeroJam(hero_action) => hero_jam::HeroJamTransition::<
 				AccountId,
@@ -69,7 +69,7 @@ where
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		extra: &Self::Extra,
-	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, Error> {
+	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		match transition_id {
 			TransitionIdentifier::HeroJam(hero_action) => hero_jam::HeroJamTransition::<
 				AccountId,

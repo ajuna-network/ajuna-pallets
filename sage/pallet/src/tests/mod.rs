@@ -53,6 +53,7 @@ where
 			});
 			let asset_instance = Asset {
 				asset_variant: HeroJam(HeroJamAsset {
+					id: asset_id,
 					asset_type: AssetType::Hero,
 					asset_subtype: AssetSubType::None,
 					energy: 0,

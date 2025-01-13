@@ -1,22 +1,21 @@
 use crate::{
-	asset,
-	asset::hero_jam::{AssetSubType, AssetType, StateType},
-	rules,
-	rules::hero_jam as hero_jam_rules,
+	asset::{hero_jam::*, Asset, AssetId, AssetVariant},
+	rules::hero_jam::*,
 };
 
 use ajuna_primitives::{
 	asset_manager::{AssetInspector, AssetManager},
 	chain_inspector::ChainInspector,
 };
-use sage_api::{traits::TransitionOutput, Error, SageGameTransition};
+use sage_api::{traits::TransitionOutput, RuleError, SageGameTransition, TransitionError};
 
-use crate::{asset::AssetVariant, rules::RuleVerifier};
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
 	sp_runtime,
 };
 use parity_scale_codec::Codec;
+use sage_api::rules::{ensure_asset_length, ensure_owner_of};
+use sp_core::H256;
 use sp_runtime::{
 	traits::{BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
@@ -97,43 +96,25 @@ pub(super) struct HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainH
 	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler)>,
 }
 
-type HeroJamRule<AccountId, AssetHandler, ChainHandler> =
-	hero_jam_rules::Rule<AccountId, AssetHandler, ChainHandler>;
-type HeroJamRuleset<AccountId, AssetHandler, ChainHandler> =
-	rules::Rule<AccountId, HeroJamRule<AccountId, AssetHandler, ChainHandler>, AssetHandler>;
-
 impl<AccountId, BlockNumber, AssetHandler, ChainHandler>
 	HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
-	AssetHandler: AssetManager<
-			AccountId = AccountId,
-			AssetId = asset::AssetId,
-			Asset = asset::Asset<BlockNumber>,
-		> + AssetInspector<
-			AccountId = AccountId,
-			AssetId = asset::AssetId,
-			Asset = asset::Asset<BlockNumber>,
-		>,
+	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>
+		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
 {
-	fn verify(
-		account_id: &AccountId,
-		asset_ids: &[asset::AssetId],
-		ruleset: &[HeroJamRuleset<AccountId, AssetHandler, ChainHandler>],
-	) -> Result<(), Error> {
-		ruleset.iter().try_for_each(|rule| rule.verify(account_id, asset_ids))
-	}
-
 	fn transition(
 		transition_id: &HeroAction,
 		_account_id: &AccountId,
-		asset_ids: &[asset::AssetId],
-	) -> Result<Vec<TransitionOutput<asset::AssetId, asset::Asset<BlockNumber>>>, Error> {
+		asset_ids: &[AssetId],
+	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber>>>, TransitionError> {
 		match transition_id {
 			HeroAction::Create => {
-				let asset = asset::hero_jam::HeroJamAsset {
+				let asset_id = H256::random();
+				let asset = HeroJamAsset {
+					id: asset_id.to_low_u64_be(),
 					asset_type: AssetType::None,
 					asset_subtype: AssetSubType::None,
 					energy: 100,
@@ -144,11 +125,11 @@ where
 					state_change_block_number: 0_u32.saturated_into::<BlockNumber>(),
 					balance: 10,
 				};
-				Ok(vec![TransitionOutput::Minted(asset::Asset::from(asset))])
+				Ok(vec![TransitionOutput::Minted(Asset::from(asset))])
 			},
 			HeroAction::Sleep(sleep_time) => {
 				match AssetHandler::get_asset(&asset_ids[0])
-					.map_err(|_| Error::Transition { error: 0 })?
+					.map_err(|_| TransitionError::Transition { error: 0 })?
 					.asset_variant
 				{
 					AssetVariant::HeroJam(mut asset) => {
@@ -158,13 +139,13 @@ where
 						asset.state_change_block_number =
 							Self::get_block_time_for_action(sleep_time);
 
-						Ok(vec![TransitionOutput::Mutated(asset_ids[0], asset::Asset::from(asset))])
+						Ok(vec![TransitionOutput::Mutated(asset_ids[0], Asset::from(asset))])
 					},
 				}
 			},
 			HeroAction::Work(work_time, work_type) => {
 				match AssetHandler::get_asset(&asset_ids[0])
-					.map_err(|_| Error::Transition { error: 0 })?
+					.map_err(|_| TransitionError::Transition { error: 0 })?
 					.asset_variant
 				{
 					AssetVariant::HeroJam(mut asset) => {
@@ -194,7 +175,7 @@ where
 						asset.state_change_block_number =
 							Self::get_block_time_for_action(work_time);
 
-						Ok(vec![TransitionOutput::Mutated(asset_ids[0], asset::Asset::from(asset))])
+						Ok(vec![TransitionOutput::Mutated(asset_ids[0], Asset::from(asset))])
 					},
 				}
 			},
@@ -240,22 +221,15 @@ impl<AccountId, BlockNumber, AssetHandler, ChainHandler> SageGameTransition
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
-	AssetHandler: AssetManager<
-			AccountId = AccountId,
-			AssetId = asset::AssetId,
-			Asset = asset::Asset<BlockNumber>,
-		> + AssetInspector<
-			AccountId = AccountId,
-			AssetId = asset::AssetId,
-			Asset = asset::Asset<BlockNumber>,
-		>,
+	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>
+		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
 {
 	type TransitionId = HeroAction;
 	type TransitionConfig = ();
 	type AccountId = AccountId;
-	type AssetId = asset::AssetId;
-	type Asset = asset::Asset<BlockNumber>;
+	type AssetId = AssetId;
+	type Asset = Asset<BlockNumber>;
 	type Extra = ();
 
 	fn verify_rule(
@@ -263,24 +237,29 @@ where
 		account_id: &Self::AccountId,
 		asset_ids: &[Self::AssetId],
 		_: &Self::Extra,
-	) -> Result<(), Error> {
-		let ruleset = match transition_id {
-			HeroAction::Create => vec![
-				HeroJamRuleset::AssetCount(0),
-				HeroJamRuleset::Not(Box::new(HeroJamRuleset::Transition(
-					HeroJamRule::AccountHasAssetOfType(AssetType::Hero, PhantomData),
-				))),
-			],
-			HeroAction::Sleep(_) | HeroAction::Work(_, _) => vec![
-				HeroJamRuleset::AssetCount(1),
-				HeroJamRuleset::IsOwnerOf(account_id.clone(), PhantomData),
-				HeroJamRuleset::Transition(HeroJamRule::AllAssetType(AssetType::Hero)),
-				HeroJamRuleset::Transition(HeroJamRule::CanStateChange(PhantomData)),
-			],
-			_ => vec![],
-		};
-
-		Self::verify(account_id, asset_ids, ruleset.as_slice())
+	) -> Result<(), RuleError> {
+		match transition_id {
+			HeroAction::Create => {
+				ensure_asset_length(asset_ids, 0)?;
+				if ensure_account_has_asset_of_type::<_, _, AssetHandler>(
+					account_id,
+					AssetType::Hero,
+				)
+				.is_err()
+				{
+					Ok(())
+				} else {
+					Err(RuleError::Other { error: ASSET_HERO_ALREADY_IN_ACCOUNT })
+				}
+			},
+			HeroAction::Sleep(_) | HeroAction::Work(_, _) => {
+				ensure_asset_length(asset_ids, 1)?;
+				ensure_owner_of::<_, _, AssetHandler>(asset_ids, account_id)?;
+				ensure_all_asset_type::<_, _, AssetHandler>(asset_ids, AssetType::Hero)?;
+				ensure_can_state_change::<_, _, AssetHandler, ChainHandler>(&asset_ids[0])
+			},
+			_ => Ok(()),
+		}
 	}
 
 	fn do_transition(
@@ -288,7 +267,7 @@ where
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		_: &Self::Extra,
-	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, Error> {
+	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		Self::transition(transition_id, account_id, assets_ids)
 	}
 }

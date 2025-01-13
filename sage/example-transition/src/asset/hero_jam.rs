@@ -1,4 +1,4 @@
-use crate::asset::AssetId;
+use crate::asset::{Asset, AssetId, AssetVariant};
 
 use sage_api::traits::GetId;
 
@@ -25,6 +25,7 @@ pub enum StateType {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub struct HeroJamAsset<BlockNumber> {
+	pub id: AssetId,
 	pub asset_type: AssetType,
 	pub asset_subtype: AssetSubType,
 	pub energy: u8,
@@ -39,8 +40,16 @@ pub struct HeroJamAsset<BlockNumber> {
 
 impl<BlockNumber> GetId<AssetId> for HeroJamAsset<BlockNumber> {
 	fn get_id(&self) -> AssetId {
-		// TODO: Improve
-		// TODO: Maybe we should rethink the whole 'GetId' trait?
-		0
+		self.id
+	}
+}
+
+impl<BlockNumber> TryFrom<Asset<BlockNumber>> for HeroJamAsset<BlockNumber> {
+	type Error = ();
+
+	fn try_from(value: Asset<BlockNumber>) -> Result<Self, Self::Error> {
+		match value.asset_variant {
+			AssetVariant::HeroJam(hero_jam_asset) => Ok(hero_jam_asset),
+		}
 	}
 }

@@ -31,12 +31,12 @@ pub trait SageGameTransition {
 		account_id: &Self::AccountId,
 		asset_ids: &[Self::AssetId],
 		extra: &Self::Extra,
-	) -> Result<(), crate::Error>;
+	) -> Result<(), crate::RuleError>;
 
 	fn do_transition(
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		extra: &Self::Extra,
-	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, crate::Error>;
+	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, crate::TransitionError>;
 }

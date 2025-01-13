@@ -78,5 +78,5 @@ pub trait AssetInspector {
 
 	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError>;
 
-	fn iter_assets_from(account_id: &Self::AccountId) -> impl Iterator<Item = Self::Asset>;
+	fn iter_assets_from(account_id: &Self::AccountId) -> impl Iterator<Item = Self::AssetId>;
 }

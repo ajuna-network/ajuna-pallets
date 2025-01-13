@@ -254,8 +254,8 @@ impl AssetInspector for MockAssetMediator {
 		<Sage as AssetInspector>::get_asset(asset_id)
 	}
 
-	fn iter_assets_from(_account_id: &Self::AccountId) -> impl Iterator<Item = Self::Asset> {
-		Vec::with_capacity(0).into_iter()
+	fn iter_assets_from(account_id: &Self::AccountId) -> impl Iterator<Item = Self::AssetId> {
+		<Sage as AssetInspector>::iter_assets_from(account_id)
 	}
 }
 
@@ -285,6 +285,7 @@ impl
 		let asset_id = AssetId::from(seed);
 		let asset = Asset {
 			asset_variant: HeroJam(HeroJamAsset {
+				id: asset_id,
 				asset_type: AssetType::None,
 				asset_subtype: AssetSubType::None,
 				energy: 0,
