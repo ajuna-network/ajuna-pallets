@@ -16,9 +16,9 @@ pub fn ensure_owner_of<AssetId, AccountId, Manager>(
 where
 	Manager: AssetManager<AccountId = AccountId, AssetId = AssetId>,
 {
-	assets
-		.iter()
-		.all(|asset_id| Manager::ensure_ownership(owner, asset_id).is_ok())
-		.then_some(())
-		.ok_or(RuleError::AssetOwnership)
+	if assets.iter().all(|asset_id| Manager::ensure_ownership(owner, asset_id).is_ok()) {
+		Ok(())
+	} else {
+		Err(RuleError::AssetOwnership)
+	}
 }

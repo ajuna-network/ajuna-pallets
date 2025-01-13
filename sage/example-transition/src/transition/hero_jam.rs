@@ -240,16 +240,7 @@ where
 		match transition_id {
 			HeroAction::Create => {
 				ensure_asset_length(asset_ids, 0)?;
-				if ensure_account_has_asset_of_type::<_, _, AssetHandler>(
-					account_id,
-					AssetType::Hero,
-				)
-				.is_err()
-				{
-					Ok(())
-				} else {
-					Err(RuleError::Other { error: ASSET_HERO_ALREADY_IN_ACCOUNT })
-				}
+				ensure_account_has_not_asset_of_type::<_, _, AssetHandler>(account_id, AssetType::Hero)
 			},
 			HeroAction::Sleep(_) | HeroAction::Work(_, _) => {
 				ensure_asset_length(asset_ids, 1)?;
