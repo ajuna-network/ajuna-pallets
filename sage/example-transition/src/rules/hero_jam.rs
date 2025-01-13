@@ -27,18 +27,6 @@ where
 	asset.try_into().map_err(|_| RuleError::Other { error: ASSET_NOT_HERO_JAM })
 }
 
-fn try_get_hero_jam_vec<AccountId, BlockNumber, Inspector>(
-	assets: &[AssetId],
-) -> Result<Vec<HeroJamAsset<BlockNumber>>, RuleError>
-where
-	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
-{
-	assets
-		.iter()
-		.map(try_get_hero_jam::<_, _, Inspector>)
-		.collect::<Result<Vec<_>, _>>()
-}
-
 pub(crate) fn ensure_all_asset_type<AccountId, BlockNumber, Inspector>(
 	assets: &[AssetId],
 	asset_type: AssetType,
@@ -46,11 +34,16 @@ pub(crate) fn ensure_all_asset_type<AccountId, BlockNumber, Inspector>(
 where
 	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 {
-	let hero_jam_vec = try_get_hero_jam_vec::<_, _, Inspector>(assets)?;
-
-	hero_jam_vec
+	assets
 		.iter()
-		.all(|hero_jam_asset| hero_jam_asset.asset_type == asset_type)
+		.map(|asset_id| try_get_hero_jam::<_, _, Inspector>(asset_id))
+		.all(|maybe_hero_jam| {
+			if let Ok(hero_jam) = maybe_hero_jam {
+				hero_jam.asset_type == asset_type
+			} else {
+				false
+			}
+		})
 		.then_some(())
 		.ok_or(RuleError::Other { error: ASSETS_NOT_ALL_SAME_TYPE })
 }
@@ -63,11 +56,16 @@ pub(crate) fn ensure_all_state_type<AccountId, BlockNumber, Inspector>(
 where
 	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 {
-	let hero_jam_vec = try_get_hero_jam_vec::<_, _, Inspector>(assets)?;
-
-	hero_jam_vec
+	assets
 		.iter()
-		.all(|hero_jam_asset| hero_jam_asset.state_type == state_type)
+		.map(|asset_id| try_get_hero_jam::<_, _, Inspector>(asset_id))
+		.all(|maybe_hero_jam| {
+			if let Ok(hero_jam) = maybe_hero_jam {
+				hero_jam.state_type == state_type
+			} else {
+				false
+			}
+		})
 		.then_some(())
 		.ok_or(RuleError::Other { error: ASSETS_NOT_ALL_SAME_STATE })
 }
