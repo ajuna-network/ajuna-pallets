@@ -61,6 +61,7 @@ where
 		.ok_or(RuleError::Other { error: ASSETS_NOT_ALL_SAME_TYPE })
 }
 
+#[allow(dead_code)]
 pub(crate) fn ensure_all_state_type<AccountId, BlockNumber, Inspector>(
 	assets: &[AssetId],
 	state_type: StateType,

@@ -15,7 +15,6 @@ use frame_support::{
 };
 use parity_scale_codec::Codec;
 use sage_api::rules::{ensure_asset_length, ensure_owner_of};
-use sp_core::H256;
 use sp_runtime::{
 	traits::{BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
@@ -112,9 +111,9 @@ where
 	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber>>>, TransitionError> {
 		match transition_id {
 			HeroAction::Create => {
-				let asset_id = H256::random();
+				let asset_id = ChainHandler::get_current_block_number().saturated_into::<AssetId>();
 				let asset = HeroJamAsset {
-					id: asset_id.to_low_u64_be(),
+					id: asset_id,
 					asset_type: AssetType::None,
 					asset_subtype: AssetSubType::None,
 					energy: 100,
