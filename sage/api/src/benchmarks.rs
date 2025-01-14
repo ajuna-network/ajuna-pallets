@@ -9,7 +9,7 @@ pub trait SageBenchmarkHelper<
 {
 	fn create_asset(seed: u32) -> (AssetId, Asset);
 
-	fn create_bench_transition() -> (TransitionId, Vec<AssetId>);
+	fn create_bench_transition() -> (TransitionId, sp_std::vec::Vec<AssetId>);
 
 	fn create_trade_filter_for(asset: &Asset) -> TradeFilter;
 
