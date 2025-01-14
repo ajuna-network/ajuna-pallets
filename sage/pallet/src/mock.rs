@@ -254,7 +254,9 @@ impl AssetInspector for MockAssetMediator {
 		<Sage as AssetInspector>::get_asset(asset_id)
 	}
 
-	fn iter_assets_from(account_id: &Self::AccountId) -> impl Iterator<Item = Self::AssetId> {
+	fn iter_assets_from(
+		account_id: &Self::AccountId,
+	) -> impl Iterator<Item = (Self::AssetId, Self::Asset)> {
 		<Sage as AssetInspector>::iter_assets_from(account_id)
 	}
 }

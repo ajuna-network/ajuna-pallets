@@ -42,7 +42,7 @@ use ajuna_primitives::{
 };
 use sage_api::{
 	traits::{GetId, TransitionOutput},
-	AsErrorCode, SageGameTransition,
+	SageGameTransition, TransitionError,
 };
 
 use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
@@ -383,10 +383,10 @@ pub mod pallet {
 		/// The feature trying to be unlocked has missing requirements to be fulfilled by
 		/// the account trying to unlock it
 		UnlockCriteriaNotFulfilled,
-		/// The rule for a given transition was not satisfied.
-		RuleNotSatisfied { code: u8 },
 		/// The amount of input assets in the transition is greater than 'MAX_ASSETS_IN_TRANSITION'
 		TooManyAssetsInTransition,
+		/// The rule for a given transition was not satisfied.
+		TransitionRuleNotSatisfied,
 		/// An error occurred during the state transition.
 		Transition { code: u8 },
 	}
@@ -738,13 +738,17 @@ pub mod pallet {
 				Self::ensure_ownership(&sender, asset_id)?;
 				Self::ensure_unlocked(asset_id)?;
 			}
-
-			T::SageGameTransition::verify_rule(&transition_id, &sender, &asset_ids, &extra)
-				.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
-
 			let transition_results =
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
-					.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
+					.map_err(|e| match e {
+					TransitionError::InvalidTransitionId =>
+						Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::TransferError => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::FeeError => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::AssetLength => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::AssetOwnership => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::Transition { code } => Error::<T, I>::Transition { code },
+				})?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 

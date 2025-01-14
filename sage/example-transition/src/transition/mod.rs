@@ -1,7 +1,7 @@
 use crate::asset;
 
 use ajuna_primitives::asset_manager::{AssetInspector, AssetManager};
-use sage_api::{traits::TransitionOutput, RuleError, SageGameTransition, TransitionError};
+use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
 use ajuna_primitives::chain_inspector::ChainInspector;
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
@@ -42,27 +42,6 @@ where
 	type AssetId = asset::AssetId;
 	type Asset = asset::Asset<BlockNumber>;
 	type Extra = ();
-
-	fn verify_rule(
-		transition_id: &Self::TransitionId,
-		account_id: &Self::AccountId,
-		asset_ids: &[Self::AssetId],
-		extra: &Self::Extra,
-	) -> Result<(), RuleError> {
-		match transition_id {
-			TransitionIdentifier::HeroJam(hero_action) => hero_jam::HeroJamTransition::<
-				AccountId,
-				BlockNumber,
-				AssetHandler,
-				ChainHandler,
-			>::verify_rule(
-				hero_action,
-				account_id,
-				asset_ids,
-				extra,
-			),
-		}
-	}
 
 	fn do_transition(
 		transition_id: &Self::TransitionId,

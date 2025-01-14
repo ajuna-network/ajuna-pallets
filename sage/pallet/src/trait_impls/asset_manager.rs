@@ -93,7 +93,15 @@ impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {
 			.ok_or(Error::<T, I>::UnknownAsset.into())
 	}
 
-	fn iter_assets_from(account_id: &Self::AccountId) -> impl Iterator<Item = Self::AssetId> {
-		AssetOwners::<T, I>::iter_key_prefix((account_id,)).map(|(_, asset_id)| asset_id)
+	fn iter_assets_from(
+		account_id: &Self::AccountId,
+	) -> impl Iterator<Item = (Self::AssetId, Self::Asset)> {
+		AssetOwners::<T, I>::iter_key_prefix((account_id,)).filter_map(|(_, asset_id)| {
+			if let Some((_, asset)) = Assets::<T, I>::get(&asset_id) {
+				Some((asset_id, asset))
+			} else {
+				None
+			}
+		})
 	}
 }

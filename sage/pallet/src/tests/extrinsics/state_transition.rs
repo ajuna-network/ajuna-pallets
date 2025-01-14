@@ -125,9 +125,7 @@ fn state_transition_should_reject_rule_verification_failure() {
 					(),
 					SOME_NATIVE_PAYMENT
 				),
-				Error::<Test, ()>::RuleNotSatisfied {
-					code: sage_api::RuleError::AssetLength.as_error_code()
-				}
+				Error::<Test, ()>::TransitionRuleNotSatisfied,
 			);
 		})
 }
