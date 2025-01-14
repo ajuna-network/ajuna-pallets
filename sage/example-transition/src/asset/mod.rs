@@ -4,7 +4,12 @@ use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 
 pub mod hero_jam;
 
-pub type AssetId = u64;
+pub type AssetId = u32;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+pub enum AssetVariant<BlockNumber> {
+	HeroJam(hero_jam::HeroJamAsset<BlockNumber>),
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub struct Asset<BlockNumber> {
@@ -23,9 +28,4 @@ impl<BlockNumber> GetId<AssetId> for Asset<BlockNumber> {
 			AssetVariant::HeroJam(asset) => asset.get_id(),
 		}
 	}
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
-pub enum AssetVariant<BlockNumber> {
-	HeroJam(hero_jam::HeroJamAsset<BlockNumber>),
 }

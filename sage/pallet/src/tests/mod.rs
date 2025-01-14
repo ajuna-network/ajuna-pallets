@@ -20,13 +20,9 @@ mod trait_impls;
 
 use crate::{mock::*, *};
 
-use example_transition::asset::{
-	hero_jam::{AssetSubType, AssetType, HeroJamAsset, StateType},
-	Asset,
-	AssetVariant::HeroJam,
-};
+use example_transition::prelude::*;
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::{testing::H256, SaturatedConversion};
+use sp_runtime::testing::H256;
 
 pub(crate) fn create_assets<I: 'static>(
 	season_id: MockSeasonId,
@@ -35,7 +31,7 @@ pub(crate) fn create_assets<I: 'static>(
 ) -> Vec<AssetIdOf<Test, I>>
 where
 	Test: Config<I>,
-	AssetIdOf<Test, I>: From<u64>,
+	AssetIdOf<Test, I>: From<u32>,
 	AssetOf<Test, I>: From<MockAsset>,
 	SeasonIdOf<Test, I>: From<MockSeasonId>,
 {
@@ -47,29 +43,20 @@ where
 	(0..n)
 		.map(|_| {
 			let base = H256::random();
-			let asset_id = base.to_low_u64_be();
+			let asset_id = base.to_low_u64_be() as u32;
 			ASSET_SEASONS.with_borrow_mut(|store| {
 				store.insert(asset_id, season_id);
 			});
-			let asset_instance = Asset {
-				asset_variant: HeroJam(HeroJamAsset {
-					id: asset_id,
-					asset_type: AssetType::Hero,
-					asset_subtype: AssetSubType::None,
-					energy: 0,
-					fatigue: 0,
-					state_type: StateType::None,
-					state_sub_type: 0,
-					state_sub_value: 0,
-					state_change_block_number: 0_u32.saturated_into(),
-					balance: 10,
-				}),
-			};
+
+			let (asset_id, asset) =
+				GameBenchmarkHelper::<BlockNumberFor<Test>>::create_asset(asset_id);
 
 			let asset_id = AssetIdOf::<Test, I>::from(asset_id);
-			let asset = AssetOf::<Test, I>::from(asset_instance);
+			let asset = AssetOf::<Test, I>::from(asset);
+
 			Assets::<Test, I>::insert(&asset_id, (account, asset));
 			AssetOwners::<Test, I>::insert((account, &casted_season_id, &asset_id), ());
+
 			asset_id
 		})
 		.collect()

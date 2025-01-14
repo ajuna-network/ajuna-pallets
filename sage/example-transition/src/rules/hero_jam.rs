@@ -5,13 +5,14 @@ use crate::asset::{
 
 use ajuna_primitives::{asset_manager::AssetInspector, chain_inspector::ChainInspector};
 use sage_api::TransitionError;
+
 use sp_runtime::traits::BlockNumber as BlockNumberT;
 
-pub const ASSETS_NOT_ALL_SAME_TYPE: u8 = 100;
-pub const ASSETS_NOT_ALL_SAME_STATE: u8 = 101;
-pub const ASSET_CANNOT_STATE_CHANGE: u8 = 102;
-pub const ASSET_HERO_NOT_IN_ACCOUNT: u8 = 103;
-pub const ASSET_HERO_ALREADY_IN_ACCOUNT: u8 = 104;
+pub(crate) const ASSETS_NOT_ALL_SAME_TYPE: u8 = 100;
+pub(crate) const ASSETS_NOT_ALL_SAME_STATE: u8 = 101;
+pub(crate) const ASSET_CANNOT_STATE_CHANGE: u8 = 102;
+pub(crate) const ASSET_HERO_NOT_IN_ACCOUNT: u8 = 103;
+pub(crate) const ASSET_HERO_ALREADY_IN_ACCOUNT: u8 = 104;
 
 pub(crate) fn ensure_all_asset_type<BlockNumber>(
 	assets: &[(AssetId, HeroJamAsset<BlockNumber>)],

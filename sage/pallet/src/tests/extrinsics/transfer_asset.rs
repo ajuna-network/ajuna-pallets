@@ -296,7 +296,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 			// Since asset_id_1 doest have its type match the filter we cannot set price for it
 			let (_, asset_1) = Assets::<Test, ()>::get(asset_id_1).expect("Should get asset");
 			match &asset_1.asset_variant {
-				HeroJam(hero_jam_asset) => {
+				AssetVariant::HeroJam(hero_jam_asset) => {
 					assert_eq!(hero_jam_asset.asset_type, AssetType::Hero);
 				},
 			}
@@ -315,7 +315,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
 				if let Some((_, ref mut asset)) = maybe_asset {
 					match asset.asset_variant {
-						HeroJam(ref mut hero_jam_asset) => {
+						AssetVariant::HeroJam(ref mut hero_jam_asset) => {
 							hero_jam_asset.asset_type = transfer_filter;
 						},
 					}

@@ -7,24 +7,27 @@ use ajuna_primitives::{
 	asset_manager::{AssetInspector, AssetManager},
 	chain_inspector::ChainInspector,
 };
-use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
+use sage_api::{
+	rules::{ensure_asset_length, ensure_owner_of},
+	traits::TransitionOutput,
+	SageGameTransition, TransitionError,
+};
 
+use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
 	sp_runtime,
 };
 use parity_scale_codec::Codec;
-use sage_api::rules::{ensure_asset_length, ensure_owner_of};
 use sp_runtime::{
 	traits::{BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
 };
-use std::marker::PhantomData;
 
-pub const BLOCKS_PER_HOUR: u32 = 600;
+const BLOCKS_PER_HOUR: u32 = 600;
 
-pub const ASSET_NOT_FOUND: u8 = 200;
-pub const ASSET_NOT_HERO_JAM: u8 = 201;
+const ASSET_NOT_FOUND: u8 = 200;
+const ASSET_NOT_HERO_JAM: u8 = 201;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum ActionTime {
@@ -72,8 +75,8 @@ impl From<u8> for WorkType {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum HeroAction {
 	Create,
-	Sleep(ActionTime),
-	Work(ActionTime, WorkType),
+	Sleep(SleepType, ActionTime),
+	Work(WorkType, ActionTime),
 	Travel,
 	Claim,
 }
@@ -143,7 +146,7 @@ where
 					AssetType::Hero,
 				)?;
 			},
-			HeroAction::Sleep(_) | HeroAction::Work(_, _) => {
+			HeroAction::Sleep(_, _) | HeroAction::Work(_, _) => {
 				let assets = Self::try_get_hero_jam_assets(asset_ids)?;
 
 				ensure_asset_length(asset_ids, 1)?;
@@ -185,7 +188,7 @@ where
 				};
 				Ok(vec![TransitionOutput::Minted(Asset::from(asset))])
 			},
-			HeroAction::Sleep(sleep_time) => {
+			HeroAction::Sleep(_, sleep_time) => {
 				let (asset_id, mut asset) = assets[0];
 
 				asset.state_type = StateType::Sleep;
@@ -195,7 +198,7 @@ where
 
 				Ok(vec![TransitionOutput::Mutated(asset_id, Asset::from(asset))])
 			},
-			HeroAction::Work(work_time, work_type) => {
+			HeroAction::Work(work_type, work_time) => {
 				let (asset_id, mut asset) = assets[0];
 
 				let fatigue = Self::get_resource_fatigue(

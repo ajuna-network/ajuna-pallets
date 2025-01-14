@@ -1,1 +1,1 @@
-pub mod hero_jam;
+pub(crate) mod hero_jam;

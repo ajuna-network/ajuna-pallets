@@ -24,7 +24,6 @@ use ajuna_primitives::{
 		WithdrawWhitelistedCredit,
 	},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
-	trade_manager::TradeManager,
 };
 use frame_support::{
 	derive_impl, parameter_types,
@@ -37,7 +36,7 @@ use frame_support::{
 use sp_runtime::{
 	testing::TestSignature,
 	traits::{IdentifyAccount, Verify},
-	BuildStorage, DispatchError, SaturatedConversion,
+	BuildStorage, DispatchError,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
@@ -58,8 +57,8 @@ pub const TOURNAMENT_TREASURY: MockAccountId = 431;
 pub const SEASON_ID_0: MockSeasonId = 0;
 pub const SEASON_ID_1: MockSeasonId = 1;
 
-pub const MAIN_ASSET_ID: u32 = 0;
-pub const LOW_LIQUIDITY_ASSET_ID: u32 = 99;
+pub const MAIN_ASSET_ID: AssetId = 0;
+pub const LOW_LIQUIDITY_ASSET_ID: AssetId = 99;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -98,19 +97,12 @@ impl pallet_assets::Config for Test {
 }
 
 pub type NativeAndAssets =
-	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
-pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<u32>> =
+	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<AssetId>, MockAccountId>;
+pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<AssetId>> =
 	WithdrawKind::Payment(NativeOrWithId::Native);
-pub const SOME_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<u32>>> = Some(NATIVE_PAYMENT);
+pub const SOME_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<AssetId>>> = Some(NATIVE_PAYMENT);
 
-use example_transition::{
-	asset::{
-		hero_jam::{AssetSubType, AssetType, HeroJamAsset, StateType},
-		Asset, AssetId, AssetVariant,
-		AssetVariant::HeroJam,
-	},
-	transition::{hero_jam::HeroAction, GameTransition, TransitionIdentifier},
-};
+use example_transition::prelude::*;
 
 parameter_types! {
 	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
@@ -184,32 +176,6 @@ impl SeasonManager for MockSeasonManager {
 	}
 }
 
-pub struct MockFilterHandler;
-
-pub type MockFilter = AssetType;
-
-impl TradeManager for MockFilterHandler {
-	type TradeFilter = MockFilter;
-	type Asset = MockAsset;
-
-	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
-		match asset.asset_variant {
-			AssetVariant::HeroJam(hero_jam_asset) => hero_jam_asset.asset_type == *filter,
-		}
-	}
-}
-
-impl TransferManager for MockFilterHandler {
-	type TransferFilter = MockFilter;
-	type Asset = MockAsset;
-
-	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
-		match asset.asset_variant {
-			AssetVariant::HeroJam(hero_jam_asset) => hero_jam_asset.asset_type == *filter,
-		}
-	}
-}
-
 pub struct MockAssetMediator;
 
 impl AssetManager for MockAssetMediator {
@@ -269,58 +235,6 @@ impl ChainInspector for MockAssetMediator {
 	}
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-pub struct SageBenchmarkHelper;
-
-#[cfg(feature = "runtime-benchmarks")]
-impl
-	BenchmarkHelper<
-		MockAccountId,
-		MockSeasonId,
-		AssetId,
-		MockAsset,
-		TransitionIdentifier,
-		WithdrawKind<NativeOrWithId<u32>>,
-	> for SageBenchmarkHelper
-{
-	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
-		let asset_id = AssetId::from(seed);
-		let asset = Asset {
-			asset_variant: HeroJam(HeroJamAsset {
-				id: asset_id,
-				asset_type: AssetType::None,
-				asset_subtype: AssetSubType::None,
-				energy: 0,
-				fatigue: 0,
-				state_type: StateType::None,
-				state_sub_type: 0,
-				state_sub_value: 0,
-				state_change_block_number: 0_u32.saturated_into(),
-				balance: 10,
-			}),
-		};
-
-		MockSeasonManager::register_asset_in(&asset_id, season_id)
-			.expect("Asset should be registered");
-		Assets::<Test, ()>::insert(asset_id, (account, asset));
-		AssetOwners::<Test, ()>::insert((account, season_id, &asset_id), ());
-
-		asset_id
-	}
-
-	fn create_bench_transition_for(
-		_account: &MockAccountId,
-		_season: &MockSeasonId,
-		_seed: u32,
-	) -> (TransitionIdentifier, Vec<AssetId>) {
-		(TransitionIdentifier::HeroJam(HeroAction::Create), vec![])
-	}
-
-	fn create_payment_kind() -> WithdrawKind<NativeOrWithId<u32>> {
-		WithdrawKind::Payment(NativeOrWithId::Native)
-	}
-}
-
 pub struct MockVoucherHandler;
 
 impl VoucherHandler for MockVoucherHandler {
@@ -347,7 +261,7 @@ impl crate::Config for Test {
 		NativeAndAssets,
 		WithdrawCreditOrVoucher<
 			WithdrawWhitelistedCredit<
-				AllowAllAssets<NativeOrWithId<u32>>,
+				AllowAllAssets<NativeOrWithId<AssetId>>,
 				WithdrawFungibles<MockAccountId, NativeAndAssets>,
 			>,
 			MockVoucherHandler,
@@ -356,13 +270,13 @@ impl crate::Config for Test {
 		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,
 	>;
-	type PaymentKind = WithdrawKind<NativeOrWithId<u32>>;
-	type FilterHandler = MockFilterHandler;
+	type PaymentKind = WithdrawKind<NativeOrWithId<AssetId>>;
+	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = SageBenchmarkHelper;
+	type BenchmarkHelper = GameBenchmarkHelper<BlockNumberFor<Test>>;
 }
 
 pub struct TestAffiliatesFeeProvider;

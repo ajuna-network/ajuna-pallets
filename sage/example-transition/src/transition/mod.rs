@@ -1,13 +1,15 @@
 use crate::asset;
 
-use ajuna_primitives::asset_manager::{AssetInspector, AssetManager};
+use ajuna_primitives::{
+	asset_manager::{AssetInspector, AssetManager},
+	chain_inspector::ChainInspector,
+};
 use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
-use ajuna_primitives::chain_inspector::ChainInspector;
+use core::marker::PhantomData;
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use parity_scale_codec::Codec;
 use sp_runtime::traits::{BlockNumber as BlockNumberT, Member};
-use std::marker::PhantomData;
 
 pub mod hero_jam;
 

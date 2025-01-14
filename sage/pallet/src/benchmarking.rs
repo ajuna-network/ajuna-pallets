@@ -16,10 +16,10 @@
 
 use crate::{
 	config::{InventoryTier, Locks},
-	pallet::{AssetFilterOf, TradeFilterOf, TransferFilterOf},
-	AssetTradePrices, BalanceOf, BenchmarkHelper, Call, Config, Event, ExtraOf, GeneralConfigOf,
-	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonIdOf,
-	SeasonUnlocks, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
+	pallet::AssetFilterOf,
+	AssetIdOf, AssetOf, AssetOwners, AssetTradePrices, Assets, BalanceOf, Config, Event, ExtraOf,
+	GeneralConfigOf, GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs,
+	SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
 };
 use ajuna_primitives::{asset_manager::Lock, season_manager::SeasonManager};
 use frame_benchmarking::v2::*;
@@ -48,6 +48,17 @@ fn set_account_balance<T: Config<I>, I: 'static>(account: &T::AccountId, balance
 	let _ = T::Currency::deposit_creating(account, balance);
 }
 
+fn store_created_asset<T: Config<I>, I: 'static>(
+	account: &T::AccountId,
+	season_id: &SeasonIdOf<T, I>,
+	asset_id: &AssetIdOf<T, I>,
+	asset: AssetOf<T, I>,
+) {
+	T::SeasonHandler::register_asset_in(asset_id, season_id).expect("Should be registered");
+	Assets::<T, I>::insert(asset_id, (account, asset));
+	AssetOwners::<T, I>::insert((account, season_id, asset_id), ());
+}
+
 fn unlock_season_features_for<T: Config<I>, I: 'static>(season_id: &SeasonIdOf<T, I>) {
 	GeneralConfigStore::<T, I>::mutate(|config| {
 		config.trade.open = true;
@@ -73,6 +84,8 @@ fn unlock_player_features_for<T: Config<I>, I: 'static>(
 #[instance_benchmarks]
 mod benchmarks {
 	use super::*;
+	use crate::Call;
+	use sage_api::benchmarks::SageBenchmarkHelper;
 
 	#[benchmark]
 	fn set_organizer() {
@@ -142,7 +155,8 @@ mod benchmarks {
 		setup_organizer::<T, I>(acc_1.clone());
 		let season_id = <T as Config<I>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
-		let filter = TradeFilterOf::<T, I>::default();
+		let (_, asset) = T::BenchmarkHelper::create_asset(31);
+		let filter = T::BenchmarkHelper::create_trade_filter_for(&asset);
 		let trade_filter = AssetFilterOf::<T, I>::Trade(filter.clone());
 
 		#[extrinsic_call]
@@ -157,7 +171,8 @@ mod benchmarks {
 		setup_organizer::<T, I>(acc_1.clone());
 		let season_id = <T as Config<I>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
-		let filter = TransferFilterOf::<T, I>::default();
+		let (_, asset) = T::BenchmarkHelper::create_asset(31);
+		let filter = T::BenchmarkHelper::create_transfer_filter_for(&asset);
 		let transfer_filter = AssetFilterOf::<T, I>::Transfer(filter.clone());
 
 		#[extrinsic_call]
@@ -175,7 +190,8 @@ mod benchmarks {
 			.expect("Should get current season");
 		unlock_season_features_for::<T, I>(&season_id);
 		unlock_player_features_for::<T, I>(&acc_1, &season_id);
-		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 2);
+		let (asset_id, asset) = T::BenchmarkHelper::create_asset(31);
+		store_created_asset::<T, I>(&acc_1, &season_id, &asset_id, asset);
 		let payment = T::BenchmarkHelper::create_payment_kind();
 
 		#[extrinsic_call]
@@ -191,7 +207,8 @@ mod benchmarks {
 			.expect("Should get current season");
 		unlock_season_features_for::<T, I>(&season_id);
 		unlock_player_features_for::<T, I>(&acc_1, &season_id);
-		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
+		let (asset_id, asset) = T::BenchmarkHelper::create_asset(31);
+		store_created_asset::<T, I>(&acc_1, &season_id, &asset_id, asset);
 		let price = 45_242_u32;
 
 		#[extrinsic_call]
@@ -206,7 +223,8 @@ mod benchmarks {
 		let season_id = <T as Config<I>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
 		unlock_season_features_for::<T, I>(&season_id);
-		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
+		let (asset_id, asset) = T::BenchmarkHelper::create_asset(31);
+		store_created_asset::<T, I>(&acc_1, &season_id, &asset_id, asset);
 		let price = BalanceOf::<T, I>::from(45_242_u32);
 		AssetTradePrices::<T, I>::insert(&season_id, &asset_id, price);
 
@@ -223,7 +241,9 @@ mod benchmarks {
 		set_account_balance::<T, I>(&acc_2, 100_000_u32.into());
 		let season_id = <T as Config<I>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
-		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
+		let (asset_id, asset) = T::BenchmarkHelper::create_asset(31);
+		store_created_asset::<T, I>(&acc_1, &season_id, &asset_id, asset);
+
 		let price = BalanceOf::<T, I>::from(45_242_u32);
 		AssetTradePrices::<T, I>::insert(&season_id, &asset_id, price);
 		let payment = T::BenchmarkHelper::create_payment_kind();
@@ -239,7 +259,8 @@ mod benchmarks {
 		let acc_1 = account::<T, I>(ACC_1);
 		let season_id = <T as Config<I>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
-		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
+		let (asset_id, asset) = T::BenchmarkHelper::create_asset(31);
+		store_created_asset::<T, I>(&acc_1, &season_id, &asset_id, asset);
 		let expected_lock = Lock::new(*SAGE_LOCK_ID, acc_1.clone());
 
 		#[extrinsic_call]
@@ -253,7 +274,8 @@ mod benchmarks {
 		let acc_1 = account::<T, I>(ACC_1);
 		let season_id = <T as Config<I>>::SeasonHandler::get_current_season_id()
 			.expect("Should get current season");
-		let asset_id = T::BenchmarkHelper::create_asset_for(&acc_1, &season_id, 31);
+		let (asset_id, asset) = T::BenchmarkHelper::create_asset(31);
+		store_created_asset::<T, I>(&acc_1, &season_id, &asset_id, asset);
 		let expected_lock = Lock::new(*SAGE_LOCK_ID, acc_1.clone());
 		Pallet::<T, I>::lock_asset(RawOrigin::Signed(acc_1.clone()).into(), asset_id.clone())
 			.expect("Should lock asset");
@@ -312,10 +334,7 @@ mod benchmarks {
 	fn state_transition() {
 		let acc_1 = account::<T, I>(ACC_1);
 		set_account_balance::<T, I>(&acc_1, 100_u32.into());
-		let season_id = <T as Config<I>>::SeasonHandler::get_current_season_id()
-			.expect("Should get current season");
-		let (transition_id, asset_ids) =
-			T::BenchmarkHelper::create_bench_transition_for(&acc_1, &season_id, 99);
+		let (transition_id, asset_ids) = T::BenchmarkHelper::create_bench_transition();
 		let extra = ExtraOf::<T, I>::default();
 		let payment = T::BenchmarkHelper::create_payment_kind();
 
