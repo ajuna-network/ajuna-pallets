@@ -79,8 +79,7 @@ mod ensure_ownership {
 	#[test]
 	fn ensure_ownership_should_reject_unknown_asset() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = AssetId::random();
-			assert_noop!(Sage::ensure_ownership(&DAVE, &asset_id), Error::<Test, ()>::UnknownAsset);
+			assert_noop!(Sage::ensure_ownership(&DAVE, &13), Error::<Test, ()>::UnknownAsset);
 		});
 	}
 }
@@ -104,8 +103,7 @@ mod ensure_for_trade {
 	#[test]
 	fn ensure_for_trade_should_reject_unknown_asset() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_id = AssetId::random();
-			assert_noop!(Sage::ensure_for_trade(&asset_id), Error::<Test, ()>::UnknownAsset);
+			assert_noop!(Sage::ensure_for_trade(&13), Error::<Test, ()>::UnknownAsset);
 		});
 	}
 

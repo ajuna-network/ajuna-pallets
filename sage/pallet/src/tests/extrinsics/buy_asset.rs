@@ -21,6 +21,7 @@ fn buy_should_work() {
 	let initial_balance = 1_000_000;
 
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.balances(&[
 			(ALICE, initial_balance),
 			(BOB, initial_balance),
@@ -35,6 +36,18 @@ fn buy_should_work() {
 		])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				filter
+			));
+
 			let season_config_0 =
 				<Test as Config<()>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
 					.expect("Should get season config");
@@ -144,10 +157,18 @@ fn buy_should_work() {
 fn buy_fee_should_be_calculated_correctly() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.balances(&[(ALICE, initial_balance), (BOB, initial_balance)])
 		.locks(&[(ALICE, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let season_config_0 =
 				<Test as Config<()>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
 					.expect("Should get season config");
@@ -211,7 +232,7 @@ fn buy_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(ALICE), AssetId::random(), SOME_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::signed(ALICE), 14, SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -221,7 +242,7 @@ fn buy_should_reject_when_trading_is_closed() {
 fn buy_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::none(), AssetId::random(), SOME_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::none(), 14, SOME_NATIVE_PAYMENT),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -242,10 +263,18 @@ fn buy_should_reject_unlisted_asset() {
 fn buy_should_reject_insufficient_balance() {
 	let alice_initial_balance = 10_000;
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.balances(&[(ALICE, alice_initial_balance), (BOB, alice_initial_balance * 2)])
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 			let asset_for_sale = asset_ids[0];
 			let asset_price = alice_initial_balance + 1;
@@ -265,9 +294,17 @@ fn buy_should_reject_insufficient_balance() {
 #[test]
 fn buy_should_reject_when_buyer_tries_to_buy_own_asset() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 			let asset_for_sale = asset_ids[0];
 			let asset_price = 749;

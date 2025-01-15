@@ -17,13 +17,13 @@
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	asset_manager::AssetInspector,
+	chain_inspector::ChainInspector,
 	payment_handler::{
 		AffiliateFeeDistribution, AllowAllAssets, AssetGameFeeHandler, DistributeFee, PaymentFee,
 		VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind,
 		WithdrawWhitelistedCredit,
 	},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
-	trade_manager::TradeManager,
 };
 use frame_support::{
 	derive_impl, parameter_types,
@@ -57,8 +57,8 @@ pub const TOURNAMENT_TREASURY: MockAccountId = 431;
 pub const SEASON_ID_0: MockSeasonId = 0;
 pub const SEASON_ID_1: MockSeasonId = 1;
 
-pub const MAIN_ASSET_ID: u32 = 0;
-pub const LOW_LIQUIDITY_ASSET_ID: u32 = 99;
+pub const MAIN_ASSET_ID: AssetId = 0;
+pub const LOW_LIQUIDITY_ASSET_ID: AssetId = 99;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -97,15 +97,12 @@ impl pallet_assets::Config for Test {
 }
 
 pub type NativeAndAssets =
-	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<u32>, MockAccountId>;
-pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<u32>> =
+	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<AssetId>, MockAccountId>;
+pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<AssetId>> =
 	WithdrawKind::Payment(NativeOrWithId::Native);
-pub const SOME_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<u32>>> = Some(NATIVE_PAYMENT);
+pub const SOME_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<AssetId>>> = Some(NATIVE_PAYMENT);
 
-use example_transition::{
-	generic::ExampleTransitionGeneric,
-	types::{Asset, AssetId, ExampleTransitionId},
-};
+use example_transition::prelude::*;
 
 parameter_types! {
 	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
@@ -120,6 +117,8 @@ thread_local! {
 pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
+
+pub type MockAsset = Asset<BlockNumberFor<Test>>;
 
 impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
@@ -177,34 +176,12 @@ impl SeasonManager for MockSeasonManager {
 	}
 }
 
-pub struct MockFilterHandler;
-
-pub type MockFilter = u32;
-
-impl TradeManager for MockFilterHandler {
-	type TradeFilter = MockFilter;
-	type Asset = Asset;
-
-	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
-		asset.asset_type == *filter
-	}
-}
-
-impl TransferManager for MockFilterHandler {
-	type TransferFilter = MockFilter;
-	type Asset = Asset;
-
-	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
-		asset.asset_type == *filter
-	}
-}
-
 pub struct MockAssetMediator;
 
 impl AssetManager for MockAssetMediator {
 	type AccountId = MockAccountId;
 	type AssetId = AssetId;
-	type Asset = Asset;
+	type Asset = MockAsset;
 
 	fn ensure_ownership(
 		owner: &Self::AccountId,
@@ -235,59 +212,26 @@ impl AssetManager for MockAssetMediator {
 }
 
 impl AssetInspector for MockAssetMediator {
+	type AccountId = MockAccountId;
 	type AssetId = AssetId;
-	type Asset = Asset;
+	type Asset = MockAsset;
 
 	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError> {
 		<Sage as AssetInspector>::get_asset(asset_id)
 	}
+
+	fn iter_assets_from(
+		account_id: &Self::AccountId,
+	) -> impl Iterator<Item = (Self::AssetId, Self::Asset)> {
+		<Sage as AssetInspector>::iter_assets_from(account_id)
+	}
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-pub struct SageBenchmarkHelper;
+impl ChainInspector for MockAssetMediator {
+	type BlockNumber = BlockNumberFor<Test>;
 
-#[cfg(feature = "runtime-benchmarks")]
-impl
-	BenchmarkHelper<
-		MockAccountId,
-		MockSeasonId,
-		AssetId,
-		Asset,
-		ExampleTransitionId,
-		WithdrawKind<NativeOrWithId<u32>>,
-	> for SageBenchmarkHelper
-{
-	fn create_asset_for(account: &MockAccountId, season_id: &MockSeasonId, seed: u32) -> AssetId {
-		use example_transition::types::Level;
-		let asset_id = AssetId::from_low_u64_le(seed as u64);
-		let asset = Asset::create(asset_id, 0, 0, 0, [seed as u8; 32], 1, Level::One);
-
-		MockSeasonManager::register_asset_in(&asset_id, season_id)
-			.expect("Asset should be registered");
-		Assets::<Test, ()>::insert(asset_id, (account, asset));
-		AssetOwners::<Test, ()>::insert((account, season_id, &asset_id), ());
-
-		asset_id
-	}
-
-	fn create_bench_transition_for(
-		account: &MockAccountId,
-		season: &MockSeasonId,
-		seed: u32,
-	) -> (ExampleTransitionId, Vec<AssetId>) {
-		let asset_id_1 = Self::create_asset_for(account, season, seed);
-		let asset_id_2 = Self::create_asset_for(account, season, seed * 2);
-		let asset_id_3 = Self::create_asset_for(account, season, seed * 3);
-		let asset_id_4 = Self::create_asset_for(account, season, seed * 4);
-		let asset_id_5 = Self::create_asset_for(account, season, seed * 5);
-
-		let asset_vec = vec![asset_id_1, asset_id_2, asset_id_3, asset_id_4, asset_id_5];
-
-		(ExampleTransitionId::BenchTransition, asset_vec)
-	}
-
-	fn create_payment_kind() -> WithdrawKind<NativeOrWithId<u32>> {
-		WithdrawKind::Payment(NativeOrWithId::Native)
+	fn get_current_block_number() -> Self::BlockNumber {
+		System::block_number()
 	}
 }
 
@@ -305,16 +249,19 @@ impl VoucherHandler for MockVoucherHandler {
 	}
 }
 
+pub type GameTransitionOf =
+	GameTransition<MockAccountId, BlockNumberFor<Test>, MockAssetMediator, MockAssetMediator>;
+
 impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
-	type SageGameTransition = ExampleTransitionGeneric<MockAccountId, MockAssetMediator>;
+	type SageGameTransition = GameTransitionOf;
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
 		NativeAndAssets,
 		WithdrawCreditOrVoucher<
 			WithdrawWhitelistedCredit<
-				AllowAllAssets<NativeOrWithId<u32>>,
+				AllowAllAssets<NativeOrWithId<AssetId>>,
 				WithdrawFungibles<MockAccountId, NativeAndAssets>,
 			>,
 			MockVoucherHandler,
@@ -323,13 +270,13 @@ impl crate::Config for Test {
 		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,
 	>;
-	type PaymentKind = WithdrawKind<NativeOrWithId<u32>>;
-	type FilterHandler = MockFilterHandler;
+	type PaymentKind = WithdrawKind<NativeOrWithId<AssetId>>;
+	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = SageBenchmarkHelper;
+	type BenchmarkHelper = GameBenchmarkHelper<BlockNumberFor<Test>>;
 }
 
 pub struct TestAffiliatesFeeProvider;
@@ -339,7 +286,7 @@ pub type TestAffiliatesMaxDistribution = ConstU32<3>;
 impl DistributeFee for TestAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
-	type FeeIdentifier = AffiliateMethods<ExampleTransitionId>;
+	type FeeIdentifier = AffiliateMethods<TransitionIdentifier>;
 	type FeeDistribution =
 		AffiliateFeeDistribution<Self::AccountId, Self::Balance, TestAffiliatesMaxDistribution>;
 

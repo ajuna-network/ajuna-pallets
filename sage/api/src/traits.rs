@@ -26,17 +26,10 @@ pub trait SageGameTransition {
 	/// method. If you don't need custom arguments, you can define that type as `()`.
 	type Extra: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
-	fn verify_rule(
-		transition_id: &Self::TransitionId,
-		account_id: &Self::AccountId,
-		asset_ids: &[Self::AssetId],
-		extra: &Self::Extra,
-	) -> Result<(), crate::Error>;
-
 	fn do_transition(
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		extra: &Self::Extra,
-	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, crate::Error>;
+	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, crate::TransitionError>;
 }

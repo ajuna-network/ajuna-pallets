@@ -18,7 +18,7 @@ use frame_support::{pallet_prelude::Member, Parameter};
 use parity_scale_codec::MaxEncodedLen;
 
 pub trait TradeManager {
-	type TradeFilter: Member + Parameter + Default + MaxEncodedLen;
+	type TradeFilter: Member + Parameter + MaxEncodedLen;
 
 	type Asset: Member + Parameter + MaxEncodedLen;
 
@@ -26,7 +26,7 @@ pub trait TradeManager {
 }
 
 pub trait TransferManager {
-	type TransferFilter: Member + Parameter + Default + MaxEncodedLen;
+	type TransferFilter: Member + Parameter + MaxEncodedLen;
 
 	type Asset: Member + Parameter + MaxEncodedLen;
 

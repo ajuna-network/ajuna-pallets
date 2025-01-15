@@ -19,9 +19,17 @@ use super::*;
 #[test]
 fn remove_price_should_work() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 2);
 			let asset_for_sale = asset_ids[0];
 			let price = 101;
@@ -42,7 +50,7 @@ fn remove_price_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::remove_asset_price(RuntimeOrigin::signed(ALICE), AssetId::random()),
+			Sage::remove_asset_price(RuntimeOrigin::signed(ALICE), 13),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -51,19 +59,24 @@ fn remove_price_should_reject_when_trading_is_closed() {
 #[test]
 fn remove_price_should_reject_unsigned_calls() {
 	ExtBuilder::default().build().execute_with(|| {
-		assert_noop!(
-			Sage::remove_asset_price(RuntimeOrigin::none(), AssetId::random()),
-			DispatchError::BadOrigin,
-		);
+		assert_noop!(Sage::remove_asset_price(RuntimeOrigin::none(), 13), DispatchError::BadOrigin,);
 	});
 }
 
 #[test]
 fn remove_price_should_reject_incorrect_ownership() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
 			let asset_for_sale = asset_ids[0];
 

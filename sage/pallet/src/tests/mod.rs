@@ -19,9 +19,10 @@ mod pallet_impls;
 mod trait_impls;
 
 use crate::{mock::*, *};
-use example_transition::types::{Asset, AssetId, Level};
 
+use example_transition::prelude::*;
 use frame_support::{assert_noop, assert_ok};
+use sp_runtime::testing::H256;
 
 pub(crate) fn create_assets<I: 'static>(
 	season_id: MockSeasonId,
@@ -30,8 +31,8 @@ pub(crate) fn create_assets<I: 'static>(
 ) -> Vec<AssetIdOf<Test, I>>
 where
 	Test: Config<I>,
-	AssetIdOf<Test, I>: From<[u8; 32]>,
-	AssetOf<Test, I>: From<Asset>,
+	AssetIdOf<Test, I>: From<u32>,
+	AssetOf<Test, I>: From<MockAsset>,
 	SeasonIdOf<Test, I>: From<MockSeasonId>,
 {
 	let casted_season_id = SeasonIdOf::<Test, I>::from(season_id);
@@ -40,17 +41,22 @@ where
 	});
 
 	(0..n)
-		.map(|i| {
-			let asset_id = AssetId::random();
+		.map(|_| {
+			let base = H256::random();
+			let asset_id = base.to_low_u64_be() as u32;
 			ASSET_SEASONS.with_borrow_mut(|store| {
 				store.insert(asset_id, season_id);
 			});
-			let asset_instance = Asset::create(asset_id, 0, 0, 0, [i; 32], 0, Level::One);
 
-			let asset_id = AssetIdOf::<Test, I>::from(asset_id.0);
-			let asset = AssetOf::<Test, I>::from(asset_instance);
+			let (asset_id, asset) =
+				GameBenchmarkHelper::<BlockNumberFor<Test>>::create_asset(asset_id);
+
+			let asset_id = AssetIdOf::<Test, I>::from(asset_id);
+			let asset = AssetOf::<Test, I>::from(asset);
+
 			Assets::<Test, I>::insert(&asset_id, (account, asset));
 			AssetOwners::<Test, I>::insert((account, &casted_season_id, &asset_id), ());
+
 			asset_id
 		})
 		.collect()

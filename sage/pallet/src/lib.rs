@@ -41,8 +41,9 @@ use ajuna_primitives::{
 	trade_manager::{TradeManager, TransferManager},
 };
 use sage_api::{
+	benchmarks::SageBenchmarkHelper,
 	traits::{GetId, TransitionOutput},
-	AsErrorCode, SageGameTransition,
+	SageGameTransition, TransitionError,
 };
 
 use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
@@ -100,19 +101,6 @@ pub mod pallet {
 	pub type PaymentOf<T, I> = <T as Config<I>>::PaymentKind;
 	pub type MaybePaymentOf<T, I> = Option<PaymentOf<T, I>>;
 
-	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<AccountId, SeasonId, AssetId, Asset, TransitionId, PaymentKind> {
-		fn create_asset_for(account: &AccountId, season: &SeasonId, seed: u32) -> AssetId;
-
-		fn create_bench_transition_for(
-			account: &AccountId,
-			season: &SeasonId,
-			seed: u32,
-		) -> (TransitionId, Vec<AssetId>);
-
-		fn create_payment_kind() -> PaymentKind;
-	}
-
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// This pallet's id.
@@ -160,12 +148,12 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: BenchmarkHelper<
-			AccountIdOf<Self>,
-			SeasonIdOf<Self, I>,
+		type BenchmarkHelper: SageBenchmarkHelper<
 			AssetIdOf<Self, I>,
 			AssetOf<Self, I>,
 			TransitionIdOf<Self, I>,
+			TradeFilterOf<Self, I>,
+			TransferFilterOf<Self, I>,
 			PaymentOf<Self, I>,
 		>;
 	}
@@ -253,14 +241,14 @@ pub mod pallet {
 	/// The filter can be changed by the organizer.
 	#[pallet::storage]
 	pub type SeasonTradeFilters<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Identity, SeasonIdOf<T, I>, TradeFilterOf<T, I>, ValueQuery>;
+		StorageMap<_, Identity, SeasonIdOf<T, I>, TradeFilterOf<T, I>, OptionQuery>;
 
 	/// A filter that assets need to pass in order to be transfer.
 	///
 	/// The filter can be changed by the organizer.
 	#[pallet::storage]
 	pub type SeasonTransferFilters<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Identity, SeasonIdOf<T, I>, TransferFilterOf<T, I>, ValueQuery>;
+		StorageMap<_, Identity, SeasonIdOf<T, I>, TransferFilterOf<T, I>, OptionQuery>;
 
 	/// Tracks assets that have been put on the market with a certain price.
 	#[pallet::storage]
@@ -383,10 +371,10 @@ pub mod pallet {
 		/// The feature trying to be unlocked has missing requirements to be fulfilled by
 		/// the account trying to unlock it
 		UnlockCriteriaNotFulfilled,
-		/// The rule for a given transition was not satisfied.
-		RuleNotSatisfied { code: u8 },
 		/// The amount of input assets in the transition is greater than 'MAX_ASSETS_IN_TRANSITION'
 		TooManyAssetsInTransition,
+		/// The rule for a given transition was not satisfied.
+		TransitionRuleNotSatisfied,
 		/// An error occurred during the state transition.
 		Transition { code: u8 },
 	}
@@ -552,11 +540,12 @@ pub mod pallet {
 				Error::<T, I>::FeatureLocked
 			);
 
-			let transfer_filter = SeasonTransferFilters::<T, I>::get(&asset_season_id);
-			ensure!(
-				T::FilterHandler::can_be_transferred_using(&asset, &transfer_filter),
-				Error::<T, I>::AssetCannotBeTransfered
-			);
+			if let Some(transfer_filter) = SeasonTransferFilters::<T, I>::get(&asset_season_id) {
+				ensure!(
+					T::FilterHandler::can_be_transferred_using(&asset, &transfer_filter),
+					Error::<T, I>::AssetCannotBeTransfered
+				);
+			}
 
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::withdraw_and_deposit_into_treasury(
@@ -591,11 +580,12 @@ pub mod pallet {
 
 			Self::ensure_unlocked(&asset_id)?;
 
-			let trade_filter = SeasonTradeFilters::<T, I>::get(&asset_season_id);
-			ensure!(
-				T::FilterHandler::can_be_traded_using(&asset, &trade_filter),
-				Error::<T, I>::AssetCannotBeTraded
-			);
+			if let Some(trade_filter) = SeasonTradeFilters::<T, I>::get(&asset_season_id) {
+				ensure!(
+					T::FilterHandler::can_be_traded_using(&asset, &trade_filter),
+					Error::<T, I>::AssetCannotBeTraded
+				);
+			}
 
 			AssetTradePrices::<T, I>::insert(&asset_season_id, &asset_id, price);
 			Self::deposit_event(Event::AssetPriceSet { asset_id, price });
@@ -738,13 +728,17 @@ pub mod pallet {
 				Self::ensure_ownership(&sender, asset_id)?;
 				Self::ensure_unlocked(asset_id)?;
 			}
-
-			T::SageGameTransition::verify_rule(&transition_id, &sender, &asset_ids, &extra)
-				.map_err(|e| Error::<T, I>::RuleNotSatisfied { code: e.as_error_code() })?;
-
 			let transition_results =
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
-					.map_err(|e| Error::<T, I>::Transition { code: e.as_error_code() })?;
+					.map_err(|e| match e {
+					TransitionError::InvalidTransitionId =>
+						Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::TransferError => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::FeeError => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::AssetLength => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::AssetOwnership => Error::<T, I>::TransitionRuleNotSatisfied,
+					TransitionError::Transition { code } => Error::<T, I>::Transition { code },
+				})?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 

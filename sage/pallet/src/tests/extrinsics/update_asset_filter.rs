@@ -19,10 +19,10 @@ use super::*;
 #[test]
 fn update_asset_filter_should_work_for_trade_filter() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let filter_core = MockFilter::from(13_u32);
+		let filter_core = AssetType::Hero;
 		let filter = AssetFilter::Trade(filter_core);
 
-		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), 0);
+		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), None);
 
 		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTradeFilter {
@@ -30,17 +30,17 @@ fn update_asset_filter_should_work_for_trade_filter() {
 			filter: filter_core,
 		}));
 
-		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), filter_core);
+		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), Some(filter_core));
 	});
 }
 
 #[test]
 fn update_asset_filter_should_work_for_transfer_filter() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let filter_core = MockFilter::from(13_u32);
+		let filter_core = AssetType::Hero;
 		let filter = AssetFilter::Transfer(filter_core);
 
-		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), 0);
+		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), None);
 
 		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransferFilter {
@@ -48,7 +48,7 @@ fn update_asset_filter_should_work_for_transfer_filter() {
 			filter: filter_core,
 		}));
 
-		assert_eq!(SeasonTransferFilters::<Test, ()>::get(SEASON_ID_0), filter_core);
+		assert_eq!(SeasonTransferFilters::<Test, ()>::get(SEASON_ID_0), Some(filter_core));
 	});
 }
 
@@ -59,7 +59,7 @@ fn update_asset_filter_should_reject_non_organizer_calls() {
 			Sage::update_asset_filter(
 				RuntimeOrigin::signed(BOB),
 				SEASON_ID_0,
-				AssetFilter::Trade(MockFilter::from(22_u32)),
+				AssetFilter::Trade(AssetType::None),
 			),
 			DispatchError::BadOrigin
 		);

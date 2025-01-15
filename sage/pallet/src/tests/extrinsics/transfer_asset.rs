@@ -20,6 +20,7 @@ use super::*;
 fn transfer_asset_works() {
 	let alice_initial_balance = MockExistentialDeposit::get() * 100;
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.balances(&[(ALICE, alice_initial_balance)])
 		.locks(&[
 			(ALICE, SEASON_ID_0, Locks::all_unlocked()),
@@ -29,6 +30,18 @@ fn transfer_asset_works() {
 		])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Transfer(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				filter
+			));
+
 			let season_config =
 				<Test as Config<()>>::SeasonHandler::get_season_config_for(&SEASON_ID_0)
 					.expect("Should get season config");
@@ -126,12 +139,7 @@ fn transfer_asset_rejects_on_transfer_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 		assert_noop!(
-			Sage::transfer_asset(
-				RuntimeOrigin::signed(BOB),
-				CHARLIE,
-				AssetId::random(),
-				SOME_NATIVE_PAYMENT
-			),
+			Sage::transfer_asset(RuntimeOrigin::signed(BOB), CHARLIE, 13, SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::TransferClosed
 		);
 	});
@@ -145,6 +153,9 @@ fn transfer_asset_works_on_transfer_closed_with_organizer() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Transfer(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(BOB), SEASON_ID_0, filter));
+
 			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 			let bob_asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
 			let asset_id = bob_asset_ids[0];
@@ -179,9 +190,17 @@ fn transfer_asset_rejects_transferring_to_self() {
 #[test]
 fn transfer_asset_rejects_asset_in_trade() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Trade(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			let asset_ids = create_assets::<()>(SEASON_ID_0, CHARLIE, 1);
 			let asset_id = asset_ids[0];
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 999));
@@ -212,12 +231,7 @@ fn transfer_asset_rejects_unowned_assets() {
 fn transfer_asset_rejects_unknown_assets() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::transfer_asset(
-				RuntimeOrigin::signed(ALICE),
-				BOB,
-				AssetId::random(),
-				SOME_NATIVE_PAYMENT
-			),
+			Sage::transfer_asset(RuntimeOrigin::signed(ALICE), BOB, 13, SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::UnknownAsset
 		);
 	});
@@ -226,10 +240,18 @@ fn transfer_asset_rejects_unknown_assets() {
 #[test]
 fn transfer_asset_rejects_on_full_asset_inventory_of_recipient() {
 	ExtBuilder::default()
+		.organizer(ALICE)
 		.balances(&[(ALICE, 1_000)])
 		.locks(&[(ALICE, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
+			let filter = AssetFilter::Transfer(AssetType::Hero);
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_0,
+				filter
+			));
+
 			PlayerSeasonConfigs::<Test, ()>::mutate(BOB, SEASON_ID_0, |config| {
 				config.inventory_tier = InventoryTier::Three
 			});
@@ -260,7 +282,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let transfer_filter = MockFilter::from(2_u32);
+			let transfer_filter = AssetType::None;
 			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,
@@ -273,7 +295,11 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 
 			// Since asset_id_1 doest have its type match the filter we cannot set price for it
 			let (_, asset_1) = Assets::<Test, ()>::get(asset_id_1).expect("Should get asset");
-			assert_eq!(asset_1.asset_type, 0);
+			match &asset_1.asset_variant {
+				AssetVariant::HeroJam(hero_jam_asset) => {
+					assert_eq!(hero_jam_asset.asset_type, AssetType::Hero);
+				},
+			}
 			assert_noop!(
 				Sage::transfer_asset(
 					RuntimeOrigin::signed(BOB),
@@ -288,7 +314,11 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 			// sale
 			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
 				if let Some((_, ref mut asset)) = maybe_asset {
-					asset.asset_type = transfer_filter;
+					match asset.asset_variant {
+						AssetVariant::HeroJam(ref mut hero_jam_asset) => {
+							hero_jam_asset.asset_type = transfer_filter;
+						},
+					}
 				}
 			});
 			assert_ok!(Sage::transfer_asset(
