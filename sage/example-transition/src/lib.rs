@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 pub mod asset;
 mod benchmarks;
 pub mod filter;
