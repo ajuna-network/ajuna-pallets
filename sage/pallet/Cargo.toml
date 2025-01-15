@@ -15,7 +15,6 @@ parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len
 scale-info         = { workspace = true, features = [ "derive" ] }
 # Substrate - Primitives
 sp-core            = { workspace = true }
-sp-io              = { workspace = true }
 sp-runtime         = { workspace = true }
 sp-std             = { workspace = true }
 # Ajuna
@@ -27,13 +26,14 @@ frame-benchmarking = { workspace = true, optional = true }
 example-transition = { workspace = true, optional = true }
 # todo: these pallets are not needed when we fix that the
 # mock doesn't need to be used in with the feature runtime-benchmarks
-pallet-assets    = { workspace = true, optional = true }
+pallet-assets      = { workspace = true, optional = true }
 pallet-balances    = { workspace = true, optional = true }
 
 [dev-dependencies]
+sp-io              = { workspace = true }
 example-transition = { workspace = true, features = ["std"] }
-pallet-balances = { workspace = true, features = ["std"] }
-pallet-assets = { workspace = true, features = ["std"] }
+pallet-balances    = { workspace = true, features = ["std"] }
+pallet-assets      = { workspace = true, features = ["std"] }
 
 [features]
 default = [ "std" ]
