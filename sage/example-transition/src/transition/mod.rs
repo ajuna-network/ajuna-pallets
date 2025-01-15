@@ -9,7 +9,7 @@ use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use parity_scale_codec::Codec;
 use sp_runtime::traits::{BlockNumber as BlockNumberT, Member};
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 pub mod hero_jam;
 
