@@ -22,7 +22,7 @@ use sp_runtime::{
 	traits::{BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
 };
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 const BLOCKS_PER_HOUR: u32 = 600;
 
@@ -186,7 +186,7 @@ where
 					state_change_block_number: 0_u32.saturated_into::<BlockNumber>(),
 					balance: 10,
 				};
-				Ok(vec![TransitionOutput::Minted(Asset::from(asset))])
+				Ok(Vec::from([TransitionOutput::Minted(Asset::from(asset))]))
 			},
 			HeroAction::Sleep(_, sleep_time) => {
 				let (asset_id, mut asset) = assets[0];
@@ -196,7 +196,7 @@ where
 				asset.state_sub_value = *sleep_time as u8;
 				asset.state_change_block_number = Self::get_block_time_for_action(sleep_time);
 
-				Ok(vec![TransitionOutput::Mutated(asset_id, Asset::from(asset))])
+				Ok(Vec::from([TransitionOutput::Mutated(asset_id, Asset::from(asset))]))
 			},
 			HeroAction::Work(work_type, work_time) => {
 				let (asset_id, mut asset) = assets[0];
@@ -224,9 +224,9 @@ where
 				asset.state_sub_value = *work_time as u8;
 				asset.state_change_block_number = Self::get_block_time_for_action(work_time);
 
-				Ok(vec![TransitionOutput::Mutated(asset_id, Asset::from(asset))])
+				Ok(Vec::from([TransitionOutput::Mutated(asset_id, Asset::from(asset))]))
 			},
-			_ => Ok(vec![]),
+			_ => Ok(Vec::with_capacity(0)),
 		}
 	}
 

@@ -12,7 +12,7 @@ use sage_api::benchmarks::SageBenchmarkHelper;
 use ajuna_primitives::payment_handler::WithdrawKind;
 use frame_support::traits::fungible::NativeOrWithId;
 use sp_runtime::{traits::BlockNumber as BlockNumberT, SaturatedConversion};
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 pub struct GameBenchmarkHelper<BlockNumber>(PhantomData<BlockNumber>);
 
@@ -49,7 +49,7 @@ where
 	}
 
 	fn create_bench_transition() -> (TransitionIdentifier, Vec<AssetId>) {
-		(TransitionIdentifier::HeroJam(HeroAction::Create), vec![])
+		(TransitionIdentifier::HeroJam(HeroAction::Create), sp_std::vec::Vec::with_capacity(0))
 	}
 
 	fn create_trade_filter_for(asset: &Asset<BlockNumber>) -> AssetType {
