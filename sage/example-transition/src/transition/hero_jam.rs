@@ -13,7 +13,6 @@ use sage_api::{
 	SageGameTransition, TransitionError,
 };
 
-use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
 	sp_runtime,
@@ -23,6 +22,7 @@ use sp_runtime::{
 	traits::{BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
 };
+use sp_std::marker::PhantomData;
 
 const BLOCKS_PER_HOUR: u32 = 600;
 

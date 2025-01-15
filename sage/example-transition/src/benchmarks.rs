@@ -10,9 +10,9 @@ use crate::{
 use sage_api::benchmarks::SageBenchmarkHelper;
 
 use ajuna_primitives::payment_handler::WithdrawKind;
-use core::marker::PhantomData;
 use frame_support::traits::fungible::NativeOrWithId;
 use sp_runtime::{traits::BlockNumber as BlockNumberT, SaturatedConversion};
+use sp_std::marker::PhantomData;
 
 pub struct GameBenchmarkHelper<BlockNumber>(PhantomData<BlockNumber>);
 

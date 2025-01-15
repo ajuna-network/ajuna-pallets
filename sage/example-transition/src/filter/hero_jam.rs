@@ -2,8 +2,8 @@ use crate::asset::hero_jam::{AssetType, HeroJamAsset};
 
 use ajuna_primitives::trade_manager::*;
 
-use core::marker::PhantomData;
 use sp_runtime::traits::BlockNumber as BlockNumberT;
+use sp_std::marker::PhantomData;
 
 pub(super) struct HeroJamFilter<BlockNumber>(PhantomData<BlockNumber>);
 

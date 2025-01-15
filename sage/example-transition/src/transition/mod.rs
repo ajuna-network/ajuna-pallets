@@ -6,10 +6,10 @@ use ajuna_primitives::{
 };
 use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
-use core::marker::PhantomData;
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use parity_scale_codec::Codec;
 use sp_runtime::traits::{BlockNumber as BlockNumberT, Member};
+use sp_std::marker::PhantomData;
 
 pub mod hero_jam;
 
