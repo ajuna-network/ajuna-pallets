@@ -117,9 +117,6 @@ fn state_transition_should_reject_rule_verification_failure() {
 		.balances(&[(ALICE, initial_balance)])
 		.build()
 		.execute_with(|| {
-			// This test assumes that the rule for 'UpgradeAsset' in
-			// sage/example-transition/src/generic.rs
-			// requires the input assets to be of length 1
 			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 2);
 			let transition_id = TransitionIdentifier::HeroJam(HeroAction::Sleep(
 				SleepType::Normal,
