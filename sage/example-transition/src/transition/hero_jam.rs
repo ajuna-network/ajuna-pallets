@@ -176,7 +176,7 @@ where
 				let asset_id = ChainHandler::get_current_block_number().saturated_into::<AssetId>();
 				let asset = HeroJamAsset {
 					id: asset_id,
-					asset_type: AssetType::None,
+					asset_type: AssetType::Hero,
 					asset_subtype: AssetSubType::None,
 					energy: 100,
 					fatigue: 0,
