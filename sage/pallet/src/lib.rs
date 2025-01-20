@@ -35,7 +35,7 @@ mod tests;
 
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
-	asset_manager::{AssetManager, Lock, LockIdentifier},
+	asset_manager::{AssetFundsManager, AssetManager, Lock, LockIdentifier},
 	payment_handler::FeeHandler,
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
@@ -876,6 +876,10 @@ pub mod pallet {
 									asset_count.saturating_dec();
 								},
 							);
+
+							if Self::inspect_asset_funds(&asset_id) > Default::default() {
+								Self::transfer_all_from_asset(&asset_id, &owner)?;
+							}
 						}
 					},
 				}

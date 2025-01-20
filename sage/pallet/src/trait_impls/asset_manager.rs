@@ -117,6 +117,20 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 	type AssetId = AssetIdOf<T, I>;
 	type Balance = BalanceOf<T, I>;
 
+	fn inspect_asset_funds(asset_id: &Self::AssetId) -> Self::Balance {
+		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
+		let asset_account =
+			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
+
+		let reducible_balance = <T::Fungible as fungible::Inspect<_>>::reducible_balance(
+			&asset_account,
+			Preservation::Expendable,
+			Fortitude::Polite,
+		);
+
+		reducible_balance
+	}
+
 	fn deposit_funds_to_asset(
 		asset_id: &Self::AssetId,
 		from: &Self::AccountId,

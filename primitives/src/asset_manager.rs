@@ -90,6 +90,8 @@ pub trait AssetFundsManager {
 
 	type Balance;
 
+	fn inspect_asset_funds(asset_id: &Self::AssetId) -> Self::Balance;
+
 	fn deposit_funds_to_asset(
 		asset_id: &Self::AssetId,
 		from: &Self::AccountId,
