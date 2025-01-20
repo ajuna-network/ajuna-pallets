@@ -122,13 +122,11 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		let asset_account =
 			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
 
-		let reducible_balance = <T::Fungible as fungible::Inspect<_>>::reducible_balance(
+		<T::Fungible as fungible::Inspect<_>>::reducible_balance(
 			&asset_account,
 			Preservation::Expendable,
 			Fortitude::Polite,
-		);
-
-		reducible_balance
+		)
 	}
 
 	fn deposit_funds_to_asset(
@@ -141,7 +139,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
 
 		<T::Fungible as fungible::Mutate<_>>::transfer(
-			&from,
+			from,
 			&asset_account,
 			amount,
 			Preservation::Preserve,
@@ -161,7 +159,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 
 		<T::Fungible as fungible::Mutate<_>>::transfer(
 			&asset_account,
-			&to,
+			to,
 			amount,
 			Preservation::Preserve,
 		)?;
@@ -183,7 +181,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		);
 		<T::Fungible as fungible::Mutate<_>>::transfer(
 			&asset_account,
-			&to,
+			to,
 			reducible_balance,
 			Preservation::Expendable,
 		)?;
