@@ -101,6 +101,21 @@ pub mod pallet {
 	pub type PaymentOf<T, I> = <T as Config<I>>::PaymentKind;
 	pub type MaybePaymentOf<T, I> = Option<PaymentOf<T, I>>;
 
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
+		/// Genesis organizer account
+		pub organizer: Option<AccountIdOf<T>>,
+		_phantom: PhantomData<I>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config<I>, I: 'static> BuildGenesisConfig for GenesisConfig<T, I> {
+		fn build(&self) {
+			Organizer::<T, I>::set(self.organizer.clone());
+		}
+	}
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// This pallet's id.
