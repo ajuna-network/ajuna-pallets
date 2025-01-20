@@ -151,7 +151,7 @@ impl AccountManager for MockAccountManager {
 
 pub type MockSeasonId = u32;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq, Default)]
 pub struct MockSeasonData {
 	pub(crate) data: u8,
 }
@@ -215,8 +215,12 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let config =
-			RuntimeGenesisConfig { system: Default::default(), balances: Default::default() };
+		let config = RuntimeGenesisConfig {
+			system: Default::default(),
+			balances: Default::default(),
+			seasons_alpha: Default::default(),
+			seasons_bench: Default::default(),
+		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));

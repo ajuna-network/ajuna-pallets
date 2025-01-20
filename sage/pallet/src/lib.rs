@@ -108,13 +108,33 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
 		/// Genesis organizer account
 		pub organizer: Option<AccountIdOf<T>>,
-		_phantom: PhantomData<I>,
+		/// Genesis initial season
+		pub season: Option<SeasonIdOf<T, I>>,
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config<I>, I: 'static> BuildGenesisConfig for GenesisConfig<T, I> {
 		fn build(&self) {
-			Organizer::<T, I>::set(self.organizer.clone());
+			if let Some(ref organizer) = self.organizer {
+				Organizer::<T, I>::set(Some(organizer.clone()));
+
+				GeneralConfigStore::<T, I>::set(GeneralConfigOf::<T, I> {
+					transfer: TransferConfig { open: true },
+					trade: TradeConfig { open: true },
+					..Default::default()
+				});
+
+				if let Some(ref season_id) = self.season {
+					PlayerSeasonConfigs::<T, I>::insert(
+						&organizer,
+						&season_id,
+						PlayerConfig {
+							inventory_tier: InventoryTier::One,
+							locks: Locks::all_unlocked(),
+						},
+					);
+				}
+			}
 		}
 	}
 
