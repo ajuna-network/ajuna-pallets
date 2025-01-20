@@ -46,7 +46,7 @@ use sage_api::{
 	SageGameTransition, TransitionError,
 };
 
-use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
+use frame_support::{pallet_prelude::*, traits::fungible, PalletId};
 use frame_system::pallet_prelude::*;
 use sp_runtime::{
 	traits::{AccountIdConversion, UniqueSaturatedInto},
@@ -66,6 +66,7 @@ pub const MAX_ASSETS_IN_TRANSITION: usize = 10;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::traits::tokens::Preservation;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -74,7 +75,8 @@ pub mod pallet {
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
+	pub type BalanceOf<T, I> =
+		<<T as Config<I>>::Fungible as fungible::Inspect<AccountIdOf<T>>>::Balance;
 
 	pub type AssetIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
@@ -136,9 +138,9 @@ pub mod pallet {
 		type FilterHandler: TradeManager<Asset = AssetOf<Self, I>>
 			+ TransferManager<Asset = AssetOf<Self, I>>;
 
-		/// Currency implementation used by this pallet. This will most likely be the
+		/// Fungible implementation used by this pallet. This will most likely be the
 		/// balances-pallet.
-		type Currency: Currency<AccountIdOf<Self>>;
+		type Fungible: fungible::Inspect<AccountIdOf<Self>> + fungible::Mutate<AccountIdOf<Self>>;
 
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self, I>>
@@ -623,11 +625,11 @@ pub mod pallet {
 
 			let (seller, price) = Self::ensure_for_trade(&asset_id)?;
 			ensure!(buyer != seller, Error::<T, I>::AlreadyOwned);
-			T::Currency::transfer(
+			<T::Fungible as fungible::Mutate<_>>::transfer(
 				&buyer,
 				&seller,
 				price,
-				frame_support::traits::ExistenceRequirement::KeepAlive,
+				Preservation::Protect,
 			)?;
 
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;

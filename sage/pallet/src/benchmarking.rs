@@ -23,7 +23,7 @@ use crate::{
 };
 use ajuna_primitives::{asset_manager::Lock, season_manager::SeasonManager};
 use frame_benchmarking::v2::*;
-use frame_support::traits::Currency;
+use frame_support::traits::fungible;
 use frame_system::RawOrigin;
 
 const ACC_1: &str = "acc_1";
@@ -45,7 +45,7 @@ fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {
 }
 
 fn set_account_balance<T: Config<I>, I: 'static>(account: &T::AccountId, balance: BalanceOf<T, I>) {
-	let _ = T::Currency::deposit_creating(account, balance);
+	let _ = <T::Fungible as fungible::Mutate<_>>::set_balance(account, balance);
 }
 
 fn store_created_asset<T: Config<I>, I: 'static>(
