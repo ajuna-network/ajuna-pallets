@@ -391,6 +391,7 @@ impl ExtBuilder {
 				],
 				next_asset_id: None,
 			},
+			sage: Default::default(),
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
