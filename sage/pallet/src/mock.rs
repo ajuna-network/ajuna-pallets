@@ -28,7 +28,7 @@ use ajuna_primitives::{
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
-		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
+		fungible::{Mutate, NativeFromLeft, NativeOrWithId, UnionOf},
 		AsEnsureOriginWithArg,
 	},
 	PalletId,
@@ -272,7 +272,7 @@ impl crate::Config for Test {
 	>;
 	type PaymentKind = WithdrawKind<NativeOrWithId<AssetId>>;
 	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
-	type Currency = Balances;
+	type Fungible = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
@@ -391,7 +391,7 @@ impl ExtBuilder {
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
 		ext.execute_with(|| System::set_block_number(1));
 		ext.execute_with(|| {
-			let _ = Balances::deposit_creating(&TOURNAMENT_TREASURY, MockExistentialDeposit::get());
+			let _ = Balances::set_balance(&TOURNAMENT_TREASURY, MockExistentialDeposit::get());
 
 			if let Some(organizer) = self.organizer {
 				Organizer::<Test, ()>::put(organizer);

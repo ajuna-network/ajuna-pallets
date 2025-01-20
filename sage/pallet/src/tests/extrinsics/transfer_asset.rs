@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use frame_support::traits::fungible::Mutate;
 
 #[test]
 fn transfer_asset_works() {
@@ -117,7 +118,7 @@ fn transfer_asset_works() {
 
 			// Organizer can transfer even when trade is closed.
 			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
-			Balances::make_free_balance_be(&BOB, transfer_fee + MockExistentialDeposit::get());
+			Balances::set_balance(&BOB, transfer_fee + MockExistentialDeposit::get());
 			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), BOB));
 			assert_ok!(Sage::transfer_asset(
 				RuntimeOrigin::signed(BOB),
