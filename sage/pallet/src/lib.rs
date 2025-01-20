@@ -878,7 +878,8 @@ pub mod pallet {
 							);
 
 							// If the asset has some funds, we transfer all to the owner.
-							// Todo: shall this be made configurable?
+							// Todo: shall this be made configurable, like partly flowing into a
+							// treasury?
 							if Self::inspect_asset_funds(&asset_id) > Default::default() {
 								Self::transfer_all_from_asset(&asset_id, &owner)?;
 							}
