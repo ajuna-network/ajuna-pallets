@@ -1,11 +1,14 @@
-use crate::asset::{Asset, AssetId};
+use crate::{
+	asset::{Asset, AssetId},
+	seasons::HeroJamSeasonId,
+};
 
 use ajuna_primitives::tournament_manager::EntityRanker;
 
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use sp_std::{cmp::Ordering, marker::PhantomData};
 
-pub type HeroJamTournamentCategoryId = u8;
+pub type HeroJamTournamentCategoryId = HeroJamSeasonId;
 
 pub type HeroJamTournamentConfig = ();
 
