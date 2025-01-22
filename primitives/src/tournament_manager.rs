@@ -1,5 +1,5 @@
 use frame_support::pallet_prelude::{DispatchError, DispatchResult};
-use sp_std::cmp::Ordering;
+use sp_std::{cmp::Ordering, vec::Vec};
 
 pub trait EntityRanker {
 	type EntityId;

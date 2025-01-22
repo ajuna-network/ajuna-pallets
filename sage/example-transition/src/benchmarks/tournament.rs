@@ -1,14 +1,16 @@
-use std::marker::PhantomData;
 use crate::{
 	asset::{Asset, AssetId},
 	tournament::{HeroJamTournamentCategoryId, HeroJamTournamentConfig},
 };
+use std::marker::PhantomData;
 
 use ajuna_primitives::{
 	asset_manager::AssetInspector, tournament_manager::TournamentBenchmarkHelper,
 };
 
-pub struct GameTournamentBenchmarkHelper<AccountId, BlockNumber, AssetHandler>(PhantomData<(AccountId, BlockNumber, AssetHandler)>);
+pub struct GameTournamentBenchmarkHelper<AccountId, BlockNumber, AssetHandler>(
+	PhantomData<(AccountId, BlockNumber, AssetHandler)>,
+);
 
 pub type HeroJamTournamentAsset<BlockNumber> = (AssetId, Asset<BlockNumber>);
 
