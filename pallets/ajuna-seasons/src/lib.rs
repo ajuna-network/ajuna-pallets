@@ -34,7 +34,7 @@ mod types;
 
 use ajuna_primitives::{
 	account_manager::AccountManager,
-	season_manager::{SeasonConfig, SeasonManager, SeasonsBenchmarkHelper, Validate},
+	season_manager::{SeasonConfig, SeasonManager, Validate},
 };
 
 use frame_support::{pallet_prelude::*, traits::Currency};
@@ -141,7 +141,10 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: SeasonsBenchmarkHelper<SeasonIdOf<Self, I>, SeasonDataOf<Self, I>>;
+		type BenchmarkHelper: ajuna_primitives::season_manager::SeasonsBenchmarkHelper<
+			SeasonIdOf<Self, I>,
+			SeasonDataOf<Self, I>,
+		>;
 	}
 
 	#[pallet::storage]

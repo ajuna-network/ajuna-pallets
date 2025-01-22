@@ -2,7 +2,7 @@ use crate::{
 	asset::{Asset, AssetId},
 	tournament::{HeroJamTournamentCategoryId, HeroJamTournamentConfig},
 };
-use std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 use ajuna_primitives::{
 	asset_manager::AssetInspector, tournament_manager::TournamentBenchmarkHelper,
