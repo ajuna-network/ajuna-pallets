@@ -33,6 +33,22 @@ fn create_owned_entity<T: Config<I>, I: 'static>(
 	assets.pop().unwrap()
 }
 
+fn create_tournament_config<T: Config<I>, I: 'static>() -> TournamentConfigFor<T, I> {
+	let ranker = T::BenchmarkHelper::create_ranker();
+	TournamentConfig {
+		start: 20_u32.into(),
+		active_end: 50_u32.into(),
+		claim_end: 70_u32.into(),
+		initial_reward: Some(10_u32.into()),
+		max_reward: None,
+		take_fee_percentage: None,
+		reward_distribution: vec![40, 30, 10].try_into().unwrap(),
+		golden_duck_config: GoldenDuckConfig::Enabled(10),
+		max_players: 4,
+		ranker,
+	}
+}
+
 fn account<T: Config<I>, I: 'static>(name: &'static str) -> T::AccountId {
 	let index = 0;
 	let seed = 0;
@@ -76,7 +92,7 @@ mod benchmarks {
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id();
-		let tournament_config = T::BenchmarkHelper::create_config();
+		let tournament_config = create_tournament_config::<T, I>();
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(acc_1), category_id, tournament_config);
@@ -90,7 +106,7 @@ mod benchmarks {
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id();
-		let tournament_config = T::BenchmarkHelper::create_config();
+		let tournament_config = create_tournament_config::<T, I>();
 		Tournament::<T, I>::create_tournament(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			category_id,
@@ -111,7 +127,7 @@ mod benchmarks {
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id();
 		let (entity_id, entity) = create_owned_entity::<T, I>(acc_1.clone());
-		let tournament_config = T::BenchmarkHelper::create_config();
+		let tournament_config = create_tournament_config::<T, I>();
 		Tournament::<T, I>::create_tournament(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			category_id,
@@ -141,7 +157,7 @@ mod benchmarks {
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
 		let category_id = T::BenchmarkHelper::create_category_id();
 		let (entity_id, _) = create_owned_entity::<T, I>(acc_1.clone());
-		let tournament_config = T::BenchmarkHelper::create_config();
+		let tournament_config = create_tournament_config::<T, I>();
 		Tournament::<T, I>::create_tournament(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			category_id,

@@ -20,6 +20,8 @@ mod trait_impls;
 
 use crate::{mock::*, *};
 
+use sage_api::benchmarks::SageBenchmarkHelper;
+
 use example_transition::prelude::*;
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::testing::H256;

@@ -13,7 +13,7 @@ pub type HeroJamTournamentCategoryId = HeroJamSeasonId;
 pub type HeroJamTournamentConfig = ();
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq)]
-pub struct HeroJamEntityRanker<BlockNumber>(PhantomData<BlockNumber>);
+pub struct HeroJamEntityRanker<BlockNumber>(pub PhantomData<BlockNumber>);
 
 impl<BlockNumber> EntityRanker for HeroJamEntityRanker<BlockNumber> {
 	type EntityId = AssetId;

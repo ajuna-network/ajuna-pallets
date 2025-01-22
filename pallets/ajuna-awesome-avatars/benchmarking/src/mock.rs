@@ -32,9 +32,7 @@ use pallet_ajuna_awesome_avatars::{
 	benchmark_helper,
 	types::{AffiliateMethods, Avatar, SeasonId},
 	AvatarIdOf, AvatarOf, AvatarRankerFor, Avatars, CurrentSeasonStatus, Owners,
-	TournamentConfigFor,
 };
-use pallet_ajuna_tournament::TournamentConfig;
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -214,7 +212,7 @@ pub struct MockTournamentBenchmarkHelper;
 impl
 	TournamentBenchmarkHelper<
 		SeasonId,
-		TournamentConfigFor<Runtime>,
+		AvatarRankerFor<Runtime>,
 		MockAccountId,
 		(AvatarIdOf<Runtime>, AvatarOf<Runtime>),
 	> for MockTournamentBenchmarkHelper
@@ -223,19 +221,8 @@ impl
 		1 as SeasonId
 	}
 
-	fn create_config() -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Runtime>> {
-		TournamentConfig {
-			start: 20_u64,
-			active_end: 50_u64,
-			claim_end: 70_u64,
-			initial_reward: Some(10),
-			max_reward: None,
-			take_fee_percentage: None,
-			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
-			golden_duck_config: pallet_ajuna_tournament::GoldenDuckConfig::Enabled(10),
-			max_players: 4,
-			ranker: AvatarRankerFor::<Runtime>::default(),
-		}
+	fn create_ranker() -> AvatarRankerFor<Runtime> {
+		AvatarRankerFor::<Runtime>::default()
 	}
 
 	fn create_entities(

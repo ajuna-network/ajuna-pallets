@@ -258,30 +258,15 @@ pub struct MockTournamentBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
 impl
-	TournamentBenchmarkHelper<
-		MockCategoryId,
-		TournamentConfigFor<Test, Instance1>,
-		MockAccountId,
-		(MockEntityId, MockEntity),
-	> for MockTournamentBenchmarkHelper
+	TournamentBenchmarkHelper<MockCategoryId, MockRanker, MockAccountId, (MockEntityId, MockEntity)>
+	for MockTournamentBenchmarkHelper
 {
 	fn create_category_id() -> MockCategoryId {
 		2
 	}
 
-	fn create_config() -> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
-		TournamentConfig {
-			start: 20_u64,
-			active_end: 50_u64,
-			claim_end: 70_u64,
-			initial_reward: Some(10),
-			max_reward: None,
-			take_fee_percentage: None,
-			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
-			golden_duck_config: GoldenDuckConfig::Enabled(10),
-			max_players: 4,
-			ranker: MockRanker,
-		}
+	fn create_ranker() -> MockRanker {
+		MockRanker
 	}
 
 	fn create_entities(owner: &MockAccountId, count: usize) -> Vec<(MockEntityId, MockEntity)> {

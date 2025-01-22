@@ -183,7 +183,7 @@ pub struct MockTournamentBenchmarkHelper;
 impl
 	TournamentBenchmarkHelper<
 		SeasonId,
-		TournamentConfigFor<Test>,
+		AvatarRankerFor<Test>,
 		MockAccountId,
 		(AvatarIdOf<Test>, AvatarOf<Test>),
 	> for MockTournamentBenchmarkHelper
@@ -192,19 +192,8 @@ impl
 		1 as SeasonId
 	}
 
-	fn create_config() -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
-		TournamentConfig {
-			start: 20_u64,
-			active_end: 50_u64,
-			claim_end: 70_u64,
-			initial_reward: Some(10),
-			max_reward: None,
-			take_fee_percentage: None,
-			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
-			golden_duck_config: pallet_ajuna_tournament::GoldenDuckConfig::Enabled(10),
-			max_players: 4,
-			ranker: AvatarRankerFor::<Test>::default(),
-		}
+	fn create_ranker() -> AvatarRankerFor<Test> {
+		AvatarRankerFor::<Test>::default()
 	}
 
 	fn create_entities(

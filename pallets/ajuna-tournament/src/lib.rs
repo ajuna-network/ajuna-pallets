@@ -123,7 +123,7 @@ pub mod pallet {
 		#[cfg(feature = "runtime-benchmarks")]
 		type BenchmarkHelper: TournamentBenchmarkHelper<
 			Self::TournamentCategoryId,
-			TournamentConfigFor<Self, I>,
+			Self::EntityRanker,
 			AccountIdFor<Self>,
 			(Self::EntityId, Self::RankedEntity),
 		>;

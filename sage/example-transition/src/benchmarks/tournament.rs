@@ -1,9 +1,10 @@
 use crate::{
 	asset::{Asset, AssetId},
-	tournament::{HeroJamTournamentCategoryId, HeroJamTournamentConfig},
+	tournament::HeroJamTournamentCategoryId,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 
+use crate::tournament::HeroJamEntityRanker;
 use ajuna_primitives::{
 	asset_manager::AssetInspector, tournament_manager::TournamentBenchmarkHelper,
 };
@@ -17,7 +18,7 @@ pub type HeroJamTournamentAsset<BlockNumber> = (AssetId, Asset<BlockNumber>);
 impl<AccountId, BlockNumber, AssetHandler>
 	TournamentBenchmarkHelper<
 		HeroJamTournamentCategoryId,
-		HeroJamTournamentConfig,
+		HeroJamEntityRanker<BlockNumber>,
 		AccountId,
 		HeroJamTournamentAsset<BlockNumber>,
 	> for GameTournamentBenchmarkHelper<AccountId, BlockNumber, AssetHandler>
@@ -28,7 +29,9 @@ where
 		HeroJamTournamentCategoryId::default()
 	}
 
-	fn create_config() -> HeroJamTournamentConfig {}
+	fn create_ranker() -> HeroJamEntityRanker<BlockNumber> {
+		HeroJamEntityRanker(PhantomData)
+	}
 
 	fn create_entities(
 		_owner: &AccountId,

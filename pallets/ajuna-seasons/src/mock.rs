@@ -166,7 +166,9 @@ impl Validate for MockSeasonData {
 pub struct MockSeasonsBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl SeasonsBenchmarkHelper<MockSeasonId, MockSeasonData> for MockSeasonsBenchmarkHelper {
+impl ajuna_primitives::season_manager::SeasonsBenchmarkHelper<MockSeasonId, MockSeasonData>
+	for MockSeasonsBenchmarkHelper
+{
 	fn create_season_id() -> MockSeasonId {
 		MockSeasonId::default()
 	}

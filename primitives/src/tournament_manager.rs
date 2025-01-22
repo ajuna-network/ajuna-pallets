@@ -69,10 +69,10 @@ pub trait TournamentClaimer: TournamentRanker {
 		entity_id: &Self::EntityId,
 	) -> DispatchResult;
 }
-pub trait TournamentBenchmarkHelper<CategoryId, TournamentConfig, AccountId, Assets> {
+pub trait TournamentBenchmarkHelper<CategoryId, Ranker, AccountId, Assets> {
 	fn create_category_id() -> CategoryId;
 
-	fn create_config() -> TournamentConfig;
+	fn create_ranker() -> Ranker;
 
 	fn create_entities(owner: &AccountId, count: usize) -> Vec<Assets>;
 }
