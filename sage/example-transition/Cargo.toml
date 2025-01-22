@@ -20,7 +20,7 @@ scale-info         = { workspace = true, features = [ "derive" ] }
 ajuna-primitives = { workspace = true }
 
 # Sage
-sage-api = { workspace = true}
+sage-api = { workspace = true }
 
 [features]
 default = ["std"]

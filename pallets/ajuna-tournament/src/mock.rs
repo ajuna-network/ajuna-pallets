@@ -18,6 +18,7 @@ use crate::{self as pallet_ajuna_tournament, *};
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock},
+	tournament_manager::{EntityRanker, TournamentBenchmarkHelper},
 };
 use frame_support::{
 	parameter_types,
@@ -110,7 +111,7 @@ pub type MockEntity = u32;
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
 pub struct MockRanker;
 
-impl EntityRank for MockRanker {
+impl EntityRanker for MockRanker {
 	type EntityId = MockEntityId;
 	type Entity = MockEntity;
 
@@ -132,9 +133,9 @@ impl EntityRank for MockRanker {
 }
 
 thread_local! {
-	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
-	pub static ASSETS: RefCell<BTreeMap<MockEntityId, MockEntity>> = RefCell::new(BTreeMap::new());
-	pub static OWNERS: RefCell<BTreeMap<MockAccountId, MockEntityId>> = RefCell::new(BTreeMap::new());
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = const { RefCell::new(None) };
+	pub static ASSETS: RefCell<BTreeMap<MockEntityId, MockEntity>> = const { RefCell::new(BTreeMap::new()) };
+	pub static OWNERS: RefCell<BTreeMap<MockAccountId, MockEntityId>> = const { RefCell::new(BTreeMap::new()) };
 }
 
 pub struct MockAccountManager;
@@ -253,26 +254,22 @@ parameter_types! {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-pub struct TournamentBenchmarkHelper;
+pub struct MockTournamentBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
 impl
-	BenchmarkHelper<
+	TournamentBenchmarkHelper<
 		MockCategoryId,
-		MockBlockNumber,
-		MockBalance,
-		MockRanker,
+		TournamentConfigFor<Test, Instance1>,
 		MockAccountId,
-		MockEntityId,
-		MockEntity,
-	> for TournamentBenchmarkHelper
+		(MockEntityId, MockEntity),
+	> for MockTournamentBenchmarkHelper
 {
-	fn create_category_id(id: u32) -> MockCategoryId {
-		id
+	fn create_category_id() -> MockCategoryId {
+		2
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
+	fn create_config() -> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,
@@ -287,8 +284,8 @@ impl
 		}
 	}
 
-	fn create_entities(owner: MockAccountId, count: u32) -> Vec<(MockEntityId, MockEntity)> {
-		MockAssetManager::create_assets(owner, count)
+	fn create_entities(owner: &MockAccountId, count: usize) -> Vec<(MockEntityId, MockEntity)> {
+		MockAssetManager::create_assets(owner.clone(), count as u32)
 	}
 }
 
@@ -306,7 +303,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = TournamentBenchmarkHelper;
+	type BenchmarkHelper = MockTournamentBenchmarkHelper;
 }
 
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
@@ -323,7 +320,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = TournamentBenchmarkHelper;
+	type BenchmarkHelper = MockTournamentBenchmarkHelper;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -339,7 +336,7 @@ impl Config for Test {
 	type AssetManager = MockAssetManager;
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 	type WeightInfo = ();
-	type BenchmarkHelper = TournamentBenchmarkHelper;
+	type BenchmarkHelper = MockTournamentBenchmarkHelper;
 }
 
 #[cfg(test)]

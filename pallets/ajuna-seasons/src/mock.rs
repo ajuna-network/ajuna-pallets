@@ -101,7 +101,7 @@ impl pallet_balances::Config for Test {
 pub type MockAssetId = u32;
 
 thread_local! {
-	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = const { RefCell::new(None) };
 }
 
 pub struct MockAccountManager;
@@ -163,15 +163,15 @@ impl Validate for MockSeasonData {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-pub struct SeasonsBenchmarkHelper;
+pub struct MockSeasonsBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<MockSeasonId, MockSeasonData> for SeasonsBenchmarkHelper {
-	fn create_season_id(id: u32) -> MockSeasonId {
-		MockSeasonId::from(id)
+impl SeasonsBenchmarkHelper<MockSeasonId, MockSeasonData> for MockSeasonsBenchmarkHelper {
+	fn create_season_id() -> MockSeasonId {
+		MockSeasonId::default()
 	}
 
-	fn create_default_season_data() -> MockSeasonData {
+	fn create_season_data() -> MockSeasonData {
 		MockSeasonData { data: 24 }
 	}
 }
@@ -186,7 +186,7 @@ impl pallet_ajuna_seasons::Config<SeasonsInstance1> for Test {
 	type Currency = Balances;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = SeasonsBenchmarkHelper;
+	type BenchmarkHelper = MockSeasonsBenchmarkHelper;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -198,7 +198,7 @@ impl Config for Test {
 	type AccountHandler = MockAccountManager;
 	type Currency = Balances;
 	type WeightInfo = ();
-	type BenchmarkHelper = SeasonsBenchmarkHelper;
+	type BenchmarkHelper = MockSeasonsBenchmarkHelper;
 }
 
 #[cfg(test)]

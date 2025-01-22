@@ -46,6 +46,12 @@ pub trait Validate {
 	fn validate(&self) -> bool;
 }
 
+impl Validate for () {
+	fn validate(&self) -> bool {
+		true
+	}
+}
+
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub struct SeasonConfig<Balance, SeasonData> {
 	pub fee: SeasonFeeConfig<Balance>,
@@ -81,4 +87,10 @@ pub trait SeasonManager {
 		asset_id: &Self::AssetId,
 		season_id: &Self::SeasonId,
 	) -> Result<(), DispatchError>;
+}
+
+pub trait SeasonsBenchmarkHelper<SeasonId, SeasonData> {
+	fn create_season_id() -> SeasonId;
+
+	fn create_season_data() -> SeasonData;
 }

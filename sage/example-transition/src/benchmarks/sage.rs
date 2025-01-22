@@ -1,15 +1,8 @@
-use crate::{
-	asset::{
-		hero_jam::{AssetSubType, AssetType, HeroJamAsset, StateType},
-		Asset, AssetId,
-		AssetVariant::HeroJam,
-	},
-	transition::{hero_jam::HeroAction, TransitionIdentifier},
-};
-
-use sage_api::benchmarks::SageBenchmarkHelper;
+use crate::{prelude::*, transition::hero_jam::HeroAction};
 
 use ajuna_primitives::payment_handler::WithdrawKind;
+use sage_api::benchmarks::SageBenchmarkHelper;
+
 use frame_support::traits::fungible::NativeOrWithId;
 use sp_runtime::{traits::BlockNumber as BlockNumberT, SaturatedConversion};
 use sp_std::{marker::PhantomData, vec::Vec};
@@ -31,7 +24,7 @@ where
 	fn create_asset(seed: u32) -> (AssetId, Asset<BlockNumber>) {
 		let asset_id = AssetId::from(seed);
 		let asset = Asset {
-			asset_variant: HeroJam(HeroJamAsset {
+			asset_variant: AssetVariant::HeroJam(HeroJamAsset {
 				id: asset_id,
 				asset_type: AssetType::Hero,
 				asset_subtype: AssetSubType::None,
@@ -54,13 +47,13 @@ where
 
 	fn create_trade_filter_for(asset: &Asset<BlockNumber>) -> AssetType {
 		match &asset.asset_variant {
-			HeroJam(hero_jam) => hero_jam.asset_type,
+			AssetVariant::HeroJam(hero_jam) => hero_jam.asset_type,
 		}
 	}
 
 	fn create_transfer_filter_for(asset: &Asset<BlockNumber>) -> AssetType {
 		match &asset.asset_variant {
-			HeroJam(hero_jam) => hero_jam.asset_type,
+			AssetVariant::HeroJam(hero_jam) => hero_jam.asset_type,
 		}
 	}
 

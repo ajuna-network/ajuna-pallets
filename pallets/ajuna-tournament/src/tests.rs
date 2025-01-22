@@ -1,4 +1,7 @@
 use crate::{mock::*, *};
+
+use ajuna_primitives::tournament_manager::*;
+
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::{bounded_vec, testing::H256};
 

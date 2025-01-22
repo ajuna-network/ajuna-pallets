@@ -43,3 +43,20 @@ impl<CategoryId> TypeId for TournamentTreasuryAccount<CategoryId> {
 	// instances, hence we should use the same identifier as the PalletId.
 	const TYPE_ID: [u8; 4] = *b"modl";
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn tournament_treasury_account_codec_works() {
+		let pallet_id = PalletId(*b"ajn/trsy");
+		let tournament_account = TournamentTreasuryAccount::new(pallet_id, 2u32);
+
+		let encoded = tournament_account.encode();
+		let decoded = TournamentTreasuryAccount::<u32>::decode(&mut encoded.as_slice()).unwrap();
+
+		// PalletId does not implement debug...
+		assert_eq!(encoded, decoded.encode())
+	}
+}

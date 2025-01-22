@@ -1,9 +1,10 @@
 [workspace.package]
-authors    = [ "Ajuna Network <https://github.com/ajuna-network>" ]
-edition    = "2021"
-homepage   = "https://ajuna.io"
-repository = "https://github.com/ajuna-network/ajuna-pallets"
-version    = "0.15.0"
+authors      = [ "Ajuna Network <https://github.com/ajuna-network>" ]
+edition      = "2021"
+homepage     = "https://ajuna.io"
+repository   = "https://github.com/ajuna-network/ajuna-pallets"
+version      = "0.15.0"
+rust-version = "1.84.0"
 
 [workspace.metadata.psvm]
 version = "polkadot-stable2409"

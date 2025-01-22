@@ -14,6 +14,8 @@ pub enum TransitionOutput<AssetId, Asset> {
 	Consumed(AssetId),
 }
 
+pub type TransitionOutputs<AssetId, Asset> = Vec<TransitionOutput<AssetId, Asset>>;
+
 pub trait SageGameTransition {
 	/// Transition identifier type.
 	type TransitionId: Member + Parameter + MaxEncodedLen + TypeInfo;
@@ -31,5 +33,5 @@ pub trait SageGameTransition {
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		extra: &Self::Extra,
-	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, crate::TransitionError>;
+	) -> Result<TransitionOutputs<Self::AssetId, Self::Asset>, crate::TransitionError>;
 }

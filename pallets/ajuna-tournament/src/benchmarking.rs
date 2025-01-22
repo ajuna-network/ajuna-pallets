@@ -15,7 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{Pallet as Tournament, *};
-use ajuna_primitives::account_manager::AccountManager;
+use ajuna_primitives::{
+	account_manager::AccountManager,
+	tournament_manager::{TournamentBenchmarkHelper, TournamentRanker},
+};
 use frame_benchmarking::v2::*;
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
@@ -26,7 +29,7 @@ const ACC_1: &str = "acc_1";
 fn create_owned_entity<T: Config<I>, I: 'static>(
 	account: T::AccountId,
 ) -> (T::EntityId, T::RankedEntity) {
-	let mut assets = T::BenchmarkHelper::create_entities(account, 1);
+	let mut assets = T::BenchmarkHelper::create_entities(&account, 1);
 	assets.pop().unwrap()
 }
 
@@ -72,8 +75,8 @@ mod benchmarks {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
-		let category_id = T::BenchmarkHelper::create_category_id(1);
-		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
+		let category_id = T::BenchmarkHelper::create_category_id();
+		let tournament_config = T::BenchmarkHelper::create_config();
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(acc_1), category_id, tournament_config);
@@ -86,8 +89,8 @@ mod benchmarks {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
-		let category_id = T::BenchmarkHelper::create_category_id(1);
-		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
+		let category_id = T::BenchmarkHelper::create_category_id();
+		let tournament_config = T::BenchmarkHelper::create_config();
 		Tournament::<T, I>::create_tournament(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			category_id,
@@ -106,9 +109,9 @@ mod benchmarks {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
-		let category_id = T::BenchmarkHelper::create_category_id(1);
+		let category_id = T::BenchmarkHelper::create_category_id();
 		let (entity_id, entity) = create_owned_entity::<T, I>(acc_1.clone());
-		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
+		let tournament_config = T::BenchmarkHelper::create_config();
 		Tournament::<T, I>::create_tournament(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			category_id,
@@ -116,12 +119,8 @@ mod benchmarks {
 		)
 		.expect("Should create tournament");
 		run_to_block::<T, I>(20_u32.into());
-		<Tournament<T, I> as TournamentRanker<
-			T::TournamentCategoryId,
-			T::RankedEntity,
-			T::EntityId,
-		>>::try_rank_entity_in_tournament_for(&category_id, &entity_id, &entity)
-		.expect("Should rank entity");
+		Tournament::<T, I>::try_rank_entity_in_tournament_for(&category_id, &entity_id, &entity)
+			.expect("Should rank entity");
 		run_to_block::<T, I>(60_u32.into());
 
 		#[extrinsic_call]
@@ -140,9 +139,9 @@ mod benchmarks {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		set_account_balance::<T, I>(&acc_1, 1000_u32.into());
-		let category_id = T::BenchmarkHelper::create_category_id(1);
+		let category_id = T::BenchmarkHelper::create_category_id();
 		let (entity_id, _) = create_owned_entity::<T, I>(acc_1.clone());
-		let tournament_config = T::BenchmarkHelper::create_default_tournament_config();
+		let tournament_config = T::BenchmarkHelper::create_config();
 		Tournament::<T, I>::create_tournament(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			category_id,
@@ -150,12 +149,8 @@ mod benchmarks {
 		)
 		.expect("Should create tournament");
 		run_to_block::<T, I>(20_u32.into());
-		<Tournament<T, I> as TournamentRanker<
-			T::TournamentCategoryId,
-			T::RankedEntity,
-			T::EntityId,
-		>>::try_rank_entity_for_golden_duck(&category_id, &entity_id)
-		.expect("Should rank entity");
+		Tournament::<T, I>::try_rank_entity_for_golden_duck(&category_id, &entity_id)
+			.expect("Should rank entity");
 		run_to_block::<T, I>(60_u32.into());
 
 		#[extrinsic_call]

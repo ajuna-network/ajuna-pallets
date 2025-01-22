@@ -27,8 +27,7 @@ mod tests;
 
 pub mod account;
 pub mod config;
-pub mod impls;
-pub mod traits;
+mod impls;
 pub mod weights;
 
 use frame_support::{pallet_prelude::*, PalletId};
@@ -38,7 +37,6 @@ use crate::weights::WeightInfo;
 
 use account::*;
 pub use config::*;
-pub use traits::*;
 
 const LOG_TARGET: &str = "runtime::ajuna-tournament";
 
@@ -51,10 +49,12 @@ pub type RankingTable<T> = BoundedVec<T, ConstU32<MAX_PLAYERS>>;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
-	use frame_support::traits::{Currency, ExistenceRequirement};
+	use ajuna_primitives::{
+		account_manager::AccountManager, asset_manager::AssetManager, tournament_manager::*,
+	};
+	use frame_support::traits::Currency;
 	use sp_runtime::{
-		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
+		traits::{AccountIdConversion, SaturatedConversion},
 		Saturating,
 	};
 
@@ -73,16 +73,6 @@ pub mod pallet {
 	pub(crate) type RewardClaimStateFor<T> = RewardClaimState<AccountIdFor<T>>;
 	pub(crate) type TournamentStateFor<T, I> = TournamentState<BalanceOf<T, I>>;
 	pub(crate) type GoldenDuckStateFor<T, I> = GoldenDuckState<<T as Config<I>>::EntityId>;
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<CategoryId, BlockNumber, Balance, Ranker, AccountId, EntityId, Entity>
-	{
-		fn create_category_id(id: u32) -> CategoryId;
-
-		fn create_default_tournament_config() -> TournamentConfig<BlockNumber, Balance, Ranker>;
-
-		fn create_entities(owner: AccountId, count: u32) -> sp_std::vec::Vec<(EntityId, Entity)>;
-	}
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -111,7 +101,7 @@ pub mod pallet {
 		/// The ranked entities type
 		type RankedEntity: Member + Parameter + MaxEncodedLen;
 
-		type EntityRanker: EntityRank<EntityId = Self::EntityId, Entity = Self::RankedEntity>
+		type EntityRanker: EntityRanker<EntityId = Self::EntityId, Entity = Self::RankedEntity>
 			+ Member
 			+ Parameter
 			+ MaxEncodedLen;
@@ -131,14 +121,11 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: BenchmarkHelper<
+		type BenchmarkHelper: TournamentBenchmarkHelper<
 			Self::TournamentCategoryId,
-			BlockNumberFor<Self>,
-			BalanceOf<Self, I>,
-			Self::EntityRanker,
+			TournamentConfigFor<Self, I>,
 			AccountIdFor<Self>,
-			EntityIdFor<Self, I>,
-			Self::RankedEntity,
+			(Self::EntityId, Self::RankedEntity),
 		>;
 	}
 
@@ -404,7 +391,7 @@ pub mod pallet {
 			}
 		}
 
-		fn ensure_valid_tournament(
+		pub(crate) fn ensure_valid_tournament(
 			category_id: &TournamentCategoryIdFor<T, I>,
 			config: &TournamentConfigFor<T, I>,
 		) -> DispatchResult {
@@ -476,7 +463,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn try_insert_tournament_schedule(
+		pub(crate) fn try_insert_tournament_schedule(
 			category_id: &TournamentCategoryIdFor<T, I>,
 			tournament_id: &TournamentId,
 			config: &TournamentConfigFor<T, I>,
@@ -538,7 +525,7 @@ pub mod pallet {
 			}
 		}
 
-		fn try_get_active_tournament_id_for(
+		pub(crate) fn try_get_active_tournament_id_for(
 			category_id: &TournamentCategoryIdFor<T, I>,
 		) -> Result<TournamentId, DispatchError> {
 			match ActiveTournaments::<T, I>::get(category_id) {
@@ -563,7 +550,7 @@ pub mod pallet {
 			}
 		}
 
-		fn try_update_rank_table(
+		pub(crate) fn try_update_rank_table(
 			table: &mut RankingTableFor<T, I>,
 			tournament_config: &TournamentConfigFor<T, I>,
 			index: usize,
@@ -667,361 +654,6 @@ pub mod pallet {
 			} else {
 				log::error!(target: LOG_TARGET, "Tried to finish a tournament with missing config!");
 				T::DbWeight::get().reads(1)
-			}
-		}
-	}
-
-	impl<T: Config<I>, I: 'static>
-		TournamentInspector<
-			TournamentCategoryIdFor<T, I>,
-			BlockNumberFor<T>,
-			BalanceOf<T, I>,
-			AccountIdFor<T>,
-			EntityRankerFor<T, I>,
-		> for Pallet<T, I>
-	{
-		fn get_active_tournament_config_for(
-			category_id: &TournamentCategoryIdFor<T, I>,
-		) -> Option<(TournamentId, TournamentConfigFor<T, I>)> {
-			match ActiveTournaments::<T, I>::get(category_id) {
-				TournamentState::ActivePeriod(tournament_id) |
-				TournamentState::ClaimPeriod(tournament_id, _) =>
-					if let Some(tournament_config) =
-						Tournaments::<T, I>::get(category_id, tournament_id)
-					{
-						Some((tournament_id, tournament_config))
-					} else {
-						log::error!(target: LOG_TARGET, "No tournament config found for active tournament!");
-						None
-					},
-				_ => None,
-			}
-		}
-
-		fn get_active_tournament_state_for(
-			category_id: &TournamentCategoryIdFor<T, I>,
-		) -> TournamentStateFor<T, I> {
-			ActiveTournaments::<T, I>::get(category_id)
-		}
-
-		fn is_golden_duck_enabled_for(category_id: &TournamentCategoryIdFor<T, I>) -> bool {
-			match ActiveTournaments::<T, I>::get(category_id) {
-				TournamentState::ActivePeriod(tournament_id) |
-				TournamentState::ClaimPeriod(tournament_id, _) => {
-					matches!(
-						GoldenDucks::<T, I>::get(category_id, tournament_id),
-						GoldenDuckStateFor::<T, I>::Enabled(_, _)
-					)
-				},
-				_ => false,
-			}
-		}
-
-		fn get_treasury_account_for(
-			category_id: &TournamentCategoryIdFor<T, I>,
-		) -> AccountIdFor<T> {
-			Self::tournament_treasury_account_id(category_id)
-		}
-	}
-
-	impl<T: Config<I>, I: 'static>
-		TournamentMutator<
-			AccountIdFor<T>,
-			TournamentCategoryIdFor<T, I>,
-			BlockNumberFor<T>,
-			BalanceOf<T, I>,
-			EntityRankerFor<T, I>,
-		> for Pallet<T, I>
-	{
-		fn try_create_new_tournament_for(
-			creator: &AccountIdFor<T>,
-			category_id: &TournamentCategoryIdFor<T, I>,
-			config: TournamentConfigFor<T, I>,
-		) -> Result<TournamentId, DispatchError> {
-			Self::ensure_valid_tournament(category_id, &config)?;
-
-			let next_tournament_id =
-				NextTournamentIds::<T, I>::mutate(category_id, |tournament_id| {
-					let assigned_id = *tournament_id;
-					*tournament_id = tournament_id.saturating_add(1);
-					assigned_id
-				});
-
-			Self::try_insert_tournament_schedule(category_id, &next_tournament_id, &config)?;
-
-			if let Some(reward) = config.initial_reward {
-				let treasury_account = Self::tournament_treasury_account_id(category_id);
-				T::Currency::transfer(
-					creator,
-					&treasury_account,
-					reward,
-					ExistenceRequirement::KeepAlive,
-				)?;
-			}
-
-			if let GoldenDuckConfig::Enabled(percentage) = config.golden_duck_config {
-				GoldenDucks::<T, I>::insert(
-					category_id,
-					next_tournament_id,
-					GoldenDuckStateFor::<T, I>::Enabled(percentage, None),
-				);
-			}
-
-			Tournaments::<T, I>::insert(category_id, next_tournament_id, config);
-
-			Self::deposit_event(Event::<T, I>::TournamentCreated {
-				category_id: *category_id,
-				tournament_id: next_tournament_id,
-			});
-
-			Ok(next_tournament_id)
-		}
-
-		fn try_remove_latest_tournament_for(
-			category_id: &TournamentCategoryIdFor<T, I>,
-		) -> DispatchResult {
-			match Self::get_active_tournament_state_for(category_id) {
-				TournamentState::Inactive =>
-					NextTournamentIds::<T, I>::try_mutate(category_id, |tournament_id| {
-						let prev_id = tournament_id.saturating_sub(1);
-						if let Some(config) = Tournaments::<T, I>::take(category_id, prev_id) {
-							GoldenDucks::<T, I>::remove(category_id, prev_id);
-
-							TournamentSchedules::<T, I>::remove(config.start);
-							TournamentSchedules::<T, I>::remove(config.active_end);
-							TournamentSchedules::<T, I>::remove(config.claim_end);
-
-							*tournament_id = prev_id;
-
-							Self::deposit_event(Event::<T, I>::TournamentRemoved {
-								category_id: *category_id,
-								tournament_id: prev_id,
-							});
-
-							Ok(())
-						} else {
-							Err(Error::<T, I>::TournamentNotFound.into())
-						}
-					}),
-				_ => Err(Error::<T, I>::CannotRemoveActiveTournament.into()),
-			}
-		}
-	}
-
-	impl<T: Config<I>, I: 'static>
-		TournamentRanker<TournamentCategoryIdFor<T, I>, T::RankedEntity, T::EntityId> for Pallet<T, I>
-	{
-		fn try_rank_entity_in_tournament_for(
-			category_id: &TournamentCategoryIdFor<T, I>,
-			entity_id: &T::EntityId,
-			entity: &T::RankedEntity,
-		) -> DispatchResult {
-			let (tournament_id, tournament_config) =
-				Self::get_active_tournament_config_for(category_id)
-					.ok_or::<Error<T, I>>(Error::<T, I>::NoActiveTournamentForCategory)?;
-
-			if !tournament_config.ranker.can_rank((entity_id, entity)) {
-				return Ok(());
-			}
-
-			TournamentRankings::<T, I>::mutate(category_id, tournament_id, |table| {
-				match table.binary_search_by(|(other_id, other)| {
-					tournament_config.ranker.rank_against((entity_id, entity), (other_id, other))
-				}) {
-					// The entity is already in the ranking table,
-					// nothing to do here
-					Ok(_) => Ok(()),
-					// The entity is not in the table,
-					// we need to check if it should be
-					// inserted or not
-					Err(index) => {
-						match Self::try_update_rank_table(
-							table,
-							&tournament_config,
-							index,
-							entity_id,
-							entity,
-						)? {
-							// The entity didn't make it to the ranking
-							RankingResult::ScoreTooLow => Ok(()),
-							// The entity made it to the ranking and the
-							// table has been successfully updated
-							RankingResult::Ranked { rank } => {
-								Self::deposit_event(
-									crate::pallet::Event::<T, I>::EntityEnteredRanking {
-										category_id: *category_id,
-										tournament_id,
-										entity_id: entity_id.clone(),
-										rank,
-									},
-								);
-								Ok(())
-							},
-						}
-					},
-				}
-			})
-		}
-
-		fn try_rank_entity_for_golden_duck(
-			category_id: &TournamentCategoryIdFor<T, I>,
-			entity_id: &T::EntityId,
-		) -> DispatchResult {
-			ensure!(
-				matches!(
-					Self::get_active_tournament_state_for(category_id),
-					TournamentState::ActivePeriod(_)
-				),
-				Error::<T, I>::NoActiveTournamentForCategory
-			);
-
-			let tournament_id = Self::try_get_active_tournament_id_for(category_id)?;
-
-			GoldenDucks::<T, I>::mutate(category_id, tournament_id, |state| {
-				if let GoldenDuckState::Enabled(payout_perc, ref maybe_entry_id) = state {
-					match maybe_entry_id {
-						None => {
-							*state =
-								GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
-							Self::deposit_event(Event::<T, I>::EntityBecameGoldenDuck {
-								category_id: *category_id,
-								tournament_id,
-								entity_id: entity_id.clone(),
-							});
-						},
-						Some(entry_id) if entity_id < entry_id => {
-							*state =
-								GoldenDuckState::Enabled(*payout_perc, Some(entity_id.clone()));
-							Self::deposit_event(Event::<T, I>::EntityBecameGoldenDuck {
-								category_id: *category_id,
-								tournament_id,
-								entity_id: entity_id.clone(),
-							});
-						},
-						_ => {},
-					}
-				}
-			});
-
-			Ok(())
-		}
-	}
-
-	impl<T: Config<I>, I: 'static>
-		TournamentClaimer<TournamentCategoryIdFor<T, I>, AccountIdFor<T>, T::EntityId> for Pallet<T, I>
-	{
-		fn try_claim_tournament_reward_for(
-			category_id: &TournamentCategoryIdFor<T, I>,
-			account: &AccountIdFor<T>,
-			entity_id: &T::EntityId,
-		) -> DispatchResult {
-			match ActiveTournaments::<T, I>::get(category_id) {
-				TournamentState::ClaimPeriod(tournament_id, reward_pot) => {
-					let index = TournamentRankings::<T, I>::get(category_id, tournament_id)
-						.iter()
-						.position(|(entry_id, _)| entry_id == entity_id)
-						.ok_or(Error::<T, I>::RankingCandidateNotInWinnerTable)?;
-
-					TournamentRewardClaims::<T, I>::try_mutate(
-						(category_id, tournament_id, index as u32),
-						|state| {
-							ensure!(
-								matches!(state, Some(RewardClaimState::Unclaimed)),
-								Error::<T, I>::TournamentRewardAlreadyClaimed
-							);
-
-							let tournament_config =
-								Tournaments::<T, I>::get(category_id, tournament_id)
-									.ok_or(Error::<T, I>::TournamentNotFound)?;
-							let treasury_account =
-								Self::tournament_treasury_account_id(category_id);
-
-							let payout_percentage = tournament_config
-								.reward_distribution
-								.get(index)
-								.copied()
-								.unwrap_or_default();
-
-							let account_payout = reward_pot
-								.saturating_mul(payout_percentage.into())
-								.checked_div(&100_u32.into())
-								.unwrap_or_default();
-
-							if account_payout > 0_u32.into() {
-								T::Currency::transfer(
-									&treasury_account,
-									account,
-									account_payout,
-									ExistenceRequirement::AllowDeath,
-								)?;
-							}
-
-							*state = Some(RewardClaimState::Claimed(account.clone()));
-
-							Self::deposit_event(Event::<T, I>::RankingRewardClaimed {
-								category_id: *category_id,
-								tournament_id,
-								entity_id: entity_id.clone(),
-								account: account.clone(),
-							});
-
-							Ok(())
-						},
-					)
-				},
-				_ => Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
-			}
-		}
-
-		fn try_claim_golden_duck_for(
-			category_id: &TournamentCategoryIdFor<T, I>,
-			account: &AccountIdFor<T>,
-			entity_id: &T::EntityId,
-		) -> DispatchResult {
-			match ActiveTournaments::<T, I>::get(category_id) {
-				TournamentState::ClaimPeriod(tournament_id, reward_pot) =>
-					match GoldenDucks::<T, I>::get(category_id, tournament_id) {
-						GoldenDuckState::Enabled(payout_percentage, Some(ref winner_id))
-							if winner_id == entity_id =>
-							GoldenDuckRewardClaims::<T, I>::try_mutate(
-								category_id,
-								tournament_id,
-								|state| {
-									ensure!(
-										matches!(state, Some(RewardClaimState::Unclaimed)),
-										Error::<T, I>::TournamentRewardAlreadyClaimed
-									);
-
-									let treasury_account =
-										Self::tournament_treasury_account_id(category_id);
-
-									let account_payout = reward_pot
-										.saturating_mul(payout_percentage.into())
-										.checked_div(&100_u32.into())
-										.unwrap_or_default();
-
-									T::Currency::transfer(
-										&treasury_account,
-										account,
-										account_payout,
-										ExistenceRequirement::AllowDeath,
-									)?;
-
-									*state = Some(RewardClaimState::Claimed(account.clone()));
-
-									Self::deposit_event(Event::<T, I>::GoldenDuckRewardClaimed {
-										category_id: *category_id,
-										tournament_id,
-										entity_id: entity_id.clone(),
-										account: account.clone(),
-									});
-
-									Ok(())
-								},
-							),
-						_ => Err(Error::<T, I>::GoldenDuckCandidateNotWinner.into()),
-					},
-				_ => Err(Error::<T, I>::TournamentNotInClaimPeriod.into()),
 			}
 		}
 	}

@@ -1,5 +1,10 @@
 use super::*;
-use ajuna_primitives::payment_handler::{DistributeFee, PaymentFee};
+
+use ajuna_primitives::{
+	payment_handler::{DistributeFee, PaymentFee},
+	tournament_manager::TournamentInspector,
+};
+
 use sp_arithmetic::traits::{CheckedDiv, Saturating};
 
 impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {

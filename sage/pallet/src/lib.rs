@@ -124,8 +124,8 @@ pub mod pallet {
 
 				if let Some(ref season_id) = self.season {
 					PlayerSeasonConfigs::<T, I>::insert(
-						&organizer,
-						&season_id,
+						organizer,
+						season_id,
 						PlayerConfig {
 							inventory_tier: InventoryTier::One,
 							locks: Locks::all_unlocked(),

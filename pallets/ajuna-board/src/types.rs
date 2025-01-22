@@ -51,6 +51,7 @@ pub enum Finished<Player> {
 	Winner(Player),
 }
 
+#[allow(dead_code)]
 pub trait TurnBasedGame {
 	/// Represents a turn in the game
 	type Turn;

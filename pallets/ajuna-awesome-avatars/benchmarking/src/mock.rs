@@ -19,6 +19,7 @@
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
 	payment_handler::{NativeGameFeeHandler, WithdrawNative},
+	tournament_manager::TournamentBenchmarkHelper,
 };
 use frame_support::{
 	parameter_types,
@@ -31,10 +32,10 @@ use pallet_ajuna_awesome_avatars::{
 	benchmark_helper,
 	types::{AffiliateMethods, Avatar, SeasonId},
 	AvatarIdOf, AvatarOf, AvatarRankerFor, Avatars, CurrentSeasonStatus, Owners,
+	TournamentConfigFor,
 };
-use pallet_ajuna_tournament::{GoldenDuckConfig, TournamentConfig};
+use pallet_ajuna_tournament::TournamentConfig;
 use sp_runtime::{
-	bounded_vec,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, DispatchError, MultiSignature,
@@ -207,26 +208,22 @@ parameter_types! {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-pub struct TournamentBenchmarkHelper;
+pub struct MockTournamentBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
 impl
-	pallet_ajuna_tournament::BenchmarkHelper<
+	TournamentBenchmarkHelper<
 		SeasonId,
-		MockBlockNumber,
-		MockBalance,
-		AvatarRankerFor<Runtime>,
+		TournamentConfigFor<Runtime>,
 		MockAccountId,
-		AvatarIdOf<Runtime>,
-		AvatarOf<Runtime>,
-	> for TournamentBenchmarkHelper
+		(AvatarIdOf<Runtime>, AvatarOf<Runtime>),
+	> for MockTournamentBenchmarkHelper
 {
-	fn create_category_id(id: u32) -> SeasonId {
-		id as SeasonId
+	fn create_category_id() -> SeasonId {
+		1 as SeasonId
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Runtime>> {
+	fn create_config() -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Runtime>> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,
@@ -234,18 +231,18 @@ impl
 			initial_reward: Some(10),
 			max_reward: None,
 			take_fee_percentage: None,
-			reward_distribution: bounded_vec![40, 30, 10],
-			golden_duck_config: GoldenDuckConfig::Enabled(10),
+			reward_distribution: vec![40, 30, 10].try_into().unwrap(),
+			golden_duck_config: pallet_ajuna_tournament::GoldenDuckConfig::Enabled(10),
 			max_players: 4,
 			ranker: AvatarRankerFor::<Runtime>::default(),
 		}
 	}
 
 	fn create_entities(
-		owner: MockAccountId,
-		count: u32,
+		owner: &MockAccountId,
+		count: usize,
 	) -> Vec<(AvatarIdOf<Runtime>, AvatarOf<Runtime>)> {
-		benchmark_helper::create_avatars::<Runtime>(owner.clone(), count).unwrap();
+		benchmark_helper::create_avatars::<Runtime>(owner.clone(), count as u32).unwrap();
 
 		let season_id = CurrentSeasonStatus::<Runtime>::get().season_id;
 		let avatar_ids = Owners::<Runtime>::get(owner, season_id);
@@ -274,7 +271,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = TournamentBenchmarkHelper;
+	type BenchmarkHelper = MockTournamentBenchmarkHelper;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

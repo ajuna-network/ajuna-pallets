@@ -15,7 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
-use ajuna_primitives::payment_handler::{NativeGameFeeHandler, WithdrawNative};
+use ajuna_primitives::{
+	payment_handler::{NativeGameFeeHandler, WithdrawNative},
+	tournament_manager::TournamentBenchmarkHelper,
+};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
@@ -174,26 +177,22 @@ parameter_types! {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-pub struct TournamentBenchmarkHelper;
+pub struct MockTournamentBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
 impl
-	pallet_ajuna_tournament::BenchmarkHelper<
+	TournamentBenchmarkHelper<
 		SeasonId,
-		MockBlockNumber,
-		MockBalance,
-		AvatarRankerFor<Test>,
+		TournamentConfigFor<Test>,
 		MockAccountId,
-		AvatarIdOf<Test>,
-		AvatarOf<Test>,
-	> for TournamentBenchmarkHelper
+		(AvatarIdOf<Test>, AvatarOf<Test>),
+	> for MockTournamentBenchmarkHelper
 {
-	fn create_category_id(id: u32) -> SeasonId {
-		id as SeasonId
+	fn create_category_id() -> SeasonId {
+		1 as SeasonId
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
+	fn create_config() -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,
@@ -209,10 +208,10 @@ impl
 	}
 
 	fn create_entities(
-		owner: MockAccountId,
-		count: u32,
+		owner: &MockAccountId,
+		count: usize,
 	) -> Vec<(AvatarIdOf<Test>, AvatarOf<Test>)> {
-		benchmark_helper::create_avatars::<Test>(owner, count).unwrap();
+		benchmark_helper::create_avatars::<Test>(*owner, count as u32).unwrap();
 
 		let season_id = CurrentSeasonStatus::<Test>::get().season_id;
 		let avatar_ids = Owners::<Test>::get(owner, season_id);
@@ -241,7 +240,7 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type MinimumTournamentPhaseDuration = MinimumTournamentPhaseDuration;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = TournamentBenchmarkHelper;
+	type BenchmarkHelper = MockTournamentBenchmarkHelper;
 }
 
 pub struct ExtBuilder {

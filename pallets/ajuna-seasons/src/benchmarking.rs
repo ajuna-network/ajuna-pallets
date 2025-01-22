@@ -59,7 +59,7 @@ mod benchmarks {
 
 	#[benchmark]
 	fn update_season() {
-		let season_id = T::BenchmarkHelper::create_season_id(1_u32);
+		let season_id = T::BenchmarkHelper::create_season_id();
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		let config = SeasonConfigOf::<T, I> {
@@ -72,7 +72,7 @@ mod benchmarks {
 				unlock_transfer_asset: 13_u32.into(),
 				state_transition_base_fee: 20_u32.into(),
 			},
-			data: T::BenchmarkHelper::create_default_season_data(),
+			data: T::BenchmarkHelper::create_season_data(),
 		};
 		let metadata = SeasonMetadata {
 			name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),
@@ -101,7 +101,7 @@ mod benchmarks {
 
 	#[benchmark]
 	fn interrupt_active_season() {
-		let season_id = T::BenchmarkHelper::create_season_id(2_u32);
+		let season_id = T::BenchmarkHelper::create_season_id();
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
 		let config = SeasonConfigOf::<T, I> {
@@ -114,7 +114,7 @@ mod benchmarks {
 				unlock_transfer_asset: 13_u32.into(),
 				state_transition_base_fee: 20_u32.into(),
 			},
-			data: T::BenchmarkHelper::create_default_season_data(),
+			data: T::BenchmarkHelper::create_season_data(),
 		};
 		let metadata = SeasonMetadata {
 			name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),

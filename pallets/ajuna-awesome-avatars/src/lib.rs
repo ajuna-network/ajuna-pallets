@@ -77,6 +77,7 @@ use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetManager, Lock, LockIdentifier},
 	payment_handler::FeeHandler,
+	tournament_manager::{TournamentInspector, TournamentRanker},
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
@@ -88,10 +89,7 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
 	AffiliateInspector, AffiliateMutator, RuleExecutor, RuleInspector,
 };
-use pallet_ajuna_tournament::{
-	config::{TournamentConfig, TournamentState},
-	traits::{TournamentInspector, TournamentRanker},
-};
+use pallet_ajuna_tournament::config::{TournamentConfig, TournamentState};
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, CheckedSub, Hash, Saturating, TrailingZeroInput, UniqueSaturatedInto,
@@ -151,12 +149,12 @@ pub mod pallet {
 			+ RuleExecutor<AffiliateMethods, Self::FeeChainMaxLength>;
 
 		type TournamentHandler: TournamentInspector<
-				SeasonId,
-				BlockNumberFor<Self>,
-				BalanceOf<Self>,
-				AccountIdFor<Self>,
-				AvatarRankerFor<Self>,
-			> + TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>;
+				CategoryId = SeasonId,
+				TournamentId = u32,
+				TournamentConfig = TournamentConfigFor<Self>,
+				TournamentState = TournamentState<BalanceOf<Self>>,
+				AccountId = AccountIdFor<Self>,
+			> + TournamentRanker<EntityId = AvatarIdOf<Self>, Entity = AvatarOf<Self>>;
 
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdFor<Self>,

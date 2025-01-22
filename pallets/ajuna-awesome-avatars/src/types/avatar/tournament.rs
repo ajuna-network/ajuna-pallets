@@ -1,5 +1,7 @@
 use super::*;
-use pallet_ajuna_tournament::traits::EntityRank;
+
+use ajuna_primitives::tournament_manager::EntityRanker;
+
 use sp_std::{cmp::Ordering, num::NonZeroU32};
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
@@ -20,7 +22,7 @@ pub struct AvatarRanker<Id, BlockNumber> {
 	pub _marker: PhantomData<(Id, BlockNumber)>,
 }
 
-impl<Id, BlockNumber> EntityRank for AvatarRanker<Id, BlockNumber>
+impl<Id, BlockNumber> EntityRanker for AvatarRanker<Id, BlockNumber>
 where
 	Id: Member,
 	BlockNumber: sp_runtime::traits::BlockNumber,

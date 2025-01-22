@@ -34,7 +34,7 @@ mod types;
 
 use ajuna_primitives::{
 	account_manager::AccountManager,
-	season_manager::{SeasonConfig, SeasonManager, Validate},
+	season_manager::{SeasonConfig, SeasonManager, SeasonsBenchmarkHelper, Validate},
 };
 
 use frame_support::{pallet_prelude::*, traits::Currency};
@@ -65,24 +65,6 @@ pub mod pallet {
 		SeasonScheduledAction<<T as Config<I>>::SeasonId>;
 
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
-
-	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<SeasonId, SeasonData> {
-		fn create_season_id(id: u32) -> SeasonId;
-
-		fn create_default_season_data() -> SeasonData;
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	impl<SeasonId: From<u32>, SeasonData: Default> BenchmarkHelper<SeasonId, SeasonData> for () {
-		fn create_season_id(id: u32) -> SeasonId {
-			id.into()
-		}
-
-		fn create_default_season_data() -> SeasonData {
-			SeasonData::default()
-		}
-	}
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -159,7 +141,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: BenchmarkHelper<SeasonIdOf<Self, I>, SeasonDataOf<Self, I>>;
+		type BenchmarkHelper: SeasonsBenchmarkHelper<SeasonIdOf<Self, I>, SeasonDataOf<Self, I>>;
 	}
 
 	#[pallet::storage]
