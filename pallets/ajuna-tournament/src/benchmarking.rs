@@ -42,7 +42,7 @@ fn create_tournament_config<T: Config<I>, I: 'static>() -> TournamentConfigFor<T
 		initial_reward: Some(10_u32.into()),
 		max_reward: None,
 		take_fee_percentage: None,
-		reward_distribution: vec![40, 30, 10].try_into().unwrap(),
+		reward_distribution: sp_std::vec![40, 30, 10].try_into().unwrap(),
 		golden_duck_config: GoldenDuckConfig::Enabled(10),
 		max_players: 4,
 		ranker,
