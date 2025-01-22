@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{Pallet as Seasons, *};
-use ajuna_primitives::season_manager::SeasonFeeConfig;
+use ajuna_primitives::season_manager::{SeasonFeeConfig, SeasonsBenchmarkHelper};
 
 use frame_benchmarking::v2::*;
 use frame_support::BoundedVec;
