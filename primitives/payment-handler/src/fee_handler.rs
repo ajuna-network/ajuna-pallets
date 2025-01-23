@@ -373,7 +373,7 @@ where
 			let remaining_credit2 =
 				Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
 
-			Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+			Self::deposit(treasury_pot, remaining_credit2)
 		} else {
 			Ok(())
 		}
@@ -382,14 +382,46 @@ where
 	fn withdraw_and_deposit_into(
 		who: &Self::AccountId,
 		payment: Self::PaymentKind,
-		treasury_pot: &Self::AccountId,
+		beneficiary: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
-			Self::deposit_into_treasury(treasury_pot, credit)
-		} else {
-			Ok(())
-		}
+		Self::withdraw_and_deposit(payment, who, beneficiary, amount)
+	}
+}
+
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament> TransferFunds
+	for NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+where
+	Balances: fungible::Balanced<AccountId, Balance = W::Balance>
+		+ fungible::Inspect<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Balances,
+		Credit = fungible::Credit<AccountId, Balances>,
+	>,
+{
+	type AccountId = AccountId;
+	type AssetId = W::AssetId;
+	type Balance = W::Balance;
+
+	fn transfer(
+		asset_id: Self::AssetId,
+		from: &Self::AccountId,
+		to: &Self::AccountId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		Self::withdraw_and_deposit(asset_id, from, to, amount)
+	}
+
+	fn transfer_all(
+		asset_id: Self::AssetId,
+		from: &Self::AccountId,
+		to: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		let balance =
+			W::Assets::reducible_balance(&from, Preservation::Preserve, Fortitude::Polite);
+
+		Self::transfer(asset_id, from, to, balance)
 	}
 }
 
@@ -479,14 +511,40 @@ where
 
 		Ok(final_fee)
 	}
+}
 
-	fn deposit_into_treasury(key: &AccountId, credit: W::Credit) -> Result<(), DispatchError> {
-		if let Err(_credit) = W::Assets::resolve(key, credit) {
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+	NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+where
+	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Balances,
+		Credit = fungible::Credit<AccountId, Balances>,
+	>,
+{
+	fn withdraw_and_deposit(
+		payment: W::AssetId,
+		who: &AccountId,
+		beneficiary: &AccountId,
+		amount: W::Balance,
+	) -> Result<(), DispatchError> {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
+			Self::deposit(beneficiary, credit)
+		} else {
+			// This is only none, if the fee was paid with a voucher.
+			// In this case we simply put nothing into the treasury.
+			Ok(())
+		}
+	}
+
+	fn deposit(beneficiary: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
+		if let Err(_credit) = W::Assets::resolve(beneficiary, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
 			// the transaction fails because we can't allocate the fees to the recipient.
 			log::error!(
-				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
+				"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
 			);
 		}
 		Ok(())
