@@ -4,6 +4,7 @@ mod fee_handler;
 mod withdraw_credit;
 
 pub use fee_handler::*;
+pub use transfer::*;
 pub use voucher_handler::*;
 pub use withdraw_credit::*;
 

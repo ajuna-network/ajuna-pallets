@@ -36,7 +36,7 @@ mod tests;
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetFundsManager, AssetManager, Lock, LockIdentifier},
-	payment_handler::{FeeHandler, WithdrawCredit},
+	payment_handler::{FeeHandler, TransferFunds},
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
 };
@@ -130,7 +130,7 @@ pub mod pallet {
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
 		>;
 
-		type WithdrawCredit: WithdrawCredit<
+		type TransferFunds: TransferFunds<
 			AccountId = AccountIdOf<Self>,
 			AssetId = FungiblesAssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
@@ -770,7 +770,7 @@ pub mod pallet {
 				&sender,
 				&current_season_id,
 				transition_results,
-				&payment,
+				payment.clone(),
 			)?;
 
 			let transition_fee = {
@@ -866,7 +866,7 @@ pub mod pallet {
 			player: &AccountIdOf<T>,
 			season_id: &SeasonIdOf<T, I>,
 			transition_results: Vec<TransitionOutputOf<T, I>>,
-			payment_kind: &FungiblesAssetIdOf<T, I>,
+			payment_kind: FungiblesAssetIdOf<T, I>,
 		) -> DispatchResult {
 			let mut minted_amount = 0 as Stat;
 			let mut mutated_amount = 0 as Stat;
@@ -917,7 +917,11 @@ pub mod pallet {
 							if Self::inspect_asset_funds(&asset_id, &payment_kind) >
 								Default::default()
 							{
-								Self::transfer_all_from_asset(&asset_id, &owner, &payment_kind)?;
+								Self::transfer_all_from_asset(
+									&asset_id,
+									&owner,
+									payment_kind.clone(),
+								)?;
 							}
 						}
 					},

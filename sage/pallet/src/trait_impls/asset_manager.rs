@@ -16,12 +16,6 @@
 
 use super::*;
 use ajuna_primitives::asset_manager::{AssetFundsManager, AssetInspector};
-use frame_support::traits::{
-	fungible,
-	tokens::{Fortitude, Preservation},
-};
-use sp_core::hexdisplay::AsBytesRef;
-use sp_runtime::traits::Hash;
 
 impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	type AccountId = AccountIdOf<T>;
@@ -123,33 +117,19 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		asset_id: &Self::AssetId,
 		_fungibles_asset_id: &Self::FungiblesAssetId,
 	) -> Self::Balance {
-		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
-		let asset_account =
-			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
-
-		<T::Fungible as fungible::Inspect<_>>::reducible_balance(
-			&asset_account,
-			Preservation::Expendable,
-			Fortitude::Polite,
-		)
+		// Todo: inspect
+		Default::default()
 	}
 
 	fn deposit_funds_to_asset(
 		asset_id: &Self::AssetId,
 		from: &Self::AccountId,
-		_fungibles_asset_id: &Self::FungiblesAssetId,
+		fungibles_asset_id: Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
-		let asset_account =
-			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
+		T::TransferFunds::transfer(fungibles_asset_id, from, &Self::assets_funds_pot(), amount)?;
 
-		<T::Fungible as fungible::Mutate<_>>::transfer(
-			from,
-			&asset_account,
-			amount,
-			Preservation::Preserve,
-		)?;
+		// Todo: Do accounting of asset funds
 
 		Ok(())
 	}
@@ -157,43 +137,21 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 	fn transfer_funds_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
-		_fungibles_asset_id: &Self::FungiblesAssetId,
+		fungibles_asset_id: Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
-		let asset_account =
-			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
+		// Todo: inspect if asset contains funds
 
-		<T::Fungible as fungible::Mutate<_>>::transfer(
-			&asset_account,
-			to,
-			amount,
-			Preservation::Preserve,
-		)?;
-		Ok(())
+		T::TransferFunds::transfer(fungibles_asset_id, &Self::assets_funds_pot(), to, amount)
 	}
 
 	fn transfer_all_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
-		_fungibles_asset_id: &Self::FungiblesAssetId,
+		fungibles_asset_id: Self::FungiblesAssetId,
 	) -> Result<(), DispatchError> {
-		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
-		let asset_account =
-			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
+		// Todo: inspect if asset contains funds
 
-		let reducible_balance = <T::Fungible as fungible::Inspect<_>>::reducible_balance(
-			&asset_account,
-			Preservation::Expendable,
-			Fortitude::Polite,
-		);
-		<T::Fungible as fungible::Mutate<_>>::transfer(
-			&asset_account,
-			to,
-			reducible_balance,
-			Preservation::Expendable,
-		)?;
-
-		Ok(())
+		T::TransferFunds::transfer_all(fungibles_asset_id, &Self::assets_funds_pot(), to)
 	}
 }

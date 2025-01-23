@@ -100,20 +100,20 @@ pub trait AssetFundsManager {
 	fn deposit_funds_to_asset(
 		asset_id: &Self::AssetId,
 		from: &Self::AccountId,
-		fungibles_asset_id: &Self::FungiblesAssetId,
+		fungibles_asset_id: Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
 
 	fn transfer_funds_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
-		fungibles_asset_id: &Self::FungiblesAssetId,
+		fungibles_asset_id: Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
 
 	fn transfer_all_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
-		fungibles_asset_id: &Self::FungiblesAssetId,
+		fungibles_asset_id: Self::FungiblesAssetId,
 	) -> Result<(), DispatchError>;
 }
