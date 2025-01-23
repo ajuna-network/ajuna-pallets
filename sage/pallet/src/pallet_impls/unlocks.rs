@@ -91,7 +91,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			LockableFeature::TradeAsset => fee.unlock_trade_asset,
 			LockableFeature::TransferAsset => fee.unlock_transfer_asset,
 		};
-		T::FeeHandler::withdraw_and_deposit_into_treasury(
+		T::FeeHandler::withdraw_and_deposit_into(
 			&payer,
 			payment,
 			&Self::treasury_account_id(),

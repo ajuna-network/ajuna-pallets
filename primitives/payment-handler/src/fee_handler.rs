@@ -69,7 +69,7 @@ pub trait FeeHandler {
 
 	/// Withdraws the `amount` denominated in `payment` and allocates it fully to the
 	/// `treasury_pot`.
-	fn withdraw_and_deposit_into_treasury(
+	fn withdraw_and_deposit_into(
 		who: &Self::AccountId,
 		payment: Self::PaymentKind,
 		treasury_pot: &Self::AccountId,
@@ -130,21 +130,25 @@ where
 			let remaining_credit2 =
 				Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
 
-			Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+			Self::deposit(treasury_pot, remaining_credit2)
 		} else {
+			// This is only none if the fee was paid with a voucher.
+			// In this case we simply do nothing.
 			Ok(())
 		}
 	}
 
-	fn withdraw_and_deposit_into_treasury(
+	fn withdraw_and_deposit_into(
 		who: &Self::AccountId,
 		payment: Self::PaymentKind,
-		treasury_pot: &Self::AccountId,
+		beneficiary: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
 		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
-			Self::deposit_into_treasury(treasury_pot, credit)
+			Self::deposit(beneficiary, credit)
 		} else {
+			// This is only none, if the fee was paid with a voucher.
+			// In this case we simply put nothing into the treasury.
 			Ok(())
 		}
 	}
@@ -239,7 +243,7 @@ where
 		Ok(final_fee)
 	}
 
-	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
+	fn deposit(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
 		if let Err(_credit) = W::Assets::resolve(key, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
@@ -308,7 +312,7 @@ where
 		}
 	}
 
-	fn withdraw_and_deposit_into_treasury(
+	fn withdraw_and_deposit_into(
 		who: &Self::AccountId,
 		payment: Self::PaymentKind,
 		treasury_pot: &Self::AccountId,

@@ -317,7 +317,7 @@ mod asset_fee_handler {
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestAssetFeeHandler::withdraw_and_deposit_into_treasury(
+				TestAssetFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					WHITELISTED_ASSET_ID_PAYMENT,
 					&fee_beneficiary,
@@ -347,7 +347,7 @@ mod asset_fee_handler {
 					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
 					.expect("Should contain remaining vouchers");
 
-				TestAssetFeeHandler::withdraw_and_deposit_into_treasury(
+				TestAssetFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					VOUCHER_ASSET_PAYMENT,
 					&fee_beneficiary,
@@ -710,7 +710,7 @@ mod native_fee_handler {
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
+				TestNativeFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					NATIVE_ASSET_PAYMENT,
 					&fee_beneficiary,
@@ -737,7 +737,7 @@ mod native_fee_handler {
 					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
 					.expect("Should contain remaining vouchers");
 
-				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
+				TestNativeFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					VOUCHER_NATIVE_PAYMENT,
 					&fee_beneficiary,

@@ -36,7 +36,7 @@ mod tests;
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetFundsManager, AssetManager, Lock, LockIdentifier},
-	payment_handler::FeeHandler,
+	payment_handler::{FeeHandler, WithdrawCredit},
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
 };
@@ -128,6 +128,12 @@ pub mod pallet {
 			Balance = BalanceOf<Self, I>,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
+		>;
+
+		type WithdrawCredit: WithdrawCredit<
+			AccountId = AccountIdOf<Self>,
+			AssetId = FungiblesAssetIdOf<Self, I>,
+			Balance = BalanceOf<Self, I>,
 		>;
 
 		type FungiblesAssetId: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
@@ -575,7 +581,7 @@ pub mod pallet {
 			}
 
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
-			T::FeeHandler::withdraw_and_deposit_into_treasury(
+			T::FeeHandler::withdraw_and_deposit_into(
 				&from,
 				payment.unwrap_or_default(),
 				&Self::treasury_account_id(),
