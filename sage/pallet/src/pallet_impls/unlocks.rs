@@ -15,8 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	pallet::PlayerStatsOf, AccountIdOf, Config, Error, Event, LockableFeature, Pallet, PaymentOf,
-	PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget,
+	pallet::PlayerStatsOf, AccountIdOf, Config, Error, Event, FungiblesAssetIdOf, LockableFeature,
+	Pallet, PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockRule,
+	UnlockTarget,
 };
 use ajuna_primitives::{payment_handler::FeeHandler, season_manager::SeasonManager};
 use frame_support::pallet_prelude::*;
@@ -26,7 +27,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		account: AccountIdOf<T>,
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
-		payment: PaymentOf<T, I>,
+		payment: FungiblesAssetIdOf<T, I>,
 	) -> DispatchResult {
 		Self::unlock(account, target, season_id, LockableFeature::TradeAsset, payment)
 	}
@@ -35,7 +36,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		account: AccountIdOf<T>,
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
-		payment: PaymentOf<T, I>,
+		payment: FungiblesAssetIdOf<T, I>,
 	) -> DispatchResult {
 		Self::unlock(account, target, season_id, LockableFeature::TransferAsset, payment)
 	}
@@ -45,7 +46,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		target: UnlockTarget<AccountIdOf<T>>,
 		season_id: SeasonIdOf<T, I>,
 		feature: LockableFeature,
-		payment: PaymentOf<T, I>,
+		payment: FungiblesAssetIdOf<T, I>,
 	) -> DispatchResult {
 		match target {
 			UnlockTarget::OneselfFree => Self::unlock_free(account, season_id, feature),
@@ -82,7 +83,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		target: AccountIdOf<T>,
 		season_id: SeasonIdOf<T, I>,
 		feature: LockableFeature,
-		payment: PaymentOf<T, I>,
+		payment: FungiblesAssetIdOf<T, I>,
 	) -> DispatchResult {
 		// first we pay
 		let fee = T::SeasonHandler::get_season_config_for(&season_id)?.fee;

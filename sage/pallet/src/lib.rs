@@ -100,8 +100,7 @@ pub mod pallet {
 	pub type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
 	pub type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
-	pub type PaymentOf<T, I> = <T as Config<I>>::PaymentKind;
-	pub type MaybePaymentOf<T, I> = Option<PaymentOf<T, I>>;
+	pub type FungiblesAssetIdOf<T, I> = <T as Config<I>>::FungiblesAssetId;
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
@@ -125,13 +124,13 @@ pub mod pallet {
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
-			PaymentKind = PaymentOf<Self, I>,
+			PaymentKind = FungiblesAssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
 		>;
 
-		type PaymentKind: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
+		type FungiblesAssetId: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
 		/// `SeasonTransferFilters` storage.
@@ -156,7 +155,7 @@ pub mod pallet {
 			TransitionIdOf<Self, I>,
 			TradeFilterOf<Self, I>,
 			TransferFilterOf<Self, I>,
-			PaymentOf<Self, I>,
+			FungiblesAssetIdOf<Self, I>,
 		>;
 	}
 
@@ -271,6 +270,19 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type LockedAssets<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, AssetIdOf<T, I>, Lock<AccountIdOf<T>>>;
+
+	/// Tracks how many funds assets have, which will be returned to the owner, once the
+	/// asset is consumed
+	#[pallet::storage]
+	pub type AssetFunds<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		AssetIdOf<T, I>,
+		Blake2_128Concat,
+		FungiblesAssetIdOf<T, I>,
+		BalanceOf<T, I>,
+		OptionQuery,
+	>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -439,7 +451,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			beneficiary: Option<AccountIdOf<T>>,
 			in_season: Option<SeasonIdOf<T, I>>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
@@ -518,7 +530,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 
@@ -617,7 +629,7 @@ pub mod pallet {
 		pub fn buy_asset(
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			let GeneralConfig { trade, .. } = GeneralConfigStore::<T, I>::get();
@@ -695,7 +707,7 @@ pub mod pallet {
 			target: UnlockTarget<AccountIdOf<T>>,
 			feature: LockableFeature,
 			season_id: SeasonIdOf<T, I>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
@@ -717,7 +729,7 @@ pub mod pallet {
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
-			payment: Option<PaymentOf<T, I>>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
