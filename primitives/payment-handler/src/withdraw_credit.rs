@@ -116,7 +116,7 @@ where
 		credit: Self::Balance,
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Self::Assets::withdraw(
-			asset_id.clone(),
+			asset_id,
 			who,
 			credit,
 			Precision::Exact,

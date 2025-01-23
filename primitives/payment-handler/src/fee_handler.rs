@@ -186,7 +186,7 @@ where
 	) -> Result<(), DispatchError> {
 		let balance = W::Assets::reducible_balance(
 			asset_id.clone(),
-			&from,
+			from,
 			Preservation::Preserve,
 			Fortitude::Polite,
 		);
@@ -418,8 +418,7 @@ where
 		from: &Self::AccountId,
 		to: &Self::AccountId,
 	) -> Result<(), DispatchError> {
-		let balance =
-			W::Assets::reducible_balance(&from, Preservation::Preserve, Fortitude::Polite);
+		let balance = W::Assets::reducible_balance(from, Preservation::Preserve, Fortitude::Polite);
 
 		Self::transfer(asset_id, from, to, balance)
 	}
