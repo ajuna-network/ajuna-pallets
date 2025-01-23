@@ -115,9 +115,14 @@ impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {
 impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 	type AccountId = AccountIdOf<T>;
 	type AssetId = AssetIdOf<T, I>;
+
+	type FungiblesAssetId = FungiblesAssetIdOf<T, I>;
 	type Balance = BalanceOf<T, I>;
 
-	fn inspect_asset_funds(asset_id: &Self::AssetId) -> Self::Balance {
+	fn inspect_asset_funds(
+		asset_id: &Self::AssetId,
+		_fungibles_asset_id: &Self::FungiblesAssetId,
+	) -> Self::Balance {
 		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
 		let asset_account =
 			Self::AccountId::decode(&mut asset_hash.encode().as_bytes_ref()).unwrap();
@@ -132,6 +137,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 	fn deposit_funds_to_asset(
 		asset_id: &Self::AssetId,
 		from: &Self::AccountId,
+		_fungibles_asset_id: &Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
 		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
@@ -151,6 +157,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 	fn transfer_funds_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
+		_fungibles_asset_id: &Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
 		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
@@ -169,6 +176,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 	fn transfer_all_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
+		_fungibles_asset_id: &Self::FungiblesAssetId,
 	) -> Result<(), DispatchError> {
 		let asset_hash = <T as frame_system::Config>::Hashing::hash_of(&asset_id);
 		let asset_account =

@@ -742,7 +742,7 @@ pub mod pallet {
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
-			payment: Option<FungiblesAssetIdOf<T, I>>,
+			payment_kind: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -759,7 +759,13 @@ pub mod pallet {
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
 					.map_err(|e| <Error<T, I>>::from(e))?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
-			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
+			let payment = payment_kind.unwrap_or_default();
+			Self::process_transition_results(
+				&sender,
+				&current_season_id,
+				transition_results,
+				&payment,
+			)?;
 
 			let transition_fee = {
 				let SeasonConfigOf::<T, I> { fee, .. } =
@@ -769,7 +775,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&sender,
-				payment.unwrap_or_default(),
+				payment,
 				transition_fee,
 				&current_season_id,
 				&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
@@ -789,6 +795,10 @@ pub mod pallet {
 
 		pub fn technical_account_id() -> T::AccountId {
 			T::PalletId::get().into_sub_account_truncating(b"technical")
+		}
+
+		pub fn assets_funds_pot() -> T::AccountId {
+			T::PalletId::get().into_sub_account_truncating(b"assets_funds")
 		}
 
 		pub(crate) fn asset_with_owner(
@@ -850,6 +860,7 @@ pub mod pallet {
 			player: &AccountIdOf<T>,
 			season_id: &SeasonIdOf<T, I>,
 			transition_results: Vec<TransitionOutputOf<T, I>>,
+			payment_kind: &FungiblesAssetIdOf<T, I>,
 		) -> DispatchResult {
 			let mut minted_amount = 0 as Stat;
 			let mut mutated_amount = 0 as Stat;
@@ -897,8 +908,10 @@ pub mod pallet {
 							// If the asset has some funds, we transfer all to the owner.
 							// Todo: shall this be made configurable, like partly flowing into a
 							// treasury?
-							if Self::inspect_asset_funds(&asset_id) > Default::default() {
-								Self::transfer_all_from_asset(&asset_id, &owner)?;
+							if Self::inspect_asset_funds(&asset_id, &payment_kind) >
+								Default::default()
+							{
+								Self::transfer_all_from_asset(&asset_id, &owner, &payment_kind)?;
 							}
 						}
 					},

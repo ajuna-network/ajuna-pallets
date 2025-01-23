@@ -88,24 +88,32 @@ pub trait AssetFundsManager {
 
 	type AssetId: Member + Codec;
 
+	type FungiblesAssetId;
+
 	type Balance;
 
-	fn inspect_asset_funds(asset_id: &Self::AssetId) -> Self::Balance;
+	fn inspect_asset_funds(
+		asset_id: &Self::AssetId,
+		fungibles_asset_id: &Self::FungiblesAssetId,
+	) -> Self::Balance;
 
 	fn deposit_funds_to_asset(
 		asset_id: &Self::AssetId,
 		from: &Self::AccountId,
+		fungibles_asset_id: &Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
 
 	fn transfer_funds_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
+		fungibles_asset_id: &Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
 
 	fn transfer_all_from_asset(
 		asset_id: &Self::AssetId,
 		to: &Self::AccountId,
+		fungibles_asset_id: &Self::FungiblesAssetId,
 	) -> Result<(), DispatchError>;
 }
