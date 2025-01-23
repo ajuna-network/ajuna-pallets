@@ -1,9 +1,14 @@
 use crate::withdraw_credit::WithdrawCredit;
 
+use crate::transfer::TransferFunds;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
-	traits::{fungible, fungibles, Defensive, Imbalance},
+	traits::{
+		fungible, fungibles,
+		tokens::{Fortitude, Preservation},
+		Defensive, Imbalance,
+	},
 	BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
@@ -144,13 +149,49 @@ where
 		beneficiary: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
-			Self::deposit(beneficiary, credit)
-		} else {
-			// This is only none, if the fee was paid with a voucher.
-			// In this case we simply put nothing into the treasury.
-			Ok(())
-		}
+		Self::withdraw_and_deposit(payment, who, beneficiary, amount)
+	}
+}
+
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament> TransferFunds
+	for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+where
+	// This is satisfied by the `pallet-assets`, `pallet-asset-conversion` and the
+	// `NativeAndAssets` struct.
+	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>
+		+ fungibles::Inspect<AccountId, Balance = W::Balance, AssetId = W::AssetId>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Assets,
+		Credit = fungibles::Credit<AccountId, Assets>,
+	>,
+{
+	type AccountId = AccountId;
+	type AssetId = W::AssetId;
+	type Balance = W::Balance;
+
+	fn transfer(
+		asset_id: Self::AssetId,
+		from: &Self::AccountId,
+		to: &Self::AccountId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		Self::withdraw_and_deposit(asset_id, from, to, amount)
+	}
+
+	fn transfer_all(
+		asset_id: Self::AssetId,
+		from: &Self::AccountId,
+		to: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		let balance = W::Assets::reducible_balance(
+			asset_id.clone(),
+			&from,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		);
+
+		Self::transfer(asset_id, from, to, balance)
 	}
 }
 
@@ -242,14 +283,40 @@ where
 
 		Ok(final_fee)
 	}
+}
 
-	fn deposit(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
-		if let Err(_credit) = W::Assets::resolve(key, credit) {
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+	AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+where
+	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Assets,
+		Credit = fungibles::Credit<AccountId, Assets>,
+	>,
+{
+	fn withdraw_and_deposit(
+		payment: W::AssetId,
+		who: &AccountId,
+		beneficiary: &AccountId,
+		amount: W::Balance,
+	) -> Result<(), DispatchError> {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
+			Self::deposit(beneficiary, credit)
+		} else {
+			// This is only none, if the fee was paid with a voucher.
+			// In this case we simply put nothing into the treasury.
+			Ok(())
+		}
+	}
+
+	fn deposit(beneficiary: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
+		if let Err(_credit) = W::Assets::resolve(beneficiary, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
 			// the transaction fails because we can't allocate the fees to the recipient.
 			log::error!(
-				"Could not deposit to treasury, it probably doesn't exist, burning the credit..."
+				"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
 			);
 		}
 		Ok(())

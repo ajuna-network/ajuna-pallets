@@ -11,4 +11,5 @@ pub use withdraw_credit::*;
 mod mock;
 #[cfg(test)]
 mod tests;
+mod transfer;
 mod voucher_handler;
