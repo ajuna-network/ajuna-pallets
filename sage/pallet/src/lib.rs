@@ -743,7 +743,7 @@ pub mod pallet {
 			}
 			let transition_results =
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
-					.map_err(|e| <Error<T, I>>::from(e))?;
+					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 
