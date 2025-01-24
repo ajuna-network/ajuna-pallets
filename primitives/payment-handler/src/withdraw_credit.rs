@@ -7,7 +7,7 @@ use frame_support::{
 		tokens::{AssetId, Balance, Fortitude, Precision, Preservation},
 	},
 };
-use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
+use parity_scale_codec::{Decode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// Implements `WithdrawCredit`, but ensures that only whitelisted assets are withdrawn.
