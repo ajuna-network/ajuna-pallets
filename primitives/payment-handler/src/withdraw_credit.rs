@@ -131,11 +131,50 @@ where
 	}
 }
 
-#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo)]
 pub enum WithdrawKind<AssetId> {
 	Payment(AssetId),
-	#[default]
 	Voucher,
+}
+
+impl<AssetId: NativeId> NativeId for WithdrawKind<AssetId> {
+	fn get_native_id() -> Self {
+		Self::Payment(AssetId::get_native_id())
+	}
+
+	fn is_native_id(&self) -> bool {
+		match self {
+			Self::Payment(asset_id) => asset_id.is_native_id(),
+			Self::Voucher => false,
+		}
+	}
+}
+
+impl<AssetId> VoucherId for WithdrawKind<AssetId> {
+	fn get_voucher_id() -> Option<Self> {
+		Some(Self::Voucher)
+	}
+
+	fn is_voucher_id(&self) -> bool {
+		match self {
+			Self::Voucher => true,
+			Self::Payment(_) => false,
+		}
+	}
+}
+
+pub trait NativeId {
+	fn get_native_id() -> Self;
+
+	fn is_native_id(&self) -> bool;
+}
+
+pub trait VoucherId: Sized {
+
+	/// Make this an option in case that vouchers are not supported.
+	fn get_voucher_id() -> Option<Self>;
+
+	fn is_voucher_id(&self) -> bool;
 }
 
 impl<AssetId> IdentifyVoucherOrAssetId for WithdrawKind<AssetId>

@@ -1,9 +1,10 @@
+use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use crate::{IdentifyVoucherOrAssetId, WithdrawCredit};
 use frame_support::traits::{
 	fungibles,
 	tokens::{Fortitude, Preservation},
 };
-use sp_runtime::DispatchError;
+use sp_runtime::{DispatchError, TokenError};
 use sp_std::marker::PhantomData;
 
 /// Abstraction around transferring funds without disclosing the
@@ -26,16 +27,22 @@ pub trait TransferFungible {
 		to: &Self::AccountId,
 		amount: Self::Balance,
 		preservation: Preservation
-	) -> Result<(), DispatchError>;
+	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError>;
 
 	fn transfer_all(
 		asset_id: Self::AssetId,
 		from: &Self::AccountId,
 		to: &Self::AccountId,
-	) -> Result<(), DispatchError>;
+	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError>;
 }
 
 pub struct TransferAll<W, I>(PhantomData<(W, I)>);
+
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
+pub struct TransferResult<AssetId, Amount> {
+	pub asset_id: AssetId,
+	pub amount: Amount,
+}
 
 impl<AccountId, Assets, W, I> TransferFungible for TransferAll<W, I>
 where
@@ -48,6 +55,7 @@ where
 		AssetId = I,
 	>,
 	I: IdentifyVoucherOrAssetId,
+	W::AssetId: From<I::AssetId>,
 {
 	type AccountId = AccountId;
 	type AssetId = W::AssetId;
@@ -59,8 +67,13 @@ where
 		to: &Self::AccountId,
 		amount: Self::Balance,
 		preservation: Preservation
-	) -> Result<(), DispatchError> {
+	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError> {
 		if let Some(credit) = W::withdraw_credit(from, asset_id, amount, preservation)? {
+			let result = TransferResult {
+				asset_id: credit.asset().into(),
+				amount: credit.peek()
+			};
+
 			if let Err(_credit) = W::Assets::resolve(to, credit) {
 				// We decide to continue here, because the error has nothing to do with the
 				// account sending the transaction. It would be a bad user experience if
@@ -69,12 +82,11 @@ where
 				"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
 			);
 			}
-			Ok(())
+			Ok(result)
 		} else {
 			// The asset id is a voucher or anything else not-relating to fungible assets.
-			// We do a no-op here.
-			log::debug!("Transferring vouchers is a noop");
-			Ok(())
+			log::error!("No credit withdrawn, maybe the asset was a voucher ");
+			Err(DispatchError::Token(TokenError::Unsupported))
 		}
 	}
 
@@ -82,7 +94,7 @@ where
 		asset_id: Self::AssetId,
 		from: &Self::AccountId,
 		to: &Self::AccountId,
-	) -> Result<(), DispatchError> {
+	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError> {
 		if let Some(id) = asset_id.as_asset_id() {
 			let balance = W::Assets::reducible_balance(
 				id.clone(),
@@ -94,9 +106,8 @@ where
 			Self::transfer(asset_id, from, to, balance, Preservation::Expendable)
 		} else {
 			// The asset id is a voucher or anything else not-relating to fungible assets.
-			// We do a no-op here.
-			log::debug!("Transferring vouchers is a noop");
-			Ok(())
+			log::error!("No credit withdrawn, maybe the asset was a voucher ");
+			Err(DispatchError::Token(TokenError::Unsupported))
 		}
 	}
 }

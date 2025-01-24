@@ -66,7 +66,8 @@ pub const MAX_ASSETS_IN_TRANSITION: usize = 10;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::traits::tokens::Preservation;
+	use frame_support::traits::tokens::{AssetId, Preservation};
+	use ajuna_primitives::payment_handler::{IdentifyVoucherOrAssetId, NativeId};
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -136,7 +137,7 @@ pub mod pallet {
 			Balance = BalanceOf<Self, I>,
 		>;
 
-		type FungiblesAssetId: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
+		type FungiblesAssetId: AssetId + IdentifyVoucherOrAssetId + NativeId;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
 		/// `SeasonTransferFilters` storage.
@@ -380,6 +381,8 @@ pub mod pallet {
 		AssetLockedByOtherApplication,
 		/// The asset is not currently locked and cannot be unlocked.
 		AssetNotLocked,
+		/// The asset does not own enough funds for the operation..
+		AssetsFundsTooLow,
 		/// Tried transferring to his or her own account.
 		CannotTransferToSelf,
 		/// The feature is locked for the current player
@@ -484,7 +487,7 @@ pub mod pallet {
 			let base_fee = fee.upgrade_asset_inventory;
 			T::FeeHandler::withdraw_and_pay_fees(
 				&caller,
-				payment.unwrap_or_default(),
+				payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id()),
 				base_fee,
 				&season_id,
 				&AffiliateMethods::UpgradeAssetInventory,
@@ -583,7 +586,7 @@ pub mod pallet {
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::withdraw_and_deposit_into(
 				&from,
-				payment.unwrap_or_default(),
+				payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id()),
 				&Self::treasury_account_id(),
 				fee.transfer_asset,
 			)?;
@@ -676,7 +679,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&buyer,
-				payment.unwrap_or_default(),
+				payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id()),
 				trade_fee,
 				&asset_season_id,
 				&AffiliateMethods::TradeAsset,
@@ -730,7 +733,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
-			let payment = payment.unwrap_or_default();
+			let payment = payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id());
 
 			match feature {
 				LockableFeature::TradeAsset =>
@@ -765,7 +768,7 @@ pub mod pallet {
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
 					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
-			let payment = payment_kind.unwrap_or_default();
+			let payment = payment_kind.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id());
 			Self::process_transition_results(
 				&sender,
 				&current_season_id,
