@@ -42,9 +42,10 @@ impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: W
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Whitelist::ensure_whitelisted(&asset_id)?;
-		Withdraw::withdraw_credit(who, asset_id, credit)
+		Withdraw::withdraw_credit(who, asset_id, credit, preservation)
 	}
 }
 
@@ -67,6 +68,7 @@ pub trait WithdrawCredit {
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation
 	) -> Result<Option<Self::Credit>, DispatchError>;
 }
 
@@ -86,12 +88,13 @@ where
 		who: &Self::AccountId,
 		_: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Self::Assets::withdraw(
 			who,
 			credit,
 			Precision::Exact,
-			Preservation::Preserve,
+			preservation,
 			Fortitude::Polite,
 		)
 		.map(Some)
@@ -114,13 +117,14 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Self::Assets::withdraw(
 			asset_id,
 			who,
 			credit,
 			Precision::Exact,
-			Preservation::Preserve,
+			preservation,
 			Fortitude::Polite,
 		)
 		.map(Some)
@@ -171,10 +175,11 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		match asset_id {
 			WithdrawKind::Payment(payment_asset_id) =>
-				W::withdraw_credit(who, payment_asset_id, credit),
+				W::withdraw_credit(who, payment_asset_id, credit, preservation),
 			WithdrawKind::Voucher => V::consume_vouchers_from(who, credit).map(|_| None),
 		}
 	}

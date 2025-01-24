@@ -25,6 +25,7 @@ pub trait TransferFungible {
 		from: &Self::AccountId,
 		to: &Self::AccountId,
 		amount: Self::Balance,
+		preservation: Preservation
 	) -> Result<(), DispatchError>;
 
 	fn transfer_all(
@@ -57,8 +58,9 @@ where
 		from: &Self::AccountId,
 		to: &Self::AccountId,
 		amount: Self::Balance,
+		preservation: Preservation
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = W::withdraw_credit(from, asset_id, amount)? {
+		if let Some(credit) = W::withdraw_credit(from, asset_id, amount, preservation)? {
 			if let Err(_credit) = W::Assets::resolve(to, credit) {
 				// We decide to continue here, because the error has nothing to do with the
 				// account sending the transaction. It would be a bad user experience if
@@ -85,11 +87,11 @@ where
 			let balance = W::Assets::reducible_balance(
 				id.clone(),
 				from,
-				Preservation::Preserve,
+				Preservation::Expendable,
 				Fortitude::Polite,
 			);
 
-			Self::transfer(asset_id, from, to, balance)
+			Self::transfer(asset_id, from, to, balance, Preservation::Expendable)
 		} else {
 			// The asset id is a voucher or anything else not-relating to fungible assets.
 			// We do a no-op here.
@@ -128,7 +130,7 @@ mod tests {
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee)
+				TestTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
 					.unwrap();
 
 				assert_eq!(
@@ -153,7 +155,7 @@ mod tests {
 					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
 					.expect("Should contain remaining vouchers");
 
-				TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee)
+				TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
 					.unwrap();
 
 				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
@@ -180,6 +182,7 @@ mod tests {
 						&ALICE,
 						&fee_beneficiary,
 						fee,
+						Preservation::Preserve
 					),
 					DispatchError::Module(ModuleError {
 						index: 2,
@@ -204,7 +207,7 @@ mod tests {
 					.expect("Should contain remaining vouchers");
 
 				assert_noop!(
-					TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee,),
+					TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve),
 					DispatchError::Token(TokenError::FundsUnavailable)
 				);
 
@@ -231,11 +234,33 @@ mod tests {
 						&ALICE,
 						&fee_beneficiary,
 						fee,
+						Preservation::Preserve
 					),
 					DispatchError::Token(TokenError::Unsupported)
 				);
 
 				assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
+			});
+		}
+	}
+
+	mod transfer_all {
+		use super::*;
+
+		#[test]
+		fn transfer_all_works() {
+			ExtBuilder::default().build().execute_with(|| {
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
+
+				TestTransfer::transfer_all(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary)
+					.unwrap();
+
+				assert_eq!(
+					Assets::balance(WHITELISTED_ASSET_ID, ALICE),
+					0
+				);
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), alice_balance_before)
 			});
 		}
 	}

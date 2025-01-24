@@ -1,16 +1,15 @@
 use crate::withdraw_credit::WithdrawCredit;
 
-use crate::transfer_fungible::TransferFungible;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
 	traits::{
 		fungible, fungibles,
-		tokens::{Fortitude, Preservation},
 		Defensive, Imbalance,
 	},
 	BoundedVec,
 };
+use frame_support::traits::tokens::Preservation;
 use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
 
@@ -128,7 +127,7 @@ where
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = W::withdraw_credit(payer, payment.clone(), base_fee)? {
+		if let Some(fee_credit) = W::withdraw_credit(payer, payment.clone(), base_fee, Preservation::Preserve)? {
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
@@ -259,7 +258,7 @@ where
 		beneficiary: &AccountId,
 		amount: W::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount, Preservation::Preserve)? {
 			Self::deposit(beneficiary, credit)
 		} else {
 			// This is only none, if the fee was paid with a voucher.
@@ -324,7 +323,7 @@ where
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = W::withdraw_credit(payer, payment, base_fee)? {
+		if let Some(fee_credit) = W::withdraw_credit(payer, payment, base_fee, Preservation::Preserve)? {
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
@@ -344,41 +343,6 @@ where
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
 		Self::withdraw_and_deposit(payment, who, beneficiary, amount)
-	}
-}
-
-impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament> TransferFungible
-	for NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
-where
-	Balances: fungible::Balanced<AccountId, Balance = W::Balance>
-		+ fungible::Inspect<AccountId, Balance = W::Balance>,
-	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Balances,
-		Credit = fungible::Credit<AccountId, Balances>,
-	>,
-{
-	type AccountId = AccountId;
-	type AssetId = W::AssetId;
-	type Balance = W::Balance;
-
-	fn transfer(
-		asset_id: Self::AssetId,
-		from: &Self::AccountId,
-		to: &Self::AccountId,
-		amount: Self::Balance,
-	) -> Result<(), DispatchError> {
-		Self::withdraw_and_deposit(asset_id, from, to, amount)
-	}
-
-	fn transfer_all(
-		asset_id: Self::AssetId,
-		from: &Self::AccountId,
-		to: &Self::AccountId,
-	) -> Result<(), DispatchError> {
-		let balance = W::Assets::reducible_balance(from, Preservation::Preserve, Fortitude::Polite);
-
-		Self::transfer(asset_id, from, to, balance)
 	}
 }
 
@@ -486,7 +450,7 @@ where
 		beneficiary: &AccountId,
 		amount: W::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount, Preservation::Preserve)? {
 			Self::deposit(beneficiary, credit)
 		} else {
 			// This is only none, if the fee was paid with a voucher.
