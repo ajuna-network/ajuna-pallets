@@ -38,7 +38,7 @@ pub trait TransferFungible {
 	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError>;
 }
 
-pub struct TransferAll<W, I>(PhantomData<(W, I)>);
+pub struct TransferFungibleAssets<W, I>(PhantomData<(W, I)>);
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
 pub struct TransferResult<AssetId, Amount> {
@@ -46,7 +46,7 @@ pub struct TransferResult<AssetId, Amount> {
 	pub amount: Amount,
 }
 
-impl<AccountId, Assets, W, I> TransferFungible for TransferAll<W, I>
+impl<AccountId, Assets, W, I> TransferFungible for TransferFungibleAssets<W, I>
 where
 	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>
 		+ fungibles::Inspect<AccountId, Balance = W::Balance, AssetId = I::AssetId>,
@@ -125,7 +125,7 @@ mod tests {
 	use frame_support::assert_noop;
 	use sp_runtime::{ModuleError, TokenError};
 
-	type TestAssetTransfer = TransferAll<
+	type TestAssetTransfer = TransferFungibleAssets<
 		WithdrawCreditOrVoucher<WithdrawWhitelistedAssets, MockVoucherHandler>,
 		WithdrawKind<AssetId>,
 	>;
