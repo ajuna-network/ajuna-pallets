@@ -184,13 +184,20 @@ mod asset_funds_manager {
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
 
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), 0);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				0
+			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
 				&ALICE,
+				NATIVE_PAYMENT,
 				asset_balance
 			));
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), asset_balance);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				asset_balance
+			);
 
 			// money went from Alice to the asset
 			assert_eq!(
@@ -207,14 +214,18 @@ mod asset_funds_manager {
 			let asset_id = asset_ids[0];
 			let asset_balance = 1_000;
 
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), 0);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				0
+			);
 			assert_err!(
 				<Sage as AssetFundsManager>::deposit_funds_to_asset(
 					&asset_id,
 					&ALICE,
+					NATIVE_PAYMENT,
 					asset_balance
 				),
-				TokenError::NotExpendable
+				TokenError::FundsUnavailable
 			);
 
 			// Alice still has all her money
@@ -233,13 +244,20 @@ mod asset_funds_manager {
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
 
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), 0);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				0
+			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
 				&ALICE,
+				NATIVE_PAYMENT,
 				asset_balance
 			));
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), asset_balance);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				asset_balance
+			);
 			assert_eq!(
 				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
 				1_000 - asset_balance
@@ -248,6 +266,7 @@ mod asset_funds_manager {
 			assert_ok!(<Sage as AssetFundsManager>::transfer_funds_from_asset(
 				&asset_id,
 				&ALICE,
+				NATIVE_PAYMENT,
 				// in this case the account can't be reaped, so we keep the ED.
 				asset_balance - ed
 			));
@@ -265,13 +284,20 @@ mod asset_funds_manager {
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
 
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), 0);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT,),
+				0
+			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
 				&ALICE,
+				NATIVE_PAYMENT,
 				asset_balance
 			));
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), asset_balance);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				asset_balance
+			);
 			assert_eq!(
 				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
 				1_000 - asset_balance
@@ -281,6 +307,7 @@ mod asset_funds_manager {
 				<Sage as AssetFundsManager>::transfer_funds_from_asset(
 					&asset_id,
 					&ALICE,
+					NATIVE_PAYMENT,
 					asset_balance
 				),
 				TokenError::NotExpendable
@@ -301,17 +328,31 @@ mod asset_funds_manager {
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
 
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), 0);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				0
+			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
 				&ALICE,
+				NATIVE_PAYMENT,
 				asset_balance
 			));
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), asset_balance);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				asset_balance
+			);
 
-			assert_ok!(<Sage as AssetFundsManager>::transfer_all_from_asset(&asset_id, &ALICE,),);
+			assert_ok!(<Sage as AssetFundsManager>::transfer_all_from_asset(
+				&asset_id,
+				&ALICE,
+				NATIVE_PAYMENT,
+			),);
 
-			assert_eq!(<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id), 0);
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT,),
+				0
+			);
 
 			// Alice has now her initial balance
 			assert_eq!(

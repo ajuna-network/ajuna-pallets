@@ -20,8 +20,8 @@ use ajuna_primitives::{
 	chain_inspector::ChainInspector,
 	payment_handler::{
 		AffiliateFeeDistribution, AllowAllAssets, AssetGameFeeHandler, DistributeFee, PaymentFee,
-		VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind,
-		WithdrawWhitelistedCredit,
+		TransferFungibleAssets, VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles,
+		WithdrawKind, WithdrawWhitelistedCredit,
 	},
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 };
@@ -252,6 +252,16 @@ impl VoucherHandler for MockVoucherHandler {
 pub type GameTransitionOf =
 	GameTransition<MockAccountId, BlockNumberFor<Test>, MockAssetMediator, MockAssetMediator>;
 
+pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
+	WithdrawWhitelistedCredit<
+		AllowAllAssets<NativeOrWithId<AssetId>>,
+		WithdrawFungibles<MockAccountId, NativeAndAssets>,
+	>,
+	MockVoucherHandler,
+>;
+
+type FungiblesAssetId = WithdrawKind<NativeOrWithId<AssetId>>;
+
 impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = GameTransitionOf;
@@ -259,18 +269,13 @@ impl crate::Config for Test {
 	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
 		NativeAndAssets,
-		WithdrawCreditOrVoucher<
-			WithdrawWhitelistedCredit<
-				AllowAllAssets<NativeOrWithId<AssetId>>,
-				WithdrawFungibles<MockAccountId, NativeAndAssets>,
-			>,
-			MockVoucherHandler,
-		>,
+		WithdrawAllCreditOrVoucher,
 		TestAffiliatesFeeProvider,
 		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,
 	>;
-	type PaymentKind = WithdrawKind<NativeOrWithId<AssetId>>;
+	type FungiblesAssetId = FungiblesAssetId;
+	type TransferFunds = TransferFungibleAssets<WithdrawAllCreditOrVoucher, FungiblesAssetId>;
 	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
 	type Fungible = Balances;
 	type RuntimeEvent = RuntimeEvent;

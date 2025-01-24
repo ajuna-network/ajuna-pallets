@@ -146,11 +146,15 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			amount,
 			Preservation::Preserve,
 		)?;
+
 		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds| match funds {
 			Some(f) => f
 				.checked_add(&result.amount)
 				.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Overflow)),
-			None => Ok(result.amount),
+			None => {
+				*funds = Some(result.amount);
+				Ok(result.amount)
+			},
 		})?;
 
 		Ok(())
@@ -162,7 +166,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		fungibles_asset_id: Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		if Self::inspect_asset_funds(asset_id, &fungibles_asset_id) > amount {
+		if Self::inspect_asset_funds(asset_id, &fungibles_asset_id) < amount {
 			return Err(Error::<T, I>::AssetsFundsTooLow.into())
 		}
 
