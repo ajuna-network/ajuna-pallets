@@ -152,7 +152,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			Some(f) => {
 				*f = f
 					.checked_add(&result.output_amount)
-					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+					.ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
 				Ok::<_, DispatchError>(())
 			},
 			None => {
@@ -186,7 +186,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			Some(f) => {
 				*f = f
 					.checked_sub(&result.output_amount)
-					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+					.ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
 				Ok::<(), DispatchError>(())
 			},
 			// We checked above, but better be sure

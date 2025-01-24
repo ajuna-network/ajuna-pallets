@@ -61,7 +61,7 @@ where
 		Credit = fungibles::Credit<AccountId, Assets>,
 		AssetId = I,
 	>,
-	I: IdentifyVoucherOrAssetId,
+	I: IdentifyVoucherOrAssetId + Clone,
 	W::AssetId: From<I::AssetId>,
 {
 	type AccountId = AccountId;
@@ -148,7 +148,6 @@ mod tests {
 
 	mod transfer {
 		use super::*;
-		use frame_support::assert_err;
 
 		#[test]
 		fn transfer_works() {

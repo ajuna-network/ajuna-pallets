@@ -487,7 +487,7 @@ pub mod pallet {
 			let base_fee = fee.upgrade_asset_inventory;
 			T::FeeHandler::withdraw_and_pay_fees(
 				&caller,
-				payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id()),
+				payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id),
 				base_fee,
 				&season_id,
 				&AffiliateMethods::UpgradeAssetInventory,
@@ -586,7 +586,7 @@ pub mod pallet {
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
 			T::FeeHandler::withdraw_and_deposit_into(
 				&from,
-				payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id()),
+				payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id),
 				&Self::treasury_account_id(),
 				fee.transfer_asset,
 			)?;
@@ -679,7 +679,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&buyer,
-				payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id()),
+				payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id),
 				trade_fee,
 				&asset_season_id,
 				&AffiliateMethods::TradeAsset,
@@ -733,7 +733,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
-			let payment = payment.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id());
+			let payment = payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
 
 			match feature {
 				LockableFeature::TradeAsset =>
@@ -769,7 +769,7 @@ pub mod pallet {
 					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			let payment =
-				payment_kind.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id());
+				payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
 			Self::process_transition_results(
 				&sender,
 				&current_season_id,
