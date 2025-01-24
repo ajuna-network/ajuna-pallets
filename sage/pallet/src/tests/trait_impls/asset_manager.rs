@@ -175,7 +175,7 @@ mod unlock_asset {
 mod asset_funds_manager {
 	use super::*;
 	use frame_support::assert_err;
-	use sp_runtime::TokenError;
+	use sp_runtime::{ModuleError, TokenError};
 
 	#[test]
 	fn depositing_to_asset_works() {
@@ -203,6 +203,23 @@ mod asset_funds_manager {
 			assert_eq!(
 				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
 				1_000 - asset_balance
+			);
+
+			// Add more money to see if depositing to existing asset funds works
+			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
+				&asset_id,
+				&ALICE,
+				NATIVE_PAYMENT,
+				asset_balance
+			));
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				2 * asset_balance
+			);
+
+			assert_eq!(
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				1_000 - 2 * asset_balance
 			);
 		});
 	}
@@ -244,6 +261,11 @@ mod asset_funds_manager {
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
 
+			<<Test as Config>::Fungible as fungible::Mutate<_>>::set_balance(
+				&Sage::assets_funds_pot(),
+				ed,
+			);
+
 			assert_eq!(
 				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
 				0
@@ -268,24 +290,36 @@ mod asset_funds_manager {
 				&ALICE,
 				NATIVE_PAYMENT,
 				// in this case the account can't be reaped, so we keep the ED.
-				asset_balance - ed
+				asset_balance
 			));
+
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				0
+			);
+
 			assert_eq!(
 				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
-				1_000 - ed
+				1_000
 			);
 		});
 	}
 
 	#[test]
-	fn transfer_funds_from_asset_keeps_asset_account_alive() {
+	fn transfer_funds_from_asset_cant_remove_more_than_owned() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
 			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+			let ed = <<Test as Config>::Fungible as fungible::Inspect<_>>::minimum_balance();
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
 
+			<<Test as Config>::Fungible as fungible::Mutate<_>>::set_balance(
+				&Sage::assets_funds_pot(),
+				ed,
+			);
+
 			assert_eq!(
-				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT,),
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
 				0
 			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
@@ -308,9 +342,13 @@ mod asset_funds_manager {
 					&asset_id,
 					&ALICE,
 					NATIVE_PAYMENT,
-					asset_balance
+					asset_balance + 1
 				),
-				TokenError::FundsUnavailable
+				DispatchError::Module(ModuleError {
+					index: 3,
+					error: [16, 0, 0, 0],
+					message: Some("AssetsFundsTooLow")
+				})
 			);
 
 			// Alice did not receive any money as the transfer failed
