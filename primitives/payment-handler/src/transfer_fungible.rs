@@ -12,10 +12,9 @@ use sp_std::marker::PhantomData;
 /// Abstraction around transferring funds without disclosing the
 /// internals of how the funds are managed.
 ///
-/// The main benefit of this trait is that the uses doesn't have
+/// The main benefit of this trait is that the users doesn't have
 /// to care if the fungible or the fungibles is used behind the
-/// scenes. The `AssetId` will be `()` for the fungible
-/// implementation.
+/// scenes.
 pub trait TransferFungible {
 	type AccountId;
 
@@ -40,10 +39,16 @@ pub trait TransferFungible {
 
 pub struct TransferFungibleAssets<W, I>(PhantomData<(W, I)>);
 
+/// Result of a successful transfer.
+///
+/// It is important to check this result because we do have implementations
+/// that withdraw credit in one asset and allocate it as another asset.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
 pub struct TransferResult<AssetId, Amount> {
-	pub asset_id: AssetId,
-	pub amount: Amount,
+	pub input_asset_id: AssetId,
+	pub input_amount: Amount,
+	pub output_asset_id: AssetId,
+	pub output_amount: Amount,
 }
 
 impl<AccountId, Assets, W, I> TransferFungible for TransferFungibleAssets<W, I>
@@ -75,8 +80,13 @@ where
 			return Err(DispatchError::Token(TokenError::Unsupported));
 		}
 
-		if let Some(credit) = W::withdraw_credit(from, asset_id, amount, preservation)? {
-			let result = TransferResult { asset_id: credit.asset().into(), amount: credit.peek() };
+		if let Some(credit) = W::withdraw_credit(from, asset_id.clone(), amount, preservation)? {
+			let result = TransferResult {
+				input_asset_id: asset_id,
+				input_amount: amount,
+				output_asset_id: credit.asset().into(),
+				output_amount: credit.peek(),
+			};
 
 			if let Err(_credit) = W::Assets::resolve(to, credit) {
 				// We decide to continue here, because the error has nothing to do with the

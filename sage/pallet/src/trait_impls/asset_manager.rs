@@ -147,15 +147,15 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			Preservation::Preserve,
 		)?;
 
-		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds| match funds {
+		AssetFunds::<T, I>::try_mutate(asset_id, result.output_asset_id, |funds| match funds {
 			Some(f) => {
 				*f = f
-					.checked_add(&result.amount)
+					.checked_add(&result.output_amount)
 					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
 				Ok::<_, DispatchError>(())
 			},
 			None => {
-				*funds = Some(result.amount);
+				*funds = Some(result.output_amount);
 				Ok(())
 			},
 		})?;
@@ -181,10 +181,10 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			Preservation::Preserve,
 		)?;
 
-		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds| match funds {
+		AssetFunds::<T, I>::try_mutate(asset_id, result.output_asset_id, |funds| match funds {
 			Some(f) => {
 				*f = f
-					.checked_sub(&result.amount)
+					.checked_sub(&result.output_amount)
 					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Underflow))?;
 				Ok::<(), DispatchError>(())
 			},
