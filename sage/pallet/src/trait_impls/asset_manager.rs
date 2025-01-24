@@ -135,6 +135,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
 		if fungibles_asset_id.is_voucher() {
+			// Todo: To be discussed if this is actually what we want.
 			log::debug!("Trying to deposit voucher to asset, this is a noop");
 			return Ok(());
 		}
