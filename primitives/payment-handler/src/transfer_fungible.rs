@@ -70,6 +70,11 @@ where
 		amount: Self::Balance,
 		preservation: Preservation,
 	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError> {
+		if asset_id.is_voucher() {
+			log::debug!("Transferring vouchers is unsupported on this level. The pallet should handle that.");
+			return Err(DispatchError::Token(TokenError::Unsupported));
+		}
+
 		if let Some(credit) = W::withdraw_credit(from, asset_id, amount, preservation)? {
 			let result = TransferResult { asset_id: credit.asset().into(), amount: credit.peek() };
 
@@ -83,8 +88,9 @@ where
 			}
 			Ok(result)
 		} else {
-			// The asset id is a voucher or anything else not-relating to fungible assets.
-			log::error!("No credit withdrawn, maybe the asset was a voucher ");
+			// We should never get here as we checked above if the asset was a voucher, and all
+			// other known implementations should return `Some`.
+			log::error!("No credit withdrawn, this is unexpected.");
 			Err(DispatchError::Token(TokenError::Unsupported))
 		}
 	}
@@ -105,7 +111,7 @@ where
 			Self::transfer(asset_id, from, to, balance, Preservation::Expendable)
 		} else {
 			// The asset id is a voucher or anything else not-relating to fungible assets.
-			log::error!("No credit withdrawn, maybe the asset was a voucher ");
+			log::debug!("Transferring vouchers is unsupported on this level. The pallet should handle that.");
 			Err(DispatchError::Token(TokenError::Unsupported))
 		}
 	}
@@ -132,6 +138,7 @@ mod tests {
 
 	mod transfer {
 		use super::*;
+		use frame_support::assert_err;
 
 		#[test]
 		fn transfer_works() {
@@ -154,40 +161,6 @@ mod tests {
 					alice_balance_before - fee
 				);
 				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), fee)
-			});
-		}
-
-		#[test]
-		fn transfer_with_vouchers_does_not_err() {
-			// This test is meant to show how using vouchers with the
-			// 'withdraw_and_deposit_into' does not actually store anything in the
-			// beneficiary, but that it also does not fail.
-			ExtBuilder::default().vouchers(&[(ALICE, 15)]).build().execute_with(|| {
-				let fee = 15;
-				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
-				let fee_beneficiary = FERDIE;
-
-				let alice_initial_vouchers = VOUCHERS
-					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
-					.expect("Should contain remaining vouchers");
-
-				TestAssetTransfer::transfer(
-					VOUCHER_ASSET_PAYMENT,
-					&ALICE,
-					&fee_beneficiary,
-					fee,
-					Preservation::Preserve,
-				)
-				.unwrap();
-
-				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
-				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), 0);
-
-				// check that the requested vouchers have been deducted from storage
-				let alice_current_vouchers = VOUCHERS
-					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
-					.expect("Should contain remaining vouchers");
-				assert_eq!(alice_current_vouchers, alice_initial_vouchers - fee);
 			});
 		}
 
@@ -218,7 +191,7 @@ mod tests {
 		}
 
 		#[test]
-		fn transfer_fails_if_missing_vouchers() {
+		fn transfer_with_vouchers_fails() {
 			ExtBuilder::default().vouchers(&[(ALICE, 10)]).build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
@@ -236,7 +209,7 @@ mod tests {
 						fee,
 						Preservation::Preserve
 					),
-					DispatchError::Token(TokenError::FundsUnavailable)
+					DispatchError::Token(TokenError::Unsupported)
 				);
 
 				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
@@ -295,5 +268,30 @@ mod tests {
 				)
 			});
 		}
+	}
+
+	#[test]
+	fn transfer_all_with_vouchers_fails() {
+		ExtBuilder::default().vouchers(&[(ALICE, 10)]).build().execute_with(|| {
+			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+			let fee_beneficiary = FERDIE;
+
+			let alice_initial_vouchers = VOUCHERS
+				.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+				.expect("Should contain remaining vouchers");
+
+			assert_noop!(
+				TestAssetTransfer::transfer_all(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary,),
+				DispatchError::Token(TokenError::Unsupported)
+			);
+
+			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+
+			// check that the vouchers have been untouched
+			let alice_current_vouchers = VOUCHERS
+				.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+				.expect("Should contain remaining vouchers");
+			assert_eq!(alice_current_vouchers, alice_initial_vouchers);
+		});
 	}
 }

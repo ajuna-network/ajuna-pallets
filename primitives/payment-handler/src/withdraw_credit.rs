@@ -133,8 +133,10 @@ pub enum WithdrawKind<AssetId> {
 	Voucher,
 }
 
-impl<AssetId: Ord> From<NativeOrWithId<AssetId>> for WithdrawKind<NativeOrWithId<AssetId>> {
-	fn from(value: NativeOrWithId<AssetId>) -> Self {
+// Not 100% sure if this is too generic and might lead to issues.
+// So far it works though.
+impl<AssetId: Ord> From<AssetId> for WithdrawKind<AssetId> {
+	fn from(value: AssetId) -> Self {
 		Self::Payment(value)
 	}
 }
