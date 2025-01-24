@@ -768,8 +768,7 @@ pub mod pallet {
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
 					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
-			let payment =
-				payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
+			let payment = payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
 			Self::process_transition_results(
 				&sender,
 				&current_season_id,
