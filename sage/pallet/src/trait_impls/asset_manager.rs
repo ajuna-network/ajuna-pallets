@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use frame_support::traits::tokens::Preservation;
 use super::*;
 use ajuna_primitives::asset_manager::{AssetFundsManager, AssetInspector};
 
@@ -127,7 +128,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		fungibles_asset_id: Self::FungiblesAssetId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		T::TransferFunds::transfer(fungibles_asset_id, from, &Self::assets_funds_pot(), amount)?;
+		T::TransferFunds::transfer(fungibles_asset_id, from, &Self::assets_funds_pot(), amount, Preservation::Preserve)?;
 
 		// Todo: Do accounting of asset funds
 
@@ -142,7 +143,7 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 	) -> Result<(), DispatchError> {
 		// Todo: inspect if asset contains funds
 
-		T::TransferFunds::transfer(fungibles_asset_id, &Self::assets_funds_pot(), to, amount)
+		T::TransferFunds::transfer(fungibles_asset_id, &Self::assets_funds_pot(), to, amount, Preservation::Preserve)
 	}
 
 	fn transfer_all_from_asset(
