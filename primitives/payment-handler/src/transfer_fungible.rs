@@ -118,112 +118,125 @@ mod tests {
 		WithdrawKind<AssetId>,
 	>;
 
-	#[test]
-	fn transfer_works() {
-		ExtBuilder::default().build().execute_with(|| {
-			let fee = 20;
-			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
-			let fee_beneficiary = FERDIE;
+	mod transfer {
+		use super::*;
 
-			TestTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee)
-				.unwrap();
+		#[test]
+		fn transfer_works() {
+			ExtBuilder::default().build().execute_with(|| {
+				let fee = 20;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
 
-			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before - fee);
-			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), fee)
-		});
-	}
+				TestTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee)
+					.unwrap();
 
-	#[test]
-	fn transfer_with_vouchers_does_not_err() {
-		// This test is meant to show how using vouchers with the
-		// 'withdraw_and_deposit_into' does not actually store anything in the
-		// beneficiary, but that it also does not fail.
-		ExtBuilder::default().vouchers(&[(ALICE, 15)]).build().execute_with(|| {
-			let fee = 15;
-			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
-			let fee_beneficiary = FERDIE;
+				assert_eq!(
+					Assets::balance(WHITELISTED_ASSET_ID, ALICE),
+					alice_balance_before - fee
+				);
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), fee)
+			});
+		}
 
-			let alice_initial_vouchers = VOUCHERS
-				.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
-				.expect("Should contain remaining vouchers");
+		#[test]
+		fn transfer_with_vouchers_does_not_err() {
+			// This test is meant to show how using vouchers with the
+			// 'withdraw_and_deposit_into' does not actually store anything in the
+			// beneficiary, but that it also does not fail.
+			ExtBuilder::default().vouchers(&[(ALICE, 15)]).build().execute_with(|| {
+				let fee = 15;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
 
-			TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee).unwrap();
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
 
-			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
-			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), 0);
+				TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee)
+					.unwrap();
 
-			// check that the requested vouchers have been deducted from storage
-			let alice_current_vouchers = VOUCHERS
-				.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
-				.expect("Should contain remaining vouchers");
-			assert_eq!(alice_current_vouchers, alice_initial_vouchers - fee);
-		});
-	}
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), 0);
 
-	#[test]
-	fn transfer_fails_if_missing_funds() {
-		ExtBuilder::default().build().execute_with(|| {
-			let fee = 101;
-			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
-			let fee_beneficiary = FERDIE;
+				// check that the requested vouchers have been deducted from storage
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers - fee);
+			});
+		}
 
-			assert_noop!(
-				TestTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee,),
-				DispatchError::Module(ModuleError {
-					index: 2,
-					error: [0, 0, 0, 0],
-					message: Some("BalanceLow")
-				})
-			);
+		#[test]
+		fn transfer_fails_if_missing_funds() {
+			ExtBuilder::default().build().execute_with(|| {
+				let fee = 101;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
 
-			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
-		});
-	}
+				assert_noop!(
+					TestTransfer::transfer(
+						WHITELISTED_ASSET_ID_PAYMENT,
+						&ALICE,
+						&fee_beneficiary,
+						fee,
+					),
+					DispatchError::Module(ModuleError {
+						index: 2,
+						error: [0, 0, 0, 0],
+						message: Some("BalanceLow")
+					})
+				);
 
-	#[test]
-	fn transfer_fails_if_missing_vouchers() {
-		ExtBuilder::default().vouchers(&[(ALICE, 10)]).build().execute_with(|| {
-			let fee = 101;
-			let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
-			let fee_beneficiary = FERDIE;
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+			});
+		}
 
-			let alice_initial_vouchers = VOUCHERS
-				.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
-				.expect("Should contain remaining vouchers");
+		#[test]
+		fn transfer_fails_if_missing_vouchers() {
+			ExtBuilder::default().vouchers(&[(ALICE, 10)]).build().execute_with(|| {
+				let fee = 101;
+				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
 
-			assert_noop!(
-				TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee,),
-				DispatchError::Token(TokenError::FundsUnavailable)
-			);
+				let alice_initial_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
 
-			assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
+				assert_noop!(
+					TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee,),
+					DispatchError::Token(TokenError::FundsUnavailable)
+				);
 
-			// check that the vouchers have been untouched
-			let alice_current_vouchers = VOUCHERS
-				.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
-				.expect("Should contain remaining vouchers");
-			assert_eq!(alice_current_vouchers, alice_initial_vouchers);
-		});
-	}
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
 
-	#[test]
-	fn transfer_fails_for_not_whitelisted_asset() {
-		ExtBuilder::default().build().execute_with(|| {
-			let fee = 101;
-			let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
-			let fee_beneficiary = FERDIE;
+				// check that the vouchers have been untouched
+				let alice_current_vouchers = VOUCHERS
+					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
+					.expect("Should contain remaining vouchers");
+				assert_eq!(alice_current_vouchers, alice_initial_vouchers);
+			});
+		}
 
-			assert_noop!(
-				TestTransfer::transfer(
-					NOT_WHITELISTED_ASSET_ID_PAYMENT,
-					&ALICE,
-					&fee_beneficiary,
-					fee,
-				),
-				DispatchError::Token(TokenError::Unsupported)
-			);
+		#[test]
+		fn transfer_fails_for_not_whitelisted_asset() {
+			ExtBuilder::default().build().execute_with(|| {
+				let fee = 101;
+				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
+				let fee_beneficiary = FERDIE;
 
-			assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
-		});
+				assert_noop!(
+					TestTransfer::transfer(
+						NOT_WHITELISTED_ASSET_ID_PAYMENT,
+						&ALICE,
+						&fee_beneficiary,
+						fee,
+					),
+					DispatchError::Token(TokenError::Unsupported)
+				);
+
+				assert_eq!(Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE), alice_balance_before);
+			});
+		}
 	}
 }
