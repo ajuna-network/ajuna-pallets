@@ -57,7 +57,22 @@ where
         to: &Self::AccountId,
         amount: Self::Balance,
     ) -> Result<(), DispatchError> {
-        todo!()
+        if let Some(credit) = W::withdraw_credit(from, asset_id, amount)? {
+            if let Err(_credit) = W::Assets::resolve(to, credit) {
+                // We decide to continue here, because the error has nothing to do with the
+                // account sending the transaction. It would be a bad user experience if
+                // the transaction fails because we can't allocate the fees to the recipient.
+                log::error!(
+				"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
+			);
+            }
+            Ok(())
+        } else {
+            // The asset id is a voucher or anything else not-relating to fungible assets.
+            // We do a no-op here.
+            log::debug!("Transferring vouchers is a noop");
+            Ok(())
+        }
     }
 
     fn transfer_all(
@@ -65,20 +80,27 @@ where
         from: &Self::AccountId,
         to: &Self::AccountId,
     ) -> Result<(), DispatchError> {
-        let balance = W::Assets::reducible_balance(
-            asset_id.as_asset_id().unwrap().clone(),
-            from,
-            Preservation::Preserve,
-            Fortitude::Polite,
-        );
+        if let Some(id) = asset_id.as_asset_id() {
+            let balance = W::Assets::reducible_balance(
+                id.clone(),
+                from,
+                Preservation::Preserve,
+                Fortitude::Polite,
+            );
 
-        Self::transfer(asset_id, from, to, balance)
+            Self::transfer(asset_id, from, to, balance)
+        } else {
+            // The asset id is a voucher or anything else not-relating to fungible assets.
+            // We do a no-op here.
+            log::debug!("Transferring vouchers is a noop");
+            Ok(())
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::mock::{AssetId, Assets, ExtBuilder, MockVoucherHandler, Test, WithdrawWhitelistedAssets, ALICE, FERDIE, WHITELISTED_ASSET_ID, WHITELISTED_ASSET_ID_PAYMENT};
+    use crate::mock::{AssetId, Assets, ExtBuilder, MockVoucherHandler, WithdrawWhitelistedAssets, ALICE, FERDIE, WHITELISTED_ASSET_ID, WHITELISTED_ASSET_ID_PAYMENT};
     use crate::{WithdrawCreditOrVoucher, WithdrawKind};
     use super::*;
 
