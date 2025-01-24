@@ -1,16 +1,14 @@
-use crate::voucher_handler::VoucherHandler;
+use crate::{voucher_handler::VoucherHandler, IdentifyVoucherOrAssetId};
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::{DispatchError, Encode},
 	traits::{
 		fungible, fungibles,
-		tokens::{Balance, Fortitude, Precision, Preservation},
+		tokens::{AssetId, Balance, Fortitude, Precision, Preservation},
 	},
 };
-use frame_support::traits::tokens::AssetId;
 use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
-use crate::IdentifyVoucherOrAssetId;
 
 /// Implements `WithdrawCredit`, but ensures that only whitelisted assets are withdrawn.
 pub struct WithdrawWhitelistedCredit<Whitelist, Withdraw>(PhantomData<(Whitelist, Withdraw)>);
@@ -137,9 +135,9 @@ pub enum WithdrawKind<AssetId> {
 }
 
 impl<AssetId> IdentifyVoucherOrAssetId for WithdrawKind<AssetId>
-where AssetId: frame_support::traits::tokens::AssetId
+where
+	AssetId: frame_support::traits::tokens::AssetId,
 {
-
 	type AssetId = AssetId;
 
 	fn is_voucher(&self) -> bool {
@@ -149,7 +147,7 @@ where AssetId: frame_support::traits::tokens::AssetId
 	fn as_asset_id(&self) -> Option<&Self::AssetId> {
 		match self {
 			WithdrawKind::Payment(asset_id) => Some(asset_id),
-			WithdrawKind::Voucher => None
+			WithdrawKind::Voucher => None,
 		}
 	}
 }
