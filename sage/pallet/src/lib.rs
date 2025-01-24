@@ -379,6 +379,19 @@ pub mod pallet {
 		Transition { code: u8 },
 	}
 
+	impl<T, I> From<TransitionError> for Error<T, I> {
+		fn from(e: TransitionError) -> Self {
+			match e {
+				TransitionError::InvalidTransitionId => Error::<T, I>::TransitionRuleNotSatisfied,
+				TransitionError::TransferError => Error::<T, I>::TransitionRuleNotSatisfied,
+				TransitionError::FeeError => Error::<T, I>::TransitionRuleNotSatisfied,
+				TransitionError::AssetLength => Error::<T, I>::TransitionRuleNotSatisfied,
+				TransitionError::AssetOwnership => Error::<T, I>::TransitionRuleNotSatisfied,
+				TransitionError::Transition { code } => Error::<T, I>::Transition { code },
+			}
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Set game organizer.
@@ -730,15 +743,7 @@ pub mod pallet {
 			}
 			let transition_results =
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
-					.map_err(|e| match e {
-					TransitionError::InvalidTransitionId =>
-						Error::<T, I>::TransitionRuleNotSatisfied,
-					TransitionError::TransferError => Error::<T, I>::TransitionRuleNotSatisfied,
-					TransitionError::FeeError => Error::<T, I>::TransitionRuleNotSatisfied,
-					TransitionError::AssetLength => Error::<T, I>::TransitionRuleNotSatisfied,
-					TransitionError::AssetOwnership => Error::<T, I>::TransitionRuleNotSatisfied,
-					TransitionError::Transition { code } => Error::<T, I>::Transition { code },
-				})?;
+					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
 
