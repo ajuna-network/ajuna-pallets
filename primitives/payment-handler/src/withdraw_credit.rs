@@ -42,7 +42,7 @@ impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: W
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-		preservation: Preservation
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Whitelist::ensure_whitelisted(&asset_id)?;
 		Withdraw::withdraw_credit(who, asset_id, credit, preservation)
@@ -68,7 +68,7 @@ pub trait WithdrawCredit {
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-		preservation: Preservation
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError>;
 }
 
@@ -88,16 +88,10 @@ where
 		who: &Self::AccountId,
 		_: Self::AssetId,
 		credit: Self::Balance,
-		preservation: Preservation
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
-		Self::Assets::withdraw(
-			who,
-			credit,
-			Precision::Exact,
-			preservation,
-			Fortitude::Polite,
-		)
-		.map(Some)
+		Self::Assets::withdraw(who, credit, Precision::Exact, preservation, Fortitude::Polite)
+			.map(Some)
 	}
 }
 
@@ -117,7 +111,7 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-		preservation: Preservation
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Self::Assets::withdraw(
 			asset_id,
@@ -170,7 +164,6 @@ pub trait NativeId {
 }
 
 pub trait VoucherId: Sized {
-
 	/// Make this an option in case that vouchers are not supported.
 	fn get_voucher_id() -> Option<Self>;
 
@@ -214,7 +207,7 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
-		preservation: Preservation
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		match asset_id {
 			WithdrawKind::Payment(payment_asset_id) =>

@@ -1,8 +1,10 @@
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use crate::{IdentifyVoucherOrAssetId, WithdrawCredit};
-use frame_support::traits::{
-	fungibles,
-	tokens::{Fortitude, Preservation},
+use frame_support::{
+	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
+	traits::{
+		fungibles,
+		tokens::{Fortitude, Preservation},
+	},
 };
 use sp_runtime::{DispatchError, TokenError};
 use sp_std::marker::PhantomData;
@@ -26,7 +28,7 @@ pub trait TransferFungible {
 		from: &Self::AccountId,
 		to: &Self::AccountId,
 		amount: Self::Balance,
-		preservation: Preservation
+		preservation: Preservation,
 	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError>;
 
 	fn transfer_all(
@@ -66,13 +68,10 @@ where
 		from: &Self::AccountId,
 		to: &Self::AccountId,
 		amount: Self::Balance,
-		preservation: Preservation
+		preservation: Preservation,
 	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError> {
 		if let Some(credit) = W::withdraw_credit(from, asset_id, amount, preservation)? {
-			let result = TransferResult {
-				asset_id: credit.asset().into(),
-				amount: credit.peek()
-			};
+			let result = TransferResult { asset_id: credit.asset().into(), amount: credit.peek() };
 
 			if let Err(_credit) = W::Assets::resolve(to, credit) {
 				// We decide to continue here, because the error has nothing to do with the
@@ -141,8 +140,14 @@ mod tests {
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestAssetTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
-					.unwrap();
+				TestAssetTransfer::transfer(
+					WHITELISTED_ASSET_ID_PAYMENT,
+					&ALICE,
+					&fee_beneficiary,
+					fee,
+					Preservation::Preserve,
+				)
+				.unwrap();
 
 				assert_eq!(
 					Assets::balance(WHITELISTED_ASSET_ID, ALICE),
@@ -166,8 +171,14 @@ mod tests {
 					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
 					.expect("Should contain remaining vouchers");
 
-				TestAssetTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
-					.unwrap();
+				TestAssetTransfer::transfer(
+					VOUCHER_ASSET_PAYMENT,
+					&ALICE,
+					&fee_beneficiary,
+					fee,
+					Preservation::Preserve,
+				)
+				.unwrap();
 
 				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
 				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), 0);
@@ -218,7 +229,13 @@ mod tests {
 					.expect("Should contain remaining vouchers");
 
 				assert_noop!(
-					TestAssetTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve),
+					TestAssetTransfer::transfer(
+						VOUCHER_ASSET_PAYMENT,
+						&ALICE,
+						&fee_beneficiary,
+						fee,
+						Preservation::Preserve
+					),
 					DispatchError::Token(TokenError::FundsUnavailable)
 				);
 
@@ -264,14 +281,18 @@ mod tests {
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestAssetTransfer::transfer_all(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary)
-					.unwrap();
+				TestAssetTransfer::transfer_all(
+					WHITELISTED_ASSET_ID_PAYMENT,
+					&ALICE,
+					&fee_beneficiary,
+				)
+				.unwrap();
 
+				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), 0);
 				assert_eq!(
-					Assets::balance(WHITELISTED_ASSET_ID, ALICE),
-					0
-				);
-				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary), alice_balance_before)
+					Assets::balance(WHITELISTED_ASSET_ID, fee_beneficiary),
+					alice_balance_before
+				)
 			});
 		}
 	}

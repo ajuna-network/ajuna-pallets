@@ -3,13 +3,9 @@ use crate::withdraw_credit::WithdrawCredit;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
-	traits::{
-		fungible, fungibles,
-		Defensive, Imbalance,
-	},
+	traits::{fungible, fungibles, tokens::Preservation, Defensive, Imbalance},
 	BoundedVec,
 };
-use frame_support::traits::tokens::Preservation;
 use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
 
@@ -127,7 +123,9 @@ where
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = W::withdraw_credit(payer, payment.clone(), base_fee, Preservation::Preserve)? {
+		if let Some(fee_credit) =
+			W::withdraw_credit(payer, payment.clone(), base_fee, Preservation::Preserve)?
+		{
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
@@ -323,7 +321,9 @@ where
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = W::withdraw_credit(payer, payment, base_fee, Preservation::Preserve)? {
+		if let Some(fee_credit) =
+			W::withdraw_credit(payer, payment, base_fee, Preservation::Preserve)?
+		{
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
