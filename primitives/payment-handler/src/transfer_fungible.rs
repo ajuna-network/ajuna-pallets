@@ -115,7 +115,7 @@ mod tests {
 	use frame_support::assert_noop;
 	use sp_runtime::{ModuleError, TokenError};
 
-	type TestTransfer = TransferAll<
+	type TestAssetTransfer = TransferAll<
 		WithdrawCreditOrVoucher<WithdrawWhitelistedAssets, MockVoucherHandler>,
 		WithdrawKind<AssetId>,
 	>;
@@ -130,7 +130,7 @@ mod tests {
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
+				TestAssetTransfer::transfer(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
 					.unwrap();
 
 				assert_eq!(
@@ -155,7 +155,7 @@ mod tests {
 					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
 					.expect("Should contain remaining vouchers");
 
-				TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
+				TestAssetTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve)
 					.unwrap();
 
 				assert_eq!(Assets::balance(WHITELISTED_ASSET_ID, ALICE), alice_balance_before);
@@ -177,7 +177,7 @@ mod tests {
 				let fee_beneficiary = FERDIE;
 
 				assert_noop!(
-					TestTransfer::transfer(
+					TestAssetTransfer::transfer(
 						WHITELISTED_ASSET_ID_PAYMENT,
 						&ALICE,
 						&fee_beneficiary,
@@ -207,7 +207,7 @@ mod tests {
 					.expect("Should contain remaining vouchers");
 
 				assert_noop!(
-					TestTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve),
+					TestAssetTransfer::transfer(VOUCHER_ASSET_PAYMENT, &ALICE, &fee_beneficiary, fee, Preservation::Preserve),
 					DispatchError::Token(TokenError::FundsUnavailable)
 				);
 
@@ -229,7 +229,7 @@ mod tests {
 				let fee_beneficiary = FERDIE;
 
 				assert_noop!(
-					TestTransfer::transfer(
+					TestAssetTransfer::transfer(
 						NOT_WHITELISTED_ASSET_ID_PAYMENT,
 						&ALICE,
 						&fee_beneficiary,
@@ -253,7 +253,7 @@ mod tests {
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestTransfer::transfer_all(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary)
+				TestAssetTransfer::transfer_all(WHITELISTED_ASSET_ID_PAYMENT, &ALICE, &fee_beneficiary)
 					.unwrap();
 
 				assert_eq!(
