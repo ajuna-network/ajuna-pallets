@@ -148,12 +148,15 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		)?;
 
 		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds| match funds {
-			Some(f) => f
-				.checked_add(&result.amount)
-				.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Overflow)),
+			Some(f) => {
+				*f = f
+					.checked_add(&result.amount)
+					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+				Ok::<_, DispatchError>(())
+			},
 			None => {
 				*funds = Some(result.amount);
-				Ok(result.amount)
+				Ok(())
 			},
 		})?;
 
@@ -179,9 +182,12 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 		)?;
 
 		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds| match funds {
-			Some(f) => f
-				.checked_sub(&result.amount)
-				.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Underflow)),
+			Some(f) => {
+				*f = f
+					.checked_sub(&result.amount)
+					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+				Ok::<(), DispatchError>(())
+			},
 			// We checked above, but better be sure
 			None => Err(Error::<T, I>::AssetsFundsTooLow.into()),
 		})?;

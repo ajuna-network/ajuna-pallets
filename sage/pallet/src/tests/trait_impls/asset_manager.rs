@@ -310,7 +310,7 @@ mod asset_funds_manager {
 					NATIVE_PAYMENT,
 					asset_balance
 				),
-				TokenError::NotExpendable
+				TokenError::FundsUnavailable
 			);
 
 			// Alice did not receive any money as the transfer failed
@@ -325,8 +325,14 @@ mod asset_funds_manager {
 	fn transfer_all_funds_from_asset_works() {
 		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
 			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+			let ed = <<Test as Config>::Fungible as fungible::Inspect<_>>::minimum_balance();
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
+
+			<<Test as Config>::Fungible as fungible::Mutate<_>>::set_balance(
+				&Sage::assets_funds_pot(),
+				ed,
+			);
 
 			assert_eq!(
 				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
@@ -350,7 +356,7 @@ mod asset_funds_manager {
 			),);
 
 			assert_eq!(
-				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT,),
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
 				0
 			);
 
