@@ -14,13 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::__private::log;
-use frame_support::traits::tokens::Preservation;
-use sp_runtime::ArithmeticError;
-use sp_runtime::traits::{CheckedAdd, CheckedSub};
 use super::*;
-use ajuna_primitives::asset_manager::{AssetFundsManager, AssetInspector};
-use ajuna_primitives::payment_handler::IdentifyVoucherOrAssetId;
+use ajuna_primitives::{
+	asset_manager::{AssetFundsManager, AssetInspector},
+	payment_handler::IdentifyVoucherOrAssetId,
+};
+use frame_support::{__private::log, traits::tokens::Preservation};
+use sp_runtime::{
+	traits::{CheckedAdd, CheckedSub},
+	ArithmeticError,
+};
 
 impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	type AccountId = AccountIdOf<T>;
@@ -136,14 +139,19 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			return Ok(());
 		}
 
-		let result = T::TransferFunds::transfer(fungibles_asset_id.clone(), from, &Self::assets_funds_pot(), amount, Preservation::Preserve)?;
-		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds|
-			match funds {
-				Some(f) => f.checked_add(&result.amount)
-					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Overflow)),
-				None =>Ok(result.amount)
-			}
+		let result = T::TransferFunds::transfer(
+			fungibles_asset_id.clone(),
+			from,
+			&Self::assets_funds_pot(),
+			amount,
+			Preservation::Preserve,
 		)?;
+		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds| match funds {
+			Some(f) => f
+				.checked_add(&result.amount)
+				.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Overflow)),
+			None => Ok(result.amount),
+		})?;
 
 		Ok(())
 	}
@@ -158,16 +166,21 @@ impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
 			return Err(Error::<T, I>::AssetsFundsTooLow.into())
 		}
 
-		let result = T::TransferFunds::transfer(fungibles_asset_id, &Self::assets_funds_pot(), to, amount, Preservation::Preserve)?;
-
-		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds|
-			match funds {
-				Some(f) => f.checked_sub(&result.amount)
-					.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Underflow)),
-				// We checked above, but better be sure
-				None =>Err(Error::<T, I>::AssetsFundsTooLow.into())
-			}
+		let result = T::TransferFunds::transfer(
+			fungibles_asset_id,
+			&Self::assets_funds_pot(),
+			to,
+			amount,
+			Preservation::Preserve,
 		)?;
+
+		AssetFunds::<T, I>::try_mutate(asset_id, result.asset_id, |funds| match funds {
+			Some(f) => f
+				.checked_sub(&result.amount)
+				.ok_or_else(|| DispatchError::Arithmetic(ArithmeticError::Underflow)),
+			// We checked above, but better be sure
+			None => Err(Error::<T, I>::AssetsFundsTooLow.into()),
+		})?;
 		Ok(())
 	}
 

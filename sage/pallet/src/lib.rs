@@ -66,8 +66,8 @@ pub const MAX_ASSETS_IN_TRANSITION: usize = 10;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::traits::tokens::{AssetId, Preservation};
 	use ajuna_primitives::payment_handler::{IdentifyVoucherOrAssetId, NativeId};
+	use frame_support::traits::tokens::{AssetId, Preservation};
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -768,7 +768,8 @@ pub mod pallet {
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
 					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
-			let payment = payment_kind.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id());
+			let payment =
+				payment_kind.unwrap_or_else(|| FungiblesAssetIdOf::<T, I>::get_native_id());
 			Self::process_transition_results(
 				&sender,
 				&current_season_id,
