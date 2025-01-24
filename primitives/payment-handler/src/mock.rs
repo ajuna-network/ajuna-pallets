@@ -83,6 +83,7 @@ impl pallet_assets::Config for Test {
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type AssetId = AssetId;
 	type Freezer = ();
 	type CallbackHandle = ();
 	#[cfg(feature = "runtime-benchmarks")]

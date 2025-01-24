@@ -153,48 +153,6 @@ where
     }
 }
 
-impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament> TransferFungible
-for AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
-where
-// This is satisfied by the `pallet-assets`, `pallet-asset-conversion` and the
-// `NativeAndAssets` struct.
-    Assets: fungibles::Balanced<AccountId, Balance=W::Balance>
-    + fungibles::Inspect<AccountId, Balance=W::Balance, AssetId=W::AssetId>,
-    W: WithdrawCredit<
-        AccountId=AccountId,
-        Assets=Assets,
-        Credit=fungibles::Credit<AccountId, Assets>,
-    >,
-{
-    type AccountId = AccountId;
-    type AssetId = W::AssetId;
-    type Balance = W::Balance;
-
-    fn transfer(
-        asset_id: Self::AssetId,
-        from: &Self::AccountId,
-        to: &Self::AccountId,
-        amount: Self::Balance,
-    ) -> Result<(), DispatchError> {
-        Self::withdraw_and_deposit(asset_id, from, to, amount)
-    }
-
-    fn transfer_all(
-        asset_id: Self::AssetId,
-        from: &Self::AccountId,
-        to: &Self::AccountId,
-    ) -> Result<(), DispatchError> {
-        let balance = W::Assets::reducible_balance(
-            asset_id.clone(),
-            from,
-            Preservation::Preserve,
-            Fortitude::Polite,
-        );
-
-        Self::transfer(asset_id, from, to, balance)
-    }
-}
-
 impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
 AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
 where

@@ -7,8 +7,10 @@ use frame_support::{
 		tokens::{Balance, Fortitude, Precision, Preservation},
 	},
 };
+use frame_support::traits::tokens::AssetId;
 use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
+use crate::IdentifyVoucherOrAssetId;
 
 /// Implements `WithdrawCredit`, but ensures that only whitelisted assets are withdrawn.
 pub struct WithdrawWhitelistedCredit<Whitelist, Withdraw>(PhantomData<(Whitelist, Withdraw)>);
@@ -56,7 +58,7 @@ impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: W
 /// to the affiliates, or the specific treasury pots.
 pub trait WithdrawCredit {
 	type AccountId;
-	type AssetId: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
+	type AssetId: AssetId;
 
 	type Assets;
 	type Balance: Balance;
@@ -132,6 +134,24 @@ pub enum WithdrawKind<AssetId> {
 	Payment(AssetId),
 	#[default]
 	Voucher,
+}
+
+impl<AssetId> IdentifyVoucherOrAssetId for WithdrawKind<AssetId>
+where AssetId: frame_support::traits::tokens::AssetId
+{
+
+	type AssetId = AssetId;
+
+	fn is_voucher(&self) -> bool {
+		self == &WithdrawKind::Voucher
+	}
+
+	fn as_asset_id(&self) -> Option<&Self::AssetId> {
+		match self {
+			WithdrawKind::Payment(asset_id) => Some(asset_id),
+			WithdrawKind::Voucher => None
+		}
+	}
 }
 
 pub struct WithdrawCreditOrVoucher<W, V>(PhantomData<(W, V)>);
