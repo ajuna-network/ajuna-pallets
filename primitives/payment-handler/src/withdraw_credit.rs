@@ -3,7 +3,9 @@ use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::{DispatchError, Encode},
 	traits::{
-		fungible, fungibles,
+		fungible,
+		fungible::NativeOrWithId,
+		fungibles,
 		tokens::{AssetId, Balance, Fortitude, Precision, Preservation},
 	},
 };
@@ -131,6 +133,12 @@ pub enum WithdrawKind<AssetId> {
 	Voucher,
 }
 
+impl<AssetId: Ord> From<NativeOrWithId<AssetId>> for WithdrawKind<NativeOrWithId<AssetId>> {
+	fn from(value: NativeOrWithId<AssetId>) -> Self {
+		Self::Payment(value)
+	}
+}
+
 impl<AssetId: NativeId> NativeId for WithdrawKind<AssetId> {
 	fn get_native_id() -> Self {
 		Self::Payment(AssetId::get_native_id())
@@ -153,6 +161,19 @@ impl<AssetId> VoucherId for WithdrawKind<AssetId> {
 		match self {
 			Self::Voucher => true,
 			Self::Payment(_) => false,
+		}
+	}
+}
+
+impl<AssetId: Ord> NativeId for NativeOrWithId<AssetId> {
+	fn get_native_id() -> Self {
+		NativeOrWithId::Native
+	}
+
+	fn is_native_id(&self) -> bool {
+		match self {
+			NativeOrWithId::Native => true,
+			NativeOrWithId::WithId(_) => false,
 		}
 	}
 }
