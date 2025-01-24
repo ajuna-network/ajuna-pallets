@@ -391,7 +391,7 @@ mod asset_funds_manager {
 				&asset_id,
 				&ALICE,
 				NATIVE_PAYMENT,
-			),);
+			));
 
 			assert_eq!(
 				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
@@ -399,6 +399,49 @@ mod asset_funds_manager {
 			);
 
 			// Alice has now her initial balance
+			assert_eq!(
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				1_000
+			);
+		});
+	}
+
+	#[test]
+	fn transfer_all_funds_from_asset_fails_if_missing_funds() {
+		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+			let ed = <<Test as Config>::Fungible as fungible::Inspect<_>>::minimum_balance();
+			let asset_id = asset_ids[0];
+
+			<<Test as Config>::Fungible as fungible::Mutate<_>>::set_balance(
+				&Sage::assets_funds_pot(),
+				ed,
+			);
+
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				0
+			);
+
+			assert_err!(
+				<Sage as AssetFundsManager>::transfer_all_from_asset(
+					&asset_id,
+					&ALICE,
+					NATIVE_PAYMENT,
+				),
+				DispatchError::Module(ModuleError {
+					index: 3,
+					error: [16, 0, 0, 0],
+					message: Some("AssetsFundsTooLow")
+				})
+			);
+
+			assert_eq!(
+				<Sage as AssetFundsManager>::inspect_asset_funds(&asset_id, &NATIVE_PAYMENT),
+				0
+			);
+
+			// Alice has still her initial balance
 			assert_eq!(
 				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
 				1_000
