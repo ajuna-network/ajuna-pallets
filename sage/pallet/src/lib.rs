@@ -35,8 +35,8 @@ mod tests;
 
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
-	asset_manager::{AssetManager, Lock, LockIdentifier},
-	payment_handler::FeeHandler,
+	asset_manager::{AssetFundsManager, AssetManager, Lock, LockIdentifier},
+	payment_handler::{FeeHandler, TransferFungible},
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
 };
@@ -46,7 +46,7 @@ use sage_api::{
 	SageGameTransition, TransitionError,
 };
 
-use frame_support::{pallet_prelude::*, traits::Currency, PalletId};
+use frame_support::{pallet_prelude::*, traits::fungible, PalletId};
 use frame_system::pallet_prelude::*;
 use sp_runtime::{
 	traits::{AccountIdConversion, UniqueSaturatedInto},
@@ -66,6 +66,8 @@ pub const MAX_ASSETS_IN_TRANSITION: usize = 10;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use ajuna_primitives::payment_handler::{IdentifyVoucherOrAssetId, NativeId};
+	use frame_support::traits::tokens::{AssetId, Preservation};
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -74,7 +76,8 @@ pub mod pallet {
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
+	pub type BalanceOf<T, I> =
+		<<T as Config<I>>::Fungible as fungible::Inspect<AccountIdOf<T>>>::Balance;
 
 	pub type AssetIdOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::AssetId;
@@ -98,8 +101,7 @@ pub mod pallet {
 	pub type AssetFilterOf<T, I> = AssetFilter<TradeFilterOf<T, I>, TransferFilterOf<T, I>>;
 	pub type AffiliateMethodsOf<T, I> = AffiliateMethods<TransitionIdOf<T, I>>;
 
-	pub type PaymentOf<T, I> = <T as Config<I>>::PaymentKind;
-	pub type MaybePaymentOf<T, I> = Option<PaymentOf<T, I>>;
+	pub type FungiblesAssetIdOf<T, I> = <T as Config<I>>::FungiblesAssetId;
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
@@ -123,22 +125,28 @@ pub mod pallet {
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
 			AccountId = AccountIdOf<Self>,
-			PaymentKind = PaymentOf<Self, I>,
+			PaymentKind = FungiblesAssetIdOf<Self, I>,
 			Balance = BalanceOf<Self, I>,
 			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
 			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
 		>;
 
-		type PaymentKind: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
+		type TransferFunds: TransferFungible<
+			AccountId = AccountIdOf<Self>,
+			AssetId = FungiblesAssetIdOf<Self, I>,
+			Balance = BalanceOf<Self, I>,
+		>;
+
+		type FungiblesAssetId: AssetId + IdentifyVoucherOrAssetId + NativeId;
 
 		/// Applies the filter that has been set in the `SeasonTraderFilters` or the
 		/// `SeasonTransferFilters` storage.
 		type FilterHandler: TradeManager<Asset = AssetOf<Self, I>>
 			+ TransferManager<Asset = AssetOf<Self, I>>;
 
-		/// Currency implementation used by this pallet. This will most likely be the
+		/// Fungible implementation used by this pallet. This will most likely be the
 		/// balances-pallet.
-		type Currency: Currency<AccountIdOf<Self>>;
+		type Fungible: fungible::Inspect<AccountIdOf<Self>> + fungible::Mutate<AccountIdOf<Self>>;
 
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self, I>>
@@ -154,7 +162,7 @@ pub mod pallet {
 			TransitionIdOf<Self, I>,
 			TradeFilterOf<Self, I>,
 			TransferFilterOf<Self, I>,
-			PaymentOf<Self, I>,
+			FungiblesAssetIdOf<Self, I>,
 		>;
 	}
 
@@ -270,6 +278,19 @@ pub mod pallet {
 	pub type LockedAssets<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Identity, AssetIdOf<T, I>, Lock<AccountIdOf<T>>>;
 
+	/// Tracks how many funds assets have, which will be returned to the owner, once the
+	/// asset is consumed
+	#[pallet::storage]
+	pub type AssetFunds<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		AssetIdOf<T, I>,
+		Blake2_128Concat,
+		FungiblesAssetIdOf<T, I>,
+		BalanceOf<T, I>,
+		OptionQuery,
+	>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
@@ -360,6 +381,8 @@ pub mod pallet {
 		AssetLockedByOtherApplication,
 		/// The asset is not currently locked and cannot be unlocked.
 		AssetNotLocked,
+		/// The asset does not own enough funds for the operation..
+		AssetsFundsTooLow,
 		/// Tried transferring to his or her own account.
 		CannotTransferToSelf,
 		/// The feature is locked for the current player
@@ -450,7 +473,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			beneficiary: Option<AccountIdOf<T>>,
 			in_season: Option<SeasonIdOf<T, I>>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
@@ -464,7 +487,7 @@ pub mod pallet {
 			let base_fee = fee.upgrade_asset_inventory;
 			T::FeeHandler::withdraw_and_pay_fees(
 				&caller,
-				payment.unwrap_or_default(),
+				payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id),
 				base_fee,
 				&season_id,
 				&AffiliateMethods::UpgradeAssetInventory,
@@ -496,7 +519,7 @@ pub mod pallet {
 		#[pallet::weight(
 			T::WeightInfo::update_asset_trade_filter()
 				.max(T::WeightInfo::update_asset_transfer_filter())
-		)]
+        )]
 		pub fn update_asset_filter(
 			origin: OriginFor<T>,
 			season_id: SeasonIdOf<T, I>,
@@ -529,7 +552,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			to: AccountIdOf<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let from = ensure_signed(origin)?;
 
@@ -561,9 +584,9 @@ pub mod pallet {
 			}
 
 			let fee = T::SeasonHandler::get_season_config_for(&asset_season_id)?.fee;
-			T::FeeHandler::withdraw_and_deposit_into_treasury(
+			T::FeeHandler::withdraw_and_deposit_into(
 				&from,
-				payment.unwrap_or_default(),
+				payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id),
 				&Self::treasury_account_id(),
 				fee.transfer_asset,
 			)?;
@@ -628,7 +651,7 @@ pub mod pallet {
 		pub fn buy_asset(
 			origin: OriginFor<T>,
 			asset_id: AssetIdOf<T, I>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			let GeneralConfig { trade, .. } = GeneralConfigStore::<T, I>::get();
@@ -636,11 +659,11 @@ pub mod pallet {
 
 			let (seller, price) = Self::ensure_for_trade(&asset_id)?;
 			ensure!(buyer != seller, Error::<T, I>::AlreadyOwned);
-			T::Currency::transfer(
+			<T::Fungible as fungible::Mutate<_>>::transfer(
 				&buyer,
 				&seller,
 				price,
-				frame_support::traits::ExistenceRequirement::KeepAlive,
+				Preservation::Protect,
 			)?;
 
 			let asset_season_id = T::SeasonHandler::get_season_id_for(&asset_id)?;
@@ -656,7 +679,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&buyer,
-				payment.unwrap_or_default(),
+				payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id),
 				trade_fee,
 				&asset_season_id,
 				&AffiliateMethods::TradeAsset,
@@ -700,17 +723,17 @@ pub mod pallet {
 		#[pallet::weight(
 			T::WeightInfo::unlock_trade_asset_feature()
 				.max(T::WeightInfo::unlock_transfer_asset_feature())
-		)]
+        )]
 		pub fn unlock_feature(
 			origin: OriginFor<T>,
 			target: UnlockTarget<AccountIdOf<T>>,
 			feature: LockableFeature,
 			season_id: SeasonIdOf<T, I>,
-			payment: MaybePaymentOf<T, I>,
+			payment: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let account = ensure_signed(origin)?;
 			T::SeasonHandler::is_valid_season(&season_id)?;
-			let payment = payment.unwrap_or_default();
+			let payment = payment.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
 
 			match feature {
 				LockableFeature::TradeAsset =>
@@ -728,7 +751,7 @@ pub mod pallet {
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
 			extra: ExtraOf<T, I>,
-			payment: Option<PaymentOf<T, I>>,
+			payment_kind: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -745,7 +768,13 @@ pub mod pallet {
 				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
 					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
-			Self::process_transition_results(&sender, &current_season_id, transition_results)?;
+			let payment = payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
+			Self::process_transition_results(
+				&sender,
+				&current_season_id,
+				transition_results,
+				payment.clone(),
+			)?;
 
 			let transition_fee = {
 				let SeasonConfigOf::<T, I> { fee, .. } =
@@ -755,7 +784,7 @@ pub mod pallet {
 
 			T::FeeHandler::withdraw_and_pay_fees(
 				&sender,
-				payment.unwrap_or_default(),
+				payment,
 				transition_fee,
 				&current_season_id,
 				&AffiliateMethodsOf::<T, I>::StateTransition(transition_id.clone()),
@@ -775,6 +804,10 @@ pub mod pallet {
 
 		pub fn technical_account_id() -> T::AccountId {
 			T::PalletId::get().into_sub_account_truncating(b"technical")
+		}
+
+		pub fn assets_funds_pot() -> T::AccountId {
+			T::PalletId::get().into_sub_account_truncating(b"assets_funds")
 		}
 
 		pub(crate) fn asset_with_owner(
@@ -836,6 +869,7 @@ pub mod pallet {
 			player: &AccountIdOf<T>,
 			season_id: &SeasonIdOf<T, I>,
 			transition_results: Vec<TransitionOutputOf<T, I>>,
+			payment_kind: FungiblesAssetIdOf<T, I>,
 		) -> DispatchResult {
 			let mut minted_amount = 0 as Stat;
 			let mut mutated_amount = 0 as Stat;
@@ -879,6 +913,19 @@ pub mod pallet {
 									asset_count.saturating_dec();
 								},
 							);
+
+							// If the asset has some funds, we transfer all to the owner.
+							// Todo: shall this be made configurable, like partly flowing into a
+							// treasury?
+							if Self::inspect_asset_funds(&asset_id, &payment_kind) >
+								Default::default()
+							{
+								Self::transfer_all_from_asset(
+									&asset_id,
+									&owner,
+									payment_kind.clone(),
+								)?;
+							}
 						}
 					},
 				}

@@ -1,13 +1,15 @@
-use crate::voucher_handler::VoucherHandler;
+use crate::{voucher_handler::VoucherHandler, IdentifyVoucherOrAssetId};
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::{DispatchError, Encode},
 	traits::{
-		fungible, fungibles,
-		tokens::{Balance, Fortitude, Precision, Preservation},
+		fungible,
+		fungible::NativeOrWithId,
+		fungibles,
+		tokens::{AssetId, Balance, Fortitude, Precision, Preservation},
 	},
 };
-use parity_scale_codec::{Decode, EncodeLike, MaxEncodedLen};
+use parity_scale_codec::{Decode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// Implements `WithdrawCredit`, but ensures that only whitelisted assets are withdrawn.
@@ -42,9 +44,10 @@ impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: W
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Whitelist::ensure_whitelisted(&asset_id)?;
-		Withdraw::withdraw_credit(who, asset_id, credit)
+		Withdraw::withdraw_credit(who, asset_id, credit, preservation)
 	}
 }
 
@@ -56,7 +59,7 @@ impl<Whitelist: EnsureWhitelistedAsset<AssetId = Withdraw::AssetId>, Withdraw: W
 /// to the affiliates, or the specific treasury pots.
 pub trait WithdrawCredit {
 	type AccountId;
-	type AssetId: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
+	type AssetId: AssetId;
 
 	type Assets;
 	type Balance: Balance;
@@ -67,6 +70,7 @@ pub trait WithdrawCredit {
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError>;
 }
 
@@ -86,15 +90,10 @@ where
 		who: &Self::AccountId,
 		_: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
-		Self::Assets::withdraw(
-			who,
-			credit,
-			Precision::Exact,
-			Preservation::Preserve,
-			Fortitude::Polite,
-		)
-		.map(Some)
+		Self::Assets::withdraw(who, credit, Precision::Exact, preservation, Fortitude::Polite)
+			.map(Some)
 	}
 }
 
@@ -114,24 +113,102 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		Self::Assets::withdraw(
-			asset_id.clone(),
+			asset_id,
 			who,
 			credit,
 			Precision::Exact,
-			Preservation::Preserve,
+			preservation,
 			Fortitude::Polite,
 		)
 		.map(Some)
 	}
 }
 
-#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo, Default)]
+#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo)]
 pub enum WithdrawKind<AssetId> {
 	Payment(AssetId),
-	#[default]
 	Voucher,
+}
+
+// Not 100% sure if this is too generic and might lead to issues.
+// So far it works though.
+impl<AssetId: Ord> From<AssetId> for WithdrawKind<AssetId> {
+	fn from(value: AssetId) -> Self {
+		Self::Payment(value)
+	}
+}
+
+impl<AssetId: NativeId> NativeId for WithdrawKind<AssetId> {
+	fn get_native_id() -> Self {
+		Self::Payment(AssetId::get_native_id())
+	}
+
+	fn is_native_id(&self) -> bool {
+		match self {
+			Self::Payment(asset_id) => asset_id.is_native_id(),
+			Self::Voucher => false,
+		}
+	}
+}
+
+impl<AssetId> VoucherId for WithdrawKind<AssetId> {
+	fn get_voucher_id() -> Option<Self> {
+		Some(Self::Voucher)
+	}
+
+	fn is_voucher_id(&self) -> bool {
+		match self {
+			Self::Voucher => true,
+			Self::Payment(_) => false,
+		}
+	}
+}
+
+impl<AssetId: Ord> NativeId for NativeOrWithId<AssetId> {
+	fn get_native_id() -> Self {
+		NativeOrWithId::Native
+	}
+
+	fn is_native_id(&self) -> bool {
+		match self {
+			NativeOrWithId::Native => true,
+			NativeOrWithId::WithId(_) => false,
+		}
+	}
+}
+
+pub trait NativeId {
+	fn get_native_id() -> Self;
+
+	fn is_native_id(&self) -> bool;
+}
+
+pub trait VoucherId: Sized {
+	/// Make this an option in case that vouchers are not supported.
+	fn get_voucher_id() -> Option<Self>;
+
+	fn is_voucher_id(&self) -> bool;
+}
+
+impl<AssetId> IdentifyVoucherOrAssetId for WithdrawKind<AssetId>
+where
+	AssetId: frame_support::traits::tokens::AssetId,
+{
+	type AssetId = AssetId;
+
+	fn is_voucher(&self) -> bool {
+		self == &WithdrawKind::Voucher
+	}
+
+	fn as_asset_id(&self) -> Option<&Self::AssetId> {
+		match self {
+			WithdrawKind::Payment(asset_id) => Some(asset_id),
+			WithdrawKind::Voucher => None,
+		}
+	}
 }
 
 pub struct WithdrawCreditOrVoucher<W, V>(PhantomData<(W, V)>);
@@ -153,10 +230,11 @@ where
 		who: &Self::AccountId,
 		asset_id: Self::AssetId,
 		credit: Self::Balance,
+		preservation: Preservation,
 	) -> Result<Option<Self::Credit>, DispatchError> {
 		match asset_id {
 			WithdrawKind::Payment(payment_asset_id) =>
-				W::withdraw_credit(who, payment_asset_id, credit),
+				W::withdraw_credit(who, payment_asset_id, credit, preservation),
 			WithdrawKind::Voucher => V::consume_vouchers_from(who, credit).map(|_| None),
 		}
 	}

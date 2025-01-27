@@ -750,7 +750,7 @@ pub mod pallet {
 					&Self::treasury_account_id(),
 				)?;
 			} else {
-				T::FeeHandler::withdraw_and_deposit_into_treasury(
+				T::FeeHandler::withdraw_and_deposit_into(
 					&buyer,
 					(),
 					&Self::treasury_account_id(),
@@ -820,7 +820,7 @@ pub mod pallet {
 					&Self::treasury_account_id(),
 				)?;
 			} else {
-				T::FeeHandler::withdraw_and_deposit_into_treasury(
+				T::FeeHandler::withdraw_and_deposit_into(
 					&caller,
 					(),
 					&Self::treasury_account_id(),
@@ -1338,7 +1338,7 @@ pub mod pallet {
 							&Self::treasury_account_id(),
 						)?;
 					} else {
-						T::FeeHandler::withdraw_and_deposit_into_treasury(
+						T::FeeHandler::withdraw_and_deposit_into(
 							player,
 							(),
 							&Self::treasury_account_id(),

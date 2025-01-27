@@ -15,7 +15,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
-use ajuna_primitives::asset_manager::AssetInspector;
+use ajuna_primitives::{
+	asset_manager::{AssetFundsManager, AssetInspector},
+	payment_handler::IdentifyVoucherOrAssetId,
+};
+use frame_support::{__private::log, traits::tokens::Preservation};
+use sp_runtime::{
+	traits::{CheckedAdd, CheckedSub},
+	ArithmeticError,
+};
 
 impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {
 	type AccountId = AccountIdOf<T>;
@@ -103,5 +111,100 @@ impl<T: Config<I>, I: 'static> AssetInspector for Pallet<T, I> {
 				None
 			}
 		})
+	}
+}
+
+impl<T: Config<I>, I: 'static> AssetFundsManager for Pallet<T, I> {
+	type AccountId = AccountIdOf<T>;
+	type AssetId = AssetIdOf<T, I>;
+
+	type FungiblesAssetId = FungiblesAssetIdOf<T, I>;
+	type Balance = BalanceOf<T, I>;
+
+	fn inspect_asset_funds(
+		asset_id: &Self::AssetId,
+		fungibles_asset_id: &Self::FungiblesAssetId,
+	) -> Self::Balance {
+		AssetFunds::<T, I>::get(asset_id, fungibles_asset_id).unwrap_or_default()
+	}
+
+	fn deposit_funds_to_asset(
+		asset_id: &Self::AssetId,
+		from: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		if fungibles_asset_id.is_voucher() {
+			// Todo: To be discussed if this is actually what we want.
+			log::debug!("Trying to deposit voucher to asset, this is a noop");
+			return Ok(());
+		}
+
+		let result = T::TransferFunds::transfer(
+			fungibles_asset_id.clone(),
+			from,
+			&Self::assets_funds_pot(),
+			amount,
+			Preservation::Preserve,
+		)?;
+
+		AssetFunds::<T, I>::try_mutate(asset_id, result.output_asset_id, |funds| match funds {
+			Some(f) => {
+				*f = f
+					.checked_add(&result.output_amount)
+					.ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+				Ok::<_, DispatchError>(())
+			},
+			None => {
+				*funds = Some(result.output_amount);
+				Ok(())
+			},
+		})?;
+
+		Ok(())
+	}
+
+	fn transfer_funds_from_asset(
+		asset_id: &Self::AssetId,
+		to: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		if Self::inspect_asset_funds(asset_id, &fungibles_asset_id) < amount {
+			return Err(Error::<T, I>::AssetsFundsTooLow.into())
+		}
+
+		let result = T::TransferFunds::transfer(
+			fungibles_asset_id,
+			&Self::assets_funds_pot(),
+			to,
+			amount,
+			Preservation::Preserve,
+		)?;
+
+		AssetFunds::<T, I>::try_mutate(asset_id, result.output_asset_id, |funds| match funds {
+			Some(f) => {
+				*f = f
+					.checked_sub(&result.output_amount)
+					.ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+				Ok::<(), DispatchError>(())
+			},
+			// We checked above, but better be sure
+			None => Err(Error::<T, I>::AssetsFundsTooLow.into()),
+		})?;
+		Ok(())
+	}
+
+	fn transfer_all_from_asset(
+		asset_id: &Self::AssetId,
+		to: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+	) -> Result<(), DispatchError> {
+		let asset_funds = Self::inspect_asset_funds(asset_id, &fungibles_asset_id);
+		if asset_funds == Default::default() {
+			return Err(Error::<T, I>::AssetsFundsTooLow.into())
+		}
+
+		Self::transfer_funds_from_asset(asset_id, to, fungibles_asset_id, asset_funds)
 	}
 }

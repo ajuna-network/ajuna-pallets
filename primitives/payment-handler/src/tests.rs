@@ -306,18 +306,18 @@ mod asset_fee_handler {
 		}
 	}
 
-	mod withdraw_and_deposit_into_treasury {
+	mod withdraw_and_deposit_into {
 		use super::*;
 		use crate::mock::{VOUCHERS, VOUCHER_ASSET_PAYMENT};
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_works() {
+		fn withdraw_and_deposit_into_works() {
 			ExtBuilder::default().build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestAssetFeeHandler::withdraw_and_deposit_into_treasury(
+				TestAssetFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					WHITELISTED_ASSET_ID_PAYMENT,
 					&fee_beneficiary,
@@ -334,10 +334,10 @@ mod asset_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_with_vouchers_does_not_err() {
+		fn withdraw_and_deposit_into_with_vouchers_does_not_err() {
 			// This test is meant to show how using vouchers with the
-			// 'withdraw_and_deposit_into_treasury' does not actually store anything in the
-			// treasury, but that it also does not fail.
+			// 'withdraw_and_deposit_into' does not actually store anything in the
+			// beneficiary, but that it also does not fail.
 			ExtBuilder::default().vouchers(&[(ALICE, 15)]).build().execute_with(|| {
 				let fee = 15;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
@@ -347,7 +347,7 @@ mod asset_fee_handler {
 					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
 					.expect("Should contain remaining vouchers");
 
-				TestAssetFeeHandler::withdraw_and_deposit_into_treasury(
+				TestAssetFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					VOUCHER_ASSET_PAYMENT,
 					&fee_beneficiary,
@@ -367,20 +367,18 @@ mod asset_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_fails_if_missing_funds() {
+		fn withdraw_and_deposit_into_fails_if_missing_funds() {
 			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
 				assert_noop!(
-					TestAssetFeeHandler::withdraw_and_pay_fees(
+					TestAssetFeeHandler::withdraw_and_deposit_into(
 						&ALICE,
 						WHITELISTED_ASSET_ID_PAYMENT,
-						fee,
-						&TournamentFeeId::Free,
-						&AffiliateFeeId::Free,
 						&fee_beneficiary,
+						fee,
 					),
 					DispatchError::Module(ModuleError {
 						index: 2,
@@ -394,7 +392,7 @@ mod asset_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_fails_if_missing_vouchers() {
+		fn withdraw_and_deposit_into_fails_if_missing_vouchers() {
 			ExtBuilder::default().vouchers(&[(ALICE, 10)]).build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(WHITELISTED_ASSET_ID, ALICE);
@@ -405,13 +403,11 @@ mod asset_fee_handler {
 					.expect("Should contain remaining vouchers");
 
 				assert_noop!(
-					TestAssetFeeHandler::withdraw_and_pay_fees(
+					TestAssetFeeHandler::withdraw_and_deposit_into(
 						&ALICE,
 						VOUCHER_ASSET_PAYMENT,
-						fee,
-						&TournamentFeeId::Free,
-						&AffiliateFeeId::Free,
 						&fee_beneficiary,
+						fee,
 					),
 					DispatchError::Token(TokenError::FundsUnavailable)
 				);
@@ -427,20 +423,18 @@ mod asset_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_for_not_whitelisted_asset() {
+		fn withdraw_and_deposit_into_fails_for_not_whitelisted_asset() {
 			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Assets::balance(NOT_WHITE_LISTED_ASSET_ID, ALICE);
 				let fee_beneficiary = FERDIE;
 
 				assert_noop!(
-					TestAssetFeeHandler::withdraw_and_pay_fees(
+					TestAssetFeeHandler::withdraw_and_deposit_into(
 						&ALICE,
 						NOT_WHITELISTED_ASSET_ID_PAYMENT,
-						fee,
-						&TournamentFeeId::Free,
-						&AffiliateFeeId::Free,
 						&fee_beneficiary,
+						fee,
 					),
 					DispatchError::Token(TokenError::Unsupported)
 				);
@@ -699,18 +693,18 @@ mod native_fee_handler {
 		}
 	}
 
-	mod withdraw_and_deposit_into_treasury {
+	mod withdraw_and_deposit_into {
 		use super::*;
 		use crate::mock::{VOUCHERS, VOUCHER_NATIVE_PAYMENT};
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_works() {
+		fn withdraw_and_deposit_into_works() {
 			ExtBuilder::default().build().execute_with(|| {
 				let fee = 20;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
-				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
+				TestNativeFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					NATIVE_ASSET_PAYMENT,
 					&fee_beneficiary,
@@ -724,10 +718,10 @@ mod native_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_with_vouchers_does_not_err() {
+		fn withdraw_and_deposit_into_with_vouchers_does_not_err() {
 			// This test is meant to show how using vouchers with the
-			// 'withdraw_and_deposit_into_treasury' does not actually store anything in the
-			// treasury, but that it also does not fail.
+			// 'withdraw_and_deposit_into' does not actually store anything in the
+			// beneficiary, but that it also does not fail.
 			ExtBuilder::default().vouchers(&[(ALICE, 8)]).build().execute_with(|| {
 				let fee = 1;
 				let alice_balance_before = Balances::balance(&ALICE);
@@ -737,7 +731,7 @@ mod native_fee_handler {
 					.with_borrow(|voucher_store| voucher_store.get(&ALICE).copied())
 					.expect("Should contain remaining vouchers");
 
-				TestNativeFeeHandler::withdraw_and_deposit_into_treasury(
+				TestNativeFeeHandler::withdraw_and_deposit_into(
 					&ALICE,
 					VOUCHER_NATIVE_PAYMENT,
 					&fee_beneficiary,
@@ -757,20 +751,18 @@ mod native_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_fails_if_missing_funds() {
+		fn withdraw_and_deposit_into_fails_if_missing_funds() {
 			ExtBuilder::default().build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Balances::balance(&ALICE);
 				let fee_beneficiary = FERDIE;
 
 				assert_noop!(
-					TestNativeFeeHandler::withdraw_and_pay_fees(
+					TestNativeFeeHandler::withdraw_and_deposit_into(
 						&ALICE,
 						NATIVE_ASSET_PAYMENT,
-						fee,
-						&TournamentFeeId::Free,
-						&AffiliateFeeId::Free,
 						&fee_beneficiary,
+						fee,
 					),
 					DispatchError::Token(TokenError::FundsUnavailable)
 				);
@@ -780,7 +772,7 @@ mod native_fee_handler {
 		}
 
 		#[test]
-		fn withdraw_and_deposit_into_treasury_fails_if_missing_vouchers() {
+		fn withdraw_and_deposit_into_fails_if_missing_vouchers() {
 			ExtBuilder::default().vouchers(&[(ALICE, 99)]).build().execute_with(|| {
 				let fee = 101;
 				let alice_balance_before = Balances::balance(&ALICE);
@@ -791,13 +783,11 @@ mod native_fee_handler {
 					.expect("Should contain remaining vouchers");
 
 				assert_noop!(
-					TestNativeFeeHandler::withdraw_and_pay_fees(
+					TestNativeFeeHandler::withdraw_and_deposit_into(
 						&ALICE,
 						NATIVE_ASSET_PAYMENT,
-						fee,
-						&TournamentFeeId::Free,
-						&AffiliateFeeId::Free,
 						&fee_beneficiary,
+						fee,
 					),
 					DispatchError::Token(TokenError::FundsUnavailable)
 				);

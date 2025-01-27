@@ -3,7 +3,7 @@ use crate::withdraw_credit::WithdrawCredit;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
-	traits::{fungible, fungibles, Defensive, Imbalance},
+	traits::{fungible, fungibles, tokens::Preservation, Defensive, Imbalance},
 	BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
@@ -69,7 +69,7 @@ pub trait FeeHandler {
 
 	/// Withdraws the `amount` denominated in `payment` and allocates it fully to the
 	/// `treasury_pot`.
-	fn withdraw_and_deposit_into_treasury(
+	fn withdraw_and_deposit_into(
 		who: &Self::AccountId,
 		payment: Self::PaymentKind,
 		treasury_pot: &Self::AccountId,
@@ -123,30 +123,30 @@ where
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = W::withdraw_credit(payer, payment.clone(), base_fee)? {
+		if let Some(fee_credit) =
+			W::withdraw_credit(payer, payment.clone(), base_fee, Preservation::Preserve)?
+		{
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
 			let remaining_credit2 =
 				Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
 
-			Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+			Self::deposit(treasury_pot, remaining_credit2)
 		} else {
+			// This is only none if the fee was paid with a voucher.
+			// In this case we simply do nothing.
 			Ok(())
 		}
 	}
 
-	fn withdraw_and_deposit_into_treasury(
+	fn withdraw_and_deposit_into(
 		who: &Self::AccountId,
 		payment: Self::PaymentKind,
-		treasury_pot: &Self::AccountId,
+		beneficiary: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
-			Self::deposit_into_treasury(treasury_pot, credit)
-		} else {
-			Ok(())
-		}
+		Self::withdraw_and_deposit(payment, who, beneficiary, amount)
 	}
 }
 
@@ -238,14 +238,40 @@ where
 
 		Ok(final_fee)
 	}
+}
 
-	fn deposit_into_treasury(key: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
-		if let Err(_credit) = W::Assets::resolve(key, credit) {
+impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+	AssetGameFeeHandler<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
+where
+	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Assets,
+		Credit = fungibles::Credit<AccountId, Assets>,
+	>,
+{
+	fn withdraw_and_deposit(
+		payment: W::AssetId,
+		who: &AccountId,
+		beneficiary: &AccountId,
+		amount: W::Balance,
+	) -> Result<(), DispatchError> {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount, Preservation::Preserve)? {
+			Self::deposit(beneficiary, credit)
+		} else {
+			// This is only none, if the fee was paid with a voucher.
+			// In this case we simply put nothing into the treasury.
+			Ok(())
+		}
+	}
+
+	fn deposit(beneficiary: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
+		if let Err(_credit) = W::Assets::resolve(beneficiary, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
 			// the transaction fails because we can't allocate the fees to the recipient.
 			log::error!(
-				"Could not deposit to treasury, it probably doesn't exist, burning the credit..."
+				"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
 			);
 		}
 		Ok(())
@@ -295,30 +321,28 @@ where
 		treasury_pot: &Self::AccountId,
 	) -> Result<(), DispatchError> {
 		// The credit may be in any asset as implemented by `WithdrawAsset`.
-		if let Some(fee_credit) = W::withdraw_credit(payer, payment, base_fee)? {
+		if let Some(fee_credit) =
+			W::withdraw_credit(payer, payment, base_fee, Preservation::Preserve)?
+		{
 			let remaining_credit =
 				Self::try_propagate_tournament_fee(fee_credit, payer, tournament_id)?;
 
 			let remaining_credit2 =
 				Self::try_propagate_chain_fee(remaining_credit, payer, affiliate_id)?;
 
-			Self::deposit_into_treasury(treasury_pot, remaining_credit2)
+			Self::deposit(treasury_pot, remaining_credit2)
 		} else {
 			Ok(())
 		}
 	}
 
-	fn withdraw_and_deposit_into_treasury(
+	fn withdraw_and_deposit_into(
 		who: &Self::AccountId,
 		payment: Self::PaymentKind,
-		treasury_pot: &Self::AccountId,
+		beneficiary: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError> {
-		if let Some(credit) = W::withdraw_credit(who, payment, amount)? {
-			Self::deposit_into_treasury(treasury_pot, credit)
-		} else {
-			Ok(())
-		}
+		Self::withdraw_and_deposit(payment, who, beneficiary, amount)
 	}
 }
 
@@ -408,14 +432,40 @@ where
 
 		Ok(final_fee)
 	}
+}
 
-	fn deposit_into_treasury(key: &AccountId, credit: W::Credit) -> Result<(), DispatchError> {
-		if let Err(_credit) = W::Assets::resolve(key, credit) {
+impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+	NativeGameFeeHandler<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
+where
+	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
+	W: WithdrawCredit<
+		AccountId = AccountId,
+		Assets = Balances,
+		Credit = fungible::Credit<AccountId, Balances>,
+	>,
+{
+	fn withdraw_and_deposit(
+		payment: W::AssetId,
+		who: &AccountId,
+		beneficiary: &AccountId,
+		amount: W::Balance,
+	) -> Result<(), DispatchError> {
+		if let Some(credit) = W::withdraw_credit(who, payment, amount, Preservation::Preserve)? {
+			Self::deposit(beneficiary, credit)
+		} else {
+			// This is only none, if the fee was paid with a voucher.
+			// In this case we simply put nothing into the treasury.
+			Ok(())
+		}
+	}
+
+	fn deposit(beneficiary: &W::AccountId, credit: W::Credit) -> Result<(), DispatchError> {
+		if let Err(_credit) = W::Assets::resolve(beneficiary, credit) {
 			// We decide to continue here, because the error has nothing to do with the
 			// account sending the transaction. It would be a bad user experience if
 			// the transaction fails because we can't allocate the fees to the recipient.
 			log::error!(
-				"Could deposit to treasury, it probably doesn't exist, burning the credit..."
+				"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
 			);
 		}
 		Ok(())

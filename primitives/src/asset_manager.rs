@@ -82,3 +82,38 @@ pub trait AssetInspector {
 		account_id: &Self::AccountId,
 	) -> impl Iterator<Item = (Self::AssetId, Self::Asset)>;
 }
+
+pub trait AssetFundsManager {
+	type AccountId: Member + Codec;
+
+	type AssetId: Member + Codec;
+
+	type FungiblesAssetId;
+
+	type Balance;
+
+	fn inspect_asset_funds(
+		asset_id: &Self::AssetId,
+		fungibles_asset_id: &Self::FungiblesAssetId,
+	) -> Self::Balance;
+
+	fn deposit_funds_to_asset(
+		asset_id: &Self::AssetId,
+		from: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError>;
+
+	fn transfer_funds_from_asset(
+		asset_id: &Self::AssetId,
+		to: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError>;
+
+	fn transfer_all_from_asset(
+		asset_id: &Self::AssetId,
+		to: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+	) -> Result<(), DispatchError>;
+}
