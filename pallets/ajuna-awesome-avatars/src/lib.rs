@@ -641,7 +641,12 @@ pub mod pallet {
 				Error::<T>::FeatureLocked
 			);
 			let Season { fee, .. } = Self::seasons(&avatar.season_id)?;
-			let _ = T::Currency::withdraw(&from, fee.transfer_avatar, WithdrawReasons::FEE, AllowDeath)?;
+			let _ = T::Currency::withdraw(
+				&from,
+				fee.transfer_avatar,
+				WithdrawReasons::FEE,
+				AllowDeath,
+			)?;
 			Self::deposit_into_treasury(&avatar.season_id, fee.transfer_avatar);
 
 			Self::do_transfer_avatar(&from, &to, &avatar.season_id, &avatar_id)?;
@@ -1723,7 +1728,8 @@ pub mod pallet {
 						}
 					};
 
-					let _ = T::Currency::withdraw(player, mint_fee, WithdrawReasons::FEE, AllowDeath)?;
+					let _ =
+						T::Currency::withdraw(player, mint_fee, WithdrawReasons::FEE, AllowDeath)?;
 					Self::deposit_into_treasury(&season_id, mint_fee);
 				},
 				MintPayment::Free => {
