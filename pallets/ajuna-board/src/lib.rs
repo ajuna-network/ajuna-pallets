@@ -34,7 +34,7 @@ mod mock;
 mod tests;
 
 pub mod dot4gravity;
-mod types;
+pub mod types;
 use types::*;
 
 pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);

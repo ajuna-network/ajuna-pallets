@@ -110,7 +110,7 @@ thread_local! {
 		account_map.insert(AffiliateWhitelistKey::get(), BTreeSet::new());
 		account_map
 	});
-	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = const { RefCell::new(None) };
 }
 
 pub struct MockAccountManager;

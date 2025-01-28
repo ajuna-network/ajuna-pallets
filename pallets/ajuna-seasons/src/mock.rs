@@ -101,7 +101,7 @@ impl pallet_balances::Config for Test {
 pub type MockAssetId = u32;
 
 thread_local! {
-	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = const { RefCell::new(None) };
 }
 
 pub struct MockAccountManager;
