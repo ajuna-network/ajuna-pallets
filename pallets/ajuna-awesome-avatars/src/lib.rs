@@ -641,7 +641,12 @@ pub mod pallet {
 				Error::<T>::FeatureLocked
 			);
 			let Season { fee, .. } = Self::seasons(&avatar.season_id)?;
-			T::Currency::withdraw(&from, fee.transfer_avatar, WithdrawReasons::FEE, AllowDeath)?;
+			let _ = T::Currency::withdraw(
+				&from,
+				fee.transfer_avatar,
+				WithdrawReasons::FEE,
+				AllowDeath,
+			)?;
 			Self::deposit_into_treasury(&avatar.season_id, fee.transfer_avatar);
 
 			Self::do_transfer_avatar(&from, &to, &avatar.season_id, &avatar_id)?;
@@ -799,7 +804,7 @@ pub mod pallet {
 					base_fee
 				}
 			};
-			T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
+			let _ = T::Currency::withdraw(&buyer, trade_fee, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&avatar.season_id, trade_fee);
 
 			Self::do_transfer_avatar(&seller, &buyer, &avatar.season_id, &avatar_id)?;
@@ -868,7 +873,7 @@ pub mod pallet {
 				}
 			};
 
-			T::Currency::withdraw(&caller, upgrade_fee, WithdrawReasons::FEE, AllowDeath)?;
+			let _ = T::Currency::withdraw(&caller, upgrade_fee, WithdrawReasons::FEE, AllowDeath)?;
 			Self::deposit_into_treasury(&season_id, upgrade_fee);
 
 			PlayerSeasonConfigs::<T>::mutate(&account_to_upgrade, season_id, |account| {
@@ -1614,7 +1619,7 @@ pub mod pallet {
 
 		pub(crate) fn deposit_into_treasury(season_id: &SeasonId, amount: BalanceOf<T>) {
 			Treasury::<T>::mutate(season_id, |bal| bal.saturating_accrue(amount));
-			T::Currency::deposit_creating(&Self::treasury_account_id(), amount);
+			let _ = T::Currency::deposit_creating(&Self::treasury_account_id(), amount);
 		}
 
 		/// Check that the origin is an organizer account.
@@ -1723,7 +1728,8 @@ pub mod pallet {
 						}
 					};
 
-					T::Currency::withdraw(player, mint_fee, WithdrawReasons::FEE, AllowDeath)?;
+					let _ =
+						T::Currency::withdraw(player, mint_fee, WithdrawReasons::FEE, AllowDeath)?;
 					Self::deposit_into_treasury(&season_id, mint_fee);
 				},
 				MintPayment::Free => {

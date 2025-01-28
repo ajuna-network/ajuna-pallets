@@ -789,7 +789,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	///
 	pub(crate) fn config_value(who: T::AccountId, index: u8) -> u32 {
 		GameConfig::config_value(
 			index,
@@ -799,7 +798,6 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
-	///
 	fn ensure_not_max_mogwais(who: T::AccountId) -> bool {
 		Self::owned_mogwais_count(&who) < Self::config_value(who, 1) as u64
 	}
@@ -826,7 +824,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	///
 	fn remove(from: T::AccountId, mogwai_id: MogwaiIdOf<T>) -> DispatchResult {
 		ensure!(Mogwais::<T>::contains_key(mogwai_id), Error::<T>::MogwaiDoesntExists);
 

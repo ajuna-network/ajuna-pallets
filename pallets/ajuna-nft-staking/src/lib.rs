@@ -497,7 +497,7 @@ pub mod pallet {
 							WithdrawReasons::TRANSFER,
 							AllowDeath,
 						)?;
-						T::Currency::deposit_creating(&pallet_account_id, imbalance.peek());
+						let _ = T::Currency::deposit_creating(&pallet_account_id, imbalance.peek());
 						Ok(())
 					},
 					Reward::Nft(address) => {
