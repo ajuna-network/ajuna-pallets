@@ -38,30 +38,6 @@ where
 	fn is_queued(&self, j: ItemKey) -> bool;
 }
 
-// There is no equivalent trait in std so we create one.
-pub trait WrappingOps {
-	fn wrapping_add(self, rhs: Self) -> Self;
-	fn wrapping_sub(self, rhs: Self) -> Self;
-}
-
-macro_rules! impl_wrapping_ops {
-	($type:ty) => {
-		impl WrappingOps for $type {
-			fn wrapping_add(self, rhs: Self) -> Self {
-				self.wrapping_add(rhs)
-			}
-			fn wrapping_sub(self, rhs: Self) -> Self {
-				self.wrapping_sub(rhs)
-			}
-		}
-	};
-}
-
-impl_wrapping_ops!(u8);
-impl_wrapping_ops!(u16);
-impl_wrapping_ops!(u32);
-impl_wrapping_ops!(u64);
-
 pub type BufferIndex = u16;
 pub type BufferIndexVector = Vec<(BufferIndex, BufferIndex)>;
 pub type Bracket = u8;
