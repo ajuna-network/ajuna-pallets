@@ -1844,7 +1844,7 @@ mod forging {
 			.seasons(&[(SEASON_ID, season)])
 			.schedules(&[(SEASON_ID, season_schedule.clone())])
 			.mint_cooldown(0)
-			.balances(&[(BOB, MockBalance::max_value())])
+			.balances(&[(BOB, MockBalance::MAX)])
 			.free_mints(&[(BOB, 0)])
 			.build()
 			.execute_with(|| {

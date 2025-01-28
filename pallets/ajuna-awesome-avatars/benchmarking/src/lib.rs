@@ -425,7 +425,7 @@ benchmarks! {
 		let amount = 1_000_000_000_000_u64.unique_saturated_into();
 		Treasurer::<T>::insert(season_id, treasurer.clone());
 		Treasury::<T>::mutate(season_id, |balance| balance.saturating_accrue(amount));
-		CurrencyOf::<T>::deposit_creating(&AAvatars::<T>::treasury_account_id(), amount);
+		let _ = CurrencyOf::<T>::deposit_creating(&AAvatars::<T>::treasury_account_id(), amount);
 		CurrencyOf::<T>::make_free_balance_be(&treasurer, CurrencyOf::<T>::minimum_balance());
 	}: _(RawOrigin::Signed(treasurer.clone()), season_id)
 	verify {

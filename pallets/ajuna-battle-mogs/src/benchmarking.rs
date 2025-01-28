@@ -16,8 +16,6 @@
 
 //! Benchmarking setup for pallet-battle-mogs
 
-#![cfg(feature = "runtime-benchmarks")]
-
 use crate::{Config as BattleMogsConfig, *};
 use frame_benchmarking::{benchmarks, whitelist_account, whitelisted_caller};
 use frame_system::RawOrigin;

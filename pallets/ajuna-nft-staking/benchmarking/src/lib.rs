@@ -123,7 +123,7 @@ fn create_collections<T: Config>(creator: &T::AccountId, n: usize) -> DispatchRe
 }
 
 fn create_collection<T: Config>(owner: &T::AccountId) -> DispatchResult {
-	NftCurrencyOf::<T>::deposit_creating(owner, CollectionDeposit::<T>::get());
+	let _ = NftCurrencyOf::<T>::deposit_creating(owner, CollectionDeposit::<T>::get());
 	<pallet_nfts::Pallet<T> as Create<T::AccountId, CollectionConfigOf<T>>>::create_collection(
 		owner,
 		owner,
@@ -169,7 +169,7 @@ fn accept_contract<T: Config>(
 fn mint_item<T: Config>(owner: &T::AccountId, collection_id: u16, item_id: u16) -> DispatchResult {
 	let collection_id = &T::Helper::collection(collection_id);
 	let item_id = &T::Helper::item(item_id);
-	NftCurrencyOf::<T>::deposit_creating(owner, ItemDeposit::<T>::get());
+	let _ = NftCurrencyOf::<T>::deposit_creating(owner, ItemDeposit::<T>::get());
 	<pallet_nfts::Pallet<T> as Mutate<T::AccountId, ItemConfig>>::mint_into(
 		collection_id,
 		item_id,
