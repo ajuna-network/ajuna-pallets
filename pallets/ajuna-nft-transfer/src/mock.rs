@@ -286,11 +286,11 @@ impl NftConvertible<KeyLimit, ValueLimit> for MockItem {
 pub const ALICE: MockAccountId = 1;
 
 thread_local! {
-	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = RefCell::new(BTreeMap::new());
-	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = RefCell::new(BTreeMap::new());
-	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = RefCell::new(BTreeMap::new());
-	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(Some(ALICE));
-	pub static PREPARE_FEE: RefCell<MockBalance> = RefCell::new(999);
+	pub static OWNERS: RefCell<BTreeMap<MockAccountId, ItemId>> = const { RefCell::new(BTreeMap::new()) };
+	pub static ASSETS: RefCell<BTreeMap<ItemId, MockItem>> = const { RefCell::new(BTreeMap::new()) };
+	pub static LOCKED_ASSETS: RefCell<BTreeMap<ItemId, Lock<MockAccountId>>> = const { RefCell::new(BTreeMap::new()) };
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = const { RefCell::new(Some(ALICE)) };
+	pub static PREPARE_FEE: RefCell<MockBalance> = const { RefCell::new(999) };
 }
 
 /// In the future we might want to use the `pallet-awesome-ajuna-avatars`, but currently this

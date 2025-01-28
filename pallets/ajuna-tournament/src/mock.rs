@@ -132,9 +132,9 @@ impl EntityRank for MockRanker {
 }
 
 thread_local! {
-	pub static ORGANIZER: RefCell<Option<MockAccountId>> = RefCell::new(None);
-	pub static ASSETS: RefCell<BTreeMap<MockEntityId, MockEntity>> = RefCell::new(BTreeMap::new());
-	pub static OWNERS: RefCell<BTreeMap<MockAccountId, MockEntityId>> = RefCell::new(BTreeMap::new());
+	pub static ORGANIZER: RefCell<Option<MockAccountId>> = const { RefCell::new(None) };
+	pub static ASSETS: RefCell<BTreeMap<MockEntityId, MockEntity>> = const { RefCell::new(BTreeMap::new()) };
+	pub static OWNERS: RefCell<BTreeMap<MockAccountId, MockEntityId>> = const { RefCell::new(BTreeMap::new()) };
 }
 
 pub struct MockAccountManager;
