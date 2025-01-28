@@ -22,6 +22,10 @@ members = [
     "sage/api",
 ]
 
+[workspace.lints.clippy]
+manual_inspect = { level = "allow", priority = 2 }              # Needs substrate fix in `#[pallet]`
+multiple_bound_locations = { level = "allow", priority = 2 }    # Needs substrate fix in `#[benchmark]`
+
 [workspace.dependencies]
 # General
 hex = { version = "0.4.3", default-features = false }

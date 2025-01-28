@@ -1,7 +1,6 @@
 [package]
 description = "Ajuna Network pallet used to interact with Erdstall chain bridge"
 name        = "pallet-ajuna-wildcard"
-
 authors.workspace    = true
 edition.workspace    = true
 homepage.workspace   = true
@@ -10,6 +9,9 @@ version.workspace    = true
 
 [package.metadata.docs.rs]
 targets = [ "x86_64-unknown-linux-gnu"]
+
+[lints]
+workspace = true
 
 [dependencies]
 # Substrate (wasm)
