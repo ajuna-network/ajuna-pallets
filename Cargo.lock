@@ -910,9 +910,9 @@ dependencies = [
 
 [[package]]
 name = "frame-benchmarking"
-version = "37.0.0"
+version = "38.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48554572bd164ee905a6ff3378e46c2101610fd2ffe3110875a6503a240fb3d7"
+checksum = "a01bdd47c2d541b38bd892da647d1e972c9d85b4ecd7094ad64f7600175da54d"
 dependencies = [
  "frame-support",
  "frame-support-procedural",
@@ -947,9 +947,9 @@ dependencies = [
 
 [[package]]
 name = "frame-support"
-version = "37.0.1"
+version = "38.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "847939177e3637c1ec2f78eecf0755910763b8d6c3dfc04aea2efec33823b3af"
+checksum = "f7dd8b9f161a8289e3b9fe6c1068519358dbff2270d38097a923d3d1b4459dca"
 dependencies = [
  "aquamarine",
  "array-bytes",
@@ -1033,9 +1033,9 @@ dependencies = [
 
 [[package]]
 name = "frame-system"
-version = "37.1.0"
+version = "38.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "043790fff021477061b207fd6b33743793b63fc64a583358956787229d039717"
+checksum = "e3c7fa02f8c305496d2ae52edaecdb9d165f11afa965e05686d7d7dd1ce93611"
 dependencies = [
  "cfg-if",
  "docify",
@@ -1740,9 +1740,9 @@ dependencies = [
 
 [[package]]
 name = "orml-vesting"
-version = "1.0.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17b4762f6a00a7f3588ac6bd8527bfcbb90104eab587fefd3602e97b6b8ac66"
+checksum = "c825df0d163efc0fa6e07083b3d3098a32e6ec1c559b7365cfbe97d1fe046783"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1980,9 +1980,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-assets"
-version = "39.0.0"
+version = "40.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd34007f64b1159232feacc431ae88b8319e16e594ed6ffc2c1a10ecf6e0ad64"
+checksum = "f45f4eb6027fc34c4650e0ed6a7e57ed3335cc364be74b4531f714237676bcee"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -1997,9 +1997,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-balances"
-version = "38.0.0"
+version = "39.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "267f2b4c64e06d340fab1e48267e815dc2afaf8e6da16369b26b5c9e1e65f1aa"
+checksum = "5c6945b078919acb14d126490e4b0973a688568b30142476ca69c6df2bed27ad"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -2013,9 +2013,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-insecure-randomness-collective-flip"
-version = "25.0.0"
+version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5e0875af2d12eb49d57c00f37cfbfba458033c10cfe87114318746381300a0e"
+checksum = "dce7ad80675d78bd38a7a66ecbbf2d218dd32955e97f8e301d0afe6c87b0f251"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2027,9 +2027,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-nfts"
-version = "31.0.0"
+version = "32.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "055e9b6e3eb24da0a1bfc66682aac1510714168ce5c4cc396bbcbeb564593d98"
+checksum = "59e2aad461a0849d7f0471576eeb1fe3151795bcf2ec9e15eca5cca5b9d743b2"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -2065,9 +2065,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-timestamp"
-version = "36.0.1"
+version = "37.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14f264c80bef4ac3180e5cba619f319d7855cc89ba91b28b3f752620d9425b88"
+checksum = "a9ba9b71bbfd33ae672f23ba7efaeed2755fdac37b8f946cb7474fc37841b7e1"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -3073,9 +3073,9 @@ dependencies = [
 
 [[package]]
 name = "sp-runtime"
-version = "39.0.2"
+version = "39.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "658f23be7c79a85581029676a73265c107c5469157e3444c8c640fdbaa8bfed0"
+checksum = "b1e00503b83cf48fffe48746b91b9b832d6785d4e2eeb0941558371eac6baac6"
 dependencies = [
  "docify",
  "either",
@@ -3134,9 +3134,9 @@ dependencies = [
 
 [[package]]
 name = "sp-staking"
-version = "34.0.0"
+version = "36.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "143a764cacbab58347d8b2fd4c8909031fb0888d7b02a0ec9fa44f81f780d732"
+checksum = "2a73eedb4b85f4cd420d31764827546aa22f82ce1646d0fd258993d051de7a90"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
