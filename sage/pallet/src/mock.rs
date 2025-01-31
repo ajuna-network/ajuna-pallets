@@ -23,6 +23,7 @@ use ajuna_primitives::{
 		TransferFungibleAssets, VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles,
 		WithdrawKind, WithdrawWhitelistedCredit,
 	},
+	sage_api::SageApi,
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 };
 use frame_support::{
@@ -102,7 +103,7 @@ pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<AssetId>> =
 	WithdrawKind::Payment(NativeOrWithId::Native);
 pub const SOME_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<AssetId>>> = Some(NATIVE_PAYMENT);
 
-use example_transition::prelude::*;
+use example_transition::{prelude::*, transition::GameTransitionConfig};
 
 parameter_types! {
 	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
@@ -176,9 +177,11 @@ impl SeasonManager for MockSeasonManager {
 	}
 }
 
-pub struct MockAssetMediator;
+/// Facade around Sage to prevent recursion errors during build
+/// when sage would be also a field in its associated types.
+pub struct SageFacade;
 
-impl AssetManager for MockAssetMediator {
+impl AssetManager for SageFacade {
 	type AccountId = MockAccountId;
 	type AssetId = AssetId;
 	type Asset = MockAsset;
@@ -211,7 +214,7 @@ impl AssetManager for MockAssetMediator {
 	}
 }
 
-impl AssetInspector for MockAssetMediator {
+impl AssetInspector for SageFacade {
 	type AccountId = MockAccountId;
 	type AssetId = AssetId;
 	type Asset = MockAsset;
@@ -227,11 +230,69 @@ impl AssetInspector for MockAssetMediator {
 	}
 }
 
-impl ChainInspector for MockAssetMediator {
+impl AssetFundsManager for SageFacade {
+	type AccountId = MockAccountId;
+	type AssetId = AssetId;
+	type FungiblesAssetId = FungiblesAssetId;
+	type Balance = MockBalance;
+
+	fn inspect_asset_funds(
+		asset_id: &Self::AssetId,
+		fungibles_asset_id: &Self::FungiblesAssetId,
+	) -> Self::Balance {
+		<Sage as AssetFundsManager>::inspect_asset_funds(asset_id, fungibles_asset_id)
+	}
+
+	fn deposit_funds_to_asset(
+		asset_id: &Self::AssetId,
+		from: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		<Sage as AssetFundsManager>::deposit_funds_to_asset(
+			asset_id,
+			from,
+			fungibles_asset_id,
+			amount,
+		)
+	}
+
+	fn transfer_funds_from_asset(
+		asset_id: &Self::AssetId,
+		to: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+		amount: Self::Balance,
+	) -> Result<(), DispatchError> {
+		<Sage as AssetFundsManager>::transfer_funds_from_asset(
+			asset_id,
+			to,
+			fungibles_asset_id,
+			amount,
+		)
+	}
+
+	fn transfer_all_from_asset(
+		asset_id: &Self::AssetId,
+		to: &Self::AccountId,
+		fungibles_asset_id: Self::FungiblesAssetId,
+	) -> Result<(), DispatchError> {
+		<Sage as AssetFundsManager>::transfer_all_from_asset(asset_id, to, fungibles_asset_id)
+	}
+}
+
+impl ChainInspector for SageFacade {
 	type BlockNumber = BlockNumberFor<Test>;
 
 	fn get_current_block_number() -> Self::BlockNumber {
 		System::block_number()
+	}
+}
+
+impl SageApi for SageFacade {
+	type TransitionConfig = GameTransitionConfig;
+
+	fn get_transition_config() -> Self::TransitionConfig {
+		<Sage as SageApi>::get_transition_config()
 	}
 }
 
@@ -250,7 +311,7 @@ impl VoucherHandler for MockVoucherHandler {
 }
 
 pub type GameTransitionOf =
-	GameTransition<MockAccountId, BlockNumberFor<Test>, MockAssetMediator, MockAssetMediator>;
+	GameTransition<MockAccountId, BlockNumberFor<Test>, SageFacade, SageFacade, SageFacade>;
 
 pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 	WithdrawWhitelistedCredit<

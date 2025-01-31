@@ -6,7 +6,10 @@ use ajuna_primitives::{
 };
 use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
-use ajuna_primitives::sage_api::SageApi;
+use crate::asset::AssetId;
+use ajuna_primitives::{
+	asset_manager::AssetFundsManager, payment_handler::NativeId, sage_api::SageApi,
+};
 use core::marker::PhantomData;
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use parity_scale_codec::Codec;
@@ -26,7 +29,7 @@ pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sa
 /// This is an example how a transition config custom to a game could look like.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct GameTransitionConfig {
-	pub game_fee: u128,
+	pub game_fee: u64,
 }
 
 impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> SageGameTransition
@@ -34,17 +37,12 @@ impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> SageGameTransitio
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
-	AssetHandler: AssetManager<
-			AccountId = AccountId,
-			AssetId = asset::AssetId,
-			Asset = asset::Asset<BlockNumber>,
-		> + AssetInspector<
-			AccountId = AccountId,
-			AssetId = asset::AssetId,
-			Asset = asset::Asset<BlockNumber>,
-		>,
+	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = asset::Asset<BlockNumber>>
+		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = asset::Asset<BlockNumber>>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
-	Sage: SageApi<TransitionConfig = GameTransitionConfig>,
+	Sage: SageApi<TransitionConfig = GameTransitionConfig>
+		+ AssetFundsManager<AccountId = AccountId, AssetId = AssetId, Balance = u64>,
+	<Sage as AssetFundsManager>::FungiblesAssetId: NativeId,
 {
 	type TransitionId = TransitionIdentifier;
 	type TransitionConfig = GameTransitionConfig;
