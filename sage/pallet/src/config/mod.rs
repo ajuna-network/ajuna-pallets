@@ -44,10 +44,7 @@ pub struct TradeConfig {
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct GeneralConfig<
-	TransitionConfig: Member + Encode + Decode + MaxEncodedLen + TypeInfo + Default,
-> {
-	pub transition: TransitionConfig,
+pub struct GeneralConfig {
 	pub transfer: TransferConfig,
 	pub trade: TradeConfig,
 }

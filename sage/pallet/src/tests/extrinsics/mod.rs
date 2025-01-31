@@ -27,5 +27,6 @@ mod unlock_asset;
 mod unlock_feature;
 mod update_asset_filter;
 mod update_general_config;
+mod update_transition_config;
 mod update_unlock_rule;
 mod upgrade_asset_inventory;

@@ -412,7 +412,6 @@ impl ExtBuilder {
 
 			// Setting initial general config for tests
 			let config = GeneralConfig {
-				transition: (),
 				transfer: TransferConfig { open: true },
 				trade: TradeConfig { open: true },
 			};

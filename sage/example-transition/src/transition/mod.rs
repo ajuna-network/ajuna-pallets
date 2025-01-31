@@ -22,6 +22,12 @@ pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler> {
 	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler)>,
 }
 
+/// This is an example how a transition config custom to a game could look like.
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq, Eq)]
+pub struct GameTransitionConfig {
+	pub game_fee: u128,
+}
+
 impl<AccountId, BlockNumber, AssetHandler, ChainHandler> SageGameTransition
 	for GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler>
 where
@@ -39,7 +45,7 @@ where
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
 {
 	type TransitionId = TransitionIdentifier;
-	type TransitionConfig = ();
+	type TransitionConfig = GameTransitionConfig;
 	type AccountId = AccountId;
 	type AssetId = asset::AssetId;
 	type Asset = asset::Asset<BlockNumber>;

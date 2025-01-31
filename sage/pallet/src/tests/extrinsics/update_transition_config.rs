@@ -15,23 +15,27 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use example_transition::transition::GameTransitionConfig;
 
 #[test]
-fn update_general_config_should_work() {
+fn update_transition_config_should_work() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let config = GeneralConfig::default();
-		assert_ok!(Sage::update_general_config(RuntimeOrigin::signed(ALICE), config.clone()));
-		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedGeneralConfig {
+		let config = GameTransitionConfig { game_fee: 10 };
+		assert_ok!(Sage::update_transition_config(RuntimeOrigin::signed(ALICE), config.clone()));
+		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransitionConfig {
 			new_config: config,
 		}));
 	});
 }
 
 #[test]
-fn update_general_config_should_reject_non_organizer_calls() {
+fn update_transition_config_should_reject_non_organizer_calls() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 		assert_noop!(
-			Sage::update_general_config(RuntimeOrigin::signed(BOB), GeneralConfig::default()),
+			Sage::update_transition_config(
+				RuntimeOrigin::signed(BOB),
+				TransitionConfigOf::<Test, _>::default()
+			),
 			DispatchError::BadOrigin
 		);
 	});
