@@ -231,7 +231,7 @@ where
 						// Todo: how to pass the FungibleAssetId that was used as payment for this
 						<Sage::FungiblesAssetId as NativeId>::get_native_id(),
 						// Todo: use balance type in transition config
-						transition_config.game_fee,
+						transition_config.hunting_reward,
 					)
 					.expect("transferring to asset failed");
 				}

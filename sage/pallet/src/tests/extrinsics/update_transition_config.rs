@@ -20,7 +20,7 @@ use example_transition::transition::GameTransitionConfig;
 #[test]
 fn update_transition_config_should_work() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let config = GameTransitionConfig { game_fee: 10 };
+		let config = GameTransitionConfig { hunting_reward: 10 };
 		assert_ok!(Sage::update_transition_config(RuntimeOrigin::signed(ALICE), config.clone()));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransitionConfig {
 			new_config: config,
