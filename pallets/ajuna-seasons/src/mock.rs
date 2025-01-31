@@ -219,6 +219,7 @@ impl ExtBuilder {
 			system: Default::default(),
 			balances: Default::default(),
 			seasons_alpha: Default::default(),
+			#[cfg(feature = "runtime-benchmarks")]
 			seasons_bench: Default::default(),
 		};
 
