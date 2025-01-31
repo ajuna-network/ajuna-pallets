@@ -49,10 +49,7 @@ fn test_seasons_full_workflow() {
 		let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 
 		// Initially there is no data in storage
-		assert_err!(
-			CurrentSeasonStatus::<Test, _>::get(),
-			Error::<Test, _>::NoActiveSeason
-		);
+		assert_err!(CurrentSeasonStatus::<Test, _>::get(), Error::<Test, _>::NoActiveSeason);
 		assert_eq!(LatestSeason::<Test, _>::get(), None);
 		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 0);
 		assert_eq!(NextSeasonChain::<Test, _>::iter().count(), 0);
@@ -79,10 +76,7 @@ fn test_seasons_full_workflow() {
 		}));
 
 		// After updating all data for the first season some data appears
-		assert_err!(
-			CurrentSeasonStatus::<Test, _>::get(),
-			Error::<Test, _>::NoActiveSeason
-		);
+		assert_err!(CurrentSeasonStatus::<Test, _>::get(), Error::<Test, _>::NoActiveSeason);
 		assert_eq!(LatestSeason::<Test, _>::get(), Some(SEASON_ID_1));
 		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 0);
 		assert_eq!(NextSeasonChain::<Test, _>::iter().count(), 0);
@@ -624,10 +618,7 @@ mod update_season {
 
 			// Nothing has changed
 			assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), Some(config.clone()));
-			assert_eq!(
-				SeasonSchedules::<Test, _>::get(SEASON_ID_1),
-				Some(schedule.clone())
-			);
+			assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), Some(schedule.clone()));
 
 			run_to_block(30);
 
