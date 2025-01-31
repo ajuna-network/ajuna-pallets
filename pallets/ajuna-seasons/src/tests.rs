@@ -29,7 +29,7 @@ fn test_seasons_full_workflow() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 		run_to_block(10);
 
-		let config = SeasonConfigOf::<Test, Instance1> {
+		let config = SeasonConfigOf::<Test, _> {
 			fee: SeasonFeeConfig {
 				transfer_asset: 10_u64,
 				buy_asset_min: 5_u64,
@@ -49,19 +49,16 @@ fn test_seasons_full_workflow() {
 		let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 
 		// Initially there is no data in storage
-		assert_err!(
-			CurrentSeasonStatus::<Test, Instance1>::get(),
-			Error::<Test, Instance1>::NoActiveSeason
-		);
-		assert_eq!(LatestSeason::<Test, Instance1>::get(), None);
-		assert_eq!(FinishedSeasons::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(NextSeasonChain::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(PrevSeasonChain::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), None);
-		assert_eq!(SeasonMetadatas::<Test, Instance1>::get(SEASON_ID_1), None);
-		assert_eq!(SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1), None);
-		assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(AssetSeasonRegister::<Test, Instance1>::iter().count(), 0);
+		assert_err!(CurrentSeasonStatus::<Test, _>::get(), Error::<Test, _>::NoActiveSeason);
+		assert_eq!(LatestSeason::<Test, _>::get(), None);
+		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 0);
+		assert_eq!(NextSeasonChain::<Test, _>::iter().count(), 0);
+		assert_eq!(PrevSeasonChain::<Test, _>::iter().count(), 0);
+		assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), None);
+		assert_eq!(SeasonMetadatas::<Test, _>::get(SEASON_ID_1), None);
+		assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), None);
+		assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 0);
+		assert_eq!(AssetSeasonRegister::<Test, _>::iter().count(), 0);
 
 		assert_ok!(SeasonsAlpha::update_season(
 			RuntimeOrigin::signed(ALICE),
@@ -79,19 +76,16 @@ fn test_seasons_full_workflow() {
 		}));
 
 		// After updating all data for the first season some data appears
-		assert_err!(
-			CurrentSeasonStatus::<Test, Instance1>::get(),
-			Error::<Test, Instance1>::NoActiveSeason
-		);
-		assert_eq!(LatestSeason::<Test, Instance1>::get(), Some(SEASON_ID_1));
-		assert_eq!(FinishedSeasons::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(NextSeasonChain::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(PrevSeasonChain::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), Some(config.clone()));
-		assert_eq!(SeasonMetadatas::<Test, Instance1>::get(SEASON_ID_1), Some(metadata));
-		assert_eq!(SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1), Some(schedule));
-		assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 3);
-		assert_eq!(AssetSeasonRegister::<Test, Instance1>::iter().count(), 0);
+		assert_err!(CurrentSeasonStatus::<Test, _>::get(), Error::<Test, _>::NoActiveSeason);
+		assert_eq!(LatestSeason::<Test, _>::get(), Some(SEASON_ID_1));
+		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 0);
+		assert_eq!(NextSeasonChain::<Test, _>::iter().count(), 0);
+		assert_eq!(PrevSeasonChain::<Test, _>::iter().count(), 0);
+		assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), Some(config.clone()));
+		assert_eq!(SeasonMetadatas::<Test, _>::get(SEASON_ID_1), Some(metadata));
+		assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), Some(schedule));
+		assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 3);
+		assert_eq!(AssetSeasonRegister::<Test, _>::iter().count(), 0);
 
 		// We move to the early starting block of season 1
 		run_to_block(20);
@@ -103,7 +97,7 @@ fn test_seasons_full_workflow() {
 		let expected_status =
 			SeasonStatus { season_id: SEASON_ID_1, early: true, active: true, early_ended: false };
 
-		assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
+		assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
 
 		// We move to the starting block of season 1 and we see that nothing happens
 		// since the season already early started
@@ -139,20 +133,20 @@ fn test_seasons_full_workflow() {
 		let expected_status =
 			SeasonStatus { season_id: SEASON_ID_1, early: true, active: true, early_ended: false };
 
-		assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
-		assert_eq!(LatestSeason::<Test, Instance1>::get(), Some(SEASON_ID_2));
-		assert_eq!(FinishedSeasons::<Test, Instance1>::iter().count(), 0);
-		assert_eq!(NextSeasonChain::<Test, Instance1>::iter().count(), 1);
-		assert_eq!(NextSeasonChain::<Test, Instance1>::get(SEASON_ID_1), Some(SEASON_ID_2));
-		assert_eq!(NextSeasonChain::<Test, Instance1>::get(SEASON_ID_2), None);
-		assert_eq!(PrevSeasonChain::<Test, Instance1>::iter().count(), 1);
-		assert_eq!(PrevSeasonChain::<Test, Instance1>::get(SEASON_ID_1), None);
-		assert_eq!(PrevSeasonChain::<Test, Instance1>::get(SEASON_ID_2), Some(SEASON_ID_1));
-		assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_2), Some(config.clone()));
-		assert_eq!(SeasonMetadatas::<Test, Instance1>::get(SEASON_ID_2), Some(metadata));
-		assert_eq!(SeasonSchedules::<Test, Instance1>::get(SEASON_ID_2), Some(schedule));
-		assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 4);
-		assert_eq!(AssetSeasonRegister::<Test, Instance1>::iter().count(), 0);
+		assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+		assert_eq!(LatestSeason::<Test, _>::get(), Some(SEASON_ID_2));
+		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 0);
+		assert_eq!(NextSeasonChain::<Test, _>::iter().count(), 1);
+		assert_eq!(NextSeasonChain::<Test, _>::get(SEASON_ID_1), Some(SEASON_ID_2));
+		assert_eq!(NextSeasonChain::<Test, _>::get(SEASON_ID_2), None);
+		assert_eq!(PrevSeasonChain::<Test, _>::iter().count(), 1);
+		assert_eq!(PrevSeasonChain::<Test, _>::get(SEASON_ID_1), None);
+		assert_eq!(PrevSeasonChain::<Test, _>::get(SEASON_ID_2), Some(SEASON_ID_1));
+		assert_eq!(Seasons::<Test, _>::get(SEASON_ID_2), Some(config.clone()));
+		assert_eq!(SeasonMetadatas::<Test, _>::get(SEASON_ID_2), Some(metadata));
+		assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_2), Some(schedule));
+		assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 4);
+		assert_eq!(AssetSeasonRegister::<Test, _>::iter().count(), 0);
 
 		// We move to the block in which season 2 should early start
 		// we see that the only thing that happens is that the action for
@@ -162,8 +156,8 @@ fn test_seasons_full_workflow() {
 		let expected_status =
 			SeasonStatus { season_id: SEASON_ID_1, early: true, active: true, early_ended: false };
 
-		assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
-		assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 3);
+		assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+		assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 3);
 
 		// We move to season 1 ending block
 		run_to_block(30);
@@ -175,9 +169,9 @@ fn test_seasons_full_workflow() {
 		let expected_status =
 			SeasonStatus { season_id: SEASON_ID_1, early: true, active: false, early_ended: false };
 
-		assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
-		assert_eq!(FinishedSeasons::<Test, Instance1>::iter().count(), 1);
-		assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 2);
+		assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 1);
+		assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 2);
 
 		// We now move to season 2 start block and season 2 manages to start
 		// but not early as indicated in the status
@@ -190,9 +184,9 @@ fn test_seasons_full_workflow() {
 		let expected_status =
 			SeasonStatus { season_id: SEASON_ID_2, early: false, active: true, early_ended: false };
 
-		assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
-		assert_eq!(FinishedSeasons::<Test, Instance1>::iter().count(), 1);
-		assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 1);
+		assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 1);
+		assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 1);
 
 		// We move to block 50, 10 block before season 2 ends and we interrupt it
 		// ending the season early
@@ -207,9 +201,9 @@ fn test_seasons_full_workflow() {
 		let expected_status =
 			SeasonStatus { season_id: SEASON_ID_2, early: false, active: false, early_ended: true };
 
-		assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
-		assert_eq!(FinishedSeasons::<Test, Instance1>::iter().count(), 2);
-		assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 0);
+		assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+		assert_eq!(FinishedSeasons::<Test, _>::iter().count(), 2);
+		assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 0);
 	});
 }
 
@@ -221,7 +215,7 @@ mod update_season {
 		ExtBuilder::default().organizer(BOB).build().execute_with(|| {
 			run_to_block(10);
 
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,
@@ -247,7 +241,7 @@ mod update_season {
 				end: season_end,
 			};
 
-			assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), None);
+			assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), None);
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(BOB),
 				SEASON_ID_1,
@@ -261,11 +255,11 @@ mod update_season {
 				metadata: None,
 				schedule: None,
 			}));
-			assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), Some(config));
+			assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), Some(config));
 
 			run_to_block(12);
 
-			assert_eq!(SeasonMetadatas::<Test, Instance1>::get(SEASON_ID_1), None);
+			assert_eq!(SeasonMetadatas::<Test, _>::get(SEASON_ID_1), None);
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(BOB),
 				SEASON_ID_1,
@@ -279,14 +273,14 @@ mod update_season {
 				metadata: Some(metadata.clone()),
 				schedule: None,
 			}));
-			assert_eq!(SeasonMetadatas::<Test, Instance1>::get(SEASON_ID_1), Some(metadata));
+			assert_eq!(SeasonMetadatas::<Test, _>::get(SEASON_ID_1), Some(metadata));
 
 			run_to_block(15);
 
-			assert_eq!(SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1), None);
-			assert_eq!(SeasonScheduledActions::<Test, Instance1>::get(season_early_start), None);
-			assert_eq!(SeasonScheduledActions::<Test, Instance1>::get(season_start), None);
-			assert_eq!(SeasonScheduledActions::<Test, Instance1>::get(season_end), None);
+			assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), None);
+			assert_eq!(SeasonScheduledActions::<Test, _>::get(season_early_start), None);
+			assert_eq!(SeasonScheduledActions::<Test, _>::get(season_start), None);
+			assert_eq!(SeasonScheduledActions::<Test, _>::get(season_end), None);
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(BOB),
 				SEASON_ID_1,
@@ -300,17 +294,17 @@ mod update_season {
 				metadata: None,
 				schedule: Some(schedule.clone()),
 			}));
-			assert_eq!(SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1), Some(schedule));
+			assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), Some(schedule));
 			assert_eq!(
-				SeasonScheduledActions::<Test, Instance1>::get(season_early_start),
+				SeasonScheduledActions::<Test, _>::get(season_early_start),
 				Some(SeasonScheduledAction::EarlyStart(SEASON_ID_1))
 			);
 			assert_eq!(
-				SeasonScheduledActions::<Test, Instance1>::get(season_start),
+				SeasonScheduledActions::<Test, _>::get(season_start),
 				Some(SeasonScheduledAction::Start(SEASON_ID_1))
 			);
 			assert_eq!(
-				SeasonScheduledActions::<Test, Instance1>::get(season_end),
+				SeasonScheduledActions::<Test, _>::get(season_end),
 				Some(SeasonScheduledAction::End(SEASON_ID_1))
 			);
 		});
@@ -323,7 +317,7 @@ mod update_season {
 
 			// This test assumes that the 'Validate' implementation for
 			// 'MockConfigData' works with even numbers
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,
@@ -344,7 +338,7 @@ mod update_season {
 					None,
 					None
 				),
-				Error::<Test, Instance1>::InvalidSeasonData
+				Error::<Test, _>::InvalidSeasonData
 			);
 		});
 	}
@@ -355,7 +349,7 @@ mod update_season {
 			run_to_block(10);
 
 			// Season early_start is before current block
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,
@@ -376,7 +370,7 @@ mod update_season {
 					None,
 					Some(schedule)
 				),
-				Error::<Test, Instance1>::SeasonStartBeforeCurrentBlock
+				Error::<Test, _>::SeasonStartBeforeCurrentBlock
 			);
 
 			// Season start is before early_start
@@ -389,7 +383,7 @@ mod update_season {
 					None,
 					Some(schedule)
 				),
-				Error::<Test, Instance1>::SeasonStartBeforeEarlyStart
+				Error::<Test, _>::SeasonStartBeforeEarlyStart
 			);
 
 			// Season end is before start
@@ -402,7 +396,7 @@ mod update_season {
 					None,
 					Some(schedule)
 				),
-				Error::<Test, Instance1>::SeasonEndBeforeStart
+				Error::<Test, _>::SeasonEndBeforeStart
 			);
 
 			// Season early_start is before previous season start
@@ -423,7 +417,7 @@ mod update_season {
 					None,
 					Some(schedule_2)
 				),
-				Error::<Test, Instance1>::SeasonStartOverlapsPreviousSeason
+				Error::<Test, _>::SeasonStartOverlapsPreviousSeason
 			);
 		});
 	}
@@ -433,7 +427,7 @@ mod update_season {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
 
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,
@@ -475,7 +469,7 @@ mod update_season {
 				active: true,
 				early_ended: false,
 			};
-			assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
+			assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
 
 			// Trying to insert a schedule for season 1 fails since 2 is already active
 			let schedule = SeasonSchedule { early_start: 40, start: 50, end: 60 };
@@ -487,7 +481,7 @@ mod update_season {
 					None,
 					Some(schedule.clone()),
 				),
-				Error::<Test, Instance1>::SeasonStartOverlapsNextSeason
+				Error::<Test, _>::SeasonStartOverlapsNextSeason
 			);
 
 			// Even when season 2 is finished we still cannot insert the schedule for season 1
@@ -499,7 +493,7 @@ mod update_season {
 				active: false,
 				early_ended: false,
 			};
-			assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
+			assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
 
 			assert_noop!(
 				SeasonsAlpha::update_season(
@@ -509,7 +503,7 @@ mod update_season {
 					None,
 					Some(schedule),
 				),
-				Error::<Test, Instance1>::SeasonStartOverlapsNextSeason
+				Error::<Test, _>::SeasonStartOverlapsNextSeason
 			);
 
 			// Trying again after the previous season block end also doesn't work
@@ -524,7 +518,7 @@ mod update_season {
 					None,
 					Some(schedule),
 				),
-				Error::<Test, Instance1>::SeasonStartOverlapsNextSeason
+				Error::<Test, _>::SeasonStartOverlapsNextSeason
 			);
 		});
 	}
@@ -543,7 +537,7 @@ mod update_season {
 					None,
 					Some(schedule)
 				),
-				Error::<Test, Instance1>::CannotScheduleSeasonWithoutConfig
+				Error::<Test, _>::CannotScheduleSeasonWithoutConfig
 			);
 		});
 	}
@@ -571,7 +565,7 @@ mod update_season {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
 
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,
@@ -600,7 +594,7 @@ mod update_season {
 				season_id: SEASON_ID_1,
 			}));
 
-			let new_config = SeasonConfigOf::<Test, Instance1> {
+			let new_config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 12_u64,
 					buy_asset_min: 3_u64,
@@ -623,11 +617,8 @@ mod update_season {
 			));
 
 			// Nothing has changed
-			assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), Some(config.clone()));
-			assert_eq!(
-				SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1),
-				Some(schedule.clone())
-			);
+			assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), Some(config.clone()));
+			assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), Some(schedule.clone()));
 
 			run_to_block(30);
 
@@ -644,8 +635,8 @@ mod update_season {
 			));
 
 			// Nothing has changed
-			assert_eq!(Seasons::<Test, Instance1>::get(SEASON_ID_1), Some(config));
-			assert_eq!(SeasonSchedules::<Test, Instance1>::get(SEASON_ID_1), Some(schedule));
+			assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), Some(config));
+			assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), Some(schedule));
 		});
 	}
 
@@ -667,8 +658,8 @@ mod update_season {
 			for season_id in 0..100_u32 {
 				let expected_prev_id = if season_id == 0 { None } else { Some(season_id - 1) };
 				let expected_next_id = if season_id == 99 { None } else { Some(season_id + 1) };
-				assert_eq!(PrevSeasonChain::<Test, Instance1>::get(season_id), expected_prev_id);
-				assert_eq!(NextSeasonChain::<Test, Instance1>::get(season_id), expected_next_id);
+				assert_eq!(PrevSeasonChain::<Test, _>::get(season_id), expected_prev_id);
+				assert_eq!(NextSeasonChain::<Test, _>::get(season_id), expected_next_id);
 			}
 		});
 	}
@@ -682,7 +673,7 @@ mod interrupt_active_season {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
 
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,
@@ -716,8 +707,8 @@ mod interrupt_active_season {
 				active: true,
 				early_ended: false,
 			};
-			assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
-			assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 2);
+			assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+			assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 2);
 
 			assert_ok!(SeasonsAlpha::interrupt_active_season(RuntimeOrigin::signed(ALICE)));
 
@@ -730,8 +721,8 @@ mod interrupt_active_season {
 				active: false,
 				early_ended: true,
 			};
-			assert_eq!(CurrentSeasonStatus::<Test, Instance1>::get(), Ok(expected_status));
-			assert_eq!(SeasonScheduledActions::<Test, Instance1>::iter().count(), 0);
+			assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+			assert_eq!(SeasonScheduledActions::<Test, _>::iter().count(), 0);
 		});
 	}
 
@@ -740,7 +731,7 @@ mod interrupt_active_season {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
 
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,

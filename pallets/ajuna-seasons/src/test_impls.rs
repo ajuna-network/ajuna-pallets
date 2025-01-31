@@ -19,7 +19,7 @@ use ajuna_primitives::season_manager::SeasonFeeConfig;
 use frame_support::{assert_noop, assert_ok};
 
 fn start_season(organizer: MockAccountId, season_id: MockSeasonId) {
-	let config = SeasonConfigOf::<Test, Instance1> {
+	let config = SeasonConfigOf::<Test, _> {
 		fee: SeasonFeeConfig {
 			transfer_asset: 10_u64,
 			buy_asset_min: 5_u64,
@@ -81,7 +81,7 @@ mod season_manager {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			assert_noop!(
 				<SeasonsAlpha as SeasonManager>::get_current_season_id(),
-				Error::<Test, Instance1>::NoActiveSeason
+				Error::<Test, _>::NoActiveSeason
 			);
 		});
 	}
@@ -94,7 +94,7 @@ mod season_manager {
 			assert_ok!(<SeasonsAlpha as SeasonManager>::is_valid_season(&SEASON_ID_2));
 			assert_noop!(
 				<SeasonsAlpha as SeasonManager>::is_valid_season(&SEASON_ID_1),
-				Error::<Test, Instance1>::InvalidSeason
+				Error::<Test, _>::InvalidSeason
 			);
 		});
 	}
@@ -102,7 +102,7 @@ mod season_manager {
 	#[test]
 	fn get_season_config_for_works() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-			let config = SeasonConfigOf::<Test, Instance1> {
+			let config = SeasonConfigOf::<Test, _> {
 				fee: SeasonFeeConfig {
 					transfer_asset: 10_u64,
 					buy_asset_min: 5_u64,
@@ -136,7 +136,7 @@ mod season_manager {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			assert_noop!(
 				<SeasonsAlpha as SeasonManager>::get_season_config_for(&SEASON_ID_1),
-				Error::<Test, Instance1>::InvalidSeason
+				Error::<Test, _>::InvalidSeason
 			);
 		});
 	}
@@ -147,11 +147,11 @@ mod season_manager {
 			start_season(ALICE, SEASON_ID_1);
 
 			let asset_id = MockAssetId::from(612_u32);
-			assert_eq!(AssetSeasonRegister::<Test, Instance1>::get(asset_id), None);
+			assert_eq!(AssetSeasonRegister::<Test, _>::get(asset_id), None);
 
 			assert_ok!(<SeasonsAlpha as SeasonManager>::register_asset_in(&asset_id, &SEASON_ID_1));
 
-			assert_eq!(AssetSeasonRegister::<Test, Instance1>::get(asset_id), Some(SEASON_ID_1));
+			assert_eq!(AssetSeasonRegister::<Test, _>::get(asset_id), Some(SEASON_ID_1));
 		});
 	}
 
@@ -161,7 +161,7 @@ mod season_manager {
 			let asset_id = MockAssetId::from(43_u32);
 			assert_noop!(
 				<SeasonsAlpha as SeasonManager>::register_asset_in(&asset_id, &SEASON_ID_1),
-				Error::<Test, Instance1>::InvalidSeason
+				Error::<Test, _>::InvalidSeason
 			);
 		});
 	}

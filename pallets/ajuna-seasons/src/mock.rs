@@ -40,9 +40,7 @@ frame_support::construct_runtime!(
 	pub struct Test {
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
-		SeasonsAlpha: pallet_ajuna_seasons::<Instance1> = 2,
-		#[cfg(feature = "runtime-benchmarks")]
-		SeasonsBench: pallet_ajuna_seasons = 3,
+		SeasonsAlpha: pallet_ajuna_seasons = 2,
 	}
 );
 
@@ -176,20 +174,6 @@ impl BenchmarkHelper<MockSeasonId, MockSeasonData> for SeasonsBenchmarkHelper {
 	}
 }
 
-type SeasonsInstance1 = pallet_ajuna_seasons::Instance1;
-impl pallet_ajuna_seasons::Config<SeasonsInstance1> for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type SeasonId = MockSeasonId;
-	type SeasonData = MockSeasonData;
-	type AssetId = MockAssetId;
-	type AccountHandler = MockAccountManager;
-	type Currency = Balances;
-	type WeightInfo = ();
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = SeasonsBenchmarkHelper;
-}
-
-#[cfg(feature = "runtime-benchmarks")]
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type SeasonId = MockSeasonId;
@@ -198,6 +182,7 @@ impl Config for Test {
 	type AccountHandler = MockAccountManager;
 	type Currency = Balances;
 	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = SeasonsBenchmarkHelper;
 }
 
@@ -219,8 +204,6 @@ impl ExtBuilder {
 			system: Default::default(),
 			balances: Default::default(),
 			seasons_alpha: Default::default(),
-			#[cfg(feature = "runtime-benchmarks")]
-			seasons_bench: Default::default(),
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
@@ -243,13 +226,9 @@ pub fn run_to_block(n: u64) {
 		if System::block_number() > 1 {
 			System::on_finalize(System::block_number());
 			SeasonsAlpha::on_finalize(System::block_number());
-			#[cfg(feature = "runtime-benchmarks")]
-			SeasonsBench::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		SeasonsAlpha::on_initialize(System::block_number());
-		#[cfg(feature = "runtime-benchmarks")]
-		SeasonsBench::on_initialize(System::block_number());
 	}
 }
