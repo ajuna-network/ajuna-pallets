@@ -35,7 +35,7 @@ pub struct HeroJamAsset<BlockNumber> {
 	pub state_sub_value: u8,
 	pub state_change_block_number: BlockNumber,
 	// TODO: Use proper balance type in final version
-	pub balance: u32,
+	pub balance: u64,
 }
 
 impl<BlockNumber> GetId<AssetId> for HeroJamAsset<BlockNumber> {

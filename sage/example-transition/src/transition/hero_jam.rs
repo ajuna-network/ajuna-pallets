@@ -220,9 +220,10 @@ where
 				);
 
 				if work_type == &WorkType::Hunt {
+					let hunting_reward = Sage::get_transition_config().hunting_reward;
+
 					// Also do the accounting on the asset, but this is not necessary per se.
-					asset.balance = asset.balance.saturating_add(10);
-					let transition_config = Sage::get_transition_config();
+					asset.balance = asset.balance.saturating_add(hunting_reward);
 
 					// Todo: how to handle dispatch errors in transitions
 					Sage::deposit_funds_to_asset(
@@ -231,7 +232,7 @@ where
 						// Todo: how to pass the FungibleAssetId that was used as payment for this
 						<Sage::FungiblesAssetId as NativeId>::get_native_id(),
 						// Todo: use balance type in transition config
-						transition_config.hunting_reward,
+						hunting_reward,
 					)
 					.expect("transferring to asset failed");
 				}
