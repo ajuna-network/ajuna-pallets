@@ -39,6 +39,7 @@ use ajuna_primitives::{
 
 use frame_support::{pallet_prelude::*, traits::Currency};
 use frame_system::pallet_prelude::*;
+use sp_runtime::{traits::MaybeSerializeDeserialize, Saturating};
 
 pub use types::*;
 use weights::WeightInfo;
@@ -83,14 +84,71 @@ pub mod pallet {
 		}
 	}
 
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
+		/// Genesis initial season + duration in blocks
+		pub season: Option<(SeasonIdOf<T, I>, BlockNumberFor<T>)>,
+	}
+	#[pallet::genesis_build]
+	impl<T: Config<I>, I: 'static> BuildGenesisConfig for GenesisConfig<T, I> {
+		fn build(&self) {
+			if let Some((ref season_id, ref duration)) = self.season {
+				CurrentSeasonStatus::<T, I>::set(Ok(SeasonStatus {
+					season_id: season_id.clone(),
+					early: true,
+					active: true,
+					early_ended: false,
+				}));
+
+				Seasons::<T, I>::insert(
+					season_id,
+					SeasonConfig {
+						fee: ajuna_primitives::season_manager::SeasonFeeConfig {
+							transfer_asset: 100_u32.into(),
+							buy_asset_min: 100_u32.into(),
+							buy_percent: 10_u8,
+							upgrade_asset_inventory: 100_u32.into(),
+							unlock_trade_asset: 100_u32.into(),
+							unlock_transfer_asset: 100_u32.into(),
+							state_transition_base_fee: 100_u32.into(),
+						},
+						..Default::default()
+					},
+				);
+
+				let early_start: BlockNumberFor<T> = 0_u32.into();
+				let start: BlockNumberFor<T> = 5_u32.into();
+				let end = duration.saturating_add(5_u32.into());
+				SeasonSchedules::<T, I>::insert(
+					season_id,
+					SeasonSchedule { early_start, start, end },
+				);
+
+				SeasonScheduledActions::<T, I>::insert(
+					early_start,
+					SeasonScheduledAction::EarlyStart(season_id.clone()),
+				);
+				SeasonScheduledActions::<T, I>::insert(
+					start,
+					SeasonScheduledAction::Start(season_id.clone()),
+				);
+				SeasonScheduledActions::<T, I>::insert(
+					end,
+					SeasonScheduledAction::End(season_id.clone()),
+				);
+			}
+		}
+	}
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self, I>>
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-		type SeasonId: Member + Parameter + MaxEncodedLen;
-		type SeasonData: Member + Parameter + MaxEncodedLen + Validate;
+		type SeasonId: Member + Parameter + MaxEncodedLen + MaybeSerializeDeserialize;
+		type SeasonData: Member + Parameter + MaxEncodedLen + Default + Validate;
 
 		type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
 

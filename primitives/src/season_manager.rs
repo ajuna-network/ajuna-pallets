@@ -16,6 +16,7 @@
 
 use frame_support::{
 	pallet_prelude::{Decode, DispatchError, Encode, Member, TypeInfo},
+	sp_runtime::traits::MaybeSerializeDeserialize,
 	Parameter,
 };
 use parity_scale_codec::MaxEncodedLen;
@@ -61,8 +62,8 @@ where
 }
 
 pub trait SeasonManager {
-	type SeasonId: Member + Parameter + MaxEncodedLen;
-	type SeasonData: Member + Parameter + MaxEncodedLen;
+	type SeasonId: Member + Parameter + MaxEncodedLen + MaybeSerializeDeserialize;
+	type SeasonData: Member + Parameter + MaxEncodedLen + Default;
 	type AssetId: Member + Parameter + MaxEncodedLen;
 	type Balance;
 
