@@ -43,7 +43,7 @@ jobs:
           toolchain: "nightly-${{env.RUST_NIGHTLY_VERSION}}"
 
         # some settings are only available in nightly.
-      - run: cargo +nightly fmt --all -- --check
+      - run: cargo +nightly-$RUST_NIGHTLY_VERSION fmt --all -- --check
 
   lint:
     if: ${{ !startsWith(github.head_ref, 'release/') }}
