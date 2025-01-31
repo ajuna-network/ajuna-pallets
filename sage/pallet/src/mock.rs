@@ -391,6 +391,7 @@ impl ExtBuilder {
 				],
 				next_asset_id: None,
 			},
+			sage: GenesisConfig { organizer: None, season: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
