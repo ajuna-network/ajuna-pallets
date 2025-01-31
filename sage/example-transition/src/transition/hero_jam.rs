@@ -13,6 +13,8 @@ use sage_api::{
 	SageGameTransition, TransitionError,
 };
 
+use crate::transition::GameTransitionConfig;
+use ajuna_primitives::sage_api::SageApi;
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
@@ -97,18 +99,19 @@ impl From<u8> for SleepType {
 	}
 }
 
-pub(super) struct HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler> {
-	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler)>,
+pub(super) struct HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> {
+	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler, Sage)>,
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler>
-	HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler>
+impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
+	HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
 	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>
 		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
+	Sage: SageApi<TransitionConfig = GameTransitionConfig>,
 {
 	fn try_get_hero_jam(asset_id: &AssetId) -> Result<HeroJamAsset<BlockNumber>, TransitionError> {
 		let asset = AssetHandler::get_asset(asset_id)

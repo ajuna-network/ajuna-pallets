@@ -6,6 +6,7 @@ use ajuna_primitives::{
 };
 use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
+use ajuna_primitives::sage_api::SageApi;
 use core::marker::PhantomData;
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use parity_scale_codec::Codec;
@@ -18,8 +19,8 @@ pub enum TransitionIdentifier {
 	HeroJam(hero_jam::HeroAction),
 }
 
-pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler> {
-	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler)>,
+pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> {
+	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler, Sage)>,
 }
 
 /// This is an example how a transition config custom to a game could look like.
@@ -28,8 +29,8 @@ pub struct GameTransitionConfig {
 	pub game_fee: u128,
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler> SageGameTransition
-	for GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler>
+impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> SageGameTransition
+	for GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
@@ -43,6 +44,7 @@ where
 			Asset = asset::Asset<BlockNumber>,
 		>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
+	Sage: SageApi<TransitionConfig = GameTransitionConfig>,
 {
 	type TransitionId = TransitionIdentifier;
 	type TransitionConfig = GameTransitionConfig;
@@ -58,17 +60,14 @@ where
 		extra: &Self::Extra,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		match transition_id {
-			TransitionIdentifier::HeroJam(hero_action) => hero_jam::HeroJamTransition::<
-				AccountId,
-				BlockNumber,
-				AssetHandler,
-				ChainHandler,
-			>::do_transition(
-				hero_action,
-				account_id,
-				assets_ids,
-				extra,
-			),
+			TransitionIdentifier::HeroJam(hero_action) =>
+				hero_jam::HeroJamTransition::<
+					AccountId,
+					BlockNumber,
+					AssetHandler,
+					ChainHandler,
+					Sage,
+				>::do_transition(hero_action, account_id, assets_ids, extra),
 		}
 	}
 }
