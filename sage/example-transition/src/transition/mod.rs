@@ -27,7 +27,7 @@ pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sa
 }
 
 /// This is an example how a transition config custom to a game could look like.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq, Eq)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Clone, PartialEq, Eq)]
 pub struct GameTransitionConfig {
 	pub hunting_reward: u64,
 }

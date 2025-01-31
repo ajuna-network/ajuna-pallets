@@ -227,7 +227,7 @@ where
 					// Todo: how to handle dispatch errors in transitions
 					Sage::deposit_funds_to_asset(
 						&asset_id,
-						&account_id,
+						account_id,
 						// Todo: how to pass the FungibleAssetId that was used as payment for this
 						<Sage::FungiblesAssetId as NativeId>::get_native_id(),
 						// Todo: use balance type in transition config
