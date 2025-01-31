@@ -24,18 +24,24 @@ env:
   CARGO_ARGS: ${{ github.ref == 'refs/heads/develop' && '--release' || '' }}
   CARGO_TERM_COLOR: always
   SKIP_WASM_BUILD: 1
+  RUST_NIGHTLY_VERSION: 2024-11-19
 
 jobs:
   fmt:
     if: ${{ !startsWith(github.head_ref, 'release/') }}
     name: Rustfmt
     runs-on: ubuntu-latest
-    container:
-      # contains the nightly-toolchain
-      image: docker.io/paritytech/ci-unified:bullseye-1.75.0-2024-01-22-v20240109
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          targets: "wasm32-unknown-unknown"
+          components: "rustfmt"
+          toolchain: "nightly-${{env.RUST_NIGHTLY_VERSION}}"
+
         # some settings are only available in nightly.
       - run: cargo +nightly fmt --all -- --check
 
