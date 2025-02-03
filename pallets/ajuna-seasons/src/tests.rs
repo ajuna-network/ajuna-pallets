@@ -45,7 +45,7 @@ fn test_seasons_full_workflow() {
 			description: BoundedVec::try_from(b"The first season".to_vec())
 				.expect("Should create vec"),
 		};
-		let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+		let schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 
 		// Initially there is no data in storage
 		assert_err!(CurrentSeasonStatus::<Test, _>::get(), Error::<Test, _>::NoActiveSeason);
@@ -111,7 +111,7 @@ fn test_seasons_full_workflow() {
 			description: BoundedVec::try_from(b"The second season".to_vec())
 				.expect("Should create vec"),
 		};
-		let schedule = SeasonSchedule { early_start: 28, start: 40, end: 60 };
+		let schedule = SeasonSchedule { early_start: 28, start: 40, end: Some(60) };
 
 		// We create a new season with its early_start overlapping season 1
 		assert_ok!(SeasonsAlpha::update_season(
@@ -236,7 +236,7 @@ mod update_season {
 			let schedule = SeasonSchedule {
 				early_start: season_early_start,
 				start: season_start,
-				end: season_end,
+				end: Some(season_end),
 			};
 
 			assert_eq!(Seasons::<Test, _>::get(SEASON_ID_1), None);
@@ -325,7 +325,7 @@ mod update_season {
 					state_transition_base_fee: 20_u64,
 				},
 			};
-			let schedule = SeasonSchedule { early_start: 7, start: 10, end: 11 };
+			let schedule = SeasonSchedule { early_start: 7, start: 10, end: Some(11) };
 			assert_noop!(
 				SeasonsAlpha::update_season(
 					RuntimeOrigin::signed(ALICE),
@@ -338,7 +338,7 @@ mod update_season {
 			);
 
 			// Season start is before early_start
-			let schedule = SeasonSchedule { early_start: 11, start: 10, end: 13 };
+			let schedule = SeasonSchedule { early_start: 11, start: 10, end: Some(13) };
 			assert_noop!(
 				SeasonsAlpha::update_season(
 					RuntimeOrigin::signed(ALICE),
@@ -351,7 +351,7 @@ mod update_season {
 			);
 
 			// Season end is before start
-			let schedule = SeasonSchedule { early_start: 11, start: 15, end: 13 };
+			let schedule = SeasonSchedule { early_start: 11, start: 15, end: Some(13) };
 			assert_noop!(
 				SeasonsAlpha::update_season(
 					RuntimeOrigin::signed(ALICE),
@@ -364,7 +364,7 @@ mod update_season {
 			);
 
 			// Season early_start is before previous season start
-			let schedule_1 = SeasonSchedule { early_start: 15, start: 17, end: 20 };
+			let schedule_1 = SeasonSchedule { early_start: 15, start: 17, end: Some(20) };
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_1,
@@ -372,7 +372,7 @@ mod update_season {
 				None,
 				Some(schedule_1)
 			));
-			let schedule_2 = SeasonSchedule { early_start: 13, start: 20, end: 25 };
+			let schedule_2 = SeasonSchedule { early_start: 13, start: 20, end: Some(25) };
 			assert_noop!(
 				SeasonsAlpha::update_season(
 					RuntimeOrigin::signed(ALICE),
@@ -402,7 +402,7 @@ mod update_season {
 					state_transition_base_fee: 20_u64,
 				},
 			};
-			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 
 			// We set up the first season but with no schedule
 			assert_ok!(SeasonsAlpha::update_season(
@@ -435,7 +435,7 @@ mod update_season {
 			assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
 
 			// Trying to insert a schedule for season 1 fails since 2 is already active
-			let schedule = SeasonSchedule { early_start: 40, start: 50, end: 60 };
+			let schedule = SeasonSchedule { early_start: 40, start: 50, end: Some(60) };
 			assert_noop!(
 				SeasonsAlpha::update_season(
 					RuntimeOrigin::signed(ALICE),
@@ -472,7 +472,7 @@ mod update_season {
 			// Trying again after the previous season block end also doesn't work
 			run_to_block(40);
 
-			let schedule = SeasonSchedule { early_start: 45, start: 50, end: 60 };
+			let schedule = SeasonSchedule { early_start: 45, start: 50, end: Some(60) };
 			assert_noop!(
 				SeasonsAlpha::update_season(
 					RuntimeOrigin::signed(ALICE),
@@ -491,7 +491,7 @@ mod update_season {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
 
-			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 			assert_noop!(
 				SeasonsAlpha::update_season(
 					RuntimeOrigin::signed(ALICE),
@@ -539,7 +539,7 @@ mod update_season {
 					state_transition_base_fee: 20_u64,
 				},
 			};
-			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 
 			// We set up the first season but with no schedule
 			assert_ok!(SeasonsAlpha::update_season(
@@ -567,7 +567,7 @@ mod update_season {
 					state_transition_base_fee: 23_u64,
 				},
 			};
-			let new_schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			let new_schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(ALICE),
@@ -624,6 +624,72 @@ mod update_season {
 			}
 		});
 	}
+
+	#[test]
+	fn update_season_should_allow_updating_infinite_active_season() {
+		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+			run_to_block(10);
+
+			let config = SeasonConfigOf::<Test, _> {
+				fee: SeasonFeeConfig {
+					transfer_asset: 10_u64,
+					buy_asset_min: 5_u64,
+					buy_percent: 10,
+					upgrade_asset_inventory: 5_u64,
+					unlock_trade_asset: 9_u64,
+					unlock_transfer_asset: 13_u64,
+					state_transition_base_fee: 20_u64,
+				},
+			};
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: None };
+
+			// We set an infinite season
+			assert_ok!(SeasonsAlpha::update_season(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				Some(config.clone()),
+				None,
+				Some(schedule.clone())
+			));
+
+			run_to_block(40);
+
+			let expected_status = SeasonStatus {
+				season_id: SEASON_ID_1,
+				early: true,
+				active: true,
+				early_ended: false,
+			};
+			assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+
+			let schedule = SeasonSchedule { early_start: 30, start: 35, end: Some(60) };
+			assert_ok!(SeasonsAlpha::update_season(
+				RuntimeOrigin::signed(ALICE),
+				SEASON_ID_1,
+				None,
+				None,
+				Some(schedule.clone())
+			));
+
+			// Only the end schedule has changed
+			let expected_schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(60) };
+			assert_eq!(SeasonSchedules::<Test, _>::get(SEASON_ID_1), Some(expected_schedule));
+
+			run_to_block(60);
+
+			System::assert_last_event(RuntimeEvent::SeasonsAlpha(Event::SeasonEnded {
+				season_id: SEASON_ID_1,
+			}));
+
+			let expected_status = SeasonStatus {
+				season_id: SEASON_ID_1,
+				early: true,
+				active: false,
+				early_ended: false,
+			};
+			assert_eq!(CurrentSeasonStatus::<Test, _>::get(), Ok(expected_status));
+		});
+	}
 }
 
 mod interrupt_active_season {
@@ -645,7 +711,7 @@ mod interrupt_active_season {
 					state_transition_base_fee: 20_u64,
 				},
 			};
-			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(ALICE),
@@ -702,7 +768,7 @@ mod interrupt_active_season {
 					state_transition_base_fee: 20_u64,
 				},
 			};
-			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(ALICE),

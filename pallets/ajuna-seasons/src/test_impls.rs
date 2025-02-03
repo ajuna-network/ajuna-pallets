@@ -31,7 +31,7 @@ fn start_season(organizer: MockAccountId, season_id: MockSeasonId) {
 		},
 	};
 	let early_start = 20;
-	let schedule = SeasonSchedule { early_start, start: 25, end: 30 };
+	let schedule = SeasonSchedule { early_start, start: 25, end: Some(30) };
 
 	assert_ok!(SeasonsAlpha::update_season(
 		RuntimeOrigin::signed(organizer),
@@ -112,7 +112,7 @@ mod season_manager {
 					state_transition_base_fee: 20_u64,
 				},
 			};
-			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
+			let schedule = SeasonSchedule { early_start: 20, start: 25, end: Some(30) };
 
 			assert_ok!(SeasonsAlpha::update_season(
 				RuntimeOrigin::signed(ALICE),

@@ -78,8 +78,11 @@ mod benchmarks {
 			description: BoundedVec::try_from(b"The first season".to_vec())
 				.expect("Should create vec"),
 		};
-		let schedule =
-			SeasonSchedule { early_start: 20_u32.into(), start: 25_u32.into(), end: 30_u32.into() };
+		let schedule = SeasonSchedule {
+			early_start: 20_u32.into(),
+			start: 25_u32.into(),
+			end: Some(30_u32.into()),
+		};
 
 		#[extrinsic_call]
 		_(
@@ -119,8 +122,11 @@ mod benchmarks {
 			description: BoundedVec::try_from(b"The first season".to_vec())
 				.expect("Should create vec"),
 		};
-		let schedule =
-			SeasonSchedule { early_start: 20_u32.into(), start: 25_u32.into(), end: 30_u32.into() };
+		let schedule = SeasonSchedule {
+			early_start: 20_u32.into(),
+			start: 25_u32.into(),
+			end: Some(30_u32.into()),
+		};
 		Seasons::<T, I>::update_season(
 			RawOrigin::Signed(acc_1.clone()).into(),
 			season_id.clone(),

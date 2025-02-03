@@ -44,5 +44,5 @@ pub struct SeasonMetadata {
 pub struct SeasonSchedule<BlockNumber> {
 	pub early_start: BlockNumber,
 	pub start: BlockNumber,
-	pub end: BlockNumber,
+	pub end: Option<BlockNumber>,
 }

@@ -114,7 +114,7 @@ pub mod pallet {
 				let end = duration.saturating_add(5_u32.into());
 				SeasonSchedules::<T, I>::insert(
 					season_id,
-					SeasonSchedule { early_start, start, end },
+					SeasonSchedule { early_start, start, end: Some(end) },
 				);
 
 				SeasonScheduledActions::<T, I>::insert(
@@ -229,8 +229,14 @@ pub mod pallet {
 	pub enum Error<T, I = ()> {
 		/// There is currently no active season
 		NoActiveSeason,
-		/// Cannot set season schedule wihout season config first.
+		/// Cannot set season schedule without season config first.
 		CannotScheduleSeasonWithoutConfig,
+		/// The previous season has no end, making it so that no
+		/// new seasons can be added after it.
+		CannotScheduleSeasonIfPreviousSeasonIsInfinite,
+		/// Cannot modify a season to be infinite if a season after it has already
+		/// been scheduled.
+		CannotScheduleInfiniteSeasonIfNextSeasonExists,
 		/// The season's early start is before the current block.
 		SeasonStartBeforeCurrentBlock,
 		/// The season starts before the previous season starts.
@@ -390,6 +396,23 @@ pub mod pallet {
 					Self::ensure_valid_schedule(&season_id, schedule_update)?;
 					Self::update_season_scheduled_actions(&season_id, schedule_update)?;
 				}
+			} else if Self::is_active_season_and_infinite(&season_id) {
+				// If the season we want to update is the current active season,
+				// and it has infinite duration (no end block).
+				// We only allow to add an end ot it once.
+				if let Some(SeasonSchedule { end: Some(end), .. }) = schedule {
+					Self::add_season_end_action_at(&season_id, end)?;
+					SeasonSchedules::<T, I>::mutate(&season_id, |maybe_schedule| {
+						if let Some(ref mut schedule) = maybe_schedule {
+							schedule.end = Some(end);
+						} else {
+							log::error!(target: LOG_TARGET,
+								"Updating schedule for active infinite season [{:?}], found no schedule data!",
+								&season_id,
+							);
+						}
+					});
+				}
 			}
 
 			if let Some(ref meta_update) = metadata {
@@ -418,7 +441,10 @@ pub mod pallet {
 						.ok_or(Error::<T, I>::InvalidSeason)?;
 					SeasonScheduledActions::<T, I>::remove(season_schedule.early_start);
 					SeasonScheduledActions::<T, I>::remove(season_schedule.start);
-					SeasonScheduledActions::<T, I>::remove(season_schedule.end);
+
+					if let Some(ref end) = season_schedule.end {
+						SeasonScheduledActions::<T, I>::remove(end);
+					}
 
 					// TODO: Maybe we could try to early start the next season if
 					// it exists and its early start was skipped
@@ -464,6 +490,18 @@ pub mod pallet {
 			}
 		}
 
+		fn is_active_season_and_infinite(season_id: &SeasonIdOf<T, I>) -> bool {
+			if let Ok(current_season) = CurrentSeasonStatus::<T, I>::get() {
+				if &current_season.season_id == season_id {
+					if let Some(schedule) = SeasonSchedules::<T, I>::get(season_id) {
+						return schedule.end.is_none();
+					}
+				}
+			}
+
+			false
+		}
+
 		fn ensure_valid_schedule(
 			season_id: &SeasonIdOf<T, I>,
 			schedule: &SeasonScheduleOf<T>,
@@ -477,7 +515,10 @@ pub mod pallet {
 				schedule.early_start < schedule.start,
 				Error::<T, I>::SeasonStartBeforeEarlyStart
 			);
-			ensure!(schedule.start < schedule.end, Error::<T, I>::SeasonEndBeforeStart);
+
+			if let Some(ref end) = schedule.end {
+				ensure!(schedule.start < *end, Error::<T, I>::SeasonEndBeforeStart);
+			}
 
 			if let Some(prev_season_id) = PrevSeasonChain::<T, I>::get(season_id) {
 				if let Some(prev_schedule) = SeasonSchedules::<T, I>::get(prev_season_id) {
@@ -485,6 +526,12 @@ pub mod pallet {
 						prev_schedule.start < schedule.early_start,
 						Error::<T, I>::SeasonStartOverlapsPreviousSeason
 					);
+
+					if prev_schedule.end.is_none() {
+						return Err(
+							Error::<T, I>::CannotScheduleSeasonIfPreviousSeasonIsInfinite.into()
+						);
+					}
 				}
 			}
 
@@ -494,6 +541,12 @@ pub mod pallet {
 						schedule.start < next_schedule.early_start,
 						Error::<T, I>::SeasonStartOverlapsNextSeason
 					);
+
+					if schedule.end.is_none() {
+						return Err(
+							Error::<T, I>::CannotScheduleInfiniteSeasonIfNextSeasonExists.into()
+						);
+					}
 				}
 			}
 
@@ -508,7 +561,9 @@ pub mod pallet {
 				if let Some(ref prev_schedule) = maybe_prev_schedule {
 					SeasonScheduledActions::<T, I>::remove(prev_schedule.early_start);
 					SeasonScheduledActions::<T, I>::remove(prev_schedule.start);
-					SeasonScheduledActions::<T, I>::remove(prev_schedule.end);
+					if let Some(ref prev_end) = prev_schedule.end {
+						SeasonScheduledActions::<T, I>::remove(prev_end);
+					}
 				}
 
 				SeasonScheduledActions::<T, I>::try_mutate(schedule.early_start, |maybe_action| {
@@ -525,18 +580,27 @@ pub mod pallet {
 
 					Ok::<(), DispatchError>(())
 				})?;
-				SeasonScheduledActions::<T, I>::try_mutate(schedule.end, |maybe_action| {
-					ensure!(maybe_action.is_none(), Error::<T, I>::ScheduleSlotAlreadyInUse);
-
-					*maybe_action = Some(SeasonScheduledAction::End(season_id.clone()));
-
-					Ok::<(), DispatchError>(())
-				})?;
+				if let Some(end) = schedule.end {
+					Self::add_season_end_action_at(season_id, end)?;
+				}
 
 				*maybe_prev_schedule = Some(schedule.clone());
 
 				Ok::<(), DispatchError>(())
 			})
+		}
+
+		fn add_season_end_action_at(
+			season_id: &SeasonIdOf<T, I>,
+			end: BlockNumberFor<T>,
+		) -> DispatchResult {
+			SeasonScheduledActions::<T, I>::try_mutate(end, |maybe_action| {
+				ensure!(maybe_action.is_none(), Error::<T, I>::ScheduleSlotAlreadyInUse);
+				*maybe_action = Some(SeasonScheduledAction::End(season_id.clone()));
+				Ok::<(), DispatchError>(())
+			})?;
+
+			Ok(())
 		}
 	}
 }
