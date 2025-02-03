@@ -21,7 +21,7 @@ use frame_support::{
 };
 use sp_runtime::BuildStorage;
 
-use ajuna_primitives::{account_manager::WhitelistKey, season_manager::Validate};
+use ajuna_primitives::account_manager::WhitelistKey;
 use sp_runtime::{
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -149,35 +149,19 @@ impl AccountManager for MockAccountManager {
 
 pub type MockSeasonId = u32;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq, Default)]
-pub struct MockSeasonData {
-	pub(crate) data: u8,
-}
-
-impl Validate for MockSeasonData {
-	fn validate(&self) -> bool {
-		(self.data % 2) == 0
-	}
-}
-
 #[cfg(feature = "runtime-benchmarks")]
 pub struct SeasonsBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl BenchmarkHelper<MockSeasonId, MockSeasonData> for SeasonsBenchmarkHelper {
+impl BenchmarkHelper<MockSeasonId> for SeasonsBenchmarkHelper {
 	fn create_season_id(id: u32) -> MockSeasonId {
 		MockSeasonId::from(id)
-	}
-
-	fn create_default_season_data() -> MockSeasonData {
-		MockSeasonData { data: 24 }
 	}
 }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type SeasonId = MockSeasonId;
-	type SeasonData = MockSeasonData;
 	type AssetId = MockAssetId;
 	type AccountHandler = MockAccountManager;
 	type Currency = Balances;

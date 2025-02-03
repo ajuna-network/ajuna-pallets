@@ -123,7 +123,6 @@ pub type MockAsset = Asset<BlockNumberFor<Test>>;
 
 impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
-	type SeasonData = ();
 	type AssetId = AssetId;
 	type Balance = MockBalance;
 
@@ -150,8 +149,8 @@ impl SeasonManager for MockSeasonManager {
 
 	fn get_season_config_for(
 		_season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance, ()>, DispatchError> {
-		Ok(SeasonConfig::<Self::Balance, ()> {
+	) -> Result<SeasonConfig<Self::Balance>, DispatchError> {
+		Ok(SeasonConfig::<Self::Balance> {
 			fee: SeasonFeeConfig::<Self::Balance> {
 				transfer_asset: MockExistentialDeposit::get(),
 				buy_asset_min: MockExistentialDeposit::get(),
@@ -161,7 +160,6 @@ impl SeasonManager for MockSeasonManager {
 				unlock_transfer_asset: MockExistentialDeposit::get(),
 				state_transition_base_fee: MockExistentialDeposit::get(),
 			},
-			data: (),
 		})
 	}
 

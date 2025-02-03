@@ -39,7 +39,6 @@ fn test_seasons_full_workflow() {
 				unlock_transfer_asset: 13_u64,
 				state_transition_base_fee: 20_u64,
 			},
-			data: MockSeasonData { data: 24 },
 		};
 		let metadata = SeasonMetadata {
 			name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),
@@ -225,7 +224,6 @@ mod update_season {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 20_u64,
 				},
-				data: MockSeasonData { data: 24 },
 			};
 			let metadata = SeasonMetadata {
 				name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),
@@ -311,39 +309,6 @@ mod update_season {
 	}
 
 	#[test]
-	fn update_season_should_reject_invalid_season_data() {
-		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-			run_to_block(10);
-
-			// This test assumes that the 'Validate' implementation for
-			// 'MockConfigData' works with even numbers
-			let config = SeasonConfigOf::<Test, _> {
-				fee: SeasonFeeConfig {
-					transfer_asset: 10_u64,
-					buy_asset_min: 5_u64,
-					buy_percent: 10,
-					upgrade_asset_inventory: 5_u64,
-					unlock_trade_asset: 9_u64,
-					unlock_transfer_asset: 13_u64,
-					state_transition_base_fee: 20_u64,
-				},
-				data: MockSeasonData { data: 13 },
-			};
-
-			assert_noop!(
-				SeasonsAlpha::update_season(
-					RuntimeOrigin::signed(ALICE),
-					SEASON_ID_1,
-					Some(config),
-					None,
-					None
-				),
-				Error::<Test, _>::InvalidSeasonData
-			);
-		});
-	}
-
-	#[test]
 	fn update_season_should_reject_invalid_schedules() {
 		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
 			run_to_block(10);
@@ -359,7 +324,6 @@ mod update_season {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 20_u64,
 				},
-				data: MockSeasonData { data: 24 },
 			};
 			let schedule = SeasonSchedule { early_start: 7, start: 10, end: 11 };
 			assert_noop!(
@@ -437,7 +401,6 @@ mod update_season {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 20_u64,
 				},
-				data: MockSeasonData { data: 24 },
 			};
 			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 
@@ -575,7 +538,6 @@ mod update_season {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 20_u64,
 				},
-				data: MockSeasonData { data: 24 },
 			};
 			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 
@@ -604,7 +566,6 @@ mod update_season {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 23_u64,
 				},
-				data: MockSeasonData { data: 12 },
 			};
 			let new_schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 
@@ -683,7 +644,6 @@ mod interrupt_active_season {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 20_u64,
 				},
-				data: MockSeasonData { data: 24 },
 			};
 			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 
@@ -741,7 +701,6 @@ mod interrupt_active_season {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 20_u64,
 				},
-				data: MockSeasonData { data: 24 },
 			};
 			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 

@@ -90,9 +90,8 @@ pub mod pallet {
 	pub(crate) type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
 	pub type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
-	pub type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
+	pub type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>>;
 	pub type SeasonIdOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonId;
-	pub type SeasonDataOf<T, I> = <<T as Config<I>>::SeasonHandler as SeasonManager>::SeasonData;
 
 	pub type TradeFilterOf<T, I> = <<T as Config<I>>::FilterHandler as TradeManager>::TradeFilter;
 	pub type TransferFilterOf<T, I> =

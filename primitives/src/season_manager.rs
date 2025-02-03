@@ -41,29 +41,13 @@ pub struct SeasonFeeConfig<Balance> {
 	/// Base price of executing and asset transition
 	pub state_transition_base_fee: Balance,
 }
-
-pub trait Validate {
-	fn validate(&self) -> bool;
-}
-
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
-pub struct SeasonConfig<Balance, SeasonData> {
+pub struct SeasonConfig<Balance> {
 	pub fee: SeasonFeeConfig<Balance>,
-	pub data: SeasonData,
-}
-
-impl<Balance, SeasonData> SeasonConfig<Balance, SeasonData>
-where
-	SeasonData: Validate,
-{
-	pub fn validate_data(&self) -> bool {
-		self.data.validate()
-	}
 }
 
 pub trait SeasonManager {
 	type SeasonId: Member + Parameter + MaxEncodedLen + MaybeSerializeDeserialize;
-	type SeasonData: Member + Parameter + MaxEncodedLen + Default;
 	type AssetId: Member + Parameter + MaxEncodedLen;
 	type Balance;
 
@@ -75,7 +59,7 @@ pub trait SeasonManager {
 
 	fn get_season_config_for(
 		season_id: &Self::SeasonId,
-	) -> Result<SeasonConfig<Self::Balance, Self::SeasonData>, DispatchError>;
+	) -> Result<SeasonConfig<Self::Balance>, DispatchError>;
 
 	fn register_asset_in(
 		asset_id: &Self::AssetId,
