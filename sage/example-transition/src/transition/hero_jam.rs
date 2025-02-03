@@ -13,6 +13,10 @@ use sage_api::{
 	SageGameTransition, TransitionError,
 };
 
+use crate::transition::GameTransitionConfig;
+use ajuna_primitives::{
+	asset_manager::AssetFundsManager, payment_handler::NativeId, sage_api::SageApi,
+};
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
@@ -97,18 +101,21 @@ impl From<u8> for SleepType {
 	}
 }
 
-pub(super) struct HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler> {
-	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler)>,
+pub(super) struct HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> {
+	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler, Sage)>,
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler>
-	HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler>
+impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
+	HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
 	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>
 		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
+	Sage: SageApi<TransitionConfig = GameTransitionConfig>
+		+ AssetFundsManager<AccountId = AccountId, AssetId = AssetId, Balance = u64>,
+	<Sage as AssetFundsManager>::FungiblesAssetId: NativeId,
 {
 	fn try_get_hero_jam(asset_id: &AssetId) -> Result<HeroJamAsset<BlockNumber>, TransitionError> {
 		let asset = AssetHandler::get_asset(asset_id)
@@ -168,7 +175,7 @@ where
 
 	fn transition_assets(
 		transition_id: &HeroAction,
-		_account_id: &AccountId,
+		account_id: &AccountId,
 		assets: Vec<(AssetId, HeroJamAsset<BlockNumber>)>,
 	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber>>>, TransitionError> {
 		match transition_id {
@@ -213,7 +220,21 @@ where
 				);
 
 				if work_type == &WorkType::Hunt {
-					asset.balance = asset.balance.saturating_add(10);
+					let hunting_reward = Sage::get_transition_config().hunting_reward;
+
+					// Also do the accounting on the asset, but this is not necessary per se.
+					asset.balance = asset.balance.saturating_add(hunting_reward);
+
+					// Todo: how to handle dispatch errors in transitions
+					Sage::deposit_funds_to_asset(
+						&asset_id,
+						account_id,
+						// Todo: how to pass the FungibleAssetId that was used as payment for this
+						<Sage::FungiblesAssetId as NativeId>::get_native_id(),
+						// Todo: use balance type in transition config
+						hunting_reward,
+					)
+					.expect("transferring to asset failed");
 				}
 
 				asset.fatigue = (asset.fatigue as i32).saturating_add(fatigue).clamp(0, 255) as u8;
@@ -263,14 +284,17 @@ where
 	}
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler> SageGameTransition
-	for HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler>
+impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> SageGameTransition
+	for HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
 	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>
 		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
+	Sage: SageApi<TransitionConfig = GameTransitionConfig>
+		+ AssetFundsManager<AccountId = AccountId, AssetId = AssetId, Balance = u64>,
+	<Sage as AssetFundsManager>::FungiblesAssetId: NativeId,
 {
 	type TransitionId = HeroAction;
 	type TransitionConfig = ();

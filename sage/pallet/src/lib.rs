@@ -88,7 +88,6 @@ pub mod pallet {
 	pub type TransitionConfigOf<T, I> =
 		<<T as Config<I>>::SageGameTransition as SageGameTransition>::TransitionConfig;
 	pub(crate) type TransitionOutputOf<T, I> = TransitionOutput<AssetIdOf<T, I>, AssetOf<T, I>>;
-	pub type GeneralConfigOf<T, I> = GeneralConfig<TransitionConfigOf<T, I>>;
 	pub type PlayerStatsOf<T> = PlayerStats<BlockNumberFor<T>>;
 
 	pub type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
@@ -118,10 +117,9 @@ pub mod pallet {
 			if let Some(ref organizer) = self.organizer {
 				Organizer::<T, I>::set(Some(organizer.clone()));
 
-				GeneralConfigStore::<T, I>::set(GeneralConfigOf::<T, I> {
+				GeneralConfigStore::<T, I>::set(GeneralConfig {
 					transfer: TransferConfig { open: true },
 					trade: TradeConfig { open: true },
-					..Default::default()
 				});
 
 				if let Some(ref season_id) = self.season {
@@ -209,7 +207,12 @@ pub mod pallet {
 	/// Tracks global configuration values that can be changed by the organizer only.
 	#[pallet::storage]
 	pub type GeneralConfigStore<T: Config<I>, I: 'static = ()> =
-		StorageValue<_, GeneralConfigOf<T, I>, ValueQuery>;
+		StorageValue<_, GeneralConfig, ValueQuery>;
+
+	/// Configuration values specific to the transition being used.
+	#[pallet::storage]
+	pub type TransitionConfigStore<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, TransitionConfigOf<T, I>, ValueQuery>;
 
 	/// Some features need to be unlocked fulfilling certain criteria.
 	///
@@ -332,7 +335,9 @@ pub mod pallet {
 		/// An organizer has been set.
 		OrganizerSet { organizer: AccountIdOf<T> },
 		/// General configuration updated.
-		UpdatedGeneralConfig { updated_config: GeneralConfigOf<T, I> },
+		UpdatedGeneralConfig { new_config: GeneralConfig },
+		/// Transition configuration updated.
+		UpdatedTransitionConfig { new_config: TransitionConfigOf<T, I> },
 		/// Unlock configuration updated for feature.
 		UpdatedUnlockRule {
 			season_id: SeasonIdOf<T, I>,
@@ -467,20 +472,35 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::update_general_config())]
 		pub fn update_general_config(
 			origin: OriginFor<T>,
-			new_config: GeneralConfigOf<T, I>,
+			new_config: GeneralConfig,
 		) -> DispatchResult {
 			let signer = ensure_signed(origin)?;
 			Self::ensure_organizer(&signer)?;
 
 			GeneralConfigStore::<T, I>::put(&new_config);
-			Self::deposit_event(Event::UpdatedGeneralConfig { updated_config: new_config });
+			Self::deposit_event(Event::UpdatedGeneralConfig { new_config });
+			Ok(())
+		}
+
+		/// Update general configuration.
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::update_general_config())]
+		pub fn update_transition_config(
+			origin: OriginFor<T>,
+			new_config: TransitionConfigOf<T, I>,
+		) -> DispatchResult {
+			let signer = ensure_signed(origin)?;
+			Self::ensure_organizer(&signer)?;
+
+			TransitionConfigStore::<T, I>::put(&new_config);
+			Self::deposit_event(Event::UpdatedTransitionConfig { new_config });
 			Ok(())
 		}
 
 		/// Updates an unlock rule for the given season.
 		///
 		/// It doesn't affect already unlocked features.
-		#[pallet::call_index(2)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::update_unlock_rule())]
 		pub fn update_unlock_rule(
 			origin: OriginFor<T>,
@@ -502,7 +522,7 @@ pub mod pallet {
 		}
 
 		/// Upgrade the asset inventory space.
-		#[pallet::call_index(3)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::upgrade_asset_inventory())]
 		pub fn upgrade_asset_inventory(
 			origin: OriginFor<T>,
@@ -550,7 +570,7 @@ pub mod pallet {
 		}
 
 		/// Updates the filter that assets need to pass for certain actions.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(
 			T::WeightInfo::update_asset_trade_filter()
 				.max(T::WeightInfo::update_asset_transfer_filter())
@@ -581,7 +601,7 @@ pub mod pallet {
 		///
 		/// It will fail if the asset transfer is disabled, the asset doesn't pass the filter
 		/// or if the asset is on the market.
-		#[pallet::call_index(5)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::transfer_asset())]
 		pub fn transfer_asset(
 			origin: OriginFor<T>,
@@ -632,7 +652,7 @@ pub mod pallet {
 		}
 
 		/// Set the price of a given asset, putting it on sale for others to buy.
-		#[pallet::call_index(6)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::set_asset_price())]
 		pub fn set_asset_price(
 			origin: OriginFor<T>,
@@ -664,7 +684,7 @@ pub mod pallet {
 		}
 
 		/// Remove the price of an asset, and thereby remove it from the market.
-		#[pallet::call_index(7)]
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::remove_asset_price())]
 		pub fn remove_asset_price(
 			origin: OriginFor<T>,
@@ -681,7 +701,7 @@ pub mod pallet {
 		}
 
 		/// Attempt to buy the selected asset.
-		#[pallet::call_index(8)]
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::buy_asset())]
 		pub fn buy_asset(
 			origin: OriginFor<T>,
@@ -736,7 +756,7 @@ pub mod pallet {
 		}
 
 		/// Locks an asset, making it unavailable for use.
-		#[pallet::call_index(9)]
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::lock_asset())]
 		pub fn lock_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -745,7 +765,7 @@ pub mod pallet {
 		}
 
 		/// Unlocks an asset, making it available for use again.
-		#[pallet::call_index(10)]
+		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::unlock_asset())]
 		pub fn unlock_asset(origin: OriginFor<T>, asset_id: AssetIdOf<T, I>) -> DispatchResult {
 			let player = ensure_signed(origin)?;
@@ -754,7 +774,7 @@ pub mod pallet {
 		}
 
 		/// Attempts to unlock the selected feature for the `target`.
-		#[pallet::call_index(11)]
+		#[pallet::call_index(12)]
 		#[pallet::weight(
 			T::WeightInfo::unlock_trade_asset_feature()
 				.max(T::WeightInfo::unlock_transfer_asset_feature())
@@ -779,7 +799,7 @@ pub mod pallet {
 		}
 
 		/// Entry point for the custom state transition.
-		#[pallet::call_index(12)]
+		#[pallet::call_index(13)]
 		#[pallet::weight(T::WeightInfo::state_transition(6))]
 		pub fn state_transition(
 			origin: OriginFor<T>,

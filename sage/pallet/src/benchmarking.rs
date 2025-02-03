@@ -18,8 +18,8 @@ use crate::{
 	config::{InventoryTier, Locks},
 	pallet::AssetFilterOf,
 	AssetIdOf, AssetOf, AssetOwners, AssetTradePrices, Assets, BalanceOf, Config, Event, ExtraOf,
-	GeneralConfigOf, GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs,
-	SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
+	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonIdOf,
+	SeasonUnlocks, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
 };
 use ajuna_primitives::{asset_manager::Lock, season_manager::SeasonManager};
 use frame_benchmarking::v2::*;
@@ -84,7 +84,7 @@ fn unlock_player_features_for<T: Config<I>, I: 'static>(
 #[instance_benchmarks]
 mod benchmarks {
 	use super::*;
-	use crate::Call;
+	use crate::{Call, GeneralConfig, TransitionConfigOf};
 	use sage_api::benchmarks::SageBenchmarkHelper;
 
 	#[benchmark]
@@ -101,12 +101,24 @@ mod benchmarks {
 	fn update_general_config() {
 		let acc_1 = account::<T, I>(ACC_1);
 		setup_organizer::<T, I>(acc_1.clone());
-		let general_config = GeneralConfigOf::<T, I>::default();
+		let general_config = GeneralConfig::default();
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(acc_1), general_config.clone());
 
-		assert_last_event::<T, I>(Event::UpdatedGeneralConfig { updated_config: general_config });
+		assert_last_event::<T, I>(Event::UpdatedGeneralConfig { new_config: general_config });
+	}
+
+	#[benchmark]
+	fn update_transition_config() {
+		let acc_1 = account::<T, I>(ACC_1);
+		setup_organizer::<T, I>(acc_1.clone());
+		let transition_config = TransitionConfigOf::<T, I>::default();
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(acc_1), transition_config.clone());
+
+		assert_last_event::<T, I>(Event::UpdatedTransitionConfig { new_config: transition_config });
 	}
 
 	#[benchmark]

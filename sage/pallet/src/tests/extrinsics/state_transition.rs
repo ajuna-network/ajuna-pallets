@@ -5,18 +5,19 @@
 // it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
-
+//
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use super::*;
+use ajuna_primitives::sage_api::SageApi;
 
 use example_transition::transition::{
-	hero_jam::{ActionTime, HeroAction, SleepType},
+	hero_jam::{ActionTime, HeroAction, SleepType, WorkType},
 	TransitionIdentifier,
 };
 
@@ -161,4 +162,47 @@ fn state_transition_should_reject_too_many_input_assets() {
 				Error::<Test, ()>::TooManyAssetsInTransition
 			);
 		})
+}
+
+#[test]
+fn hero_hunt_transition_add_funds_to_balance_works() {
+	let initial_balance = 100_000;
+	ExtBuilder::default()
+		.balances(&[(ALICE, initial_balance)])
+		.build()
+		.execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+			let season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
+				.expect("Should get season_id");
+			let season_config =
+				<Test as Config<()>>::SeasonHandler::get_season_config_for(&season_id)
+					.expect("Should get season config");
+			let transition_id =
+				TransitionIdentifier::HeroJam(HeroAction::Work(WorkType::Hunt, ActionTime::Short));
+
+			assert_eq!(Balances::free_balance(ALICE), initial_balance);
+			assert_ok!(Sage::state_transition(
+				RuntimeOrigin::signed(ALICE),
+				transition_id,
+				asset_ids.clone(),
+				(),
+				SOME_NATIVE_PAYMENT
+			));
+			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
+				account: ALICE,
+				id: transition_id,
+			}));
+			let transition_fee = season_config.fee.state_transition_base_fee;
+			let transition_config = Sage::get_transition_config();
+			let hunting_reward = transition_config.hunting_reward;
+			assert_eq!(
+				Balances::free_balance(ALICE),
+				initial_balance - transition_fee - hunting_reward
+			);
+			assert_eq!(Balances::free_balance(Sage::assets_funds_pot()), hunting_reward);
+			assert_eq!(
+				AssetFunds::<Test, _>::get(asset_ids[0], NATIVE_PAYMENT),
+				Some(hunting_reward)
+			);
+		});
 }
