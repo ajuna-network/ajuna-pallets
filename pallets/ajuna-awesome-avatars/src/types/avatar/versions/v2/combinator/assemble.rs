@@ -888,11 +888,10 @@ mod test {
 			let sac_3 = create_random_toolbox([0; 32], &ALICE, 100);
 			let sac_4 = create_random_toolbox([0; 32], &ALICE, 100);
 
-			let total_souls = leader.1.get_souls() +
-				sac_1.1.get_souls() +
-				sac_2.1.get_souls() +
-				sac_3.1.get_souls() +
-				sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 
 			let expected_dna = [
 				0x41, 0x12, 0x02, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1175,11 +1174,10 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), Some(unit_fn));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), Some(unit_fn));
 
-			let total_souls = leader.1.get_souls() +
-				sac_1.1.get_souls() +
-				sac_2.1.get_souls() +
-				sac_3.1.get_souls() +
-				sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 
 			assert_eq!(
 				ForgerV2::<Test>::determine_forge_type(
@@ -1264,11 +1262,10 @@ mod test {
 			let sac_3 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[3]), avatar_fn(31));
 			let sac_4 = create_random_avatar::<Test, _>(&ALICE, Some(hash_base[4]), avatar_fn(73));
 
-			let total_souls = leader.1.get_souls() +
-				sac_1.1.get_souls() +
-				sac_2.1.get_souls() +
-				sac_3.1.get_souls() +
-				sac_4.1.get_souls();
+			let total_souls =
+				leader.1.get_souls() +
+					sac_1.1.get_souls() + sac_2.1.get_souls() +
+					sac_3.1.get_souls() + sac_4.1.get_souls();
 
 			let leader_progress = leader.1.get_progress();
 			let lowest_count = DnaUtils::<BlockNumberFor<Test>>::lowest_progress_indexes(

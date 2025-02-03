@@ -72,7 +72,6 @@ mod benchmarks {
 				unlock_transfer_asset: 13_u32.into(),
 				state_transition_base_fee: 20_u32.into(),
 			},
-			data: T::BenchmarkHelper::create_default_season_data(),
 		};
 		let metadata = SeasonMetadata {
 			name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),
@@ -114,7 +113,6 @@ mod benchmarks {
 				unlock_transfer_asset: 13_u32.into(),
 				state_transition_base_fee: 20_u32.into(),
 			},
-			data: T::BenchmarkHelper::create_default_season_data(),
 		};
 		let metadata = SeasonMetadata {
 			name: BoundedVec::try_from(b"Season-1".to_vec()).expect("Should create vec"),

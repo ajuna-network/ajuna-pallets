@@ -58,8 +58,7 @@ impl<T: Config> AvatarCombinator<T> {
 				PET_MOON_PHASE_SIZE,
 				PET_MOON_PHASE_AMOUNT,
 				block_number,
-			) % 7) as usize +
-				9;
+			) % 7) as usize + 9;
 			leader_spec_bytes[pet_type_index] = leader_spec_bytes[pet_type_index].saturating_add(1);
 
 			leader.set_specs(leader_spec_bytes);

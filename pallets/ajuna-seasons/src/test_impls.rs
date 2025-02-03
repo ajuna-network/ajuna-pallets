@@ -29,7 +29,6 @@ fn start_season(organizer: MockAccountId, season_id: MockSeasonId) {
 			unlock_transfer_asset: 13_u64,
 			state_transition_base_fee: 20_u64,
 		},
-		data: MockSeasonData { data: 24 },
 	};
 	let early_start = 20;
 	let schedule = SeasonSchedule { early_start, start: 25, end: 30 };
@@ -112,7 +111,6 @@ mod season_manager {
 					unlock_transfer_asset: 13_u64,
 					state_transition_base_fee: 20_u64,
 				},
-				data: MockSeasonData { data: 24 },
 			};
 			let schedule = SeasonSchedule { early_start: 20, start: 25, end: 30 };
 

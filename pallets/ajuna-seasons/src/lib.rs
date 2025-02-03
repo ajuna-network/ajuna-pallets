@@ -34,7 +34,7 @@ mod types;
 
 use ajuna_primitives::{
 	account_manager::AccountManager,
-	season_manager::{SeasonConfig, SeasonManager, Validate},
+	season_manager::{SeasonConfig, SeasonManager},
 };
 
 use frame_support::{pallet_prelude::*, traits::Currency};
@@ -55,11 +55,10 @@ pub mod pallet {
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 	pub type SeasonIdOf<T, I> = <T as Config<I>>::SeasonId;
-	pub type SeasonDataOf<T, I> = <T as Config<I>>::SeasonData;
 	pub type AssetIdOf<T, I> = <T as Config<I>>::AssetId;
 
 	pub(crate) type SeasonStatusOf<T, I> = SeasonStatus<SeasonIdOf<T, I>>;
-	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>, SeasonDataOf<T, I>>;
+	pub(crate) type SeasonConfigOf<T, I> = SeasonConfig<BalanceOf<T, I>>;
 	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
 	pub(crate) type SeasonScheduledActionOf<T, I> =
 		SeasonScheduledAction<<T as Config<I>>::SeasonId>;
@@ -67,20 +66,14 @@ pub mod pallet {
 	pub type BalanceOf<T, I> = <<T as Config<I>>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
 	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<SeasonId, SeasonData> {
+	pub trait BenchmarkHelper<SeasonId> {
 		fn create_season_id(id: u32) -> SeasonId;
-
-		fn create_default_season_data() -> SeasonData;
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	impl<SeasonId: From<u32>, SeasonData: Default> BenchmarkHelper<SeasonId, SeasonData> for () {
+	impl<SeasonId: From<u32>> BenchmarkHelper<SeasonId> for () {
 		fn create_season_id(id: u32) -> SeasonId {
 			id.into()
-		}
-
-		fn create_default_season_data() -> SeasonData {
-			SeasonData::default()
 		}
 	}
 
@@ -113,7 +106,6 @@ pub mod pallet {
 							unlock_transfer_asset: 100_u32.into(),
 							state_transition_base_fee: 100_u32.into(),
 						},
-						..Default::default()
 					},
 				);
 
@@ -148,7 +140,6 @@ pub mod pallet {
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type SeasonId: Member + Parameter + MaxEncodedLen + MaybeSerializeDeserialize;
-		type SeasonData: Member + Parameter + MaxEncodedLen + Default + Validate;
 
 		type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
 
@@ -159,7 +150,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: BenchmarkHelper<SeasonIdOf<Self, I>, SeasonDataOf<Self, I>>;
+		type BenchmarkHelper: BenchmarkHelper<SeasonIdOf<Self, I>>;
 	}
 
 	#[pallet::storage]
@@ -236,8 +227,6 @@ pub mod pallet {
 	#[pallet::error]
 	#[derive(PartialEq)]
 	pub enum Error<T, I = ()> {
-		/// The season's data didn't pass its validation method.
-		InvalidSeasonData,
 		/// There is currently no active season
 		NoActiveSeason,
 		/// Cannot set season schedule wihout season config first.
@@ -380,7 +369,6 @@ pub mod pallet {
 			// don't allow any changes except metadata
 			if Self::is_season_modifiable(&season_id) {
 				if let Some(ref config_update) = config {
-					Self::ensure_valid_config(config_update)?;
 					Seasons::<T, I>::insert(&season_id, config_update);
 				}
 
@@ -474,11 +462,6 @@ pub mod pallet {
 			} else {
 				true
 			}
-		}
-
-		fn ensure_valid_config(config: &SeasonConfigOf<T, I>) -> DispatchResult {
-			ensure!(config.validate_data(), Error::<T, I>::InvalidSeasonData);
-			Ok(())
 		}
 
 		fn ensure_valid_schedule(
