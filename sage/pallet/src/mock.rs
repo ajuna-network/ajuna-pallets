@@ -278,6 +278,7 @@ impl AssetFundsManager for SageFacade {
 	}
 }
 
+type BN = BlockNumberFor<Test>;
 impl ChainInspector for SageFacade {
 	type BlockNumber = BlockNumberFor<Test>;
 
@@ -286,8 +287,9 @@ impl ChainInspector for SageFacade {
 	}
 }
 
-type TestSageEngine =
-	crate::trait_impls::sage_api::SageEngine<Test, (), SageFacade, SageFacade, SageFacade>;
+struct TestSageEngine;
+
+impl_sage_api!(TestSageEngine, System, Sage, BN);
 
 pub struct MockVoucherHandler;
 
@@ -315,6 +317,7 @@ pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 
 type FungiblesAssetId = WithdrawKind<NativeOrWithId<AssetId>>;
 
+type DefaultSageInstance = ();
 impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = GameTransitionOf;
