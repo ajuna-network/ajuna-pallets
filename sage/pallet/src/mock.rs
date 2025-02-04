@@ -293,6 +293,7 @@ impl_sage_api!(
 	TestSageEngine,
 	Test,
 	DefaultSageInstance,
+	MockSeasonManager,
 	MockAccountId,
 	AssetId,
 	MockAsset,

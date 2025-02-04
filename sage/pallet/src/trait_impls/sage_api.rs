@@ -1,20 +1,19 @@
-// where
-// A: AssetFundsManager<
-// AccountId = AccountIdOf<T>,
-// AssetId = AssetIdOf<T, I>,
-// FungiblesAssetId = FungiblesAssetIdOf<T, I>,
-// Balance = BalanceOf<T, I>,
-// >,
-// C: ChainInspector<BlockNumber = BlockNumberFor<T>>,
-// S: SeasonManager<
-// AssetId = AssetIdOf<T, I>,
-// Balance = BalanceOf<T, I>,
-// SeasonId = SeasonIdOf<T, I>,
-// >,
-
 #[macro_export]
 macro_rules! impl_sage_api {
-	($impl_target:ident, $runtime:ident, $sage_instance:ident, $account_id:ident, $asset_id:ident, $asset:ident, $fungible_asset_id:ident, $balance:ident, $block_number:ident, $season_id:ident, $transition_config:ident) => {
+	(
+		$impl_target:ident,
+		$runtime:ident,
+		$sage_instance:ident,
+		$season_manager:ident,
+		$account_id:ident,
+		$asset_id:ident,
+		$asset:ident,
+		$fungible_asset_id:ident,
+		$balance:ident,
+		$block_number:ident,
+		$season_id:ident,
+		$transition_config:ident
+	) => {
 		impl SageApi for $impl_target {
 			type AccountId = $account_id;
 			type AssetId = $asset_id;
@@ -105,28 +104,28 @@ macro_rules! impl_sage_api {
 			fn get_season_id_for(
 				asset_id: &Self::AssetId,
 			) -> Result<Self::SeasonId, DispatchError> {
-				todo!()
+				<$season_manager as SeasonManager>::get_season_id_for(asset_id)
 			}
 
 			fn get_current_season_id() -> Result<Self::SeasonId, DispatchError> {
-				todo!()
+				<$season_manager as SeasonManager>::get_current_season_id()
 			}
 
 			fn is_valid_season(season_id: &Self::SeasonId) -> Result<(), DispatchError> {
-				todo!()
+				<$season_manager as SeasonManager>::is_valid_season(season_id)
 			}
 
 			fn get_season_config_for(
 				season_id: &Self::SeasonId,
 			) -> Result<SeasonConfig<Self::Balance>, DispatchError> {
-				todo!()
+				<$season_manager as SeasonManager>::get_season_config_for(season_id)
 			}
 
 			fn register_asset_in(
 				asset_id: &Self::AssetId,
 				season_id: &Self::SeasonId,
 			) -> Result<(), DispatchError> {
-				todo!()
+				<$season_manager as SeasonManager>::register_asset_in(asset_id, season_id)
 			}
 		}
 	};
