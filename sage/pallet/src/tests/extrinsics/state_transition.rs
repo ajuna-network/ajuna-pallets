@@ -193,7 +193,7 @@ fn hero_hunt_transition_add_funds_to_balance_works() {
 				id: transition_id,
 			}));
 			let transition_fee = season_config.fee.state_transition_base_fee;
-			let transition_config = Sage::get_transition_config();
+			let transition_config = TestSageEngine::get_transition_config();
 			let hunting_reward = transition_config.hunting_reward;
 			assert_eq!(
 				Balances::free_balance(ALICE),

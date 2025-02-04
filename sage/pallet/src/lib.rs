@@ -187,7 +187,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
-		type BenchmarkHelper: SageBenchmarkHelper<
+		type BenchmarkHelper: sage_api::benchmarks::SageBenchmarkHelper<
 			AssetIdOf<Self, I>,
 			AssetOf<Self, I>,
 			TransitionIdOf<Self, I>,

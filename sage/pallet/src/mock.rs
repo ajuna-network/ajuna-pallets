@@ -287,9 +287,21 @@ impl ChainInspector for SageFacade {
 	}
 }
 
-struct TestSageEngine;
+pub struct TestSageEngine;
 
-impl_sage_api!(TestSageEngine, System, Sage, BN);
+impl_sage_api!(
+	TestSageEngine,
+	Test,
+	DefaultSageInstance,
+	MockAccountId,
+	AssetId,
+	MockAsset,
+	FungiblesAssetId,
+	MockBalance,
+	BN,
+	MockSeasonId,
+	GameTransitionConfig
+);
 
 pub struct MockVoucherHandler;
 

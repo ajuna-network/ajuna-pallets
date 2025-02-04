@@ -1,4 +1,3 @@
-
 // where
 // A: AssetFundsManager<
 // AccountId = AccountIdOf<T>,
@@ -15,21 +14,16 @@
 
 #[macro_export]
 macro_rules! impl_sage_api {
-	($impl_target:ident, $system:ident, $sage:ident, $block_number:ident) => {
+	($impl_target:ident, $runtime:ident, $sage_instance:ident, $account_id:ident, $asset_id:ident, $asset:ident, $fungible_asset_id:ident, $balance:ident, $block_number:ident, $season_id:ident, $transition_config:ident) => {
 		impl SageApi for $impl_target {
-			type AccountId = <$system as frame_system::Config>::AccountId;
-			type AssetId =
-				<<$sage as crate::Config>::SageGameTransition as SageGameTransition>::AssetId;
-			type Asset =
-				<<$sage as crate::Config>::SageGameTransition as SageGameTransition>::Asset;
-			type FungiblesAssetId = <$sage as crate::Config>::FungiblesAssetId;
-			type Balance = <<$sage as crate::Config>::Fungible as fungible::Inspect<
-				<$system as frame_system::Config>::AccountId,
-			>>::Balance;
+			type AccountId = $account_id;
+			type AssetId = $asset_id;
+			type Asset = $asset;
+			type FungiblesAssetId = $fungible_asset_id;
+			type Balance = $balance;
 			type BlockNumber = $block_number;
-			type SeasonId = <<$sage as Config>::SeasonHandler as SeasonManager>::SeasonId;
-			type TransitionConfig =
-				<<$sage as Config>::SageGameTransition as SageGameTransition>::TransitionConfig;
+			type SeasonId = $season_id;
+			type TransitionConfig = $transition_config;
 
 			fn get_transition_config() -> Self::TransitionConfig {
 				// TransitionConfigStore::<$runtime, $sage_instance>::get()
@@ -47,8 +41,10 @@ macro_rules! impl_sage_api {
 				todo!()
 			}
 
-			fn iter_assets_from(account_id: &Self::AccountId) -> Vec<(Self::AssetId, Self::Asset)> {
-				vec![]
+			fn iter_assets_from(
+				account_id: &Self::AccountId,
+			) -> impl Iterator<Item = (Self::AssetId, Self::Asset)> {
+				vec![].into_iter()
 			}
 
 			fn inspect_asset_funds(
