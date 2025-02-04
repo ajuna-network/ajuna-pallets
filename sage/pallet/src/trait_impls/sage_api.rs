@@ -26,32 +26,36 @@ macro_rules! impl_sage_api {
 			type TransitionConfig = $transition_config;
 
 			fn get_transition_config() -> Self::TransitionConfig {
-				// TransitionConfigStore::<$runtime, $sage_instance>::get()
-				todo!()
+				TransitionConfigStore::<$runtime, $sage_instance>::get()
 			}
 
 			fn ensure_ownership(
 				owner: &Self::AccountId,
 				asset_id: &Self::AssetId,
 			) -> Result<Self::Asset, DispatchError> {
-				todo!()
+				<Pallet<$runtime, $sage_instance> as AssetManager>::ensure_ownership(
+					owner, asset_id,
+				)
 			}
 
 			fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError> {
-				todo!()
+				<Pallet<$runtime, $sage_instance> as AssetInspector>::get_asset(asset_id)
 			}
 
 			fn iter_assets_from(
 				account_id: &Self::AccountId,
 			) -> impl Iterator<Item = (Self::AssetId, Self::Asset)> {
-				vec![].into_iter()
+				<Pallet<$runtime, $sage_instance> as AssetInspector>::iter_assets_from(account_id)
 			}
 
 			fn inspect_asset_funds(
 				asset_id: &Self::AssetId,
 				fungibles_asset_id: &Self::FungiblesAssetId,
 			) -> Self::Balance {
-				todo!()
+				<Pallet<$runtime, $sage_instance> as AssetFundsManager>::inspect_asset_funds(
+					asset_id,
+					fungibles_asset_id,
+				)
 			}
 
 			fn deposit_funds_to_asset(
@@ -60,7 +64,12 @@ macro_rules! impl_sage_api {
 				fungibles_asset_id: Self::FungiblesAssetId,
 				amount: Self::Balance,
 			) -> Result<(), DispatchError> {
-				todo!()
+				<Pallet<$runtime, $sage_instance> as AssetFundsManager>::deposit_funds_to_asset(
+					asset_id,
+					from,
+					fungibles_asset_id,
+					amount,
+				)
 			}
 
 			fn transfer_funds_from_asset(
@@ -69,7 +78,12 @@ macro_rules! impl_sage_api {
 				fungibles_asset_id: Self::FungiblesAssetId,
 				amount: Self::Balance,
 			) -> Result<(), DispatchError> {
-				todo!()
+				<Pallet<$runtime, $sage_instance> as AssetFundsManager>::transfer_funds_from_asset(
+					asset_id,
+					to,
+					fungibles_asset_id,
+					amount,
+				)
 			}
 
 			fn transfer_all_from_asset(
@@ -77,11 +91,15 @@ macro_rules! impl_sage_api {
 				to: &Self::AccountId,
 				fungibles_asset_id: Self::FungiblesAssetId,
 			) -> Result<(), DispatchError> {
-				todo!()
+				<Pallet<$runtime, $sage_instance> as AssetFundsManager>::transfer_all_from_asset(
+					asset_id,
+					to,
+					fungibles_asset_id,
+				)
 			}
 
 			fn get_current_block_number() -> Self::BlockNumber {
-				todo!()
+				frame_system::Pallet::<$runtime>::block_number()
 			}
 
 			fn get_season_id_for(
