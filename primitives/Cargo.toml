@@ -20,6 +20,7 @@ sp-std             = { workspace = true }
 frame-support = { workspace = true }
 
 [features]
+default = ["std"]
 std = [
     "ajuna-payment-handler/std",
     "frame-support/std",
