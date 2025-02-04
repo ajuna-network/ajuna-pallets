@@ -186,6 +186,9 @@ macro_rules! impl_runtime_sage_api {
 		$runtime:ident,
 		$sage_instance:ident,
 		$season_manager:ident,
+		$asset_id:ident,
+		$asset:ident,
+		$transition_config:ident,
 	) => {
 		impl_sage_api!(
 			$impl_target,
@@ -193,18 +196,28 @@ macro_rules! impl_runtime_sage_api {
 			$sage_instance,
 			$season_manager,
 			MockAccountId,
-			AssetId,
-			MockAsset,
+			$asset_id,
+			$asset,
 			FungiblesAssetId,
 			MockBalance,
 			TestBlockNumber,
 			MockSeasonId,
-			GameTransitionConfig
+			$transition_config
 		);
 	};
 }
 
-impl_runtime_sage_api!(TestSageEngine, Test, DefaultSageInstance, MockSeasonManager,);
+// Every new game we add can simply call that macro for another sage instance to
+// implement the sage api given that the other types are identical.
+impl_runtime_sage_api!(
+	TestSageEngine,
+	Test,
+	DefaultSageInstance,
+	MockSeasonManager,
+	AssetId,
+	MockAsset,
+	GameTransitionConfig,
+);
 
 pub struct MockVoucherHandler;
 
