@@ -1,16 +1,8 @@
 use crate::{
 	asset::{hero_jam::*, Asset, AssetId},
 	rules::hero_jam::*,
+	transition::GameTransitionConfig,
 };
-
-use ajuna_primitives::{asset_manager::AssetInspector, chain_inspector::ChainInspector};
-use sage_api::{
-	rules::{ensure_asset_length, ensure_owner_of},
-	traits::TransitionOutput,
-	SageGameTransition, TransitionError,
-};
-
-use crate::transition::GameTransitionConfig;
 use ajuna_primitives::{payment_handler::NativeId, sage_api::SageApi};
 use core::marker::PhantomData;
 use frame_support::{
@@ -18,6 +10,11 @@ use frame_support::{
 	sp_runtime,
 };
 use parity_scale_codec::Codec;
+use sage_api::{
+	rules::{ensure_asset_length, ensure_owner_of},
+	traits::TransitionOutput,
+	SageGameTransition, TransitionError,
+};
 use sp_runtime::{
 	traits::{BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
