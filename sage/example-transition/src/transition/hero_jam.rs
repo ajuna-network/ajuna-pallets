@@ -29,6 +29,8 @@ const BLOCKS_PER_HOUR: u32 = 600;
 const ASSET_NOT_FOUND: u8 = 200;
 const ASSET_NOT_HERO_JAM: u8 = 201;
 
+const HERO_JAM_COLLECTION_ID: u8 = 1;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum ActionTime {
 	Short = 1,
@@ -73,12 +75,20 @@ impl From<u8> for WorkType {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
-pub enum HeroAction {
-	Create,
+pub enum UseType {
+	None = 0,
+	Disassemble = 1,
+	Assemble = 2,
+	Consume = 3,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+pub enum Action {
+	CreateHero,
+	CreateMap,
 	Sleep(SleepType, ActionTime),
 	Work(WorkType, ActionTime),
-	Travel,
-	Claim,
+	Use(UseType),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -132,26 +142,26 @@ where
 	}
 
 	fn verify_transition_rules(
-		transition_id: &HeroAction,
+		transition_id: &Action,
 		account_id: &AccountId,
 		asset_ids: &[AssetId],
 	) -> Result<Vec<(AssetId, HeroJamAsset<BlockNumber>)>, TransitionError> {
 		let mut maybe_assets = None;
 
 		match transition_id {
-			HeroAction::Create => {
+			Action::CreateHero => {
 				ensure_asset_length(asset_ids, 0)?;
 				ensure_account_has_not_asset_of_type::<_, _, AssetHandler>(
 					account_id,
-					AssetType::Hero,
+					VariantType::Hero,
 				)?;
 			},
-			HeroAction::Sleep(_, _) | HeroAction::Work(_, _) => {
+			Action::Sleep(_, _) | Action::Work(_, _) => {
 				let assets = Self::try_get_hero_jam_assets(asset_ids)?;
 
 				ensure_asset_length(asset_ids, 1)?;
 				ensure_owner_of::<_, _, AssetHandler>(asset_ids, account_id)?;
-				ensure_all_asset_type(assets.as_slice(), AssetType::Hero)?;
+				ensure_all_asset_type(assets.as_slice(), VariantType::Hero)?;
 				ensure_can_state_change::<_, ChainHandler>(&assets[0].1)?;
 
 				maybe_assets = Some(assets);
@@ -167,12 +177,12 @@ where
 	}
 
 	fn transition_assets(
-		transition_id: &HeroAction,
+		transition_id: &Action,
 		_account_id: &AccountId,
 		assets: Vec<(AssetId, HeroJamAsset<BlockNumber>)>,
 	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber>>>, TransitionError> {
 		match transition_id {
-			HeroAction::Create => {
+			Action::CreateHero => {
 				let asset_id = ChainHandler::get_current_block_number().saturated_into::<AssetId>();
 				let asset = HeroJamAsset {
 					id: asset_id,
@@ -188,7 +198,7 @@ where
 				};
 				Ok(Vec::from([TransitionOutput::Minted(Asset::from(asset))]))
 			},
-			HeroAction::Sleep(_, sleep_time) => {
+			Action::Sleep(_, sleep_time) => {
 				let (asset_id, mut asset) = assets[0];
 
 				asset.state_type = StateType::Sleep;
@@ -198,7 +208,7 @@ where
 
 				Ok(Vec::from([TransitionOutput::Mutated(asset_id, Asset::from(asset))]))
 			},
-			HeroAction::Work(work_type, work_time) => {
+			Action::Work(work_type, work_time) => {
 				let (asset_id, mut asset) = assets[0];
 
 				let fatigue = Self::get_resource_fatigue(
@@ -272,7 +282,7 @@ where
 		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
 {
-	type TransitionId = HeroAction;
+	type TransitionId = Action;
 	type TransitionConfig = ();
 	type AccountId = AccountId;
 	type AssetId = AssetId;

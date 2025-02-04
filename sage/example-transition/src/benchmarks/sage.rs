@@ -1,4 +1,4 @@
-use crate::{prelude::*, transition::hero_jam::HeroAction};
+use crate::{prelude::*, transition::hero_jam::Action};
 
 use ajuna_primitives::payment_handler::WithdrawKind;
 use sage_api::benchmarks::SageBenchmarkHelper;
@@ -42,7 +42,7 @@ where
 	}
 
 	fn create_bench_transition() -> (TransitionIdentifier, Vec<AssetId>) {
-		(TransitionIdentifier::HeroJam(HeroAction::Create), sp_std::vec::Vec::with_capacity(0))
+		(TransitionIdentifier::HeroJam(Action::CreateHero), sp_std::vec::Vec::with_capacity(0))
 	}
 
 	fn create_trade_filter_for(asset: &Asset<BlockNumber>) -> AssetType {

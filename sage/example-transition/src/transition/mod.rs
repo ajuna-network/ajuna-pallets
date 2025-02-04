@@ -15,7 +15,7 @@ pub mod hero_jam;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum TransitionIdentifier {
-	HeroJam(hero_jam::HeroAction),
+	HeroJam(hero_jam::Action),
 }
 
 pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler> {

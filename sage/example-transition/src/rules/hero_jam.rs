@@ -6,6 +6,7 @@ use crate::asset::{
 use ajuna_primitives::{asset_manager::AssetInspector, chain_inspector::ChainInspector};
 use sage_api::TransitionError;
 
+use crate::asset::hero_jam::VariantType;
 use sp_runtime::traits::BlockNumber as BlockNumberT;
 
 pub const ASSETS_NOT_ALL_SAME_TYPE: u8 = 100;
@@ -16,11 +17,11 @@ pub const ASSET_HERO_ALREADY_IN_ACCOUNT: u8 = 104;
 
 pub(crate) fn ensure_all_asset_type<BlockNumber>(
 	assets: &[(AssetId, HeroJamAsset<BlockNumber>)],
-	asset_type: AssetType,
+	asset_type: VariantType,
 ) -> Result<(), TransitionError> {
 	assets
 		.iter()
-		.all(|(_, hero_jam)| hero_jam.asset_type == asset_type)
+		.all(|(_, hero_jam)| hero_jam.is_variant(asset_type))
 		.then_some(())
 		.ok_or(TransitionError::Transition { code: ASSETS_NOT_ALL_SAME_TYPE })
 }
@@ -56,20 +57,20 @@ where
 #[inline]
 fn account_has_asset_of_type<AccountId, BlockNumber, Inspector>(
 	account_id: &AccountId,
-	asset_type: AssetType,
+	asset_type: VariantType,
 ) -> bool
 where
 	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 {
 	Inspector::iter_assets_from(account_id).any(|(_, asset)| match asset.asset_variant {
-		AssetVariant::HeroJam(hero_jam) => hero_jam.asset_type == asset_type,
+		AssetVariant::HeroJam(hero_jam) => hero_jam.is_variant(asset_type),
 	})
 }
 
 #[allow(dead_code)]
 pub(crate) fn ensure_account_has_asset_of_type<AccountId, BlockNumber, Inspector>(
 	account_id: &AccountId,
-	asset_type: AssetType,
+	asset_type: VariantType,
 ) -> Result<(), TransitionError>
 where
 	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
@@ -83,7 +84,7 @@ where
 
 pub(crate) fn ensure_account_has_not_asset_of_type<AccountId, BlockNumber, Inspector>(
 	account_id: &AccountId,
-	asset_type: AssetType,
+	asset_type: VariantType,
 ) -> Result<(), TransitionError>
 where
 	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,

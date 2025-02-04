@@ -457,7 +457,8 @@ impl Generation {
 
 			resulting_rarity = RarityType::from(
 				((out_rarity_1 as u16 +
-					out_rarity_2 as u16 + ((input_rarity_1 as u16 + input_rarity_2 as u16) / 2)) /
+					out_rarity_2 as u16 +
+					((input_rarity_1 as u16 + input_rarity_2 as u16) / 2)) /
 					2) % 5,
 			)
 		}
