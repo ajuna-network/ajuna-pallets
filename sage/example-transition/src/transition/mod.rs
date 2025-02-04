@@ -5,7 +5,10 @@ use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 use crate::asset::{Asset, AssetId};
 use ajuna_primitives::sage_api::SageApi;
 use core::marker::PhantomData;
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use frame_support::{
+	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
+	traits::tokens::Balance as BalanceT,
+};
 use parity_scale_codec::Codec;
 use sp_runtime::traits::{BlockNumber as BlockNumberT, Member};
 
@@ -16,35 +19,36 @@ pub enum TransitionIdentifier {
 	HeroJam(hero_jam::HeroAction),
 }
 
-pub struct GameTransition<AccountId, BlockNumber, Sage> {
-	_phantom: PhantomData<(AccountId, BlockNumber, Sage)>,
+pub struct GameTransition<AccountId, BlockNumber, Balance, Sage> {
+	_phantom: PhantomData<(AccountId, BlockNumber, Balance, Sage)>,
 }
 
 /// This is an example how a transition config custom to a game could look like.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Clone, PartialEq, Eq)]
-pub struct GameTransitionConfig {
-	pub hunting_reward: u64,
+pub struct GameTransitionConfig<Balance> {
+	pub hunting_reward: Balance,
 }
 
-impl<AccountId, BlockNumber, Sage> SageGameTransition
-	for GameTransition<AccountId, BlockNumber, Sage>
+impl<AccountId, BlockNumber, Balance, Sage> SageGameTransition
+	for GameTransition<AccountId, BlockNumber, Balance, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
+	Balance: BalanceT,
 	Sage: SageApi<
-		TransitionConfig = GameTransitionConfig,
+		TransitionConfig = GameTransitionConfig<Balance>,
 		AccountId = AccountId,
 		AssetId = AssetId,
-		Balance = u64,
-		Asset = Asset<BlockNumber>,
+		Balance = Balance,
+		Asset = Asset<BlockNumber, Balance>,
 		BlockNumber = BlockNumber,
 	>,
 {
 	type TransitionId = TransitionIdentifier;
-	type TransitionConfig = GameTransitionConfig;
+	type TransitionConfig = GameTransitionConfig<Balance>;
 	type AccountId = AccountId;
 	type AssetId = asset::AssetId;
-	type Asset = asset::Asset<BlockNumber>;
+	type Asset = asset::Asset<BlockNumber, Balance>;
 	type Extra = ();
 
 	fn do_transition(

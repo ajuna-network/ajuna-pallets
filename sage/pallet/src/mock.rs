@@ -118,7 +118,7 @@ pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
 
-pub type MockAsset = Asset<BlockNumberFor<Test>>;
+pub type MockAsset = Asset<BlockNumberFor<Test>, MockBalance>;
 
 impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
@@ -177,6 +177,7 @@ impl SeasonManager for MockSeasonManager {
 pub struct TestSageEngine;
 // The macro can't handle the brackets.
 type TestBlockNumber = BlockNumberFor<Test>;
+type TestGameTransitionConfig = GameTransitionConfig<MockBalance>;
 
 /// Runtime specific sage implementation so that we don't have to
 /// pass our type definitions all the time.
@@ -216,7 +217,7 @@ impl_runtime_sage_api!(
 	MockSeasonManager,
 	AssetId,
 	MockAsset,
-	GameTransitionConfig,
+	TestGameTransitionConfig,
 );
 
 pub struct MockVoucherHandler;
@@ -233,7 +234,8 @@ impl VoucherHandler for MockVoucherHandler {
 	}
 }
 
-pub type GameTransitionOf = GameTransition<MockAccountId, BlockNumberFor<Test>, TestSageEngine>;
+pub type GameTransitionOf =
+	GameTransition<MockAccountId, BlockNumberFor<Test>, MockBalance, TestSageEngine>;
 
 pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 	WithdrawWhitelistedCredit<
@@ -260,7 +262,7 @@ impl crate::Config for Test {
 	>;
 	type FungiblesAssetId = FungiblesAssetId;
 	type TransferFunds = TransferFungibleAssets<WithdrawAllCreditOrVoucher, FungiblesAssetId>;
-	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
+	type FilterHandler = GameFilter<BlockNumberFor<Test>, MockBalance>;
 	type Fungible = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

@@ -24,7 +24,7 @@ pub enum StateType {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
-pub struct HeroJamAsset<BlockNumber> {
+pub struct HeroJamAsset<BlockNumber, Balance> {
 	pub id: AssetId,
 	pub asset_type: AssetType,
 	pub asset_subtype: AssetSubType,
@@ -34,20 +34,21 @@ pub struct HeroJamAsset<BlockNumber> {
 	pub state_sub_type: u8,
 	pub state_sub_value: u8,
 	pub state_change_block_number: BlockNumber,
-	// TODO: Use proper balance type in final version
-	pub balance: u64,
+	pub balance: Balance,
 }
 
-impl<BlockNumber> GetId<AssetId> for HeroJamAsset<BlockNumber> {
+impl<BlockNumber, Balance> GetId<AssetId> for HeroJamAsset<BlockNumber, Balance> {
 	fn get_id(&self) -> AssetId {
 		self.id
 	}
 }
 
-impl<BlockNumber> TryFrom<Asset<BlockNumber>> for HeroJamAsset<BlockNumber> {
+impl<BlockNumber, Balance> TryFrom<Asset<BlockNumber, Balance>>
+	for HeroJamAsset<BlockNumber, Balance>
+{
 	type Error = ();
 
-	fn try_from(value: Asset<BlockNumber>) -> Result<Self, Self::Error> {
+	fn try_from(value: Asset<BlockNumber, Balance>) -> Result<Self, Self::Error> {
 		match value.asset_variant {
 			AssetVariant::HeroJam(hero_jam_asset) => Ok(hero_jam_asset),
 		}

@@ -11,15 +11,15 @@ use sage_api::benchmarks::SageBenchmarkHelper;
 
 use ajuna_primitives::payment_handler::WithdrawKind;
 use core::marker::PhantomData;
-use frame_support::traits::fungible::NativeOrWithId;
+use frame_support::traits::{fungible::NativeOrWithId, tokens::Balance as BalanceT};
 use sp_runtime::{traits::BlockNumber as BlockNumberT, SaturatedConversion};
 
 pub struct GameBenchmarkHelper<BlockNumber>(PhantomData<BlockNumber>);
 
-impl<BlockNumber>
+impl<BlockNumber, Balance>
 	SageBenchmarkHelper<
 		AssetId,
-		Asset<BlockNumber>,
+		Asset<BlockNumber, Balance>,
 		TransitionIdentifier,
 		AssetType,
 		AssetType,
@@ -27,8 +27,9 @@ impl<BlockNumber>
 	> for GameBenchmarkHelper<BlockNumber>
 where
 	BlockNumber: BlockNumberT,
+	Balance: BalanceT,
 {
-	fn create_asset(seed: u32) -> (AssetId, Asset<BlockNumber>) {
+	fn create_asset(seed: u32) -> (AssetId, Asset<BlockNumber, Balance>) {
 		let asset_id = AssetId::from(seed);
 		let asset = Asset {
 			asset_variant: HeroJam(HeroJamAsset {
@@ -41,7 +42,7 @@ where
 				state_sub_type: 0,
 				state_sub_value: 0,
 				state_change_block_number: 0_u32.saturated_into(),
-				balance: 10,
+				balance: 10u32.into(),
 			}),
 		};
 
@@ -52,13 +53,13 @@ where
 		(TransitionIdentifier::HeroJam(HeroAction::Create), vec![])
 	}
 
-	fn create_trade_filter_for(asset: &Asset<BlockNumber>) -> AssetType {
+	fn create_trade_filter_for(asset: &Asset<BlockNumber, Balance>) -> AssetType {
 		match &asset.asset_variant {
 			HeroJam(hero_jam) => hero_jam.asset_type,
 		}
 	}
 
-	fn create_transfer_filter_for(asset: &Asset<BlockNumber>) -> AssetType {
+	fn create_transfer_filter_for(asset: &Asset<BlockNumber, Balance>) -> AssetType {
 		match &asset.asset_variant {
 			HeroJam(hero_jam) => hero_jam.asset_type,
 		}

@@ -8,6 +8,7 @@ use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
 	sp_runtime,
+	traits::tokens::Balance as BalanceT,
 };
 use parity_scale_codec::Codec;
 use sage_api::{
@@ -97,20 +98,23 @@ pub(super) struct HeroJamTransition<AccountId, BlockNumber, Sage> {
 	_phantom: PhantomData<(AccountId, BlockNumber, Sage)>,
 }
 
-impl<AccountId, BlockNumber, Sage> HeroJamTransition<AccountId, BlockNumber, Sage>
+impl<AccountId, BlockNumber, Balance, Sage> HeroJamTransition<AccountId, BlockNumber, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
+	Balance: BalanceT,
 	Sage: SageApi<
-		TransitionConfig = GameTransitionConfig,
+		TransitionConfig = GameTransitionConfig<Balance>,
 		AccountId = AccountId,
 		AssetId = AssetId,
-		Balance = u64,
-		Asset = Asset<BlockNumber>,
+		Asset = Asset<BlockNumber, Balance>,
+		Balance = Balance,
 		BlockNumber = BlockNumber,
 	>,
 {
-	fn try_get_hero_jam(asset_id: &AssetId) -> Result<HeroJamAsset<BlockNumber>, TransitionError> {
+	fn try_get_hero_jam(
+		asset_id: &AssetId,
+	) -> Result<HeroJamAsset<BlockNumber, Balance>, TransitionError> {
 		let asset = Sage::get_asset(asset_id)
 			.map_err(|_| TransitionError::Transition { code: ASSET_NOT_FOUND })?;
 		asset
@@ -120,7 +124,7 @@ where
 
 	fn try_get_hero_jam_assets(
 		asset_ids: &[AssetId],
-	) -> Result<Vec<(AssetId, HeroJamAsset<BlockNumber>)>, TransitionError> {
+	) -> Result<Vec<(AssetId, HeroJamAsset<BlockNumber, Balance>)>, TransitionError> {
 		asset_ids
 			.iter()
 			.copied()
@@ -135,13 +139,13 @@ where
 		transition_id: &HeroAction,
 		account_id: &AccountId,
 		asset_ids: &[AssetId],
-	) -> Result<Vec<(AssetId, HeroJamAsset<BlockNumber>)>, TransitionError> {
+	) -> Result<Vec<(AssetId, HeroJamAsset<BlockNumber, Balance>)>, TransitionError> {
 		let mut maybe_assets = None;
 
 		match transition_id {
 			HeroAction::Create => {
 				ensure_asset_length(asset_ids, 0)?;
-				ensure_account_has_not_asset_of_type::<_, _, Sage>(account_id, AssetType::Hero)?;
+				ensure_account_has_not_asset_of_type::<_, _, _, Sage>(account_id, AssetType::Hero)?;
 			},
 			HeroAction::Sleep(_, _) | HeroAction::Work(_, _) => {
 				let assets = Self::try_get_hero_jam_assets(asset_ids)?;
@@ -149,7 +153,7 @@ where
 				ensure_asset_length(asset_ids, 1)?;
 				ensure_owner_of::<_, _, Sage>(asset_ids, account_id)?;
 				ensure_all_asset_type(assets.as_slice(), AssetType::Hero)?;
-				ensure_can_state_change::<_, Sage>(&assets[0].1)?;
+				ensure_can_state_change::<_, _, Sage>(&assets[0].1)?;
 
 				maybe_assets = Some(assets);
 			},
@@ -166,8 +170,8 @@ where
 	fn transition_assets(
 		transition_id: &HeroAction,
 		account_id: &AccountId,
-		assets: Vec<(AssetId, HeroJamAsset<BlockNumber>)>,
-	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber>>>, TransitionError> {
+		assets: Vec<(AssetId, HeroJamAsset<BlockNumber, Balance>)>,
+	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber, Balance>>>, TransitionError> {
 		match transition_id {
 			HeroAction::Create => {
 				let asset_id = Sage::get_current_block_number().saturated_into::<AssetId>();
@@ -181,7 +185,7 @@ where
 					state_sub_type: 0,
 					state_sub_value: 0,
 					state_change_block_number: 0_u32.saturated_into::<BlockNumber>(),
-					balance: 10,
+					balance: 10u32.into(),
 				};
 				Ok(vec![TransitionOutput::Minted(Asset::from(asset))])
 			},
@@ -221,7 +225,6 @@ where
 						account_id,
 						// Todo: how to pass the FungibleAssetId that was used as payment for this
 						<Sage::FungiblesAssetId as NativeId>::get_native_id(),
-						// Todo: use balance type in transition config
 						hunting_reward,
 					)
 					.expect("transferring to asset failed");
@@ -274,17 +277,18 @@ where
 	}
 }
 
-impl<AccountId, BlockNumber, Sage> SageGameTransition
+impl<AccountId, BlockNumber, Balance, Sage> SageGameTransition
 	for HeroJamTransition<AccountId, BlockNumber, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
+	Balance: BalanceT,
 	Sage: SageApi<
-		TransitionConfig = GameTransitionConfig,
+		TransitionConfig = GameTransitionConfig<Balance>,
 		AccountId = AccountId,
 		AssetId = AssetId,
-		Balance = u64,
-		Asset = Asset<BlockNumber>,
+		Balance = Balance,
+		Asset = Asset<BlockNumber, Balance>,
 		BlockNumber = BlockNumber,
 	>,
 {
@@ -292,7 +296,7 @@ where
 	type TransitionConfig = ();
 	type AccountId = AccountId;
 	type AssetId = AssetId;
-	type Asset = Asset<BlockNumber>;
+	type Asset = Asset<BlockNumber, Balance>;
 	type Extra = ();
 
 	fn do_transition(
