@@ -3,10 +3,7 @@ use crate::{
 	rules::hero_jam::*,
 };
 
-use ajuna_primitives::{
-	asset_manager::{AssetInspector, AssetManager},
-	chain_inspector::ChainInspector,
-};
+use ajuna_primitives::{asset_manager::AssetInspector, chain_inspector::ChainInspector};
 use sage_api::{
 	rules::{ensure_asset_length, ensure_owner_of},
 	traits::TransitionOutput,
@@ -14,9 +11,7 @@ use sage_api::{
 };
 
 use crate::transition::GameTransitionConfig;
-use ajuna_primitives::{
-	asset_manager::AssetFundsManager, payment_handler::NativeId, sage_api::SageApi,
-};
+use ajuna_primitives::{payment_handler::NativeId, sage_api::SageApi};
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},

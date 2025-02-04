@@ -41,7 +41,6 @@ use ajuna_primitives::{
 	trade_manager::{TradeManager, TransferManager},
 };
 use sage_api::{
-	benchmarks::SageBenchmarkHelper,
 	traits::{GetId, TransitionOutput},
 	SageGameTransition, TransitionError,
 };

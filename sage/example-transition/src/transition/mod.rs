@@ -1,15 +1,9 @@
 use crate::asset;
 
-use ajuna_primitives::{
-	asset_manager::{AssetInspector, AssetManager},
-	chain_inspector::ChainInspector,
-};
 use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
 use crate::asset::{Asset, AssetId};
-use ajuna_primitives::{
-	asset_manager::AssetFundsManager, payment_handler::NativeId, sage_api::SageApi,
-};
+use ajuna_primitives::sage_api::SageApi;
 use core::marker::PhantomData;
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use parity_scale_codec::Codec;
