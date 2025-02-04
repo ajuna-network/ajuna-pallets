@@ -289,20 +289,33 @@ impl ChainInspector for SageFacade {
 
 pub struct TestSageEngine;
 
-impl_sage_api!(
-	TestSageEngine,
-	Test,
-	DefaultSageInstance,
-	MockSeasonManager,
-	MockAccountId,
-	AssetId,
-	MockAsset,
-	FungiblesAssetId,
-	MockBalance,
-	BN,
-	MockSeasonId,
-	GameTransitionConfig
-);
+/// Runtime specific sage implementation so that we don't have to
+/// pass our type definitions all the time.
+macro_rules! impl_runtime_sage_api {
+	(
+		$impl_target:ident,
+		$runtime:ident,
+		$sage_instance:ident,
+		$season_manager:ident,
+	) => {
+		impl_sage_api!(
+			$impl_target,
+			$runtime,
+			$sage_instance,
+			$season_manager,
+			MockAccountId,
+			AssetId,
+			MockAsset,
+			FungiblesAssetId,
+			MockBalance,
+			BN,
+			MockSeasonId,
+			GameTransitionConfig
+		);
+	};
+}
+
+impl_runtime_sage_api!(TestSageEngine, Test, DefaultSageInstance, MockSeasonManager,);
 
 pub struct MockVoucherHandler;
 
