@@ -1,4 +1,5 @@
 use crate::season_manager::SeasonConfig;
+use ajuna_payment_handler::NativeId;
 use frame_support::{
 	pallet_prelude::{DispatchError, MaybeSerializeDeserialize, Member},
 	Parameter,
@@ -10,7 +11,9 @@ pub trait SageApi {
 
 	type AssetId: Member + Codec;
 
-	type FungiblesAssetId;
+	type Asset: Member + Codec;
+
+	type FungiblesAssetId: NativeId;
 
 	type Balance;
 
@@ -20,6 +23,17 @@ pub trait SageApi {
 
 	type TransitionConfig;
 	fn get_transition_config() -> Self::TransitionConfig;
+
+	fn ensure_ownership(
+		owner: &Self::AccountId,
+		asset_id: &Self::AssetId,
+	) -> Result<Self::Asset, DispatchError>;
+
+	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError>;
+
+	fn iter_assets_from(
+		account_id: &Self::AccountId,
+	) -> impl Iterator<Item = (Self::AssetId, Self::Asset)>;
 
 	fn inspect_asset_funds(
 		asset_id: &Self::AssetId,

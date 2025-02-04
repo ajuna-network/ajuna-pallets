@@ -101,24 +101,25 @@ impl From<u8> for SleepType {
 	}
 }
 
-pub(super) struct HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> {
-	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler, Sage)>,
+pub(super) struct HeroJamTransition<AccountId, BlockNumber, Sage> {
+	_phantom: PhantomData<(AccountId, BlockNumber, Sage)>,
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
-	HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
+impl<AccountId, BlockNumber, Sage> HeroJamTransition<AccountId, BlockNumber, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
-	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>
-		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
-	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
-	Sage: SageApi<TransitionConfig = GameTransitionConfig>
-		+ AssetFundsManager<AccountId = AccountId, AssetId = AssetId, Balance = u64>,
-	<Sage as AssetFundsManager>::FungiblesAssetId: NativeId,
+	Sage: SageApi<
+		TransitionConfig = GameTransitionConfig,
+		AccountId = AccountId,
+		AssetId = AssetId,
+		Balance = u64,
+		Asset = Asset<BlockNumber>,
+		BlockNumber = BlockNumber,
+	>,
 {
 	fn try_get_hero_jam(asset_id: &AssetId) -> Result<HeroJamAsset<BlockNumber>, TransitionError> {
-		let asset = AssetHandler::get_asset(asset_id)
+		let asset = Sage::get_asset(asset_id)
 			.map_err(|_| TransitionError::Transition { code: ASSET_NOT_FOUND })?;
 		asset
 			.try_into()
@@ -148,18 +149,15 @@ where
 		match transition_id {
 			HeroAction::Create => {
 				ensure_asset_length(asset_ids, 0)?;
-				ensure_account_has_not_asset_of_type::<_, _, AssetHandler>(
-					account_id,
-					AssetType::Hero,
-				)?;
+				ensure_account_has_not_asset_of_type::<_, _, Sage>(account_id, AssetType::Hero)?;
 			},
 			HeroAction::Sleep(_, _) | HeroAction::Work(_, _) => {
 				let assets = Self::try_get_hero_jam_assets(asset_ids)?;
 
 				ensure_asset_length(asset_ids, 1)?;
-				ensure_owner_of::<_, _, AssetHandler>(asset_ids, account_id)?;
+				ensure_owner_of::<_, _, Sage>(asset_ids, account_id)?;
 				ensure_all_asset_type(assets.as_slice(), AssetType::Hero)?;
-				ensure_can_state_change::<_, ChainHandler>(&assets[0].1)?;
+				ensure_can_state_change::<_, Sage>(&assets[0].1)?;
 
 				maybe_assets = Some(assets);
 			},
@@ -180,7 +178,7 @@ where
 	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber>>>, TransitionError> {
 		match transition_id {
 			HeroAction::Create => {
-				let asset_id = ChainHandler::get_current_block_number().saturated_into::<AssetId>();
+				let asset_id = Sage::get_current_block_number().saturated_into::<AssetId>();
 				let asset = HeroJamAsset {
 					id: asset_id,
 					asset_type: AssetType::None,
@@ -252,7 +250,7 @@ where
 	}
 
 	fn get_block_time_for_action(action_time: &ActionTime) -> BlockNumber {
-		let current_block = ChainHandler::get_current_block_number();
+		let current_block = Sage::get_current_block_number();
 		let block_time = action_time.get_block_time_from();
 
 		current_block.saturating_add(block_time.saturated_into())
@@ -284,17 +282,19 @@ where
 	}
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> SageGameTransition
-	for HeroJamTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
+impl<AccountId, BlockNumber, Sage> SageGameTransition
+	for HeroJamTransition<AccountId, BlockNumber, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
-	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>
-		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
-	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
-	Sage: SageApi<TransitionConfig = GameTransitionConfig>
-		+ AssetFundsManager<AccountId = AccountId, AssetId = AssetId, Balance = u64>,
-	<Sage as AssetFundsManager>::FungiblesAssetId: NativeId,
+	Sage: SageApi<
+		TransitionConfig = GameTransitionConfig,
+		AccountId = AccountId,
+		AssetId = AssetId,
+		Balance = u64,
+		Asset = Asset<BlockNumber>,
+		BlockNumber = BlockNumber,
+	>,
 {
 	type TransitionId = HeroAction;
 	type TransitionConfig = ();

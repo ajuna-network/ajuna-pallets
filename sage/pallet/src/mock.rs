@@ -286,13 +286,8 @@ impl ChainInspector for SageFacade {
 	}
 }
 
-impl SageApi for SageFacade {
-	type TransitionConfig = GameTransitionConfig;
-
-	fn get_transition_config() -> Self::TransitionConfig {
-		<Sage as SageApi>::get_transition_config()
-	}
-}
+type TestSageEngine =
+	crate::trait_impls::sage_api::SageEngine<Test, (), SageFacade, SageFacade, SageFacade>;
 
 pub struct MockVoucherHandler;
 
@@ -308,8 +303,7 @@ impl VoucherHandler for MockVoucherHandler {
 	}
 }
 
-pub type GameTransitionOf =
-	GameTransition<MockAccountId, BlockNumberFor<Test>, SageFacade, SageFacade, SageFacade>;
+pub type GameTransitionOf = GameTransition<MockAccountId, BlockNumberFor<Test>, TestSageEngine>;
 
 pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 	WithdrawWhitelistedCredit<

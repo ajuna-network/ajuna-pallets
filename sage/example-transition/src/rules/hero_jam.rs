@@ -3,9 +3,9 @@ use crate::asset::{
 	Asset, AssetId, AssetVariant,
 };
 
-use ajuna_primitives::{asset_manager::AssetInspector, chain_inspector::ChainInspector};
 use sage_api::TransitionError;
 
+use ajuna_primitives::sage_api::SageApi;
 use sp_runtime::traits::BlockNumber as BlockNumberT;
 
 pub const ASSETS_NOT_ALL_SAME_TYPE: u8 = 100;
@@ -39,14 +39,14 @@ where
 		.ok_or(TransitionError::Transition { code: ASSETS_NOT_ALL_SAME_STATE })
 }
 
-pub(crate) fn ensure_can_state_change<BlockNumber, Chain>(
+pub(crate) fn ensure_can_state_change<BlockNumber, Sage>(
 	asset: &HeroJamAsset<BlockNumber>,
 ) -> Result<(), TransitionError>
 where
 	BlockNumber: BlockNumberT,
-	Chain: ChainInspector<BlockNumber = BlockNumber>,
+	Sage: SageApi<BlockNumber = BlockNumber>,
 {
-	if asset.state_change_block_number < Chain::get_current_block_number() {
+	if asset.state_change_block_number < Sage::get_current_block_number() {
 		Ok(())
 	} else {
 		Err(TransitionError::Transition { code: ASSET_CANNOT_STATE_CHANGE })
@@ -54,41 +54,41 @@ where
 }
 
 #[inline]
-fn account_has_asset_of_type<AccountId, BlockNumber, Inspector>(
+fn account_has_asset_of_type<AccountId, BlockNumber, Sage>(
 	account_id: &AccountId,
 	asset_type: AssetType,
 ) -> bool
 where
-	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
+	Sage: SageApi<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 {
-	Inspector::iter_assets_from(account_id).any(|(_, asset)| match asset.asset_variant {
+	Sage::iter_assets_from(account_id).any(|(_, asset)| match asset.asset_variant {
 		AssetVariant::HeroJam(hero_jam) => hero_jam.asset_type == asset_type,
 	})
 }
 
 #[allow(dead_code)]
-pub(crate) fn ensure_account_has_asset_of_type<AccountId, BlockNumber, Inspector>(
+pub(crate) fn ensure_account_has_asset_of_type<AccountId, BlockNumber, Sage>(
 	account_id: &AccountId,
 	asset_type: AssetType,
 ) -> Result<(), TransitionError>
 where
-	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
+	Sage: SageApi<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 {
-	if account_has_asset_of_type::<_, _, Inspector>(account_id, asset_type) {
+	if account_has_asset_of_type::<_, _, Sage>(account_id, asset_type) {
 		Ok(())
 	} else {
 		Err(TransitionError::Transition { code: ASSET_HERO_NOT_IN_ACCOUNT })
 	}
 }
 
-pub(crate) fn ensure_account_has_not_asset_of_type<AccountId, BlockNumber, Inspector>(
+pub(crate) fn ensure_account_has_not_asset_of_type<AccountId, BlockNumber, Sage>(
 	account_id: &AccountId,
 	asset_type: AssetType,
 ) -> Result<(), TransitionError>
 where
-	Inspector: AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
+	Sage: SageApi<AccountId = AccountId, AssetId = AssetId, Asset = Asset<BlockNumber>>,
 {
-	if account_has_asset_of_type::<_, _, Inspector>(account_id, asset_type) {
+	if account_has_asset_of_type::<_, _, Sage>(account_id, asset_type) {
 		Err(TransitionError::Transition { code: ASSET_HERO_ALREADY_IN_ACCOUNT })
 	} else {
 		Ok(())

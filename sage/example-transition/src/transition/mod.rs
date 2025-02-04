@@ -6,7 +6,7 @@ use ajuna_primitives::{
 };
 use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
-use crate::asset::AssetId;
+use crate::asset::{Asset, AssetId};
 use ajuna_primitives::{
 	asset_manager::AssetFundsManager, payment_handler::NativeId, sage_api::SageApi,
 };
@@ -22,8 +22,8 @@ pub enum TransitionIdentifier {
 	HeroJam(hero_jam::HeroAction),
 }
 
-pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> {
-	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler, Sage)>,
+pub struct GameTransition<AccountId, BlockNumber, Sage> {
+	_phantom: PhantomData<(AccountId, BlockNumber, Sage)>,
 }
 
 /// This is an example how a transition config custom to a game could look like.
@@ -32,17 +32,19 @@ pub struct GameTransitionConfig {
 	pub hunting_reward: u64,
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> SageGameTransition
-	for GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
+impl<AccountId, BlockNumber, Sage> SageGameTransition
+	for GameTransition<AccountId, BlockNumber, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
-	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = asset::Asset<BlockNumber>>
-		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = asset::Asset<BlockNumber>>,
-	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
-	Sage: SageApi<TransitionConfig = GameTransitionConfig>
-		+ AssetFundsManager<AccountId = AccountId, AssetId = AssetId, Balance = u64>,
-	<Sage as AssetFundsManager>::FungiblesAssetId: NativeId,
+	Sage: SageApi<
+		TransitionConfig = GameTransitionConfig,
+		AccountId = AccountId,
+		AssetId = AssetId,
+		Balance = u64,
+		Asset = Asset<BlockNumber>,
+		BlockNumber = BlockNumber,
+	>,
 {
 	type TransitionId = TransitionIdentifier;
 	type TransitionConfig = GameTransitionConfig;
@@ -59,13 +61,12 @@ where
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		match transition_id {
 			TransitionIdentifier::HeroJam(hero_action) =>
-				hero_jam::HeroJamTransition::<
-					AccountId,
-					BlockNumber,
-					AssetHandler,
-					ChainHandler,
-					Sage,
-				>::do_transition(hero_action, account_id, assets_ids, extra),
+				hero_jam::HeroJamTransition::<AccountId, BlockNumber, Sage>::do_transition(
+					hero_action,
+					account_id,
+					assets_ids,
+					extra,
+				),
 		}
 	}
 }
