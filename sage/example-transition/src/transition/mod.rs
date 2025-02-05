@@ -1,17 +1,14 @@
 use crate::asset;
 
-use ajuna_primitives::{
-	asset_manager::{AssetInspector, AssetManager},
-	chain_inspector::ChainInspector,
-};
 use sage_api::{traits::TransitionOutput, SageGameTransition, TransitionError};
 
-use crate::asset::AssetId;
-use ajuna_primitives::{
-	asset_manager::AssetFundsManager, payment_handler::NativeId, sage_api::SageApi,
-};
+use crate::asset::{Asset, AssetId};
+use ajuna_primitives::sage_api::SageApi;
 use core::marker::PhantomData;
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use frame_support::{
+	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
+	traits::tokens::Balance as BalanceT,
+};
 use parity_scale_codec::Codec;
 use sp_runtime::traits::{BlockNumber as BlockNumberT, Member};
 
@@ -22,33 +19,36 @@ pub enum TransitionIdentifier {
 	HeroJam(hero_jam::HeroAction),
 }
 
-pub struct GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> {
-	_phantom: PhantomData<(AccountId, BlockNumber, AssetHandler, ChainHandler, Sage)>,
+pub struct GameTransition<AccountId, BlockNumber, Balance, Sage> {
+	_phantom: PhantomData<(AccountId, BlockNumber, Balance, Sage)>,
 }
 
 /// This is an example how a transition config custom to a game could look like.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Clone, PartialEq, Eq)]
-pub struct GameTransitionConfig {
-	pub hunting_reward: u64,
+pub struct GameTransitionConfig<Balance> {
+	pub hunting_reward: Balance,
 }
 
-impl<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage> SageGameTransition
-	for GameTransition<AccountId, BlockNumber, AssetHandler, ChainHandler, Sage>
+impl<AccountId, BlockNumber, Balance, Sage> SageGameTransition
+	for GameTransition<AccountId, BlockNumber, Balance, Sage>
 where
 	AccountId: Member + Codec,
 	BlockNumber: BlockNumberT,
-	AssetHandler: AssetManager<AccountId = AccountId, AssetId = AssetId, Asset = asset::Asset<BlockNumber>>
-		+ AssetInspector<AccountId = AccountId, AssetId = AssetId, Asset = asset::Asset<BlockNumber>>,
-	ChainHandler: ChainInspector<BlockNumber = BlockNumber>,
-	Sage: SageApi<TransitionConfig = GameTransitionConfig>
-		+ AssetFundsManager<AccountId = AccountId, AssetId = AssetId, Balance = u64>,
-	<Sage as AssetFundsManager>::FungiblesAssetId: NativeId,
+	Balance: BalanceT,
+	Sage: SageApi<
+		TransitionConfig = GameTransitionConfig<Balance>,
+		AccountId = AccountId,
+		AssetId = AssetId,
+		Balance = Balance,
+		Asset = Asset<BlockNumber, Balance>,
+		BlockNumber = BlockNumber,
+	>,
 {
 	type TransitionId = TransitionIdentifier;
-	type TransitionConfig = GameTransitionConfig;
+	type TransitionConfig = GameTransitionConfig<Balance>;
 	type AccountId = AccountId;
 	type AssetId = asset::AssetId;
-	type Asset = asset::Asset<BlockNumber>;
+	type Asset = asset::Asset<BlockNumber, Balance>;
 	type Extra = ();
 
 	fn do_transition(
@@ -59,13 +59,12 @@ where
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		match transition_id {
 			TransitionIdentifier::HeroJam(hero_action) =>
-				hero_jam::HeroJamTransition::<
-					AccountId,
-					BlockNumber,
-					AssetHandler,
-					ChainHandler,
-					Sage,
-				>::do_transition(hero_action, account_id, assets_ids, extra),
+				hero_jam::HeroJamTransition::<AccountId, BlockNumber, Sage>::do_transition(
+					hero_action,
+					account_id,
+					assets_ids,
+					extra,
+				),
 		}
 	}
 }

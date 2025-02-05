@@ -22,6 +22,7 @@ use crate::{mock::*, *};
 
 use example_transition::prelude::*;
 use frame_support::{assert_noop, assert_ok};
+use sage_api::benchmarks::SageBenchmarkHelper;
 use sp_runtime::testing::H256;
 
 pub(crate) fn create_assets<I: 'static>(

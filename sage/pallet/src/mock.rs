@@ -17,7 +17,6 @@
 use crate::{self as pallet_sage, *};
 use ajuna_primitives::{
 	asset_manager::AssetInspector,
-	chain_inspector::ChainInspector,
 	payment_handler::{
 		AffiliateFeeDistribution, AllowAllAssets, AssetGameFeeHandler, DistributeFee, PaymentFee,
 		TransferFungibleAssets, VoucherHandler, WithdrawCreditOrVoucher, WithdrawFungibles,
@@ -119,7 +118,7 @@ pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
 
-pub type MockAsset = Asset<BlockNumberFor<Test>>;
+pub type MockAsset = Asset<BlockNumberFor<Test>, MockBalance>;
 
 impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
@@ -175,124 +174,51 @@ impl SeasonManager for MockSeasonManager {
 	}
 }
 
-/// Facade around Sage to prevent recursion errors during build
-/// when sage would be also a field in its associated types.
-pub struct SageFacade;
+pub struct TestSageEngine;
+// The macro can't handle the brackets.
+type TestBlockNumber = BlockNumberFor<Test>;
+type TestGameTransitionConfig = GameTransitionConfig<MockBalance>;
 
-impl AssetManager for SageFacade {
-	type AccountId = MockAccountId;
-	type AssetId = AssetId;
-	type Asset = MockAsset;
-
-	fn ensure_ownership(
-		owner: &Self::AccountId,
-		asset_id: &Self::AssetId,
-	) -> Result<Self::Asset, DispatchError> {
-		<Sage as AssetManager>::ensure_ownership(owner, asset_id)
-	}
-
-	fn lock_asset(
-		lock_id: LockIdentifier,
-		owner: Self::AccountId,
-		asset_id: Self::AssetId,
-	) -> Result<Self::Asset, DispatchError> {
-		<Sage as AssetManager>::lock_asset(lock_id, owner, asset_id)
-	}
-
-	fn unlock_asset(
-		lock_id: LockIdentifier,
-		owner: Self::AccountId,
-		asset_id: Self::AssetId,
-	) -> Result<Self::Asset, DispatchError> {
-		<Sage as AssetManager>::unlock_asset(lock_id, owner, asset_id)
-	}
-
-	fn is_locked(asset: &Self::AssetId) -> Option<Lock<Self::AccountId>> {
-		<Sage as AssetManager>::is_locked(asset)
-	}
+/// Runtime specific sage implementation so that we don't have to
+/// pass our type definitions all the time.
+macro_rules! impl_runtime_sage_api {
+	(
+		$impl_target:ident,
+		$runtime:ident,
+		$sage_instance:ident,
+		$season_manager:ident,
+		$asset_id:ident,
+		$asset:ident,
+		$transition_config:ident,
+	) => {
+		impl_sage_api!(
+			$impl_target,
+			$runtime,
+			$sage_instance,
+			$season_manager,
+			MockAccountId,
+			$asset_id,
+			$asset,
+			FungiblesAssetId,
+			MockBalance,
+			TestBlockNumber,
+			MockSeasonId,
+			$transition_config
+		);
+	};
 }
 
-impl AssetInspector for SageFacade {
-	type AccountId = MockAccountId;
-	type AssetId = AssetId;
-	type Asset = MockAsset;
-
-	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError> {
-		<Sage as AssetInspector>::get_asset(asset_id)
-	}
-
-	fn iter_assets_from(
-		account_id: &Self::AccountId,
-	) -> impl Iterator<Item = (Self::AssetId, Self::Asset)> {
-		<Sage as AssetInspector>::iter_assets_from(account_id)
-	}
-}
-
-impl AssetFundsManager for SageFacade {
-	type AccountId = MockAccountId;
-	type AssetId = AssetId;
-	type FungiblesAssetId = FungiblesAssetId;
-	type Balance = MockBalance;
-
-	fn inspect_asset_funds(
-		asset_id: &Self::AssetId,
-		fungibles_asset_id: &Self::FungiblesAssetId,
-	) -> Self::Balance {
-		<Sage as AssetFundsManager>::inspect_asset_funds(asset_id, fungibles_asset_id)
-	}
-
-	fn deposit_funds_to_asset(
-		asset_id: &Self::AssetId,
-		from: &Self::AccountId,
-		fungibles_asset_id: Self::FungiblesAssetId,
-		amount: Self::Balance,
-	) -> Result<(), DispatchError> {
-		<Sage as AssetFundsManager>::deposit_funds_to_asset(
-			asset_id,
-			from,
-			fungibles_asset_id,
-			amount,
-		)
-	}
-
-	fn transfer_funds_from_asset(
-		asset_id: &Self::AssetId,
-		to: &Self::AccountId,
-		fungibles_asset_id: Self::FungiblesAssetId,
-		amount: Self::Balance,
-	) -> Result<(), DispatchError> {
-		<Sage as AssetFundsManager>::transfer_funds_from_asset(
-			asset_id,
-			to,
-			fungibles_asset_id,
-			amount,
-		)
-	}
-
-	fn transfer_all_from_asset(
-		asset_id: &Self::AssetId,
-		to: &Self::AccountId,
-		fungibles_asset_id: Self::FungiblesAssetId,
-	) -> Result<(), DispatchError> {
-		<Sage as AssetFundsManager>::transfer_all_from_asset(asset_id, to, fungibles_asset_id)
-	}
-}
-
-impl ChainInspector for SageFacade {
-	type BlockNumber = BlockNumberFor<Test>;
-
-	fn get_current_block_number() -> Self::BlockNumber {
-		System::block_number()
-	}
-}
-
-impl SageApi for SageFacade {
-	type TransitionConfig = GameTransitionConfig;
-
-	fn get_transition_config() -> Self::TransitionConfig {
-		<Sage as SageApi>::get_transition_config()
-	}
-}
+// Every new game we add can simply call that macro for another sage instance to
+// implement the sage api given that the other types are identical.
+impl_runtime_sage_api!(
+	TestSageEngine,
+	Test,
+	DefaultSageInstance,
+	MockSeasonManager,
+	AssetId,
+	MockAsset,
+	TestGameTransitionConfig,
+);
 
 pub struct MockVoucherHandler;
 
@@ -309,7 +235,7 @@ impl VoucherHandler for MockVoucherHandler {
 }
 
 pub type GameTransitionOf =
-	GameTransition<MockAccountId, BlockNumberFor<Test>, SageFacade, SageFacade, SageFacade>;
+	GameTransition<MockAccountId, BlockNumberFor<Test>, MockBalance, TestSageEngine>;
 
 pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 	WithdrawWhitelistedCredit<
@@ -321,6 +247,7 @@ pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 
 type FungiblesAssetId = WithdrawKind<NativeOrWithId<AssetId>>;
 
+type DefaultSageInstance = ();
 impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = GameTransitionOf;
@@ -335,7 +262,7 @@ impl crate::Config for Test {
 	>;
 	type FungiblesAssetId = FungiblesAssetId;
 	type TransferFunds = TransferFungibleAssets<WithdrawAllCreditOrVoucher, FungiblesAssetId>;
-	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
+	type FilterHandler = GameFilter<BlockNumberFor<Test>, MockBalance>;
 	type Fungible = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();

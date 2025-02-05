@@ -1,7 +1,6 @@
 use crate::TransitionError;
 
-use ajuna_primitives::asset_manager::AssetManager;
-
+use ajuna_primitives::sage_api::SageApi;
 use frame_support::ensure;
 
 pub fn ensure_asset_length<AssetId>(
@@ -12,14 +11,14 @@ pub fn ensure_asset_length<AssetId>(
 	Ok(())
 }
 
-pub fn ensure_owner_of<AssetId, AccountId, Manager>(
+pub fn ensure_owner_of<AssetId, AccountId, Sage>(
 	assets: &[AssetId],
 	owner: &AccountId,
 ) -> Result<(), TransitionError>
 where
-	Manager: AssetManager<AccountId = AccountId, AssetId = AssetId>,
+	Sage: SageApi<AccountId = AccountId, AssetId = AssetId>,
 {
-	if assets.iter().all(|asset_id| Manager::ensure_ownership(owner, asset_id).is_ok()) {
+	if assets.iter().all(|asset_id| Sage::ensure_ownership(owner, asset_id).is_ok()) {
 		Ok(())
 	} else {
 		Err(TransitionError::AssetOwnership)

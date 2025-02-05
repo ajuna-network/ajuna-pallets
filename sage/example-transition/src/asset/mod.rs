@@ -7,22 +7,24 @@ pub mod hero_jam;
 pub type AssetId = u32;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
-pub enum AssetVariant<BlockNumber> {
-	HeroJam(hero_jam::HeroJamAsset<BlockNumber>),
+pub enum AssetVariant<BlockNumber, Balance> {
+	HeroJam(hero_jam::HeroJamAsset<BlockNumber, Balance>),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
-pub struct Asset<BlockNumber> {
-	pub asset_variant: AssetVariant<BlockNumber>,
+pub struct Asset<BlockNumber, Balance> {
+	pub asset_variant: AssetVariant<BlockNumber, Balance>,
 }
 
-impl<BlockNumber> From<hero_jam::HeroJamAsset<BlockNumber>> for Asset<BlockNumber> {
-	fn from(value: hero_jam::HeroJamAsset<BlockNumber>) -> Self {
+impl<BlockNumber, Balance> From<hero_jam::HeroJamAsset<BlockNumber, Balance>>
+	for Asset<BlockNumber, Balance>
+{
+	fn from(value: hero_jam::HeroJamAsset<BlockNumber, Balance>) -> Self {
 		Self { asset_variant: AssetVariant::HeroJam(value) }
 	}
 }
 
-impl<BlockNumber> GetId<AssetId> for Asset<BlockNumber> {
+impl<BlockNumber, Balance> GetId<AssetId> for Asset<BlockNumber, Balance> {
 	fn get_id(&self) -> AssetId {
 		match &self.asset_variant {
 			AssetVariant::HeroJam(asset) => asset.get_id(),
