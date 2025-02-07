@@ -1846,7 +1846,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-ajuna-battle-royale"
-version = "0.13.0"
+version = "0.15.0"
 dependencies = [
  "bitvec",
  "frame-support",

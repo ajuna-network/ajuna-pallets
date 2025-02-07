@@ -1275,7 +1275,7 @@ pub mod pallet {
 
 			for defeated_player in T::BattleHandler::try_finish_battle()? {
 				if let Some((season_id, avatar_id)) = BattlingAvatars::<T>::take(&defeated_player) {
-					LockedAvatars::<T>::remove(avatar_id);
+					Self::unlock_asset(T::PalletId::get().0, defeated_player.clone(), avatar_id)?;
 					Self::remove_avatar_from(&defeated_player, &season_id, &avatar_id);
 				} else {
 					let log_target = "runtime::ajuna-awesome-avatars";
@@ -1284,6 +1284,7 @@ pub mod pallet {
 			}
 
 			for (account_id, (_, avatar_id)) in BattlingAvatars::<T>::drain() {
+				Self::unlock_asset(T::PalletId::get().0, account_id.clone(), avatar_id)?;
 				LockedAvatars::<T>::remove(avatar_id);
 
 				Self::deposit_event(Event::<T>::AccountWonBattleRoyale {
@@ -1314,9 +1315,10 @@ pub mod pallet {
 			ensure!(Self::ensure_for_trade(&avatar_id).is_err(), Error::<T>::AvatarInTrade);
 			Self::ensure_unlocked(&avatar_id)?;
 
+			Self::lock_asset(T::PalletId::get().0, player.clone(), avatar_id)?;
+
 			T::BattleHandler::try_queue_player(&player, initial_weapon, initial_position)?;
 
-			LockedAvatars::<T>::insert(avatar_id, ());
 			BattlingAvatars::<T>::insert(&player, (avatar.season_id, avatar_id));
 
 			Ok(())
