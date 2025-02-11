@@ -227,6 +227,9 @@ where
 						payment_asset.unwrap_or_else(Sage::FungiblesAssetId::get_native_id);
 
 					if payment.is_voucher() {
+						// we don't want that users can add funds to their assets with vouchers.
+						// Only real tokens should be allowed.
+						// Todo: should we try to use the native token in this case?
 						return Err(TransitionError::VoucherNotAllowed);
 					}
 
