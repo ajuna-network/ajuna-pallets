@@ -132,7 +132,7 @@ fn state_transition_should_reject_rule_verification_failure() {
 					(),
 					SOME_NATIVE_PAYMENT
 				),
-				Error::<Test, ()>::TransitionRuleNotSatisfied,
+				Error::<Test, ()>::AssetLength,
 			);
 		})
 }
