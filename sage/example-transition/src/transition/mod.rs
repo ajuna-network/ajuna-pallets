@@ -55,7 +55,7 @@ where
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
-		extra: &Self::Extra,
+		extra: Option<Self::Extra>,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		match transition_id {
 			TransitionIdentifier::HeroJam(hero_action) =>

@@ -30,6 +30,6 @@ pub trait SageGameTransition {
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
-		extra: &Self::Extra,
+		extra: Option<Self::Extra>,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, crate::TransitionError>;
 }

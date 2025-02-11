@@ -303,7 +303,7 @@ where
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
-		_: &Self::Extra,
+		_: Option<Self::Extra>,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		let assets = Self::verify_transition_rules(transition_id, account_id, assets_ids)?;
 		Self::transition_assets(transition_id, account_id, assets)

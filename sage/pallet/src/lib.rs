@@ -803,7 +803,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			transition_id: TransitionIdOf<T, I>,
 			asset_ids: Vec<AssetIdOf<T, I>>,
-			extra: ExtraOf<T, I>,
+			extra: Option<ExtraOf<T, I>>,
 			payment_kind: Option<FungiblesAssetIdOf<T, I>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
@@ -818,7 +818,7 @@ pub mod pallet {
 				Self::ensure_unlocked(asset_id)?;
 			}
 			let transition_results =
-				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
+				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, extra)
 					.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			let payment = payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
