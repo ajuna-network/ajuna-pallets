@@ -50,12 +50,14 @@ where
 	type AssetId = asset::AssetId;
 	type Asset = asset::Asset<BlockNumber, Balance>;
 	type Extra = ();
+	type PaymentFungible = Sage::FungiblesAssetId;
 
 	fn do_transition(
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		extra: &Self::Extra,
+		payment_asset: Option<Self::PaymentFungible>,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		match transition_id {
 			TransitionIdentifier::HeroJam(hero_action) =>
@@ -64,6 +66,7 @@ where
 					account_id,
 					assets_ids,
 					extra,
+					payment_asset,
 				),
 		}
 	}

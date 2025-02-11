@@ -13,7 +13,7 @@ pub trait SageApi {
 
 	type Asset: Member + Codec;
 
-	type FungiblesAssetId: NativeId;
+	type FungiblesAssetId: Clone + NativeId;
 
 	type Balance;
 

@@ -144,7 +144,10 @@ pub mod pallet {
 
 		/// The `SageGameTransition` that this pallet hosts, and whose state transition
 		/// are executed as part of the `state_transition` extrinsic.
-		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
+		type SageGameTransition: SageGameTransition<
+			AccountId = AccountIdOf<Self>,
+			PaymentFungible = Self::FungiblesAssetId,
+		>;
 
 		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
@@ -817,9 +820,14 @@ pub mod pallet {
 				Self::ensure_ownership(&sender, asset_id)?;
 				Self::ensure_unlocked(asset_id)?;
 			}
-			let transition_results =
-				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
-					.map_err(<Error<T, I>>::from)?;
+			let transition_results = T::SageGameTransition::do_transition(
+				&transition_id,
+				&sender,
+				&asset_ids,
+				&extra,
+				payment_kind.clone(),
+			)
+			.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			let payment = payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
 			Self::process_transition_results(

@@ -26,10 +26,16 @@ pub trait SageGameTransition {
 	/// method. If you don't need custom arguments, you can define that type as `()`.
 	type Extra: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 
+	/// Defines the fungible asset that was used to pay the transaction. If the transition accesses
+	/// user funds, it might want to use the same asset, as this implies that the user is willing
+	/// to use this one instead of the native balance.
+	type PaymentFungible;
+
 	fn do_transition(
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		extra: &Self::Extra,
+		payment_kind: Option<Self::PaymentFungible>,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, crate::TransitionError>;
 }
