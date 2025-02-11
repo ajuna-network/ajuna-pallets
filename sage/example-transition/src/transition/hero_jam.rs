@@ -3,7 +3,10 @@ use crate::{
 	rules::hero_jam::*,
 	transition::GameTransitionConfig,
 };
-use ajuna_primitives::{payment_handler::NativeId, sage_api::SageApi};
+use ajuna_primitives::{
+	payment_handler::{IdentifyVoucherOrAssetId, NativeId},
+	sage_api::SageApi,
+};
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
@@ -171,6 +174,7 @@ where
 		transition_id: &HeroAction,
 		account_id: &AccountId,
 		assets: Vec<(AssetId, HeroJamAsset<BlockNumber, Balance>)>,
+		payment_asset: Option<Sage::FungiblesAssetId>,
 	) -> Result<Vec<TransitionOutput<AssetId, Asset<BlockNumber, Balance>>>, TransitionError> {
 		match transition_id {
 			HeroAction::Create => {
@@ -219,15 +223,19 @@ where
 					// Also do the accounting on the asset, but this is not necessary per se.
 					asset.balance = asset.balance.saturating_add(hunting_reward);
 
+					let payment =
+						payment_asset.unwrap_or_else(Sage::FungiblesAssetId::get_native_id);
+
+					if payment.is_voucher() {
+						// we don't want that users can add funds to their assets with vouchers.
+						// Only real tokens should be allowed.
+						// Todo: should we try to use the native token in this case?
+						return Err(TransitionError::VoucherNotAllowed);
+					}
+
 					// Todo: how to handle dispatch errors in transitions
-					Sage::deposit_funds_to_asset(
-						&asset_id,
-						account_id,
-						// Todo: how to pass the FungibleAssetId that was used as payment for this
-						<Sage::FungiblesAssetId as NativeId>::get_native_id(),
-						hunting_reward,
-					)
-					.expect("transferring to asset failed");
+					Sage::deposit_funds_to_asset(&asset_id, account_id, payment, hunting_reward)
+						.map_err(|_| TransitionError::TransferError)?;
 				}
 
 				asset.fatigue = (asset.fatigue as i32).saturating_add(fatigue).clamp(0, 255) as u8;
@@ -298,14 +306,16 @@ where
 	type AssetId = AssetId;
 	type Asset = Asset<BlockNumber, Balance>;
 	type Extra = ();
+	type PaymentFungible = Sage::FungiblesAssetId;
 
 	fn do_transition(
 		transition_id: &Self::TransitionId,
 		account_id: &Self::AccountId,
 		assets_ids: &[Self::AssetId],
 		_: &Self::Extra,
+		payment_asset: Option<Self::PaymentFungible>,
 	) -> Result<Vec<TransitionOutput<Self::AssetId, Self::Asset>>, TransitionError> {
 		let assets = Self::verify_transition_rules(transition_id, account_id, assets_ids)?;
-		Self::transition_assets(transition_id, account_id, assets)
+		Self::transition_assets(transition_id, account_id, assets, payment_asset)
 	}
 }

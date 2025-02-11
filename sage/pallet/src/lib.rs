@@ -144,7 +144,10 @@ pub mod pallet {
 
 		/// The `SageGameTransition` that this pallet hosts, and whose state transition
 		/// are executed as part of the `state_transition` extrinsic.
-		type SageGameTransition: SageGameTransition<AccountId = AccountIdOf<Self>>;
+		type SageGameTransition: SageGameTransition<
+			AccountId = AccountIdOf<Self>,
+			PaymentFungible = Self::FungiblesAssetId,
+		>;
 
 		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
@@ -436,6 +439,16 @@ pub mod pallet {
 		TooManyAssetsInTransition,
 		/// The rule for a given transition was not satisfied.
 		TransitionRuleNotSatisfied,
+		/// A transfer error occurred inside the transition.
+		TransferError,
+		/// An error occurred during the fee payment of the ransition.
+		FeeError,
+		/// Invalid number of assets for this transition.
+		AssetLength,
+		/// Asset Ownership error.
+		AssetOwnership,
+		/// Voucher is not allowed for that transition.
+		VoucherNotAllowed,
 		/// An error occurred during the state transition.
 		Transition { code: u8 },
 	}
@@ -443,11 +456,11 @@ pub mod pallet {
 	impl<T, I> From<TransitionError> for Error<T, I> {
 		fn from(e: TransitionError) -> Self {
 			match e {
-				TransitionError::InvalidTransitionId => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::TransferError => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::FeeError => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::AssetLength => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::AssetOwnership => Error::<T, I>::TransitionRuleNotSatisfied,
+				TransitionError::TransferError => Error::<T, I>::TransferError,
+				TransitionError::FeeError => Error::<T, I>::FeeError,
+				TransitionError::AssetLength => Error::<T, I>::AssetLength,
+				TransitionError::AssetOwnership => Error::<T, I>::AssetOwnership,
+				TransitionError::VoucherNotAllowed => Error::<T, I>::VoucherNotAllowed,
 				TransitionError::Transition { code } => Error::<T, I>::Transition { code },
 			}
 		}
@@ -817,9 +830,14 @@ pub mod pallet {
 				Self::ensure_ownership(&sender, asset_id)?;
 				Self::ensure_unlocked(asset_id)?;
 			}
-			let transition_results =
-				T::SageGameTransition::do_transition(&transition_id, &sender, &asset_ids, &extra)
-					.map_err(<Error<T, I>>::from)?;
+			let transition_results = T::SageGameTransition::do_transition(
+				&transition_id,
+				&sender,
+				&asset_ids,
+				&extra,
+				payment_kind.clone(),
+			)
+			.map_err(<Error<T, I>>::from)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			let payment = payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
 			Self::process_transition_results(

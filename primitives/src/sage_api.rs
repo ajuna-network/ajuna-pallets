@@ -1,5 +1,5 @@
 use crate::season_manager::SeasonConfig;
-use ajuna_payment_handler::NativeId;
+use ajuna_payment_handler::{IdentifyVoucherOrAssetId, NativeId};
 use frame_support::{
 	pallet_prelude::{DispatchError, MaybeSerializeDeserialize, Member},
 	Parameter,
@@ -13,7 +13,7 @@ pub trait SageApi {
 
 	type Asset: Member + Codec;
 
-	type FungiblesAssetId: NativeId;
+	type FungiblesAssetId: Clone + NativeId + IdentifyVoucherOrAssetId;
 
 	type Balance;
 
