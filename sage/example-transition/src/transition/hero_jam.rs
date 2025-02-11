@@ -3,7 +3,10 @@ use crate::{
 	rules::hero_jam::*,
 	transition::GameTransitionConfig,
 };
-use ajuna_primitives::{payment_handler::NativeId, sage_api::SageApi};
+use ajuna_primitives::{
+	payment_handler::{IdentifyVoucherOrAssetId, NativeId},
+	sage_api::SageApi,
+};
 use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
@@ -222,6 +225,11 @@ where
 
 					let payment =
 						payment_asset.unwrap_or_else(|| Sage::FungiblesAssetId::get_native_id());
+
+					if payment.is_voucher() {
+						// Todo: proper error handling.
+						panic!("Voucher not allowed");
+					}
 
 					// Todo: how to handle dispatch errors in transitions
 					Sage::deposit_funds_to_asset(&asset_id, account_id, payment, hunting_reward)
