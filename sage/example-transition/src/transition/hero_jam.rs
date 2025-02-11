@@ -224,7 +224,7 @@ where
 					asset.balance = asset.balance.saturating_add(hunting_reward);
 
 					let payment =
-						payment_asset.unwrap_or_else(|| Sage::FungiblesAssetId::get_native_id());
+						payment_asset.unwrap_or_else(Sage::FungiblesAssetId::get_native_id);
 
 					if payment.is_voucher() {
 						// Todo: proper error handling.
