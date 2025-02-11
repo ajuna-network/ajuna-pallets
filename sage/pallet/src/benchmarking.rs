@@ -17,7 +17,7 @@
 use crate::{
 	config::{InventoryTier, Locks},
 	pallet::AssetFilterOf,
-	AssetIdOf, AssetOf, AssetOwners, AssetTradePrices, Assets, BalanceOf, Config, Event, ExtraOf,
+	AssetIdOf, AssetOf, AssetOwners, AssetTradePrices, Assets, BalanceOf, Config, Event,
 	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonIdOf,
 	SeasonUnlocks, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
 };
@@ -347,11 +347,10 @@ mod benchmarks {
 		let acc_1 = account::<T, I>(ACC_1);
 		set_account_balance::<T, I>(&acc_1, 100_u32.into());
 		let (transition_id, asset_ids) = T::BenchmarkHelper::create_bench_transition();
-		let extra = ExtraOf::<T, I>::default();
 		let payment = T::BenchmarkHelper::create_payment_kind();
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(acc_1.clone()), transition_id.clone(), asset_ids, extra, Some(payment));
+		_(RawOrigin::Signed(acc_1.clone()), transition_id.clone(), asset_ids, None, Some(payment));
 
 		assert_last_event::<T, I>(Event::TransitionExecuted { account: acc_1, id: transition_id });
 	}

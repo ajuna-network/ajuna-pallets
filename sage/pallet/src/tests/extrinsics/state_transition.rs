@@ -40,7 +40,7 @@ fn state_transition_works() {
 				RuntimeOrigin::signed(ALICE),
 				transition_id,
 				vec![],
-				(),
+				None,
 				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
@@ -73,7 +73,7 @@ fn state_transition_should_reject_non_owned_assets() {
 					RuntimeOrigin::signed(ALICE),
 					transition_id,
 					asset_ids,
-					(),
+					None,
 					SOME_NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::AssetNotOwned
@@ -103,7 +103,7 @@ fn state_transition_should_reject_locked_assets() {
 					RuntimeOrigin::signed(Sage::technical_account_id()),
 					transition_id,
 					asset_ids,
-					(),
+					None,
 					SOME_NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::AssetLocked
@@ -129,7 +129,7 @@ fn state_transition_should_reject_rule_verification_failure() {
 					RuntimeOrigin::signed(ALICE),
 					transition_id,
 					asset_ids,
-					(),
+					None,
 					SOME_NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::TransitionRuleNotSatisfied,
@@ -156,7 +156,7 @@ fn state_transition_should_reject_too_many_input_assets() {
 					RuntimeOrigin::signed(ALICE),
 					transition_id,
 					asset_ids,
-					(),
+					None,
 					SOME_NATIVE_PAYMENT
 				),
 				Error::<Test, ()>::TooManyAssetsInTransition
@@ -185,7 +185,7 @@ fn hero_hunt_transition_add_funds_to_balance_works() {
 				RuntimeOrigin::signed(ALICE),
 				transition_id,
 				asset_ids.clone(),
-				(),
+				None,
 				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {

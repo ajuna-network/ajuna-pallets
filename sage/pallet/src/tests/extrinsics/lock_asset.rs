@@ -63,7 +63,7 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 					RuntimeOrigin::signed(technical_account),
 					TransitionIdentifier::HeroJam(HeroAction::Create),
 					vec![asset_id],
-					(),
+					None,
 					SOME_NATIVE_PAYMENT,
 				),
 			] {
