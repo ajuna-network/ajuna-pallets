@@ -460,7 +460,7 @@ pub mod pallet {
 				TransitionError::FeeError => Error::<T, I>::FeeError,
 				TransitionError::AssetLength => Error::<T, I>::AssetLength,
 				TransitionError::AssetOwnership => Error::<T, I>::AssetOwnership,
-				TransitionError::VoucherNotAllowed => Error::<T, I>::AssetOwnership,
+				TransitionError::VoucherNotAllowed => Error::<T, I>::VoucherNotAllowed,
 				TransitionError::Transition { code } => Error::<T, I>::Transition { code },
 			}
 		}
