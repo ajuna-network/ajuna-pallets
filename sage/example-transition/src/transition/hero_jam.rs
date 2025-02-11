@@ -227,13 +227,12 @@ where
 						payment_asset.unwrap_or_else(Sage::FungiblesAssetId::get_native_id);
 
 					if payment.is_voucher() {
-						// Todo: proper error handling.
-						panic!("Voucher not allowed");
+						return Err(TransitionError::VoucherNotAllowed);
 					}
 
 					// Todo: how to handle dispatch errors in transitions
 					Sage::deposit_funds_to_asset(&asset_id, account_id, payment, hunting_reward)
-						.expect("transferring to asset failed");
+						.map_err(|_| TransitionError::TransferError)?;
 				}
 
 				asset.fatigue = (asset.fatigue as i32).saturating_add(fatigue).clamp(0, 255) as u8;

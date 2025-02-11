@@ -439,6 +439,16 @@ pub mod pallet {
 		TooManyAssetsInTransition,
 		/// The rule for a given transition was not satisfied.
 		TransitionRuleNotSatisfied,
+		/// A transfer error occurred inside the transition.
+		TransferError,
+		/// An error occurred during the fee payment of the ransition.
+		FeeError,
+		/// Invalid number of assets for this transition.
+		AssetLength,
+		/// Asset Ownership error.
+		AssetOwnership,
+		/// Voucher is not allowed for that transition.
+		VoucherNotAllowed,
 		/// An error occurred during the state transition.
 		Transition { code: u8 },
 	}
@@ -446,11 +456,11 @@ pub mod pallet {
 	impl<T, I> From<TransitionError> for Error<T, I> {
 		fn from(e: TransitionError) -> Self {
 			match e {
-				TransitionError::InvalidTransitionId => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::TransferError => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::FeeError => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::AssetLength => Error::<T, I>::TransitionRuleNotSatisfied,
-				TransitionError::AssetOwnership => Error::<T, I>::TransitionRuleNotSatisfied,
+				TransitionError::TransferError => Error::<T, I>::TransferError,
+				TransitionError::FeeError => Error::<T, I>::FeeError,
+				TransitionError::AssetLength => Error::<T, I>::AssetLength,
+				TransitionError::AssetOwnership => Error::<T, I>::AssetOwnership,
+				TransitionError::VoucherNotAllowed => Error::<T, I>::AssetOwnership,
 				TransitionError::Transition { code } => Error::<T, I>::Transition { code },
 			}
 		}
