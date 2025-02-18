@@ -19,7 +19,7 @@ use super::*;
 #[test]
 fn update_asset_filter_should_work_for_trade_filter() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let filter_core = AssetType::Hero;
+		let filter_core = VariantType::Player(PlayerType::Human);
 		let filter = AssetFilter::Trade(filter_core);
 
 		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), None);
@@ -37,7 +37,7 @@ fn update_asset_filter_should_work_for_trade_filter() {
 #[test]
 fn update_asset_filter_should_work_for_transfer_filter() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let filter_core = AssetType::Hero;
+		let filter_core = VariantType::Player(PlayerType::Human);
 		let filter = AssetFilter::Transfer(filter_core);
 
 		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), None);
@@ -59,7 +59,7 @@ fn update_asset_filter_should_reject_non_organizer_calls() {
 			Sage::update_asset_filter(
 				RuntimeOrigin::signed(BOB),
 				SEASON_ID_0,
-				AssetFilter::Trade(AssetType::None),
+				AssetFilter::Trade(VariantType::Player(PlayerType::Human)),
 			),
 			DispatchError::BadOrigin
 		);

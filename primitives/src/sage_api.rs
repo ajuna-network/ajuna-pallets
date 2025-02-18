@@ -22,6 +22,7 @@ pub trait SageApi {
 	type SeasonId: Member + Parameter + MaxEncodedLen + MaybeSerializeDeserialize;
 
 	type TransitionConfig;
+	type HashOutput;
 	fn get_transition_config() -> Self::TransitionConfig;
 
 	fn ensure_ownership(
@@ -76,4 +77,6 @@ pub trait SageApi {
 		asset_id: &Self::AssetId,
 		season_id: &Self::SeasonId,
 	) -> Result<(), DispatchError>;
+
+	fn random_hash(subject: &[u8]) -> Self::HashOutput;
 }

@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+
 use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 
 #[test]

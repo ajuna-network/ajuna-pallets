@@ -827,7 +827,6 @@ pub mod pallet {
 			);
 
 			for asset_id in asset_ids.iter() {
-				Self::ensure_ownership(&sender, asset_id)?;
 				Self::ensure_unlocked(asset_id)?;
 			}
 			let transition_results = T::SageGameTransition::do_transition(

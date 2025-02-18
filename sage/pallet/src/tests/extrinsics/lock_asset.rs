@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
-use example_transition::transition::{hero_jam::HeroAction, TransitionIdentifier};
 
 #[test]
 fn can_lock_asset_successfully_with_sage_lock_id() {
@@ -61,7 +60,7 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 				),
 				Sage::state_transition(
 					RuntimeOrigin::signed(technical_account),
-					TransitionIdentifier::HeroJam(HeroAction::Create),
+					CasinoAction::Deposit(AssetType::Player, TokenType::T1),
 					vec![asset_id],
 					(),
 					SOME_NATIVE_PAYMENT,

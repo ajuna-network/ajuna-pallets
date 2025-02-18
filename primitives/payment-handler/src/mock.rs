@@ -30,7 +30,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	BuildStorage, DispatchError, TokenError,
 };
-use std::{cell::RefCell, collections::HashMap};
+use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
 pub type Signature = TestSignature;
 pub type AccountSignature = <Signature as Verify>::Signer;
@@ -153,7 +153,7 @@ impl DistributeFee for TestTournamentFeeProvider {
 }
 
 thread_local! {
-	pub static VOUCHERS: RefCell<HashMap<AccountId, Balance>> = RefCell::new(HashMap::new());
+	pub static VOUCHERS: RefCell<BTreeMap<AccountId, Balance>> = const { RefCell::new(BTreeMap::new()) };
 }
 
 pub struct MockVoucherHandler;

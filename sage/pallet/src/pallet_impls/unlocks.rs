@@ -19,7 +19,9 @@ use crate::{
 	Pallet, PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockRule,
 	UnlockTarget,
 };
+
 use ajuna_primitives::{payment_handler::FeeHandler, season_manager::SeasonManager};
+
 use frame_support::pallet_prelude::*;
 
 impl<T: Config<I>, I: 'static> Pallet<T, I> {

@@ -5,6 +5,7 @@ macro_rules! impl_sage_api {
 		$runtime:ident,
 		$sage_instance:ident,
 		$season_manager:ident,
+		$randomness:ident,
 		$account_id:ident,
 		$asset_id:ident,
 		$asset:ident,
@@ -12,7 +13,8 @@ macro_rules! impl_sage_api {
 		$balance:ident,
 		$block_number:ident,
 		$season_id:ident,
-		$transition_config:ident
+		$transition_config:ident,
+		$hash_output:ident,
 	) => {
 		impl SageApi for $impl_target {
 			type AccountId = $account_id;
@@ -23,6 +25,7 @@ macro_rules! impl_sage_api {
 			type BlockNumber = $block_number;
 			type SeasonId = $season_id;
 			type TransitionConfig = $transition_config;
+			type HashOutput = $hash_output;
 
 			fn get_transition_config() -> Self::TransitionConfig {
 				TransitionConfigStore::<$runtime, $sage_instance>::get()
@@ -126,6 +129,14 @@ macro_rules! impl_sage_api {
 				season_id: &Self::SeasonId,
 			) -> Result<(), DispatchError> {
 				<$season_manager as SeasonManager>::register_asset_in(asset_id, season_id)
+			}
+
+			fn random_hash(subject: &[u8]) -> Self::HashOutput {
+				<$randomness as frame_support::traits::Randomness<
+					Self::HashOutput,
+					Self::BlockNumber,
+				>>::random(subject)
+				.0
 			}
 		}
 	};
