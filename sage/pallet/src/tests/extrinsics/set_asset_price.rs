@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use example_transition::asset::BanditVariant;
 
 #[test]
 fn set_price_should_work() {
@@ -110,8 +111,18 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
 				if let Some((_, ref mut asset)) = maybe_asset {
 					asset.variant = AssetVariant::Machine(MachineVariant {
-						sub_variant: MachineSubVariant::Bandit(Default::default()),
-						..MachineVariant::default()
+						seat_linked: 0,
+						seat_limit: 0,
+						value_1_factor: TokenType::T1,
+						value_1_mul: MultiplierType::V1,
+						value_2_factor: TokenType::T1,
+						value_2_mul: MultiplierType::V1,
+						value_3_factor: TokenType::T1,
+						value_3_mul: MultiplierType::V1,
+						sub_variant: MachineSubVariant::Bandit(BanditVariant {
+							max_spins: 0,
+							jackpot: 0,
+						}),
 					});
 				}
 			});

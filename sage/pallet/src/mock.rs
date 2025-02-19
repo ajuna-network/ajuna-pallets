@@ -68,7 +68,7 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		PalletAssets: pallet_assets = 2,
-		HashRandomness: pallet_insecure_randomness_collective_flip = 3,
+		Randomness: pallet_insecure_randomness_collective_flip = 3,
 		Sage: pallet_sage = 4,
 	}
 );
@@ -201,7 +201,7 @@ macro_rules! impl_runtime_sage_api {
 			$runtime,
 			$sage_instance,
 			$season_manager,
-			HashRandomness,
+			Randomness,
 			MockAccountId,
 			$asset_id,
 			$asset,
