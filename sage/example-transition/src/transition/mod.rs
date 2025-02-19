@@ -270,7 +270,7 @@ where
 
 					sp_std::vec![TransitionOutput::Mutated(asset_id, asset)]
 				} else {
-					sp_std::vec![]
+					return Err(TransitionError::Transition { code: ASSET_COULD_NOT_RECEIVE_FUNDS });
 				}
 			},
 			CasinoAction::Gamble(amount) => {
@@ -295,8 +295,16 @@ where
 				let bandit_funds = Self::get_asset_funds(&bandit_id, payment_asset.as_ref());
 				let can_withdraw_play_fee = player_funds.checked_sub(&play_fee).is_some();
 				let can_deposit_play_fee = bandit_funds.checked_add(&play_fee).is_some();
-				if !can_withdraw_play_fee || !can_deposit_play_fee {
-					return Ok(sp_std::vec![]);
+
+				if !can_withdraw_play_fee {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_WITHDRAW_PLAY_FEE,
+					});
+				}
+				if !can_deposit_play_fee {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_RECEIVE_PLAY_FEE,
+					});
 				}
 
 				let spin_times = sp_std::cmp::min(amount.as_value(), 4);
@@ -318,8 +326,16 @@ where
 				let can_withdraw_max_reward =
 					bandit_funds.checked_sub(&max_reward.into()).is_some();
 				let can_deposit_max_reward = player_funds.checked_add(&max_reward.into()).is_some();
-				if !can_withdraw_max_reward || !can_deposit_max_reward {
-					return Ok(sp_std::vec![]);
+
+				if !can_withdraw_max_reward {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_WITHDRAW_MAX_REWARD,
+					});
+				}
+				if !can_deposit_max_reward {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_RECEIVE_MAX_REWARD,
+					});
 				}
 
 				// Now we spin the machine!
@@ -334,7 +350,9 @@ where
 					);
 
 					if maybe_full_spins.is_none() {
-						return Ok(sp_std::vec![]);
+						return Err(TransitionError::Transition {
+							code: COULD_NOT_PERFORM_MACHINE_SPINS,
+						});
 					}
 
 					maybe_full_spins.unwrap()
@@ -352,8 +370,15 @@ where
 				// Verify if we can actually transfer the reward
 				let can_withdraw_reward = bandit_funds.checked_sub(&reward).is_some();
 				let can_deposit_reward = player_funds.checked_add(&reward).is_some();
-				if !can_withdraw_reward || !can_deposit_reward {
-					return Ok(sp_std::vec![]);
+				if !can_withdraw_reward {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_WITHDRAW_SPIN_REWARD,
+					});
+				}
+				if !can_deposit_reward {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_RECEIVE_SPIN_REWARD,
+					});
 				}
 
 				// First we transfer the play_fee to the bandit machine
@@ -406,7 +431,7 @@ where
 
 					sp_std::vec![TransitionOutput::Mutated(asset_id, asset)]
 				} else {
-					sp_std::vec![]
+					return Err(TransitionError::Transition { code: ASSET_COULD_NOT_RECEIVE_FUNDS });
 				}
 			},
 			CasinoAction::Rent(multiplier_type) => {
@@ -415,7 +440,9 @@ where
 				let machine = asset.try_as_machine()?;
 
 				if machine.seat_linked >= machine.seat_limit {
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition {
+						code: MACHINE_CANNOT_RENT_MORE_SEATS,
+					});
 				}
 
 				machine.seat_linked = machine.seat_linked.saturating_add(1);
@@ -444,7 +471,7 @@ where
 				let current_block = Sage::get_current_block_number();
 
 				if asset_2.try_as_seat()?.player_id.is_some() || human.seat_id.is_some() {
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition { code: SEAT_IS_NOT_LINKED_TO_PLAYER });
 				}
 
 				let reservation_duration = multiplier_type.as_reservation_duration();
@@ -456,7 +483,7 @@ where
 				if current_block >
 					last_block_of_validity.saturating_sub(reservation_duration.into())
 				{
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition { code: SEAT_RESERVATION_HAS_EXPIRED });
 				}
 
 				let reservation_fee = (asset_2.try_as_seat()?.player_fee as u32)
@@ -469,9 +496,15 @@ where
 					player_funds.checked_sub(&reservation_fee.into()).is_some();
 				let can_deposit_play_fee =
 					seat_funds.checked_add(&reservation_fee.into()).is_some();
-
-				if !can_withdraw_play_fee || !can_deposit_play_fee {
-					return Ok(sp_std::vec![]);
+				if !can_withdraw_play_fee {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_WITHDRAW_PLAY_FEE,
+					});
+				}
+				if !can_deposit_play_fee {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_RECEIVE_PLAY_FEE,
+					});
 				}
 
 				Self::withdraw_funds_from_asset(&asset_id_1, account_id, reservation_fee.into())?;
@@ -501,12 +534,14 @@ where
 
 				// seat is not occupied, player is not seated, or they are not linked to each oth
 				if !seat.is_linked_to(asset_id_1) || !human.is_linked_to(asset_id_2) {
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition {
+						code: SEAT_IS_NOT_LINKED_TO_SPECIFIED_PLAYER,
+					});
 				}
 
 				let seat_funds = Self::get_asset_funds(&asset_id_2, payment_asset.as_ref());
 				if seat_funds.is_zero() {
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition { code: SEAT_HAS_NO_FUNDS });
 				}
 
 				Self::withdraw_funds_from_asset(&asset_id_2, account_id, seat_funds.clone())?;
@@ -534,7 +569,9 @@ where
 
 				// seat is not occupied, player is not seated, or they are not linked to each oth
 				if !seat.is_linked_to(human_id) || !human.is_linked_to(seat_id) {
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition {
+						code: SEAT_IS_NOT_LINKED_TO_SPECIFIED_PLAYER,
+					});
 				}
 
 				let is_reservation_valid = seat
@@ -548,12 +585,12 @@ where
 					current_block;
 
 				if !is_reservation_valid && !is_grace_period {
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition { code: SEAT_RESERVATION_IS_NOT_VALID });
 				}
 
 				let reservation_fee = Self::get_asset_funds(&seat_id, payment_asset.as_ref());
 				if reservation_fee.is_zero() {
-					return Ok(sp_std::vec![]);
+					return Err(TransitionError::Transition { code: SEAT_HAS_NO_FUNDS });
 				}
 
 				Self::withdraw_funds_from_asset(&seat_id, account_id, reservation_fee.clone())?;
