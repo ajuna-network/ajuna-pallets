@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use example_transition::asset::BanditVariant;
 
 #[test]
 fn set_price_should_work() {
@@ -23,7 +24,7 @@ fn set_price_should_work() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let filter = AssetFilter::Trade(AssetType::Hero);
+			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,
@@ -82,11 +83,11 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let trade_filter = AssetType::None;
+			let filter = AssetFilter::Trade(VariantType::Machine(MachineType::Bandit));
 			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,
-				AssetFilter::Trade(trade_filter)
+				filter,
 			));
 
 			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 2);
@@ -95,11 +96,10 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 
 			// Since asset_id_1 doest have its type match the filter we cannot set price for it
 			let (_, asset_1) = Assets::<Test, ()>::get(asset_id_1).expect("Should get asset");
-			match &asset_1.asset_variant {
-				AssetVariant::HeroJam(hero_jam_asset) => {
-					assert_eq!(hero_jam_asset.asset_type, AssetType::Hero);
-				},
-			}
+			assert!(
+				asset_1.variant.is_variant(VariantType::Player(PlayerType::Human)),
+				"Should be player variant!"
+			);
 
 			assert_noop!(
 				Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_id_1, 101),
@@ -110,11 +110,20 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 			// sale
 			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
 				if let Some((_, ref mut asset)) = maybe_asset {
-					match asset.asset_variant {
-						AssetVariant::HeroJam(ref mut hero_jam_asset) => {
-							hero_jam_asset.asset_type = trade_filter;
-						},
-					}
+					asset.variant = AssetVariant::Machine(MachineVariant {
+						seat_linked: 0,
+						seat_limit: 0,
+						value_1_factor: TokenType::T1,
+						value_1_mul: MultiplierType::V1,
+						value_2_factor: TokenType::T1,
+						value_2_mul: MultiplierType::V1,
+						value_3_factor: TokenType::T1,
+						value_3_mul: MultiplierType::V1,
+						sub_variant: MachineSubVariant::Bandit(BanditVariant {
+							max_spins: 0,
+							jackpot: 0,
+						}),
+					});
 				}
 			});
 			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_id_2, 101));

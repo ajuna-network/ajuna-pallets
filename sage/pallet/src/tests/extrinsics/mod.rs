@@ -16,6 +16,8 @@
 
 use super::*;
 
+use example_transition::prelude::*;
+
 mod buy_asset;
 mod lock_asset;
 mod remove_asset_price;

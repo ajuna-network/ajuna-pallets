@@ -23,7 +23,7 @@ fn remove_price_should_work() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let filter = AssetFilter::Trade(AssetType::Hero);
+			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,
@@ -70,7 +70,7 @@ fn remove_price_should_reject_incorrect_ownership() {
 		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
-			let filter = AssetFilter::Trade(AssetType::Hero);
+			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
 				RuntimeOrigin::signed(ALICE),
 				SEASON_ID_0,

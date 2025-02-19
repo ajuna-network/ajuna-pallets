@@ -15,12 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
-use example_transition::transition::GameTransitionConfig;
 
 #[test]
 fn update_transition_config_should_work() {
 	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-		let config = GameTransitionConfig { hunting_reward: 10 };
+		let config = CasinoJamTransitionConfig { reward_multiplier: 2 };
 		assert_ok!(Sage::update_transition_config(RuntimeOrigin::signed(ALICE), config.clone()));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransitionConfig {
 			new_config: config,

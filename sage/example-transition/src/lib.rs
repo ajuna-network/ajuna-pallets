@@ -1,5 +1,8 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 pub mod asset;
 mod benchmarks;
+pub mod error;
 pub mod filter;
 mod rules;
 pub mod transition;
@@ -8,12 +11,13 @@ pub mod transition;
 /// of the gameplay logic into a SAGE instance.
 pub mod prelude {
 	pub use crate::{
-		asset::{
-			hero_jam::{AssetSubType, AssetType, HeroJamAsset, StateType},
-			Asset, AssetId, AssetVariant,
-		},
+		asset::{Asset, AssetId, AssetVariant, MachineSubVariant, MachineVariant, VariantType},
 		benchmarks::GameBenchmarkHelper,
+		error,
 		filter::GameFilter,
-		transition::{GameTransition, TransitionIdentifier},
+		transition::{
+			AssetType, CasinoAction, CasinoJamTransition, CasinoJamTransitionConfig, MachineType,
+			MultiplierType, PlayerType, TokenType,
+		},
 	};
 }

@@ -79,7 +79,7 @@ mod lock_asset {
 			.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
-				let filter = AssetFilter::Trade(AssetType::Hero);
+				let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 				assert_ok!(Sage::update_asset_filter(
 					RuntimeOrigin::signed(ALICE),
 					SEASON_ID_0,
@@ -345,7 +345,7 @@ mod asset_funds_manager {
 					asset_balance + 1
 				),
 				DispatchError::Module(ModuleError {
-					index: 3,
+					index: 4,
 					error: [16, 0, 0, 0],
 					message: Some("AssetsFundsTooLow")
 				})
@@ -430,7 +430,7 @@ mod asset_funds_manager {
 					NATIVE_PAYMENT,
 				),
 				DispatchError::Module(ModuleError {
-					index: 3,
+					index: 4,
 					error: [16, 0, 0, 0],
 					message: Some("AssetsFundsTooLow")
 				})

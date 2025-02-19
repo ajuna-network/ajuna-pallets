@@ -25,6 +25,7 @@ use ajuna_primitives::{
 	sage_api::SageApi,
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 };
+
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
@@ -33,6 +34,7 @@ use frame_support::{
 	},
 	PalletId,
 };
+use sp_core::H256;
 use sp_runtime::{
 	testing::TestSignature,
 	traits::{IdentifyAccount, Verify},
@@ -66,7 +68,8 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		PalletAssets: pallet_assets = 2,
-		Sage: pallet_sage = 3,
+		Randomness: pallet_insecure_randomness_collective_flip = 3,
+		Sage: pallet_sage = 4,
 	}
 );
 
@@ -96,13 +99,15 @@ impl pallet_assets::Config for Test {
 	type CallbackHandle = ();
 }
 
+impl pallet_insecure_randomness_collective_flip::Config for Test {}
+
 pub type NativeAndAssets =
 	UnionOf<Balances, PalletAssets, NativeFromLeft, NativeOrWithId<AssetId>, MockAccountId>;
 pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<AssetId>> =
 	WithdrawKind::Payment(NativeOrWithId::Native);
 pub const SOME_NATIVE_PAYMENT: Option<WithdrawKind<NativeOrWithId<AssetId>>> = Some(NATIVE_PAYMENT);
 
-use example_transition::{prelude::*, transition::GameTransitionConfig};
+use example_transition::{prelude::*, transition::CasinoJamTransitionConfig};
 
 parameter_types! {
 	pub const ExamplePalletId: PalletId = PalletId(*b"sage/exi");
@@ -118,7 +123,8 @@ pub struct MockSeasonManager;
 
 pub type MockSeasonId = u8;
 
-pub type MockAsset = Asset<BlockNumberFor<Test>, MockBalance>;
+pub type MockAsset = Asset<BlockNumberFor<Test>>;
+pub type MockTransitionId = CasinoAction;
 
 impl SeasonManager for MockSeasonManager {
 	type SeasonId = MockSeasonId;
@@ -177,7 +183,6 @@ impl SeasonManager for MockSeasonManager {
 pub struct TestSageEngine;
 // The macro can't handle the brackets.
 type TestBlockNumber = BlockNumberFor<Test>;
-type TestGameTransitionConfig = GameTransitionConfig<MockBalance>;
 
 /// Runtime specific sage implementation so that we don't have to
 /// pass our type definitions all the time.
@@ -196,6 +201,7 @@ macro_rules! impl_runtime_sage_api {
 			$runtime,
 			$sage_instance,
 			$season_manager,
+			Randomness,
 			MockAccountId,
 			$asset_id,
 			$asset,
@@ -203,7 +209,8 @@ macro_rules! impl_runtime_sage_api {
 			MockBalance,
 			TestBlockNumber,
 			MockSeasonId,
-			$transition_config
+			$transition_config,
+			H256,
 		);
 	};
 }
@@ -217,7 +224,7 @@ impl_runtime_sage_api!(
 	MockSeasonManager,
 	AssetId,
 	MockAsset,
-	TestGameTransitionConfig,
+	CasinoJamTransitionConfig,
 );
 
 pub struct MockVoucherHandler;
@@ -235,7 +242,7 @@ impl VoucherHandler for MockVoucherHandler {
 }
 
 pub type GameTransitionOf =
-	GameTransition<MockAccountId, BlockNumberFor<Test>, MockBalance, TestSageEngine>;
+	CasinoJamTransition<MockAccountId, BlockNumberFor<Test>, TestSageEngine>;
 
 pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 	WithdrawWhitelistedCredit<
@@ -262,7 +269,7 @@ impl crate::Config for Test {
 	>;
 	type FungiblesAssetId = FungiblesAssetId;
 	type TransferFunds = TransferFungibleAssets<WithdrawAllCreditOrVoucher, FungiblesAssetId>;
-	type FilterHandler = GameFilter<BlockNumberFor<Test>, MockBalance>;
+	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
 	type Fungible = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
@@ -277,7 +284,7 @@ pub type TestAffiliatesMaxDistribution = ConstU32<3>;
 impl DistributeFee for TestAffiliatesFeeProvider {
 	type AccountId = MockAccountId;
 	type Balance = MockBalance;
-	type FeeIdentifier = AffiliateMethods<TransitionIdentifier>;
+	type FeeIdentifier = AffiliateMethods<MockTransitionId>;
 	type FeeDistribution =
 		AffiliateFeeDistribution<Self::AccountId, Self::Balance, TestAffiliatesMaxDistribution>;
 
