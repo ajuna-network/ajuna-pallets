@@ -1,9 +1,4 @@
-use crate::{
-	error::*,
-	transition::{
-		MachineType, MultiplierType, PlayerType, TokenType, ASSET_COLLECTION_ID, BANDIT_MAX_SPINS,
-	},
-};
+use crate::{error::*, transition::*};
 
 use sage_api::{traits::GetId, TransitionError};
 
@@ -74,18 +69,18 @@ where
 		seat_id: AssetId,
 		genesis: BlockNumber,
 		machine_id: AssetId,
-		multiplier_type: MultiplierType,
+		rent_duration: RentDuration,
 	) -> Self {
 		Asset::<BlockNumber> {
 			id: seat_id,
 			collection_id: ASSET_COLLECTION_ID,
 			genesis,
 			variant: AssetVariant::Seat(SeatVariant {
-				seat_validity_period: multiplier_type.as_seat_validity_period(),
+				rent_duration,
 				player_fee: 1,
 				player_grace_period: 30,
 				reservation_start_block: 0_u32.into(),
-				reservation_duration: 0,
+				reservation_duration: ReservationDuration::None,
 				last_action_block: 0,
 				player_action_count: 0,
 				player_id: None,
@@ -249,11 +244,11 @@ pub struct BanditVariant {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub struct SeatVariant<BlockNumber> {
-	pub seat_validity_period: u16,
+	pub rent_duration: RentDuration,
 	pub player_fee: u16,
 	pub player_grace_period: u8,
 	pub reservation_start_block: BlockNumber,
-	pub reservation_duration: u16,
+	pub reservation_duration: ReservationDuration,
 	pub last_action_block: u16,
 	pub player_action_count: u16,
 	pub player_id: Option<AssetId>,
@@ -267,7 +262,7 @@ where
 	pub(crate) fn release(&mut self) {
 		self.player_id = None;
 		self.reservation_start_block = 0_u32.into();
-		self.reservation_duration = 0;
+		self.reservation_duration = ReservationDuration::None;
 		self.last_action_block = 0;
 		self.player_action_count = 0;
 	}

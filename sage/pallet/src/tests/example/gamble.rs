@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use example_transition::transition::{RentDuration, ReservationDuration};
 
 #[test]
 fn gamble_works() {
@@ -54,7 +55,7 @@ fn gamble_works() {
 
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(ALICE),
-				CasinoAction::Rent(MultiplierType::V4),
+				CasinoAction::Rent(RentDuration::Day1),
 				vec![machine_id],
 				(),
 				SOME_NATIVE_PAYMENT
@@ -72,7 +73,7 @@ fn gamble_works() {
 
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(ALICE),
-				CasinoAction::Reserve(MultiplierType::V4),
+				CasinoAction::Reserve(ReservationDuration::Hours8),
 				vec![human_id, seat_id],
 				(),
 				SOME_NATIVE_PAYMENT
@@ -118,10 +119,10 @@ fn gamble_works() {
 				.try_as_tracker()
 				.expect("Should be tracker");
 
-			assert_eq!(tracker.slot_a_result, 17685);
-			assert_eq!(tracker.slot_b_result, 14142);
-			assert_eq!(tracker.slot_c_result, 5637);
-			assert_eq!(tracker.slot_d_result, 24921);
+			assert_eq!(tracker.slot_a_result, 21858);
+			assert_eq!(tracker.slot_b_result, 33657);
+			assert_eq!(tracker.slot_c_result, 16649);
+			assert_eq!(tracker.slot_d_result, 5124);
 			assert_eq!(tracker.last_reward, 0);
 		});
 }

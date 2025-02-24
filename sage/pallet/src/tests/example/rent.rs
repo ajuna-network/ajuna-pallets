@@ -31,8 +31,7 @@ fn rent_seat_works() {
 			let (machine_id, _) =
 				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
 
-			let multiplier = MultiplierType::V1;
-			let transition_id = CasinoAction::Rent(multiplier);
+			let transition_id = CasinoAction::Rent(RentDuration::Days3);
 
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(ALICE),
@@ -48,14 +47,14 @@ fn rent_seat_works() {
 
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 
-			assert_eq!(seat.seat_validity_period, multiplier.as_seat_validity_period());
+			assert_eq!(seat.rent_duration, RentDuration::Days3);
 			assert_eq!(seat.player_fee, 1);
 			assert_eq!(seat.player_grace_period, 30);
 			assert_eq!(
 				seat.reservation_start_block,
 				0_u32.saturated_into::<BlockNumberFor<Test>>()
 			);
-			assert_eq!(seat.reservation_duration, 0);
+			assert_eq!(seat.reservation_duration, ReservationDuration::None);
 			assert_eq!(seat.last_action_block, 0);
 			assert_eq!(seat.player_action_count, 0);
 			assert_eq!(seat.player_id, None);

@@ -21,6 +21,7 @@ mod kick;
 mod release;
 mod rent;
 mod reserve;
+mod r#return;
 mod withdraw;
 
 use super::*;

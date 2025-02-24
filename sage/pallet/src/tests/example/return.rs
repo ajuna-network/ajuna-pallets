@@ -52,28 +52,40 @@ fn reserve_works() {
 
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(ALICE),
-				CasinoAction::Reserve(ReservationDuration::Mins45),
+				CasinoAction::Reserve(ReservationDuration::Mins5),
 				vec![human_id, seat_id],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 
-			let (_, mut seat_asset) = get_assets_from(ALICE, VariantType::Seat)[0];
-			let (_, mut human_asset) =
-				get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+			run_to_block(100);
 
-			let seat = seat_asset.try_as_seat().expect("should have seat");
-			assert_eq!(seat.player_id, Some(human_id));
-			assert_eq!(seat.reservation_start_block, 20);
-			assert_eq!(seat.reservation_duration, ReservationDuration::Mins45);
-			assert_eq!(seat.last_action_block, 0);
-			assert_eq!(seat.player_action_count, 0);
+			assert_ok!(Sage::state_transition(
+				RuntimeOrigin::signed(ALICE),
+				CasinoAction::Release,
+				vec![human_id, seat_id],
+				(),
+				SOME_NATIVE_PAYMENT
+			));
 
-			let human = human_asset
-				.try_as_player()
-				.expect("should have player")
-				.try_as_human()
-				.expect("should have human");
-			assert_eq!(human.seat_id, Some(seat_id));
+			run_to_block(120);
+
+			let (_, mut machine) =
+				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
+			assert_eq!(machine.try_as_machine().expect("Should be machine").seat_linked, 1);
+			assert!(Sage::get_asset(&seat_id).is_ok());
+
+			assert_ok!(Sage::state_transition(
+				RuntimeOrigin::signed(ALICE),
+				CasinoAction::Return,
+				vec![machine_id, seat_id],
+				(),
+				SOME_NATIVE_PAYMENT
+			));
+
+			let (_, mut machine) =
+				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
+			assert_eq!(machine.try_as_machine().expect("Should be machine").seat_linked, 0);
+			assert!(Sage::get_asset(&seat_id).is_err());
 		});
 }

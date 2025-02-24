@@ -17,7 +17,7 @@ pub mod prelude {
 		filter::GameFilter,
 		transition::{
 			AssetType, CasinoAction, CasinoJamTransition, CasinoJamTransitionConfig, MachineType,
-			MultiplierType, PlayerType, TokenType,
+			MultiplierType, PlayerType, RentDuration, ReservationDuration, TokenType,
 		},
 	};
 }

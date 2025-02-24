@@ -28,11 +28,10 @@ fn release_works() {
 
 			let (machine_id, _) =
 				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
-			let multiplier = MultiplierType::V1;
 
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(ALICE),
-				CasinoAction::Rent(multiplier),
+				CasinoAction::Rent(RentDuration::Days3),
 				vec![machine_id],
 				(),
 				SOME_NATIVE_PAYMENT
@@ -53,7 +52,7 @@ fn release_works() {
 
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(ALICE),
-				CasinoAction::Reserve(multiplier),
+				CasinoAction::Reserve(ReservationDuration::Hours3),
 				vec![human_id, seat_id],
 				(),
 				SOME_NATIVE_PAYMENT
@@ -66,7 +65,7 @@ fn release_works() {
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 			assert_eq!(seat.player_id, Some(human_id));
 			assert_eq!(seat.reservation_start_block, 20);
-			assert_eq!(seat.reservation_duration, multiplier.as_reservation_duration());
+			assert_eq!(seat.reservation_duration, ReservationDuration::Hours3);
 			assert_eq!(seat.last_action_block, 0);
 			assert_eq!(seat.player_action_count, 0);
 
@@ -94,7 +93,7 @@ fn release_works() {
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 			assert_eq!(seat.player_id, None);
 			assert_eq!(seat.reservation_start_block, 0);
-			assert_eq!(seat.reservation_duration, 0);
+			assert_eq!(seat.reservation_duration, ReservationDuration::None);
 			assert_eq!(seat.last_action_block, 0);
 			assert_eq!(seat.player_action_count, 0);
 

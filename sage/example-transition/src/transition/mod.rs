@@ -2,6 +2,7 @@ use crate::{
 	asset::{Asset, AssetId, VariantType},
 	error::*,
 	rules::*,
+	transition::utils::CasinoJamUtils,
 };
 
 use ajuna_primitives::{payment_handler::NativeId, sage_api::SageApi};
@@ -22,13 +23,8 @@ use sp_std::{marker::PhantomData, vec::Vec};
 mod enums;
 mod utils;
 
-use crate::transition::utils::CasinoJamUtils;
 pub use enums::*;
-use sage_api::rules::ensure_owner_of;
-
-pub const ASSET_COLLECTION_ID: u8 = 1;
-
-pub const BANDIT_MAX_SPINS: u8 = 4;
+pub(crate) use utils::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum AssetType {
@@ -42,10 +38,11 @@ pub enum CasinoAction {
 	Deposit(AssetType, TokenType),
 	Gamble(MultiplierType),
 	Withdraw(AssetType, TokenType),
-	Rent(MultiplierType),
-	Reserve(MultiplierType),
+	Rent(RentDuration),
+	Reserve(ReservationDuration),
 	Release,
 	Kick,
+	Return,
 }
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Clone, PartialEq, Eq)]
@@ -215,6 +212,16 @@ where
 				ensure_asset_type_at(&assets, VariantType::Player(PlayerType::Human), 0)?;
 				ensure_asset_type_at(&assets, VariantType::Player(PlayerType::Human), 1)?;
 				ensure_asset_type_at(&assets, VariantType::Seat, 2)?;
+
+				maybe_assets = Some(assets);
+			},
+			CasinoAction::Return => {
+				let assets = Self::try_get_assets(asset_ids)?;
+
+				ensure_asset_length(asset_ids, 2)?;
+				ensure_owner_of::<_, _, Sage>(asset_ids, account_id)?;
+				ensure_asset_type_at(&assets, VariantType::Machine(MachineType::Bandit), 0)?;
+				ensure_asset_type_at(&assets, VariantType::Seat, 1)?;
 
 				maybe_assets = Some(assets);
 			},
@@ -420,8 +427,16 @@ where
 				]
 			},
 			CasinoAction::Withdraw(_, token_type) => {
-				let (asset_id, asset) =
+				let (asset_id, mut asset) =
 					assets.pop().ok_or(TransitionError::Transition { code: ASSET_NOT_FOUND })?;
+
+				if let Ok(machine) = asset.try_as_machine() {
+					if machine.seat_linked > 0 {
+						return Err(TransitionError::Transition {
+							code: MACHINE_STILL_HAS_LINKED_SEATS,
+						});
+					}
+				}
 
 				let withdraw_amount: Balance = token_type.as_value().into();
 				let asset_funds = Self::get_asset_funds(&asset_id, payment_asset.as_ref());
@@ -434,7 +449,7 @@ where
 					return Err(TransitionError::Transition { code: ASSET_COULD_NOT_RECEIVE_FUNDS });
 				}
 			},
-			CasinoAction::Rent(multiplier_type) => {
+			CasinoAction::Rent(rent_duration) => {
 				let (asset_id, mut asset) =
 					assets.pop().ok_or(TransitionError::Transition { code: ASSET_NOT_FOUND })?;
 				let machine = asset.try_as_machine()?;
@@ -453,7 +468,7 @@ where
 					seat_id,
 					current_block,
 					asset_id,
-					*multiplier_type,
+					*rent_duration,
 				);
 
 				sp_std::vec![
@@ -461,7 +476,7 @@ where
 					TransitionOutput::Minted(seat)
 				]
 			},
-			CasinoAction::Reserve(multiplier_type) => {
+			CasinoAction::Reserve(reservation_duration) => {
 				let (asset_id_2, mut asset_2) =
 					assets.pop().ok_or(TransitionError::Transition { code: ASSET_NOT_FOUND })?;
 				let (asset_id_1, mut asset_1) =
@@ -474,20 +489,19 @@ where
 					return Err(TransitionError::Transition { code: SEAT_IS_NOT_LINKED_TO_PLAYER });
 				}
 
-				let reservation_duration = multiplier_type.as_reservation_duration();
-				let seat_validity_period = asset_2.try_as_seat()?.seat_validity_period;
-				let last_block_of_validity =
-					asset_2.genesis.saturating_add(seat_validity_period.into());
+				let rent_blocks = asset_2.try_as_seat()?.rent_duration.get_rent_duration_blocks();
+				let last_block_of_validity = asset_2.genesis.saturating_add(rent_blocks.into());
 
 				// Verify if seat is running out of time with this reservation
-				if current_block >
-					last_block_of_validity.saturating_sub(reservation_duration.into())
+				let reservation_blocks = reservation_duration.get_reservation_duration_blocks();
+				if current_block > last_block_of_validity.saturating_sub(reservation_blocks.into())
 				{
 					return Err(TransitionError::Transition { code: SEAT_RESERVATION_HAS_EXPIRED });
 				}
 
-				let reservation_fee = (asset_2.try_as_seat()?.player_fee as u32)
-					.saturating_mul(multiplier_type.as_value());
+				let player_fee = asset_2.try_as_seat()?.player_fee as u32;
+				let reservation_fee =
+					reservation_duration.get_reservation_duration_fees(player_fee);
 
 				let player_funds = Self::get_asset_funds(&asset_id_1, payment_asset.as_ref());
 				let seat_funds = Self::get_asset_funds(&asset_id_2, payment_asset.as_ref());
@@ -515,7 +529,7 @@ where
 				human.seat_id = Some(asset_id_2);
 				seat.player_id = Some(asset_id_1);
 				seat.reservation_start_block = current_block;
-				seat.reservation_duration = reservation_duration;
+				seat.reservation_duration = *reservation_duration;
 				seat.last_action_block = 0;
 				seat.player_action_count = 0;
 
@@ -544,8 +558,27 @@ where
 					return Err(TransitionError::Transition { code: SEAT_HAS_NO_FUNDS });
 				}
 
-				Self::withdraw_funds_from_asset(&asset_id_2, account_id, seat_funds.clone())?;
-				Self::deposit_funds_to_asset(&asset_id_1, account_id, seat_funds)?;
+				let full_reservation_fee =
+					seat.reservation_duration.get_reservation_duration_fees(seat.player_fee as u32);
+				let usage_fee = SEAT_USAGE_FEE_PERC * full_reservation_fee.saturating_div(100);
+				let reservation_fee: Balance =
+					full_reservation_fee.saturating_sub(usage_fee).into();
+
+				let can_withdraw_seat_fee = seat_funds.checked_sub(&reservation_fee).is_some();
+				let can_deposit_seat_fee = seat_funds.checked_add(&reservation_fee).is_some();
+				if !can_withdraw_seat_fee {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_WITHDRAW_PLAY_FEE,
+					});
+				}
+				if !can_deposit_seat_fee {
+					return Err(TransitionError::Transition {
+						code: ASSET_COULD_NOT_RECEIVE_PLAY_FEE,
+					});
+				}
+
+				Self::withdraw_funds_from_asset(&asset_id_2, account_id, reservation_fee.clone())?;
+				Self::deposit_funds_to_asset(&asset_id_1, account_id, reservation_fee)?;
 
 				seat.release();
 				human.release();
@@ -574,10 +607,11 @@ where
 					});
 				}
 
-				let is_reservation_valid = seat
-					.reservation_start_block
-					.saturating_add(seat.reservation_duration.into()) >=
-					current_block;
+				let reservation_blocks =
+					seat.reservation_duration.get_reservation_duration_blocks();
+				let is_reservation_valid =
+					seat.reservation_start_block.saturating_add(reservation_blocks.into()) >=
+						current_block;
 				let is_grace_period = seat
 					.reservation_start_block
 					.saturating_add(seat.last_action_block.into())
@@ -603,6 +637,56 @@ where
 					TransitionOutput::Mutated(sniper_id, asset_1),
 					TransitionOutput::Mutated(human_id, asset_2),
 					TransitionOutput::Mutated(seat_id, asset_3),
+				]
+			},
+			CasinoAction::Return => {
+				let (seat_id, mut asset_2) =
+					assets.pop().ok_or(TransitionError::Transition { code: ASSET_NOT_FOUND })?;
+				let seat = asset_2.try_as_seat()?;
+				let (machine_id, mut asset_1) =
+					assets.pop().ok_or(TransitionError::Transition { code: ASSET_NOT_FOUND })?;
+				let machine = asset_1.try_as_machine()?;
+
+				if seat.machine_id.is_none() || seat.machine_id != Some(machine_id) {
+					return Err(TransitionError::Transition { code: SEAT_IS_NOT_LINED_TO_MACHINE });
+				}
+
+				if machine.seat_linked == 0 {
+					return Err(TransitionError::Transition { code: MACHINE_HAS_NO_LINKED_SEATS });
+				}
+
+				if seat.player_id.is_some() {
+					return Err(TransitionError::Transition {
+						code: SEAT_IS_STILL_LINKED_TO_PLAYER,
+					});
+				}
+
+				machine.seat_linked -= 1;
+
+				let seat_funds = Self::get_asset_funds(&seat_id, payment_asset.as_ref());
+				if !seat_funds.is_zero() {
+					let can_withdraw_seat_funds = seat_funds.checked_sub(&seat_funds).is_some();
+					let can_deposit_seat_funds = seat_funds.checked_add(&seat_funds).is_some();
+					if !can_withdraw_seat_funds {
+						return Err(TransitionError::Transition {
+							code: ASSET_COULD_NOT_WITHDRAW_PLAY_FEE,
+						});
+					}
+					if !can_deposit_seat_funds {
+						return Err(TransitionError::Transition {
+							code: ASSET_COULD_NOT_RECEIVE_PLAY_FEE,
+						});
+					}
+
+					Self::withdraw_funds_from_asset(&seat_id, account_id, seat_funds.clone())?;
+					Self::deposit_funds_to_asset(&machine_id, account_id, seat_funds)?;
+				}
+
+				seat.release();
+
+				sp_std::vec![
+					TransitionOutput::Mutated(machine_id, asset_1),
+					TransitionOutput::Consumed(seat_id),
 				]
 			},
 		};
