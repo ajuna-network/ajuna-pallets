@@ -27,7 +27,7 @@ pub(super) struct SpinResult {
 }
 
 impl SpinResult {
-	pub(super) fn get_packed(&self) -> u16 {
+	pub(super) fn get_packed(&self) -> (u16, u8) {
 		CasinoJamUtils::pack_slot_result(
 			self.slot_1,
 			self.slot_2,
@@ -47,16 +47,18 @@ impl CasinoJamUtils {
 		slot_3: u8,
 		bonus_1: u8,
 		bonus_2: u8,
-	) -> u16 {
-		let mut result: u16 = 0;
+	) -> (u16, u8) {
+		let mut slot: u16 = 0;
 
-		result |= (slot_1 as u16 & 0x0F) << 12; // Bits 15-12
-		result |= (slot_2 as u16 & 0x0F) << 8; // Bits 11-8
-		result |= (slot_3 as u16 & 0x0F) << 4; // Bits 7-4
-		result |= (bonus_1 as u16 & 0x03) << 2; // Bits 3-2
-		result |= bonus_2 as u16 & 0x03; // Bits 1-0
+		slot |= (slot_1 as u16 & 0x0F) << 12; // Bits 15-12
+		slot |= (slot_2 as u16 & 0x0F) << 8; // Bits 11-8
+		slot |= (slot_3 as u16 & 0x0F) << 4; // Bits 7-4
 
-		result
+		let mut bonus = 0;
+		bonus |= (bonus_1 & 0x0F) << 4; // Bits 3-2
+		bonus |= bonus_2 & 0x0F; // Bits 1-0
+
+		(slot, bonus)
 	}
 
 	fn single_spin_reward(min_reward: u32, spin: &SpinResult) -> u32 {

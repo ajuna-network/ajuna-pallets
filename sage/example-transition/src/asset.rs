@@ -34,10 +34,10 @@ where
 			collection_id: ASSET_COLLECTION_ID,
 			genesis,
 			variant: AssetVariant::Player(PlayerVariant::Tracker(TrackerVariant {
-				slot_a_result: 0,
-				slot_b_result: 0,
-				slot_c_result: 0,
-				slot_d_result: 0,
+				slot_a_result: (0, 0),
+				slot_b_result: (0, 0),
+				slot_c_result: (0, 0),
+				slot_d_result: (0, 0),
 				last_reward: 0,
 			})),
 		}
@@ -193,19 +193,19 @@ impl HumanVariant {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub struct TrackerVariant {
-	pub slot_a_result: u16,
-	pub slot_b_result: u16,
-	pub slot_c_result: u16,
-	pub slot_d_result: u16,
+	pub slot_a_result: (u16, u8),
+	pub slot_b_result: (u16, u8),
+	pub slot_c_result: (u16, u8),
+	pub slot_d_result: (u16, u8),
 	pub last_reward: u32,
 }
 
 impl TrackerVariant {
 	pub(crate) fn clear(&mut self) {
-		self.slot_a_result = 0;
-		self.slot_b_result = 0;
-		self.slot_c_result = 0;
-		self.slot_d_result = 0;
+		self.slot_a_result = (0, 0);
+		self.slot_b_result = (0, 0);
+		self.slot_c_result = (0, 0);
+		self.slot_d_result = (0, 0);
 		self.last_reward = 0;
 	}
 }

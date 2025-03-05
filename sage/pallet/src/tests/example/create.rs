@@ -68,10 +68,10 @@ fn create_player_works() {
 				};
 
 			assert!(human.seat_id.is_none());
-			assert_eq!(tracker.slot_a_result, 0);
-			assert_eq!(tracker.slot_b_result, 0);
-			assert_eq!(tracker.slot_c_result, 0);
-			assert_eq!(tracker.slot_d_result, 0);
+			assert_eq!(tracker.slot_a_result, (0, 0));
+			assert_eq!(tracker.slot_b_result, (0, 0));
+			assert_eq!(tracker.slot_c_result, (0, 0));
+			assert_eq!(tracker.slot_d_result, (0, 0));
 			assert_eq!(tracker.last_reward, 0);
 		});
 }

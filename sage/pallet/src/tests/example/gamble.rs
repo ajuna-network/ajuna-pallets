@@ -87,10 +87,10 @@ fn gamble_works() {
 				.try_as_tracker()
 				.expect("Should be tracker");
 
-			assert_eq!(tracker.slot_a_result, 0);
-			assert_eq!(tracker.slot_b_result, 0);
-			assert_eq!(tracker.slot_c_result, 0);
-			assert_eq!(tracker.slot_d_result, 0);
+			assert_eq!(tracker.slot_a_result, (0, 0));
+			assert_eq!(tracker.slot_b_result, (0, 0));
+			assert_eq!(tracker.slot_c_result, (0, 0));
+			assert_eq!(tracker.slot_d_result, (0, 0));
 			assert_eq!(tracker.last_reward, 0);
 
 			run_to_block(20);
@@ -119,10 +119,10 @@ fn gamble_works() {
 				.try_as_tracker()
 				.expect("Should be tracker");
 
-			assert_eq!(tracker.slot_a_result, 21858);
-			assert_eq!(tracker.slot_b_result, 33657);
-			assert_eq!(tracker.slot_c_result, 16649);
-			assert_eq!(tracker.slot_d_result, 5124);
+			assert_eq!(tracker.slot_a_result, (21856, 2));
+			assert_eq!(tracker.slot_b_result, (33648, 33));
+			assert_eq!(tracker.slot_c_result, (16640, 33));
+			assert_eq!(tracker.slot_d_result, (5120, 20));
 			assert_eq!(tracker.last_reward, 0);
 		});
 }
