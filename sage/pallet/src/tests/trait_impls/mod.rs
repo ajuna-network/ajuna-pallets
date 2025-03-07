@@ -16,5 +16,6 @@
 
 mod account_manager;
 mod asset_manager;
+mod sage_api;
 
 use super::*;

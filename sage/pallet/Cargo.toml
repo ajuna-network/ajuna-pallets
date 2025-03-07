@@ -32,6 +32,7 @@ example-transition = { workspace = true, optional = true }
 # mock doesn't need to be used in with the feature runtime-benchmarks
 pallet-assets    = { workspace = true, optional = true }
 pallet-balances    = { workspace = true, optional = true }
+rand = "0.8.5"
 
 [dev-dependencies]
 example-transition = { workspace = true, features = ["std"] }
