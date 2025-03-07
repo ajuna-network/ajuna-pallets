@@ -19,17 +19,49 @@ mod random_hash {
         }
     }
 
+    #[test]
+    fn hashes_with_same_subjects_are_the_same() {
+        // This test should mostly highlight a caveat for this function. For the same subject this
+        // function returns the same "random" hash during the entirety of a block.
+        ExtBuilder::default()
+            .build()
+            .execute_with(|| {
+                setup_blocks(30);
+
+                let hash1 = <TestSageEngine as SageApi>::random_hash(b"hello");
+                let hash2 = <TestSageEngine as SageApi>::random_hash(b"hello");
+
+                assert_eq!(hash1, hash2);
+            });
+    }
+
 	#[test]
-	fn repeated_calls_are_different() {
+	fn hashes_with_different_subjects_are_different() {
 		ExtBuilder::default()
 			.build()
 			.execute_with(|| {
                 setup_blocks(30);
 
                 let hash1 = <TestSageEngine as SageApi>::random_hash(b"hello");
-				let hash2 = <TestSageEngine as SageApi>::random_hash(b"hello");
+				let hash2 = <TestSageEngine as SageApi>::random_hash(b"world");
 
 				assert_ne!(hash1, hash2);
 			});
 	}
+
+    #[test]
+    fn hashes_with_same_subjects_in_different_blocks_are_different() {
+        ExtBuilder::default()
+            .build()
+            .execute_with(|| {
+                setup_blocks(30);
+
+                let hash1 = <TestSageEngine as SageApi>::random_hash(b"hello");
+
+                setup_blocks(1);
+                let hash2 = <TestSageEngine as SageApi>::random_hash(b"hello");
+
+                assert_ne!(hash1, hash2);
+            });
+    }
 }

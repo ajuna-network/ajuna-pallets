@@ -44,6 +44,10 @@ macro_rules! impl_sage_api {
 				<Pallet<$runtime, $sage_instance> as AssetInspector>::get_asset(asset_id)
 			}
 
+			fn create_next_asset_id() -> Option<Self::AssetId> {
+				<Pallet<$runtime, $sage_instance>>::create_next_asset_id()
+			}
+
 			fn iter_assets_from(
 				account_id: &Self::AccountId,
 			) -> impl Iterator<Item = (Self::AssetId, Self::Asset)> {

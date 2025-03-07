@@ -41,6 +41,7 @@ use sp_runtime::{
 	BuildStorage, DispatchError,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
+use ajuna_primitives::next_asset_id_provider::{IncrementingAssetIdProvider};
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -254,10 +255,15 @@ pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 
 type FungiblesAssetId = WithdrawKind<NativeOrWithId<AssetId>>;
 
+// Can't use that currently, as our example game transition uses u32.
+// type TestAssetIdProvider = RandomAssetIdProvider<AssetId, BlockNumberFor<Test>, Randomness>;
+type TestAssetIdProvider = IncrementingAssetIdProvider<AssetId>;
+
 type DefaultSageInstance = ();
 impl crate::Config for Test {
 	type PalletId = ExamplePalletId;
 	type SageGameTransition = GameTransitionOf;
+	type NextAssetIdProvider = TestAssetIdProvider;
 	type SeasonHandler = MockSeasonManager;
 	type FeeHandler = AssetGameFeeHandler<
 		MockAccountId,
@@ -267,8 +273,8 @@ impl crate::Config for Test {
 		TestAffiliatesMaxDistribution,
 		TestTournamentFeeProvider,
 	>;
-	type FungiblesAssetId = FungiblesAssetId;
 	type TransferFunds = TransferFungibleAssets<WithdrawAllCreditOrVoucher, FungiblesAssetId>;
+	type FungiblesAssetId = FungiblesAssetId;
 	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
 	type Fungible = Balances;
 	type RuntimeEvent = RuntimeEvent;

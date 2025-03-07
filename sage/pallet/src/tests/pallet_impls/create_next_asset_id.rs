@@ -16,6 +16,27 @@
 
 use super::*;
 
-mod ensures;
-mod unlocks;
-mod create_next_asset_id;
+mod create_next_asset_id {
+    use super::*;
+
+    #[test]
+    fn create_next_asset_id_works() {
+        ExtBuilder::default().build().execute_with(|| {
+            assert_eq!(LastAssetId::<Test, ()>::get(), 0u32);
+
+            assert_eq!(Sage::create_next_asset_id(), Some(1u32));
+            assert_eq!(LastAssetId::<Test, ()>::get(), 1u32);
+
+            assert_eq!(Sage::create_next_asset_id(), Some(2u32));
+        });
+    }
+
+
+    #[test]
+    fn create_next_asset_id_returns_none_upon_overflow() {
+        ExtBuilder::default().build().execute_with(|| {
+            LastAssetId::<Test, ()>::put(u32::MAX);
+            assert_eq!(Sage::create_next_asset_id(), None);
+        });
+    }
+}
