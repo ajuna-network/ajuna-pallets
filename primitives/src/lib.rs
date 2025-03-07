@@ -23,11 +23,11 @@
 pub mod account_manager;
 pub mod asset_manager;
 pub mod chain_inspector;
+pub mod next_asset_id_provider;
 pub mod runtime_types;
 pub mod sage_api;
 pub mod season_manager;
 pub mod trade_manager;
 pub mod treasury_manager;
-pub mod next_asset_id_provider;
 
 pub use ajuna_payment_handler as payment_handler;

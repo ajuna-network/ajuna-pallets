@@ -905,7 +905,7 @@ pub mod pallet {
 			LockedAssets::<T, I>::get(asset_id)
 		}
 
-		pub fn create_next_asset_id() -> Option<AssetIdOf<T,I>> {
+		pub fn create_next_asset_id() -> Option<AssetIdOf<T, I>> {
 			let last_id = LastAssetId::<T, I>::get();
 
 			match <T as Config<I>>::NextAssetIdProvider::next_asset_id(&last_id) {

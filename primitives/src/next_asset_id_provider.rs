@@ -1,7 +1,9 @@
-use frame_support::{sp_runtime::traits::CheckedAdd, traits::Randomness};
-use std::marker::PhantomData;
-use frame_support::sp_runtime::traits::One;
+use frame_support::{
+	sp_runtime::traits::{CheckedAdd, One},
+	traits::Randomness,
+};
 use parity_scale_codec::Encode;
+use std::marker::PhantomData;
 
 pub trait ProvideNextAssetId {
 	type AssetId;
@@ -63,6 +65,6 @@ mod tests {
 		// This test shows that the input is indeed used as a subject for creating the output.
 		// But the safety and reasonable uniqueness guarantees depend on the actual
 		// randomness source used.
-		assert_eq!(MockRandomAssetIdProvider::next_asset_id(&10 ), Some(20));
+		assert_eq!(MockRandomAssetIdProvider::next_asset_id(&10), Some(20));
 	}
 }

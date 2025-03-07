@@ -123,8 +123,7 @@ where
 	}
 
 	fn generate_asset_id() -> Result<AssetId, TransitionError> {
-		Sage::create_next_asset_id()
-			.ok_or_else(|| TransitionError::CouldNotCreateAssetId)
+		Sage::create_next_asset_id().ok_or_else(|| TransitionError::CouldNotCreateAssetId)
 	}
 
 	fn verify_transition_rules(

@@ -26,6 +26,7 @@ use ajuna_primitives::{
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 };
 
+use ajuna_primitives::next_asset_id_provider::IncrementingAssetIdProvider;
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
@@ -41,7 +42,6 @@ use sp_runtime::{
 	BuildStorage, DispatchError,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
-use ajuna_primitives::next_asset_id_provider::{IncrementingAssetIdProvider};
 
 pub type MockSignature = TestSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
