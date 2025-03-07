@@ -406,8 +406,8 @@ pub mod pallet {
 		AssetNotOwned,
 		/// Attempt to buy already owned asset.
 		AlreadyOwned,
-		/// This asset cannot be used in transfer.
-		AssetCannotBeTransfered,
+		/// This asset cannot be transferred.
+		AssetCannotBeTransferred,
 		/// This asset cannot be used in trade.
 		AssetCannotBeTraded,
 		/// An asset selected for buying is not actually in sale.
@@ -645,7 +645,7 @@ pub mod pallet {
 			if let Some(transfer_filter) = SeasonTransferFilters::<T, I>::get(&asset_season_id) {
 				ensure!(
 					T::FilterHandler::can_be_transferred_using(&asset, &transfer_filter),
-					Error::<T, I>::AssetCannotBeTransfered
+					Error::<T, I>::AssetCannotBeTransferred
 				);
 			}
 
