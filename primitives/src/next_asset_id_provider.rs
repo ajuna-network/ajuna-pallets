@@ -29,6 +29,9 @@ impl<AssetId: Encode, BlockNumber, R: Randomness<AssetId, BlockNumber>> ProvideN
 	type AssetId = AssetId;
 
 	fn next_asset_id(current_asset_id: &Self::AssetId) -> Option<Self::AssetId> {
+		// Important: The output of `R::random` should not be used to derive another random output.
+		// This will weaken the safety. See the documentation of the randomness collective pallet
+		// for more information.
 		Some(R::random(current_asset_id.encode().as_slice()).0)
 	}
 }
