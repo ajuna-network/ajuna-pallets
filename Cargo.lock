@@ -2056,7 +2056,6 @@ dependencies = [
  "pallet-balances",
  "pallet-insecure-randomness-collective-flip",
  "parity-scale-codec",
- "rand",
  "sage-api",
  "scale-info",
  "sp-core",
