@@ -330,6 +330,17 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+
+	/// Stores the value for the last asset id that was created.
+	///
+	/// This may be a monotonic counter or a random hash.
+	#[pallet::storage]
+	pub type LastAssetId<T: Config<I>, I: 'static = ()> = StorageValue<
+		_,
+		AssetIdOf<T, I>,
+		ValueQuery,
+	>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {

@@ -28,5 +28,6 @@ pub mod sage_api;
 pub mod season_manager;
 pub mod trade_manager;
 pub mod treasury_manager;
+pub mod next_asset_id_provider;
 
 pub use ajuna_payment_handler as payment_handler;
