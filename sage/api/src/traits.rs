@@ -22,7 +22,7 @@ pub trait SageGameTransition {
 	/// The account id type, usually 32 bytes long.
 	type AccountId: Member + Codec;
 	/// The asset id type of the sage assets defined by the developer.
-	type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
+	type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo + Default;
 	/// The asset type used in sage defined by the game developer.
 	type Asset: Member + Parameter + MaxEncodedLen + TypeInfo + GetId<Self::AssetId>;
 	/// An optional extra, which is simply forwarded to the `verify_rule` and `do_transition`

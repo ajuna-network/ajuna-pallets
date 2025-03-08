@@ -8,6 +8,7 @@ pub enum TransitionError {
 	TransferError,
 	FeeError,
 	VoucherNotAllowed,
+	CouldNotCreateAssetId,
 	AssetLength,
 	AssetOwnership,
 	Transition { code: u8 },

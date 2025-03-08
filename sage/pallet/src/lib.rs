@@ -36,6 +36,7 @@ mod tests;
 use ajuna_primitives::{
 	account_manager::{AccountManager, WhitelistKey},
 	asset_manager::{AssetFundsManager, AssetManager, Lock, LockIdentifier},
+	next_asset_id_provider::ProvideNextAssetId,
 	payment_handler::{FeeHandler, TransferFungible},
 	season_manager::{SeasonConfig, SeasonManager},
 	trade_manager::{TradeManager, TransferManager},
@@ -148,6 +149,8 @@ pub mod pallet {
 			AccountId = AccountIdOf<Self>,
 			PaymentFungible = Self::FungiblesAssetId,
 		>;
+
+		type NextAssetIdProvider: ProvideNextAssetId<AssetId = AssetIdOf<Self, I>>;
 
 		/// Retrieves information about past and ongoing seasons.
 		type SeasonHandler: SeasonManager<
@@ -330,6 +333,13 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// Stores the value for the last asset id that was created.
+	///
+	/// This may be a monotonic counter or a random hash.
+	#[pallet::storage]
+	pub type LastAssetId<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, AssetIdOf<T, I>, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
@@ -406,8 +416,8 @@ pub mod pallet {
 		AssetNotOwned,
 		/// Attempt to buy already owned asset.
 		AlreadyOwned,
-		/// This asset cannot be used in transfer.
-		AssetCannotBeTransfered,
+		/// This asset cannot be transferred.
+		AssetCannotBeTransferred,
 		/// This asset cannot be used in trade.
 		AssetCannotBeTraded,
 		/// An asset selected for buying is not actually in sale.
@@ -443,6 +453,8 @@ pub mod pallet {
 		TransferError,
 		/// An error occurred during the fee payment of the ransition.
 		FeeError,
+		/// Could not create the asset id
+		CouldNotCreateAssetId,
 		/// Invalid number of assets for this transition.
 		AssetLength,
 		/// Asset Ownership error.
@@ -458,6 +470,7 @@ pub mod pallet {
 			match e {
 				TransitionError::TransferError => Error::<T, I>::TransferError,
 				TransitionError::FeeError => Error::<T, I>::FeeError,
+				TransitionError::CouldNotCreateAssetId => Error::<T, I>::CouldNotCreateAssetId,
 				TransitionError::AssetLength => Error::<T, I>::AssetLength,
 				TransitionError::AssetOwnership => Error::<T, I>::AssetOwnership,
 				TransitionError::VoucherNotAllowed => Error::<T, I>::VoucherNotAllowed,
@@ -645,7 +658,7 @@ pub mod pallet {
 			if let Some(transfer_filter) = SeasonTransferFilters::<T, I>::get(&asset_season_id) {
 				ensure!(
 					T::FilterHandler::can_be_transferred_using(&asset, &transfer_filter),
-					Error::<T, I>::AssetCannotBeTransfered
+					Error::<T, I>::AssetCannotBeTransferred
 				);
 			}
 
@@ -890,6 +903,18 @@ pub mod pallet {
 
 		pub(crate) fn is_locked(asset_id: &AssetIdOf<T, I>) -> Option<Lock<AccountIdOf<T>>> {
 			LockedAssets::<T, I>::get(asset_id)
+		}
+
+		pub fn create_next_asset_id() -> Option<AssetIdOf<T, I>> {
+			let last_id = LastAssetId::<T, I>::get();
+
+			match <T as Config<I>>::NextAssetIdProvider::next_asset_id(&last_id) {
+				Some(asset_id) => {
+					LastAssetId::<T, I>::set(asset_id.clone());
+					Some(asset_id)
+				},
+				None => None,
+			}
 		}
 
 		pub(crate) fn do_transfer_asset(

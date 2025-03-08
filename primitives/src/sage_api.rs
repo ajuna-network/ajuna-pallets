@@ -32,6 +32,8 @@ pub trait SageApi {
 
 	fn get_asset(asset_id: &Self::AssetId) -> Result<Self::Asset, DispatchError>;
 
+	fn create_next_asset_id() -> Option<Self::AssetId>;
+
 	fn iter_assets_from(
 		account_id: &Self::AccountId,
 	) -> impl Iterator<Item = (Self::AssetId, Self::Asset)>;

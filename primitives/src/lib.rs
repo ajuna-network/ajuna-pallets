@@ -23,6 +23,7 @@
 pub mod account_manager;
 pub mod asset_manager;
 pub mod chain_inspector;
+pub mod next_asset_id_provider;
 pub mod runtime_types;
 pub mod sage_api;
 pub mod season_manager;

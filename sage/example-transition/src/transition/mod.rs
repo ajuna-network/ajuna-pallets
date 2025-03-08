@@ -122,16 +122,8 @@ where
 			.map_err(|_| TransitionError::Transition { code: ASSET_COULD_NOT_WITHDRAW_FUNDS })
 	}
 
-	fn generate_asset_id(nonce: u64) -> AssetId {
-		let hash_base = Sage::random_hash(b"create_asset");
-		let current_block_number = Sage::get_current_block_number();
-
-		hash_base
-			.0
-			.into_iter()
-			.fold(0 as AssetId, |acc, value| acc.saturating_add(value as AssetId))
-			.saturating_add(current_block_number.saturated_into())
-			.saturating_add(nonce as AssetId)
+	fn generate_asset_id() -> Result<AssetId, TransitionError> {
+		Sage::create_next_asset_id().ok_or(TransitionError::CouldNotCreateAssetId)
 	}
 
 	fn verify_transition_rules(
@@ -239,9 +231,9 @@ where
 
 				match action {
 					AssetType::Player => {
-						let player_id = Self::generate_asset_id(17);
+						let player_id = Self::generate_asset_id()?;
 						let player = Asset::new_player(player_id, current_block);
-						let tracker_id = Self::generate_asset_id(31);
+						let tracker_id = Self::generate_asset_id()?;
 						let tracker = Asset::new_tracker(tracker_id, current_block);
 
 						sp_std::vec![
@@ -251,7 +243,7 @@ where
 					},
 					AssetType::Machine(machine_type) => match machine_type {
 						MachineType::Bandit => {
-							let machine_id = Self::generate_asset_id(13);
+							let machine_id = Self::generate_asset_id()?;
 							let machine = Asset::new_bandit_machine(machine_id, current_block);
 							sp_std::vec![TransitionOutput::Minted(machine)]
 						},
@@ -447,7 +439,7 @@ where
 
 				machine.seat_linked = machine.seat_linked.saturating_add(1);
 
-				let seat_id = Self::generate_asset_id(3);
+				let seat_id = Self::generate_asset_id()?;
 				let current_block = Sage::get_current_block_number();
 				let seat = Asset::<BlockNumber>::new_seat(
 					seat_id,

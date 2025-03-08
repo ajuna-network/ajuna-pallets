@@ -309,7 +309,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 					asset_id_1,
 					SOME_NATIVE_PAYMENT
 				),
-				Error::<Test, ()>::AssetCannotBeTransfered
+				Error::<Test, ()>::AssetCannotBeTransferred
 			);
 
 			// We change asset_id_2 type so that it matches the filter, allowing us to put it on

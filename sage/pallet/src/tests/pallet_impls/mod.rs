@@ -16,5 +16,6 @@
 
 use super::*;
 
+mod create_next_asset_id;
 mod ensures;
 mod unlocks;
