@@ -3,7 +3,7 @@ use frame_support::{
 	traits::Randomness,
 };
 use parity_scale_codec::Encode;
-use std::marker::PhantomData;
+use sp_std::marker::PhantomData;
 
 pub trait ProvideNextAssetId {
 	type AssetId;
