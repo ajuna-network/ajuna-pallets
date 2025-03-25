@@ -1,9 +1,8 @@
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use sp_runtime::DispatchError;
 
 /// Errors that may happen during the execution of a SAGE transition.
-#[derive(
-	Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord,
-)]
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TransitionError {
 	TransferError,
 	FeeError,
@@ -12,4 +11,17 @@ pub enum TransitionError {
 	AssetLength,
 	AssetOwnership,
 	Transition { code: u8 },
+	Dispatch { error: DispatchError },
+}
+
+impl From<DispatchError> for TransitionError {
+	fn from(error: DispatchError) -> TransitionError {
+		TransitionError::Dispatch { error }
+	}
+}
+
+impl From<u8> for TransitionError {
+	fn from(error: u8) -> TransitionError {
+		TransitionError::Transition { code: error }
+	}
 }
