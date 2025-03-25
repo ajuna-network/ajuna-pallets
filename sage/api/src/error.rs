@@ -14,8 +14,12 @@ pub enum TransitionError {
 	AssetCouldNotBeDecoded,
 	/// The asset data was too long and could be written back to the asset.
 	AssetDataTooLong,
-	Transition { code: u8 },
-	Dispatch { error: DispatchError },
+	Transition {
+		code: u8,
+	},
+	Dispatch {
+		error: DispatchError,
+	},
 }
 
 impl From<DispatchError> for TransitionError {
