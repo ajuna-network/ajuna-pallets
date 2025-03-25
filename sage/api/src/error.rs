@@ -10,6 +10,10 @@ pub enum TransitionError {
 	CouldNotCreateAssetId,
 	AssetLength,
 	AssetOwnership,
+	/// The asset could not be decoded. Maybe it was the wrong asset type.
+	AssetCouldNotBeDecoded,
+	/// The asset data was too long and could be written back to the asset.
+	AssetDataTooLong,
 	Transition { code: u8 },
 	Dispatch { error: DispatchError },
 }

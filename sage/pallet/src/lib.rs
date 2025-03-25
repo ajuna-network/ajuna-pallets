@@ -457,6 +457,10 @@ pub mod pallet {
 		CouldNotCreateAssetId,
 		/// Invalid number of assets for this transition.
 		AssetLength,
+		/// The asset could not be decoded.
+		AssetCouldNotBeDecoded,
+		/// The asset data was too long to be written back to the asset.
+		AssetDataTooLong,
 		/// Asset Ownership error.
 		AssetOwnership,
 		/// Voucher is not allowed for that transition.
@@ -475,6 +479,8 @@ pub mod pallet {
 			TransitionError::VoucherNotAllowed => Error::<T, I>::VoucherNotAllowed.into(),
 			TransitionError::Transition { code } => Error::<T, I>::Transition { code }.into(),
 			TransitionError::Dispatch { error } => error,
+			TransitionError::AssetCouldNotBeDecoded => Error::<T, I>::AssetCouldNotBeDecoded.into(),
+			TransitionError::AssetDataTooLong => Error::<T, I>::AssetDataTooLong.into(),
 		}
 	}
 
