@@ -457,6 +457,10 @@ pub mod pallet {
 		CouldNotCreateAssetId,
 		/// Invalid number of assets for this transition.
 		AssetLength,
+		/// The asset could not be decoded.
+		AssetCouldNotBeDecoded,
+		/// The asset data was too long to be written back to the asset.
+		AssetDataTooLong,
 		/// Asset Ownership error.
 		AssetOwnership,
 		/// Voucher is not allowed for that transition.
@@ -465,17 +469,18 @@ pub mod pallet {
 		Transition { code: u8 },
 	}
 
-	impl<T, I> From<TransitionError> for Error<T, I> {
-		fn from(e: TransitionError) -> Self {
-			match e {
-				TransitionError::TransferError => Error::<T, I>::TransferError,
-				TransitionError::FeeError => Error::<T, I>::FeeError,
-				TransitionError::CouldNotCreateAssetId => Error::<T, I>::CouldNotCreateAssetId,
-				TransitionError::AssetLength => Error::<T, I>::AssetLength,
-				TransitionError::AssetOwnership => Error::<T, I>::AssetOwnership,
-				TransitionError::VoucherNotAllowed => Error::<T, I>::VoucherNotAllowed,
-				TransitionError::Transition { code } => Error::<T, I>::Transition { code },
-			}
+	fn transform_error<T: Config<I>, I: 'static>(e: TransitionError) -> DispatchError {
+		match e {
+			TransitionError::TransferError => Error::<T, I>::TransferError.into(),
+			TransitionError::FeeError => Error::<T, I>::FeeError.into(),
+			TransitionError::CouldNotCreateAssetId => Error::<T, I>::CouldNotCreateAssetId.into(),
+			TransitionError::AssetLength => Error::<T, I>::AssetLength.into(),
+			TransitionError::AssetOwnership => Error::<T, I>::AssetOwnership.into(),
+			TransitionError::VoucherNotAllowed => Error::<T, I>::VoucherNotAllowed.into(),
+			TransitionError::Transition { code } => Error::<T, I>::Transition { code }.into(),
+			TransitionError::Dispatch { error } => error,
+			TransitionError::AssetCouldNotBeDecoded => Error::<T, I>::AssetCouldNotBeDecoded.into(),
+			TransitionError::AssetDataTooLong => Error::<T, I>::AssetDataTooLong.into(),
 		}
 	}
 
@@ -849,7 +854,7 @@ pub mod pallet {
 				&extra,
 				payment_kind.clone(),
 			)
-			.map_err(<Error<T, I>>::from)?;
+			.map_err(transform_error::<T, _>)?;
 			let current_season_id = T::SeasonHandler::get_current_season_id()?;
 			let payment = payment_kind.unwrap_or_else(FungiblesAssetIdOf::<T, I>::get_native_id);
 			Self::process_transition_results(
