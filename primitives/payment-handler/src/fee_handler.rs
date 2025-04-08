@@ -1,34 +1,21 @@
 use crate::withdraw_credit::WithdrawCredit;
 
+use crate::distribute_fee::TakeNoFee;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
-	traits::{fungible, fungibles, tokens::Preservation, Defensive, Imbalance},
+	traits::{
+		fungible, fungibles,
+		tokens::{Pay, Preservation},
+		Defensive, Imbalance,
+	},
 	BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::traits::ConstU32;
 
-/// Distributes shares of a base fee to some beneficiaries.
-pub trait DistributeFee {
-	/// AccountId type used.
-	type AccountId;
-
-	/// Scalar balance type.
-	type Balance;
-
-	/// Fee identifier used to derive the fee distribution.
-	type FeeIdentifier;
-
-	/// Type of the fee distribution
-	type FeeDistribution;
-
-	fn distribute_fee(
-		base_fee: Self::Balance,
-		account: &Self::AccountId,
-		identifier: &Self::FeeIdentifier,
-	) -> Option<Self::FeeDistribution>;
-}
+pub use crate::distribute_fee::DistributeFee;
 
 /// Payment to be executed.
 #[derive(Debug, Encode, Decode, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -48,7 +35,7 @@ impl<AccountId, Balance> PaymentFee<AccountId, Balance> {
 pub trait FeeHandler {
 	type AccountId;
 
-	type PaymentKind: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
+	type PaymentKind;
 
 	/// Scalar type of the fee balance.
 	type Balance;
@@ -75,6 +62,50 @@ pub trait FeeHandler {
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
+}
+
+pub struct TakeNoFeeHandler<
+	AccountId,
+	PaymentKind,
+	Balance,
+	AffiliateFeeIdentifier,
+	TournamentFeeIdentifier,
+>(PhantomData<(AccountId, PaymentKind, Balance, AffiliateFeeIdentifier, TournamentFeeIdentifier)>);
+
+impl<AccountId, PaymentKind, Balance, AffiliateFeeIdentifier, TournamentFeeIdentifier> FeeHandler
+	for TakeNoFeeHandler<
+		AccountId,
+		PaymentKind,
+		Balance,
+		AffiliateFeeIdentifier,
+		TournamentFeeIdentifier,
+	>
+{
+	type AccountId = AccountId;
+	type PaymentKind = PaymentKind;
+	type Balance = Balance;
+	type AffiliateFeeIdentifier = AffiliateFeeIdentifier;
+	type TournamentFeeIdentifier = TournamentFeeIdentifier;
+
+	fn withdraw_and_pay_fees(
+		_: &Self::AccountId,
+		_: Self::PaymentKind,
+		_: Self::Balance,
+		_: &Self::TournamentFeeIdentifier,
+		_: &Self::AffiliateFeeIdentifier,
+		_: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
+
+	fn withdraw_and_deposit_into(
+		_: &Self::AccountId,
+		_: Self::PaymentKind,
+		_: &Self::AccountId,
+		_: Self::Balance,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
 }
 
 pub type AffiliateFeeDistribution<AccountId, Balance, MaxDistribution> =

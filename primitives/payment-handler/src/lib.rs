@@ -8,6 +8,7 @@ pub use transfer_fungible::*;
 pub use voucher_handler::*;
 pub use withdraw_credit::*;
 
+mod distribute_fee;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
