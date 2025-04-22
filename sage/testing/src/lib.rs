@@ -373,8 +373,9 @@ pub type EnsureAlice = EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, Ensur
 
 /// Provides an implementation of [`frame_support::traits::Randomness`] that should only be used in
 /// tests!
-/// 
-/// This can be injected into the `impl_test_runtime_sage_api` macro in order to get predictable results.
+///
+/// This can be injected into the `impl_test_runtime_sage_api` macro in order to get predictable
+/// results.
 pub struct TestRandomness<T>(sp_std::marker::PhantomData<T>);
 
 impl<Output: parity_scale_codec::Decode + Default, T>
