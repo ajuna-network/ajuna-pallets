@@ -157,7 +157,6 @@ impl SeasonManager for MockSeasonManager {
 }
 
 pub struct TestSageEngine;
-// The macro can't handle the brackets.
 
 // Every new game we add can simply call that macro for another sage instance to
 // implement the sage api given that the other types are identical.
