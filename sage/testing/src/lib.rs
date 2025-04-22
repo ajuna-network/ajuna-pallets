@@ -97,8 +97,8 @@ parameter_types! {
 
 #[macro_export]
 macro_rules! impl_frame_system {
-	($t:ident) => {
-		impl frame_system::Config for $t {
+	($runtime:ident) => {
+		impl frame_system::Config for $runtime {
 			type BaseCallFilter = frame_support::traits::Everything;
 			type BlockWeights = ();
 			type BlockLength = ();
@@ -139,16 +139,16 @@ parameter_types! {
 
 #[macro_export]
 macro_rules! impl_timestamp {
-	($t:ident, $scheduler:ident) => {
-		impl pallet_timestamp::Config for $t {
+	($runtime:ident, $scheduler:ident) => {
+		impl pallet_timestamp::Config for $runtime {
 			type Moment = Moment;
 			type OnTimestampSet = $scheduler;
 			type MinimumPeriod = MinimumPeriod;
 			type WeightInfo = ();
 		}
 	};
-	($t:ident) => {
-		impl pallet_timestamp::Config for $t {
+	($runtime:ident) => {
+		impl pallet_timestamp::Config for $runtime {
 			type Moment = Moment;
 			type OnTimestampSet = ();
 			type MinimumPeriod = MinimumPeriod;
@@ -166,8 +166,8 @@ parameter_types! {
 
 #[macro_export]
 macro_rules! impl_balances {
-	($t:ident, $system:ident) => {
-		impl pallet_balances::Config for $t {
+	($runtime:ident, $system:ident) => {
+		impl pallet_balances::Config for $runtime {
 			type Balance = Balance;
 			type RuntimeEvent = RuntimeEvent;
 			type DustRemoval = ();
@@ -277,12 +277,12 @@ pub type SeasonId = u32;
 
 #[macro_export]
 macro_rules! impl_ajuna_seasons {
-	($runtime:ident, $game_asset_id:ident, $game_transition:ident) => {
+	($runtime:ident, $game_asset_id:ident, $pallet_sage:ident) => {
 		impl pallet_ajuna_seasons::Config for $runtime {
 			type RuntimeEvent = RuntimeEvent;
 			type SeasonId = SeasonId;
 			type AssetId = $game_asset_id;
-			type AccountHandler = $game_transition;
+			type AccountHandler = $pallet_sage;
 			type Currency = Balances;
 			type WeightInfo = ();
 			#[cfg(feature = "runtime-benchmarks")]
@@ -350,11 +350,12 @@ macro_rules! impl_default_test_sage_api {
 }
 
 #[macro_export]
-macro_rules! test_runtime {
+macro_rules! impl_core_pallets {
 	($t:ident, $system:ident, $scheduler:ident) => {
 		impl_frame_system!($t);
 		impl_balances!($t, $system);
 		impl_timestamp!($t, $scheduler);
+		impl_assets!($t, $scheduler);
 		impl_outer_origin_for_runtime!($t);
 	};
 }
