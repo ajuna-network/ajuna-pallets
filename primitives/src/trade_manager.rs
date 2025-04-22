@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use core::marker::PhantomData;
 use frame_support::{pallet_prelude::Member, Parameter};
 use parity_scale_codec::MaxEncodedLen;
 
@@ -25,10 +26,40 @@ pub trait TradeManager {
 	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool;
 }
 
+pub struct AllowAllTrades<Filter, Asset>(PhantomData<(Filter, Asset)>);
+
+impl<Filter, Asset> TradeManager for AllowAllTrades<Filter, Asset>
+where
+	Filter: Member + Parameter + MaxEncodedLen,
+	Asset: Member + Parameter + MaxEncodedLen,
+{
+	type TradeFilter = Filter;
+	type Asset = Asset;
+
+	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
+		true
+	}
+}
+
 pub trait TransferManager {
 	type TransferFilter: Member + Parameter + MaxEncodedLen;
 
 	type Asset: Member + Parameter + MaxEncodedLen;
 
 	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool;
+}
+
+pub struct AllowAllTransfers<Filter, Asset>(PhantomData<(Filter, Asset)>);
+
+impl<Filter, Asset> TransferManager for AllowAllTransfers<Filter, Asset>
+where
+	Filter: Member + Parameter + MaxEncodedLen,
+	Asset: Member + Parameter + MaxEncodedLen,
+{
+	type TransferFilter = Filter;
+	type Asset = Asset;
+
+	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
+		true
+	}
 }
