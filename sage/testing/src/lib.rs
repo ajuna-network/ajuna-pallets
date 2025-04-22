@@ -20,6 +20,12 @@
 //! avoided as we need to get some types from there.
 //!
 //! ```rust
+//! use sage_testing::{impl_ajuna_seasons, impl_core_pallets, impl_pallet_sage, impl_test_runtime_sage_api, TestRandomness};
+//! use sp_core::H256;
+//!
+//! // The game logic implemented by the game dev
+//! use example_game::{GameAssetId, GameAsset, GameTransition, TransitionConfig};
+//!
 //! type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 //!
 //! frame_support::construct_runtime!(
@@ -28,13 +34,32 @@
 //!         System: frame_system,
 //!         Timestamp: pallet_timestamp,
 //!         Balances: pallet_balances,
+//!         Assets: pallet_assets,
 //!         AjunaSeasons: pallet_ajuna_seasons,
+//!         Sage: pallet_sage,
 //!      }
 //! );
 //!
-//! impl_frame_system!(TestRuntime);
-//! impl_timestamp!(TestRuntime);
-//! impl_balances!(TestRuntime)
+//! pub struct SageEngine;
+//! // Use `TestRandomness` for predictable output.
+//! // Otherwise, we can instantiate the `pallet_insecure_randomness_collective_flip`
+//! // in the runtime.
+//! pub type Randomness = TestRandomness<TestRuntime>;
+//!
+//! impl_core_pallets!(TestRuntime, System);
+//! impl_ajuna_seasons!(TestRuntime, GameAssetId, Sage);
+//! impl_pallet_sage!(TestRuntime, GameTransition, GameAssetId, GameAsset, AjunaSeasons, Balances, Assets);
+//! impl_test_runtime_sage_api!(
+//!   SageEngine,
+//!   TestRuntime,
+//!   Sage,
+//!   AjunaSeasons,
+//!   GameAssetId,
+//!   GameAsset,
+//!   TransitionConfig,
+//!   Randomness,
+//!   H256
+//! )
 //! ```
 
 use frame_support::{
@@ -348,6 +373,8 @@ pub type EnsureAlice = EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, Ensur
 
 /// Provides an implementation of [`frame_support::traits::Randomness`] that should only be used in
 /// tests!
+/// 
+/// This can be injected into the `impl_test_runtime_sage_api` macro in order to get predictable results.
 pub struct TestRandomness<T>(sp_std::marker::PhantomData<T>);
 
 impl<Output: parity_scale_codec::Decode + Default, T>
