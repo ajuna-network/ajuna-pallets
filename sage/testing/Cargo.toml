@@ -33,6 +33,8 @@ pallet-assets = { workspace = true, features = ["std"] }
 pallet-insecure-randomness-collective-flip = { workspace = true, features = ["std"] }
 pallet-timestamp = { workspace = true, features = ["std"] }
 
+pallet-ajuna-seasons = { workspace = true, features = ["std"]}
+
 # Benchmarking
 frame-benchmarking = { workspace = true, optional = true }
 

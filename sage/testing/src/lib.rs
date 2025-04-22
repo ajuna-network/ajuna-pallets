@@ -14,14 +14,33 @@
 // You should have received a copy of the GNU General Public License
 // along with Encointer.  If not, see <http://www.gnu.org/licenses/>.
 
-//extern crate externalities;
-//extern crate test_client;
-//extern crate node_primitives;
+//! Helpers to easily create a mocked runtime that is able to host the complete SAGE stack.
+//! 
+//! You still need the following boilerplate code in the test suite, which can unfortunately not be
+//! avoided as we need to get some types from there.
+//! 
+//! ```rust
+//! type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
+//! 
+//! frame_support::construct_runtime!(
+//! 	pub enum TestRuntime
+//! 	{
+//! 		System: frame_system,
+//! 		Timestamp: pallet_timestamp,
+//! 		Balances: pallet_balances,
+//! 		AjunaSeasons: pallet_ajuna_seasons,
+//! 	}
+//! );
+//!
+//! impl_frame_system!(TestRuntime);
+//! impl_timestamp!(TestRuntime);
+//! impl_balances!(TestRuntime)
+//! ```
 
-use frame_support::{ord_parameter_types, parameter_types, traits::EitherOfDiverse, PalletId};
+use frame_support::{ord_parameter_types, parameter_types, traits::EitherOfDiverse};
 use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSignedBy};
 use sp_core::crypto::AccountId32;
-use sp_runtime::{generic, traits::IdentifyAccount, MultiSignature, Perbill};
+use sp_runtime::{traits::IdentifyAccount, MultiSignature, Perbill};
 
 // convenience reexport such that the tests do not need to put sp-keyring in the Cargo.toml.
 pub use sp_keyring::AccountKeyring;
@@ -31,6 +50,7 @@ pub use frame_system;
 pub use pallet_balances;
 pub use pallet_timestamp;
 pub use sp_runtime;
+pub use sp_runtime::{generic};
 
 pub use sp_core::H256;
 pub use sp_runtime::traits::{BlakeTwo256, Verify};
@@ -61,7 +81,6 @@ parameter_types! {
 #[macro_export]
 macro_rules! impl_frame_system {
 	($t:ident) => {
-		use sp_runtime::{generic, traits::IdentityLookup};
 		impl frame_system::Config for $t {
 			type BaseCallFilter = frame_support::traits::Everything;
 			type BlockWeights = ();
@@ -92,7 +111,6 @@ macro_rules! impl_frame_system {
 			type PreInherents = ();
 			type PostInherents = ();
 			type PostTransactions = ();
-			type ExtensionsWeightInfo = ();
 		}
 	};
 }
@@ -147,6 +165,22 @@ macro_rules! impl_balances {
 			type FreezeIdentifier = ();
 			type MaxFreezes = frame_support::traits::ConstU32<0>;
 			type DoneSlashHandler = ();
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! impl_ajuna_seasons {
+    ($runtime:ident, $season_id:ident, $asset_id:ident, $game_transition:ident) => {
+		impl pallet_ajuna_seasons::Config for $runtime {
+			type RuntimeEvent = RuntimeEvent;
+			type SeasonId = $season_id;
+			type AssetId = $asset_id;
+			type AccountHandler = $game_transition;
+			type Currency = Balances;
+			type WeightInfo = ();
+			#[cfg(feature = "runtime-benchmarks")]
+			type BenchmarkHelper = ();
 		}
 	};
 }
