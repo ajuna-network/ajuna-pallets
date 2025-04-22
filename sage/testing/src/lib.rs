@@ -61,6 +61,11 @@
 //!   H256
 //! )
 //! ```
+//! 
+
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
 
 use frame_support::{
 	ord_parameter_types, parameter_types,
@@ -73,8 +78,10 @@ use frame_support::{
 use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSignedBy};
 use sp_core::crypto::AccountId32;
 use sp_runtime::{traits::IdentifyAccount, MultiSignature, Perbill};
+use alloc::vec;
 
 // convenience reexport such that the tests do not need to put sp-keyring in the Cargo.toml.
+#[cfg(feature = "std")]
 pub use sp_keyring::AccountKeyring;
 
 // reexports for macro resolution
