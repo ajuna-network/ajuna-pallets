@@ -23,7 +23,7 @@
 //! type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
 //!
 //! frame_support::construct_runtime!(
-//! 	pub enum TestRuntime
+//!    pub enum TestRuntime
 //!      {
 //!         System: frame_system,
 //!         Timestamp: pallet_timestamp,
