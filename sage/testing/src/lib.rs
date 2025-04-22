@@ -37,8 +37,14 @@
 //! impl_balances!(TestRuntime)
 //! ```
 
-use frame_support::{ord_parameter_types, parameter_types, traits::EitherOfDiverse, PalletId};
-use frame_support::traits::fungible::{NativeFromLeft, NativeOrWithId, UnionOf};
+use frame_support::{
+	ord_parameter_types, parameter_types,
+	traits::{
+		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
+		EitherOfDiverse,
+	},
+	PalletId,
+};
 use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSignedBy};
 use sp_core::crypto::AccountId32;
 use sp_runtime::{traits::IdentifyAccount, MultiSignature, Perbill};
@@ -50,13 +56,16 @@ pub use sp_keyring::AccountKeyring;
 pub use frame_system;
 pub use pallet_balances;
 pub use pallet_timestamp;
-pub use sp_runtime;
-pub use sp_runtime::{generic};
+pub use sp_runtime::{self, generic};
 
+pub use ajuna_primitives::{
+	payment_handler::{
+		TakeNoFeeHandler, TransferFungible, WithdrawCredit, WithdrawFungibles, WithdrawKind,
+	},
+	trade_manager::AllowAllTradesAndTransfers,
+};
 pub use sp_core::H256;
 pub use sp_runtime::traits::{BlakeTwo256, Verify};
-pub use ajuna_primitives::payment_handler::{TakeNoFeeHandler, TransferFungible, WithdrawCredit, WithdrawFungibles, WithdrawKind};
-pub use ajuna_primitives::trade_manager::AllowAllTradesAndTransfers;
 
 pub const NONE: u64 = 0;
 pub const GENESIS_TIME: u64 = 1_585_058_843_000;
@@ -189,28 +198,28 @@ pub type PalletAssetsAssetId = u32;
 
 #[macro_export]
 macro_rules! impl_assets {
-    ($runtime:ident) => {
+	($runtime:ident) => {
 		impl pallet_assets::Config for $runtime {
-				type RuntimeEvent = RuntimeEvent;
-				type Balance = Balance;
-				type RemoveItemsLimit = ConstU32<1000>;
-				type AssetId = SageAssetId;
-				type AssetIdParameter = parity_scale_codec::Compact<u32>;
-				type Currency = Balances;
-				type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
-				type ForceOrigin = EnsureAlice;
-				type AssetDeposit = AssetDeposit;
-				type AssetAccountDeposit = AssetAccountDeposit;
-				type MetadataDepositBase = MetadataDepositBase;
-				type MetadataDepositPerByte = MetadataDepositPerByte;
-				type ApprovalDeposit = ApprovalDeposit;
-				type StringLimit = ConstU32<20>;
-				type Freezer = ();
-				type Extra = ();
-				type CallbackHandle = ();
-				type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
-				#[cfg(feature = "runtime-benchmarks")]
-				type BenchmarkHelper = ();
+			type RuntimeEvent = RuntimeEvent;
+			type Balance = Balance;
+			type RemoveItemsLimit = ConstU32<1000>;
+			type AssetId = SageAssetId;
+			type AssetIdParameter = parity_scale_codec::Compact<u32>;
+			type Currency = Balances;
+			type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+			type ForceOrigin = EnsureAlice;
+			type AssetDeposit = AssetDeposit;
+			type AssetAccountDeposit = AssetAccountDeposit;
+			type MetadataDepositBase = MetadataDepositBase;
+			type MetadataDepositPerByte = MetadataDepositPerByte;
+			type ApprovalDeposit = ApprovalDeposit;
+			type StringLimit = ConstU32<20>;
+			type Freezer = ();
+			type Extra = ();
+			type CallbackHandle = ();
+			type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+			#[cfg(feature = "runtime-benchmarks")]
+			type BenchmarkHelper = ();
 		}
 	};
 }
@@ -218,8 +227,10 @@ macro_rules! impl_assets {
 pub type FungiblesAssetId = WithdrawKind<NativeOrWithId<PalletAssetsAssetId>>;
 
 // Assume that the test runtime has both, the pallet-balances and the pallet-assets.
-pub type NativeAndAssets<Balances, Assets> = UnionOf<Balances, Assets, NativeFromLeft, NativeOrWithId<PalletAssetsAssetId>, AccountId>;
-pub type TransferFungibles<Balances, Assets> = WithdrawFungibles<NativeAndAssets<Balances, Assets>, AccountId>;
+pub type NativeAndAssets<Balances, Assets> =
+	UnionOf<Balances, Assets, NativeFromLeft, NativeOrWithId<PalletAssetsAssetId>, AccountId>;
+pub type TransferFungibles<Balances, Assets> =
+	WithdrawFungibles<NativeAndAssets<Balances, Assets>, AccountId>;
 
 pub type TestFeeFeeHandler<TransitionId> = TakeNoFeeHandler<
 	AccountId,
@@ -235,7 +246,7 @@ parameter_types! {
 
 #[macro_export]
 macro_rules! impl_pallet_sage {
-    (
+	(
 		$runtime:ident,
 		$game_transition:ident,
 		$game_asset_id:ident,
@@ -245,19 +256,19 @@ macro_rules! impl_pallet_sage {
 		$pallet_assets:ident
 	) => {
 		impl pallet_sage::Config for $runtime {
-				type PalletId = SagePalletId;
-				type SageGameTransition = $game_transition;
-				type NextAssetIdProvider = IncrementingAssetIdProvider<$game_asset_id>;
-				type SeasonHandler = $season_handler;
-				type FeeHandler = TestFeeFeeHandler<$game_asset_id>;
-				type TransferFunds = TransferFungibleAssets<TransferWithdraw, FungiblesAssetId>;
-				type FungiblesAssetId = FungiblesAssetId;
-				type FilterHandler = AllowAllTradesAndTransfers<(), $game_asset>;
-				type Fungible = $pallet_balances;
-				type RuntimeEvent = RuntimeEvent;
-				type WeightInfo = ();
-				#[cfg(feature = "runtime-benchmarks")]
-				type BenchmarkHelper = ();
+			type PalletId = SagePalletId;
+			type SageGameTransition = $game_transition;
+			type NextAssetIdProvider = IncrementingAssetIdProvider<$game_asset_id>;
+			type SeasonHandler = $season_handler;
+			type FeeHandler = TestFeeFeeHandler<$game_asset_id>;
+			type TransferFunds = TransferFungibleAssets<TransferWithdraw, FungiblesAssetId>;
+			type FungiblesAssetId = FungiblesAssetId;
+			type FilterHandler = AllowAllTradesAndTransfers<(), $game_asset>;
+			type Fungible = $pallet_balances;
+			type RuntimeEvent = RuntimeEvent;
+			type WeightInfo = ();
+			#[cfg(feature = "runtime-benchmarks")]
+			type BenchmarkHelper = ();
 		}
 	};
 }
@@ -266,7 +277,7 @@ pub type SeasonId = u32;
 
 #[macro_export]
 macro_rules! impl_ajuna_seasons {
-    ($runtime:ident, $game_asset_id:ident, $game_transition:ident) => {
+	($runtime:ident, $game_asset_id:ident, $game_transition:ident) => {
 		impl pallet_ajuna_seasons::Config for $runtime {
 			type RuntimeEvent = RuntimeEvent;
 			type SeasonId = SeasonId;
@@ -277,6 +288,64 @@ macro_rules! impl_ajuna_seasons {
 			#[cfg(feature = "runtime-benchmarks")]
 			type BenchmarkHelper = ();
 		}
+	};
+}
+
+/// Test Runtime specific sage implementation.
+#[macro_export]
+macro_rules! impl_test_runtime_sage_api {
+	(
+		$impl_target:ident,
+		$runtime:ident,
+		$sage_instance:ident,
+		$season_manager:ident,
+		$game_asset_id:ident,
+		$game_asset:ident,
+		$transition_config:ident,
+		$randomness_source:ident,
+		$hash:ident
+	) => {
+		impl_sage_api!(
+			$impl_target,
+			$runtime,
+			$sage_instance,
+			$season_manager,
+			$randomness_source,
+			AccountId,
+			$game_asset_id,
+			$game_asset,
+			FungiblesAssetId,
+			Balance,
+			BlockNumber,
+			SeasonId,
+			$transition_config,
+			$hash,
+		);
+	};
+}
+
+#[macro_export]
+macro_rules! impl_default_test_sage_api {
+	(
+		$impl_target:ident,
+		$runtime:ident,
+		$sage_instance:ident,
+		$season_manager:ident,
+		$game_asset_id:ident,
+		$game_asset:ident,
+		$transition_config:ident,
+		) => {
+		impl_test_runtime_sage_api!(
+			$impl_target,
+			$runtime,
+			$sage_instance,
+			$season_manager,
+			$game_asset_id,
+			$game_asset,
+			$transition_config,
+			TestRandomness<$runtime>,
+			H256
+		)
 	};
 }
 
