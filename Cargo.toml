@@ -20,6 +20,7 @@ members = [
     "sage/example-transition",
     "sage/pallet",
     "sage/api",
+    "sage/testing",
 ]
 
 [workspace.lints.clippy]
@@ -47,6 +48,7 @@ pallet-timestamp                           = { version = "37.0.0", default-featu
 sp-arithmetic                              = { version = "26.0.0", default-features = false }
 sp-core                                    = { version = "34.0.0", default-features = false }
 sp-io                                      = { version = "38.0.0", default-features = false }
+sp-keyring                                 = { version = "39.0.0", default-features = false }
 sp-runtime                                 = { version = "39.0.5", default-features = false }
 sp-std                                     = { version = "14.0.0", default-features = false }
 

@@ -1,0 +1,77 @@
+[package]
+name = "sage-testing"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Substrate - FRAME
+frame-support      = { workspace = true }
+frame-system       = { workspace = true }
+# Substrate - SCALE codec
+parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
+scale-info         = { workspace = true, features = [ "derive" ] }
+# Substrate - Primitives
+sp-core            = { workspace = true }
+sp-io              = { workspace = true }
+sp-keyring         = { workspace = true }
+sp-runtime         = { workspace = true }
+sp-std             = { workspace = true }
+# Ajuna
+ajuna-primitives   = { workspace = true }
+sage-api           = { workspace = true }
+
+# Core Runtime
+example-transition = { workspace = true, features = ["std"] }
+pallet-balances = { workspace = true, features = ["std"] }
+pallet-assets = { workspace = true, features = ["std"] }
+pallet-insecure-randomness-collective-flip = { workspace = true, features = ["std"] }
+pallet-timestamp = { workspace = true, features = ["std"] }
+
+# Benchmarking
+frame-benchmarking = { workspace = true, optional = true }
+
+[features]
+default = [ "std" ]
+std = [
+    "frame-benchmarking/std",
+    "frame-support/std",
+    "frame-system/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "pallet-balances/std",
+    # Ajuna
+    "ajuna-primitives/std",
+    "sage-api/std",
+    # Example
+    "example-transition/std",
+    "pallet-assets/std",
+    "pallet-insecure-randomness-collective-flip/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    # Ajuna
+    "ajuna-primitives/runtime-benchmarks",
+    "pallet-assets/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "sp-runtime/try-runtime",
+    "pallet-balances/try-runtime",
+    "pallet-assets/try-runtime",
+    "pallet-insecure-randomness-collective-flip/try-runtime",
+]
