@@ -11,6 +11,7 @@ mod random_hash {
 		for i in 1..(blocks + 1) {
 			System::reset_events();
 			System::initialize(&i, &parent_hash, &Default::default());
+			Randomness::on_initialize(i);
 
 			let header = System::finalize();
 			parent_hash = header.hash();
@@ -39,6 +40,20 @@ mod random_hash {
 
 			let hash1 = <TestSageEngine as SageApi>::random_hash(b"hello");
 			let hash2 = <TestSageEngine as SageApi>::random_hash(b"world");
+
+			assert_ne!(hash1, hash2);
+		});
+	}
+
+	#[test]
+	fn hashes_with_same_subjects_in_different_blocks_are_different() {
+		ExtBuilder::default().build().execute_with(|| {
+			setup_blocks(30);
+
+			let hash1 = <TestSageEngine as SageApi>::random_hash(b"hello");
+
+			setup_blocks(1);
+			let hash2 = <TestSageEngine as SageApi>::random_hash(b"hello");
 
 			assert_ne!(hash1, hash2);
 		});

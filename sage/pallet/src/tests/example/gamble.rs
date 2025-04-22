@@ -118,10 +118,10 @@ fn gamble_works() {
 				.try_as_tracker()
 				.expect("Should be tracker");
 
-			assert_eq!(tracker.slot_a_result, 12598);
-			assert_eq!(tracker.slot_b_result, 30581);
-			assert_eq!(tracker.slot_c_result, 9296);
-			assert_eq!(tracker.slot_d_result, 0);
+			assert_eq!(tracker.slot_a_result, 17685);
+			assert_eq!(tracker.slot_b_result, 14142);
+			assert_eq!(tracker.slot_c_result, 5637);
+			assert_eq!(tracker.slot_d_result, 24921);
 			assert_eq!(tracker.last_reward, 0);
 		});
 }

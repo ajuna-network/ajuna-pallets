@@ -73,11 +73,14 @@ frame_support::construct_runtime!(
 		System: frame_system = 0,
 		Balances: pallet_balances = 1,
 		PalletAssets: pallet_assets = 2,
+		Randomness: pallet_insecure_randomness_collective_flip = 3,
 		Sage: pallet_sage = 4,
 	}
 );
 
 impl_core_pallets!(Test, System);
+
+impl pallet_insecure_randomness_collective_flip::Config for Test {}
 
 pub type NativeAndAssets = NativeAndAssetsG<Balances, PalletAssets>;
 pub const NATIVE_PAYMENT: WithdrawKind<NativeOrWithId<AssetId>> =
@@ -157,9 +160,6 @@ impl SeasonManager for MockSeasonManager {
 
 pub struct TestSageEngine;
 // The macro can't handle the brackets.
-type TestBlockNumber = BlockNumberFor<Test>;
-
-type Randomness = TestRandomness<Test>;
 
 // Every new game we add can simply call that macro for another sage instance to
 // implement the sage api given that the other types are identical.

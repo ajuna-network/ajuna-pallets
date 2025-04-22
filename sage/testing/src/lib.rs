@@ -327,31 +327,6 @@ macro_rules! impl_test_runtime_sage_api {
 }
 
 #[macro_export]
-macro_rules! impl_default_test_sage_api {
-	(
-		$impl_target:ident,
-		$runtime:ident,
-		$sage_instance:ident,
-		$season_manager:ident,
-		$game_asset_id:ident,
-		$game_asset:ident,
-		$transition_config:ident,
-		) => {
-		impl_test_runtime_sage_api!(
-			$impl_target,
-			$runtime,
-			$sage_instance,
-			$season_manager,
-			$game_asset_id,
-			$game_asset,
-			$transition_config,
-			TestRandomness<$runtime>,
-			H256
-		)
-	};
-}
-
-#[macro_export]
 macro_rules! impl_core_pallets {
 	($t:ident, $system:ident) => {
 		impl_frame_system!($t);
