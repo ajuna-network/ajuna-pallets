@@ -15,13 +15,13 @@
 // along with Encointer.  If not, see <http://www.gnu.org/licenses/>.
 
 //! Helpers to easily create a mocked runtime that is able to host the complete SAGE stack.
-//! 
+//!
 //! You still need the following boilerplate code in the test suite, which can unfortunately not be
 //! avoided as we need to get some types from there.
-//! 
+//!
 //! ```rust
 //! type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
-//! 
+//!
 //! frame_support::construct_runtime!(
 //! 	pub enum TestRuntime
 //! 	{
@@ -59,6 +59,11 @@ pub const NONE: u64 = 0;
 pub const GENESIS_TIME: u64 = 1_585_058_843_000;
 pub const ONE_DAY: u64 = 86_400_000;
 pub const BLOCKTIME: u64 = 6_000; // 6s per block
+
+// Unit = the base number of indivisible units for balances
+pub const UNIT: Balance = 1_000_000_000_000;
+pub const MILLI_UNIT: Balance = 1_000_000_000;
+pub const MICRO_UNIT: Balance = 1_000_000;
 
 /// The signature type used by accounts/transactions.
 pub type Signature = MultiSignature;
@@ -165,6 +170,44 @@ macro_rules! impl_balances {
 			type FreezeIdentifier = ();
 			type MaxFreezes = frame_support::traits::ConstU32<0>;
 			type DoneSlashHandler = ();
+		}
+	};
+}
+
+parameter_types! {
+	pub const AssetDeposit: Balance = Balance::MAX;
+	pub const AssetAccountDeposit: Balance = 1_000 * UNIT;
+	pub const ApprovalDeposit: Balance = 1_000 * UNIT;
+	pub const MetadataDepositBase: Balance = 0;
+	pub const MetadataDepositPerByte: Balance = 0;
+}
+
+pub type PalletAssetsAssetId = u32;
+
+#[macro_export]
+macro_rules! impl_assets {
+    ($runtime:ident) => {
+		impl pallet_assets::Config for $runtime {
+				type RuntimeEvent = RuntimeEvent;
+				type Balance = Balance;
+				type RemoveItemsLimit = ConstU32<1000>;
+				type AssetId = SageAssetId;
+				type AssetIdParameter = parity_scale_codec::Compact<u32>;
+				type Currency = Balances;
+				type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+				type ForceOrigin = EnsureAlice;
+				type AssetDeposit = AssetDeposit;
+				type AssetAccountDeposit = AssetAccountDeposit;
+				type MetadataDepositBase = MetadataDepositBase;
+				type MetadataDepositPerByte = MetadataDepositPerByte;
+				type ApprovalDeposit = ApprovalDeposit;
+				type StringLimit = ConstU32<20>;
+				type Freezer = ();
+				type Extra = ();
+				type CallbackHandle = ();
+				type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+				#[cfg(feature = "runtime-benchmarks")]
+				type BenchmarkHelper = ();
 		}
 	};
 }
