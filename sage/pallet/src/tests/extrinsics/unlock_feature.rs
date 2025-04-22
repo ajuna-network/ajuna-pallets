@@ -179,7 +179,9 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 			assert!(PlayerSeasonConfigs::<Test, ()>::get(bob(), season_id).locks.asset_transfer);
 
 			// Unlocking feature for another through paying
-			assert!(!PlayerSeasonConfigs::<Test, ()>::get(charlie(), season_id).locks.asset_transfer);
+			assert!(
+				!PlayerSeasonConfigs::<Test, ()>::get(charlie(), season_id).locks.asset_transfer
+			);
 			assert_ok!(Sage::unlock_feature(
 				RuntimeOrigin::signed(bob()),
 				UnlockTarget::OtherPaying(charlie()),
@@ -196,6 +198,8 @@ fn unlock_feature_works_for_transfer_asset_targets() {
 				Balances::free_balance(bob()),
 				initial_balance - season_config.fee.unlock_trade_asset * 2
 			);
-			assert!(PlayerSeasonConfigs::<Test, ()>::get(charlie(), season_id).locks.asset_transfer);
+			assert!(
+				PlayerSeasonConfigs::<Test, ()>::get(charlie(), season_id).locks.asset_transfer
+			);
 		});
 }

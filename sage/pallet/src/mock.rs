@@ -26,7 +26,9 @@ use ajuna_primitives::{
 	season_manager::{SeasonConfig, SeasonFeeConfig, SeasonManager},
 };
 
-use ajuna_primitives::next_asset_id_provider::IncrementingAssetIdProvider;
+use ajuna_primitives::{
+	next_asset_id_provider::IncrementingAssetIdProvider, runtime_types::AccountId,
+};
 use frame_support::{
 	parameter_types,
 	traits::{
@@ -35,14 +37,10 @@ use frame_support::{
 	},
 	PalletId,
 };
-use sp_core::H256;
-use sp_runtime::{
-	BuildStorage, DispatchError,
-};
-use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
-use ajuna_primitives::runtime_types::AccountId;
 use sage_testing::*;
-
+use sp_core::H256;
+use sp_runtime::{BuildStorage, DispatchError};
+use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
 pub fn alice() -> AccountId {
 	AccountKeyring::Alice.to_account_id()
@@ -189,8 +187,7 @@ impl VoucherHandler for MockVoucherHandler {
 	}
 }
 
-pub type GameTransitionOf =
-	CasinoJamTransition<AccountId, BlockNumberFor<Test>, TestSageEngine>;
+pub type GameTransitionOf = CasinoJamTransition<AccountId, BlockNumberFor<Test>, TestSageEngine>;
 
 pub type WithdrawAllCreditOrVoucher = WithdrawCreditOrVoucher<
 	WithdrawWhitelistedCredit<

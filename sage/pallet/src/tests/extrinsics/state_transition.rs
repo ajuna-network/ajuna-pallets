@@ -154,8 +154,8 @@ fn player_fund_transition_add_funds_to_balance_works() {
 			let transition_fee = season_config.fee.state_transition_base_fee;
 			let added_balance = TokenType::T10.get_value_for(MultiplierType::V1).into();
 			assert_eq!(
-                Balances::free_balance(alice()),
-                initial_balance - transition_fee - added_balance
+				Balances::free_balance(alice()),
+				initial_balance - transition_fee - added_balance
 			);
 
 			assert_eq!(Balances::free_balance(Sage::assets_funds_pot()), added_balance);

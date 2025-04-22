@@ -84,8 +84,8 @@ fn buy_should_work() {
 
 			// check for ownership transfer
 			assert_eq!(
-                AssetOwners::<Test, ()>::iter_prefix((alice(), SEASON_ID_0)).count(),
-                owned_by_alice.len() + 1
+				AssetOwners::<Test, ()>::iter_prefix((alice(), SEASON_ID_0)).count(),
+				owned_by_alice.len() + 1
 			);
 			assert_eq!(
 				AssetOwners::<Test, ()>::iter_prefix((bob(), SEASON_ID_0)).count(),
@@ -221,8 +221,8 @@ fn buy_fee_should_be_calculated_correctly() {
 					asset_price_2 - season_fees_0.buy_asset_min
 			);
 			assert_eq!(
-                Balances::free_balance(alice()),
-                initial_balance + asset_price + asset_price_2
+				Balances::free_balance(alice()),
+				initial_balance + asset_price + asset_price_2
 			);
 		});
 }
@@ -285,7 +285,11 @@ fn buy_should_reject_insufficient_balance() {
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(alice()), asset_for_sale, SOME_NATIVE_PAYMENT),
+				Sage::buy_asset(
+					RuntimeOrigin::signed(alice()),
+					asset_for_sale,
+					SOME_NATIVE_PAYMENT
+				),
 				sp_runtime::TokenError::FundsUnavailable
 			);
 		});

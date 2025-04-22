@@ -84,7 +84,8 @@ fn kick_works() {
 
 			create_player_and_tracker_for(bob());
 
-			let (bob_human_id, _) = get_assets_from(bob(), VariantType::Player(PlayerType::Human))[0];
+			let (bob_human_id, _) =
+				get_assets_from(bob(), VariantType::Player(PlayerType::Human))[0];
 
 			assert_ok!(Sage::state_transition(
 				RuntimeOrigin::signed(bob()),

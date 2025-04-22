@@ -51,7 +51,11 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 
 			// Ensure locked assets cannot be used in trading, transferring and forging
 			for extrinsic in [
-				Sage::set_asset_price(RuntimeOrigin::signed(technical_account.clone()), asset_id, 1_000),
+				Sage::set_asset_price(
+					RuntimeOrigin::signed(technical_account.clone()),
+					asset_id,
+					1_000,
+				),
 				Sage::transfer_asset(
 					RuntimeOrigin::signed(technical_account.clone()),
 					bob(),

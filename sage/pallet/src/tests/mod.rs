@@ -21,12 +21,12 @@ mod trait_impls;
 
 use crate::{mock::*, *};
 
+use ajuna_primitives::runtime_types::AccountId;
 use example_transition::prelude::*;
 use frame_support::{assert_noop, assert_ok};
 use sage_api::benchmarks::SageBenchmarkHelper;
-use sp_runtime::testing::H256;
-use ajuna_primitives::runtime_types::AccountId;
 use sage_testing::SeasonId;
+use sp_runtime::testing::H256;
 
 pub(crate) fn create_assets<I: 'static>(
 	season_id: SeasonId,

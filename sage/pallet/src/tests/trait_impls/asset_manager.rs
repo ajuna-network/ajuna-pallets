@@ -89,7 +89,11 @@ mod lock_asset {
 				let asset_ids = create_assets::<()>(SEASON_ID_0, charlie(), 1);
 				let asset_id = asset_ids[0];
 
-				assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(charlie()), asset_id, 1_000));
+				assert_ok!(Sage::set_asset_price(
+					RuntimeOrigin::signed(charlie()),
+					asset_id,
+					1_000
+				));
 				assert_noop!(
 					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, charlie(), asset_id),
 					Error::<Test, ()>::CannotLockAssetInTrade
@@ -201,8 +205,8 @@ mod asset_funds_manager {
 
 			// money went from Alice to the asset
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000 - asset_balance
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000 - asset_balance
 			);
 
 			// Add more money to see if depositing to existing asset funds works
@@ -218,8 +222,8 @@ mod asset_funds_manager {
 			);
 
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000 - 2 * asset_balance
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000 - 2 * asset_balance
 			);
 		});
 	}
@@ -247,8 +251,8 @@ mod asset_funds_manager {
 
 			// Alice still has all her money
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000
 			);
 		});
 	}
@@ -281,8 +285,8 @@ mod asset_funds_manager {
 				asset_balance
 			);
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000 - asset_balance
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000 - asset_balance
 			);
 
 			assert_ok!(<Sage as AssetFundsManager>::transfer_funds_from_asset(
@@ -299,8 +303,8 @@ mod asset_funds_manager {
 			);
 
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000
 			);
 		});
 	}
@@ -333,8 +337,8 @@ mod asset_funds_manager {
 				asset_balance
 			);
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000 - asset_balance
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000 - asset_balance
 			);
 
 			assert_err!(
@@ -353,8 +357,8 @@ mod asset_funds_manager {
 
 			// Alice did not receive any money as the transfer failed
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000 - asset_balance
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000 - asset_balance
 			);
 		});
 	}
@@ -400,8 +404,8 @@ mod asset_funds_manager {
 
 			// Alice has now her initial balance
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000
 			);
 		});
 	}
@@ -443,8 +447,8 @@ mod asset_funds_manager {
 
 			// Alice has still her initial balance
 			assert_eq!(
-                <<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
-                1_000
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
+				1_000
 			);
 		});
 	}

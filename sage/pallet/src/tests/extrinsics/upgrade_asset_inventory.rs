@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
-use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 use sage_testing::ExistentialDeposit;
+use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 
 #[test]
 fn upgrade_asset_inventory_should_work() {
@@ -31,8 +31,8 @@ fn upgrade_asset_inventory_should_work() {
 			let upgrade_fee = season_config.fee.upgrade_asset_inventory;
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::One
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::One
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0)
@@ -55,8 +55,8 @@ fn upgrade_asset_inventory_should_work() {
 			}));
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::Two
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::Two
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0)
@@ -79,8 +79,8 @@ fn upgrade_asset_inventory_should_work() {
 			}));
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::Three
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::Three
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0)
@@ -103,8 +103,8 @@ fn upgrade_asset_inventory_should_work() {
 			}));
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::Four
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::Four
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0)
@@ -127,8 +127,8 @@ fn upgrade_asset_inventory_should_work() {
 			}));
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::Five
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::Five
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0)
@@ -151,8 +151,8 @@ fn upgrade_asset_inventory_should_work() {
 			}));
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::Max
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::Max
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0)
@@ -172,8 +172,8 @@ fn upgrade_asset_inventory_should_work_on_different_beneficiary() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::One
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::One
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(bob(), SEASON_ID_0).inventory_tier,
@@ -193,8 +193,8 @@ fn upgrade_asset_inventory_should_work_on_different_beneficiary() {
 			}));
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::One
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::One
 			);
 			assert_eq!(
 				PlayerSeasonConfigs::<Test, ()>::get(bob(), SEASON_ID_0).inventory_tier,
@@ -211,12 +211,12 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 		.build()
 		.execute_with(|| {
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::One
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::One
 			);
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_1).inventory_tier,
-                InventoryTier::One
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_1).inventory_tier,
+				InventoryTier::One
 			);
 
 			assert_ok!(Sage::upgrade_asset_inventory(
@@ -227,12 +227,12 @@ fn upgrade_asset_inventory_should_work_on_different_season() {
 			));
 
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
-                InventoryTier::One
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_0).inventory_tier,
+				InventoryTier::One
 			);
 			assert_eq!(
-                PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_1).inventory_tier,
-                InventoryTier::Two
+				PlayerSeasonConfigs::<Test, ()>::get(alice(), SEASON_ID_1).inventory_tier,
+				InventoryTier::Two
 			);
 		});
 }

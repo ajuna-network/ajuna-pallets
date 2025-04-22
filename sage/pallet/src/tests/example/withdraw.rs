@@ -27,7 +27,8 @@ fn withdraw_player_works() {
 			create_player_and_tracker_for(alice());
 			let transition_cost = ExistentialDeposit::get();
 
-			let (player_id, _) = get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
+			let (player_id, _) =
+				get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 
 			let token = TokenType::T100;
 			let token_value = token.as_value() as u128;
@@ -44,8 +45,8 @@ fn withdraw_player_works() {
 			));
 
 			assert_eq!(
-                Balances::free_balance(alice()),
-                initial_balance - token_value - (transition_cost * 2)
+				Balances::free_balance(alice()),
+				initial_balance - token_value - (transition_cost * 2)
 			);
 			assert_eq!(Sage::inspect_asset_funds(&player_id, &NATIVE_PAYMENT), token_value);
 
@@ -60,8 +61,8 @@ fn withdraw_player_works() {
 			));
 
 			assert_eq!(
-                Balances::free_balance(alice()),
-                initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
+				Balances::free_balance(alice()),
+				initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
 			);
 			assert_eq!(
 				Sage::inspect_asset_funds(&player_id, &NATIVE_PAYMENT),
@@ -98,8 +99,8 @@ fn withdraw_machine_works() {
 			));
 
 			assert_eq!(
-                Balances::free_balance(alice()),
-                initial_balance - token_value - (transition_cost * 2)
+				Balances::free_balance(alice()),
+				initial_balance - token_value - (transition_cost * 2)
 			);
 			assert_eq!(Sage::inspect_asset_funds(&machine_id, &NATIVE_PAYMENT), token_value);
 
@@ -114,8 +115,8 @@ fn withdraw_machine_works() {
 			));
 
 			assert_eq!(
-                Balances::free_balance(alice()),
-                initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
+				Balances::free_balance(alice()),
+				initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
 			);
 			assert_eq!(
 				Sage::inspect_asset_funds(&machine_id, &NATIVE_PAYMENT),

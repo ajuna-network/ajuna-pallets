@@ -25,8 +25,7 @@ mod withdraw;
 
 use super::*;
 
-use ajuna_primitives::asset_manager::AssetInspector;
-use ajuna_primitives::runtime_types::AccountId;
+use ajuna_primitives::{asset_manager::AssetInspector, runtime_types::AccountId};
 use example_transition::prelude::*;
 
 pub(crate) fn create_player_and_tracker_for(account_id: AccountId) {
@@ -67,4 +66,3 @@ pub(crate) fn get_assets_from(
 		.filter(|(_, asset)| asset.variant.is_variant(variant_type))
 		.collect()
 }
-

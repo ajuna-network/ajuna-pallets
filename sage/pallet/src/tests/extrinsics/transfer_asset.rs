@@ -69,8 +69,8 @@ fn transfer_asset_works() {
 
 			// Asset transferred from Alice.
 			assert_eq!(
-                AssetOwners::<Test, ()>::iter_prefix((alice(), SEASON_ID_0)).count(),
-                alice_asset_ids.len() - 1
+				AssetOwners::<Test, ()>::iter_prefix((alice(), SEASON_ID_0)).count(),
+				alice_asset_ids.len() - 1
 			);
 			let alice_current_assets = {
 				let mut assets = AssetOwners::<Test, ()>::iter_prefix((alice(), SEASON_ID_0))
@@ -158,7 +158,11 @@ fn transfer_asset_works_on_transfer_closed_with_organizer() {
 		.build()
 		.execute_with(|| {
 			let filter = AssetFilter::Transfer(VariantType::Player(PlayerType::Human));
-			assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(bob()), SEASON_ID_0, filter));
+			assert_ok!(Sage::update_asset_filter(
+				RuntimeOrigin::signed(bob()),
+				SEASON_ID_0,
+				filter
+			));
 
 			GeneralConfigStore::<Test, ()>::mutate(|config| config.transfer.open = false);
 			let bob_asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 1);
@@ -225,7 +229,12 @@ fn transfer_asset_rejects_unowned_assets() {
 	ExtBuilder::default().build().execute_with(|| {
 		let asset_id = create_assets::<()>(SEASON_ID_0, charlie(), 1)[0];
 		assert_noop!(
-			Sage::transfer_asset(RuntimeOrigin::signed(alice()), bob(), asset_id, SOME_NATIVE_PAYMENT),
+			Sage::transfer_asset(
+				RuntimeOrigin::signed(alice()),
+				bob(),
+				asset_id,
+				SOME_NATIVE_PAYMENT
+			),
 			Error::<Test, ()>::AssetNotOwned
 		);
 	});
