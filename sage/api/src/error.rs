@@ -1,4 +1,3 @@
-
 // Ajuna Node
 // Copyright (C) 2022 BlogaTech AG
 //

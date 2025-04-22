@@ -77,7 +77,7 @@ pub trait FeeHandler {
 /// Most likely this will just be used for testing environments, so that we don't need to
 /// provide actual implementations of the complex logic underneath. We still need to provide the
 /// generics, as the pallet-sage constrains these types to other types defined in the pallet.
-/// 
+///
 /// The biggest benefit is that we don't need to instantiate a tournaments and affiliate pallet
 /// for this fee handler.
 pub struct TakeNoFeeHandler<
