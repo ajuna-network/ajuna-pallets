@@ -1,16 +1,12 @@
+pub use crate::distribute_fee::DistributeFee;
 use crate::withdraw_credit::WithdrawCredit;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
-	traits::{
-		fungible, fungibles,
-		tokens::{Preservation},
-		Defensive, Imbalance,
-	},
+	traits::{fungible, fungibles, tokens::Preservation, Defensive, Imbalance},
 	BoundedVec,
 };
 use parity_scale_codec::{Decode, Encode};
-pub use crate::distribute_fee::DistributeFee;
 
 /// Payment to be executed.
 #[derive(Debug, Encode, Decode, PartialEq, Eq, PartialOrd, Ord, Clone)]

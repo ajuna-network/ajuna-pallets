@@ -28,8 +28,6 @@ pub trait TradeManager {
 	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool;
 }
 
-
-
 impl<Filter, Asset> TradeManager for AllowAllTradesAndTransfers<Filter, Asset>
 where
 	Filter: Member + Parameter + MaxEncodedLen,
