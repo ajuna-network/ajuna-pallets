@@ -24,12 +24,12 @@
 //!
 //! frame_support::construct_runtime!(
 //! 	pub enum TestRuntime
-//! 	{
-//! 		System: frame_system,
-//! 		Timestamp: pallet_timestamp,
-//! 		Balances: pallet_balances,
-//! 		AjunaSeasons: pallet_ajuna_seasons,
-//! 	}
+//!      {
+//!         System: frame_system,
+//!         Timestamp: pallet_timestamp,
+//!         Balances: pallet_balances,
+//!         AjunaSeasons: pallet_ajuna_seasons,
+//!      }
 //! );
 //!
 //! impl_frame_system!(TestRuntime);
