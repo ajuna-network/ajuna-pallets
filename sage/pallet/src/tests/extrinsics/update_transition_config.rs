@@ -18,9 +18,9 @@ use super::*;
 
 #[test]
 fn update_transition_config_should_work() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		let config = CasinoJamTransitionConfig { reward_multiplier: 2 };
-		assert_ok!(Sage::update_transition_config(RuntimeOrigin::signed(ALICE), config.clone()));
+		assert_ok!(Sage::update_transition_config(RuntimeOrigin::signed(alice()), config.clone()));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransitionConfig {
 			new_config: config,
 		}));
@@ -29,10 +29,10 @@ fn update_transition_config_should_work() {
 
 #[test]
 fn update_transition_config_should_reject_non_organizer_calls() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		assert_noop!(
 			Sage::update_transition_config(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				TransitionConfigOf::<Test, _>::default()
 			),
 			DispatchError::BadOrigin

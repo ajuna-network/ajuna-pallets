@@ -21,29 +21,29 @@ fn buy_should_work() {
 	let initial_balance = 1_000_000;
 
 	ExtBuilder::default()
-		.organizer(ALICE)
+		.organizer(alice())
 		.balances(&[
-			(ALICE, initial_balance),
-			(BOB, initial_balance),
-			(CHARLIE, initial_balance),
-			(DAVE, initial_balance),
+			(alice(), initial_balance),
+			(bob(), initial_balance),
+			(charlie(), initial_balance),
+			(dave(), initial_balance),
 		])
 		.locks(&[
-			(ALICE, SEASON_ID_0, Locks::all_unlocked()),
-			(BOB, SEASON_ID_0, Locks::all_unlocked()),
-			(ALICE, SEASON_ID_1, Locks::all_unlocked()),
-			(BOB, SEASON_ID_1, Locks::all_unlocked()),
+			(alice(), SEASON_ID_0, Locks::all_unlocked()),
+			(bob(), SEASON_ID_0, Locks::all_unlocked()),
+			(alice(), SEASON_ID_1, Locks::all_unlocked()),
+			(bob(), SEASON_ID_1, Locks::all_unlocked()),
 		])
 		.build()
 		.execute_with(|| {
 			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				SEASON_ID_0,
 				filter
 			));
 			assert_ok!(Sage::update_asset_filter(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				SEASON_ID_1,
 				filter
 			));
@@ -53,60 +53,60 @@ fn buy_should_work() {
 					.expect("Should get season config");
 			let season_fees_0 = season_config_0.fee;
 
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 3);
 
-			let owned_by_alice = AssetOwners::<Test, ()>::iter_prefix((ALICE, SEASON_ID_0))
+			let owned_by_alice = AssetOwners::<Test, ()>::iter_prefix((alice(), SEASON_ID_0))
 				.map(|(asset_id, _)| asset_id)
 				.collect::<Vec<_>>();
-			let owned_by_bob = AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_0))
+			let owned_by_bob = AssetOwners::<Test, ()>::iter_prefix((bob(), SEASON_ID_0))
 				.map(|(asset_id, _)| asset_id)
 				.collect::<Vec<_>>();
 
 			let asset_for_sale = asset_ids[0];
-			let asset_price = 4_417;
+			let asset_price = 4_417u128;
 			assert_ok!(Sage::set_asset_price(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				asset_for_sale,
 				asset_price
 			));
 			assert_ok!(Sage::buy_asset(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				asset_for_sale,
 				SOME_NATIVE_PAYMENT
 			));
 
 			// check for balance transfer
 			let price_fee = asset_price
-				.saturating_mul(season_fees_0.buy_percent as u64)
-				.saturating_div(MAX_PERCENTAGE as u64);
-			assert_eq!(Balances::free_balance(ALICE), initial_balance - asset_price - price_fee);
-			assert_eq!(Balances::free_balance(BOB), initial_balance + asset_price);
+				.saturating_mul(season_fees_0.buy_percent.into())
+				.saturating_div(MAX_PERCENTAGE.into());
+			assert_eq!(Balances::free_balance(alice()), initial_balance - asset_price - price_fee);
+			assert_eq!(Balances::free_balance(bob()), initial_balance + asset_price);
 
 			// check for ownership transfer
 			assert_eq!(
-				AssetOwners::<Test, ()>::iter_prefix((ALICE, SEASON_ID_0)).count(),
-				owned_by_alice.len() + 1
+                AssetOwners::<Test, ()>::iter_prefix((alice(), SEASON_ID_0)).count(),
+                owned_by_alice.len() + 1
 			);
 			assert_eq!(
-				AssetOwners::<Test, ()>::iter_prefix((BOB, SEASON_ID_0)).count(),
+				AssetOwners::<Test, ()>::iter_prefix((bob(), SEASON_ID_0)).count(),
 				owned_by_bob.len() - 1
 			);
-			assert!(AssetOwners::<Test, ()>::contains_key((ALICE, SEASON_ID_0, asset_for_sale)));
-			assert!(!AssetOwners::<Test, ()>::contains_key((BOB, SEASON_ID_0, asset_for_sale)));
-			assert_eq!(Assets::<Test, ()>::get(asset_for_sale).unwrap().0, ALICE);
+			assert!(AssetOwners::<Test, ()>::contains_key((alice(), SEASON_ID_0, asset_for_sale)));
+			assert!(!AssetOwners::<Test, ()>::contains_key((bob(), SEASON_ID_0, asset_for_sale)));
+			assert_eq!(Assets::<Test, ()>::get(asset_for_sale).unwrap().0, alice());
 
 			// check for removal from trade storage
 			assert_eq!(AssetTradePrices::<Test, ()>::get(SEASON_ID_0, asset_for_sale), None);
 
 			// check for account stats
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(ALICE, SEASON_ID_0).bought_amount, 1);
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(BOB, SEASON_ID_0).sold_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(alice(), SEASON_ID_0).bought_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(bob(), SEASON_ID_0).sold_amount, 1);
 
 			// check events
 			System::assert_last_event(RuntimeEvent::Sage(Event::AssetTraded {
 				asset_id: asset_for_sale,
-				from: BOB,
-				to: ALICE,
+				from: bob(),
+				to: alice(),
 				price: asset_price,
 			}));
 
@@ -114,28 +114,28 @@ fn buy_should_work() {
 			let asset_for_sale = asset_ids[1];
 			let asset_price = 1_357;
 			assert_ok!(Sage::set_asset_price(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				asset_for_sale,
 				asset_price
 			));
 			assert_ok!(Sage::buy_asset(
-				RuntimeOrigin::signed(CHARLIE),
+				RuntimeOrigin::signed(charlie()),
 				asset_for_sale,
 				SOME_NATIVE_PAYMENT
 			));
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(CHARLIE, SEASON_ID_0).bought_amount, 1);
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(BOB, SEASON_ID_0).sold_amount, 2);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(charlie(), SEASON_ID_0).bought_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(bob(), SEASON_ID_0).sold_amount, 2);
 
 			// check season id
-			let asset_on_sale = create_assets::<()>(SEASON_ID_1, ALICE, 1)[0];
+			let asset_on_sale = create_assets::<()>(SEASON_ID_1, alice(), 1)[0];
 			let asset_price = 369;
 			assert_ok!(Sage::set_asset_price(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				asset_on_sale,
 				asset_price
 			));
 			assert_ok!(Sage::buy_asset(
-				RuntimeOrigin::signed(DAVE),
+				RuntimeOrigin::signed(dave()),
 				asset_on_sale,
 				SOME_NATIVE_PAYMENT
 			));
@@ -145,11 +145,11 @@ fn buy_should_work() {
 				.expect("Should get season id");
 			assert_eq!(current_season_id, SEASON_ID_0);
 			// changes in SEASON_ID_0
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(ALICE, SEASON_ID_0).sold_amount, 1);
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(DAVE, SEASON_ID_0).bought_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(alice(), SEASON_ID_0).sold_amount, 1);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(dave(), SEASON_ID_0).bought_amount, 1);
 			// no changes were applied to SEASON_ID_1 stats
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(ALICE, SEASON_ID_1).sold_amount, 0);
-			assert_eq!(PlayerSeasonStats::<Test, ()>::get(DAVE, SEASON_ID_1).bought_amount, 0);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(alice(), SEASON_ID_1).sold_amount, 0);
+			assert_eq!(PlayerSeasonStats::<Test, ()>::get(dave(), SEASON_ID_1).bought_amount, 0);
 		});
 }
 
@@ -157,14 +157,14 @@ fn buy_should_work() {
 fn buy_fee_should_be_calculated_correctly() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.organizer(ALICE)
-		.balances(&[(ALICE, initial_balance), (BOB, initial_balance)])
-		.locks(&[(ALICE, SEASON_ID_0, Locks::all_unlocked())])
+		.organizer(alice())
+		.balances(&[(alice(), initial_balance), (bob(), initial_balance)])
+		.locks(&[(alice(), SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
 			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				SEASON_ID_0,
 				filter
 			));
@@ -174,55 +174,55 @@ fn buy_fee_should_be_calculated_correctly() {
 					.expect("Should get season config");
 			let season_fees_0 = season_config_0.fee;
 
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 2);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 2);
 
 			let asset_price = 9_999;
 			assert_ok!(Sage::set_asset_price(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				asset_ids[0],
 				asset_price
 			));
 			// If the 'buy_percent' makes the fee greater than 'min_buy_fee' then fee will be
 			// calculated from the asset_price
 			let price_fee_1 = asset_price
-				.saturating_mul(season_fees_0.buy_percent as u64)
-				.saturating_div(MAX_PERCENTAGE as u64);
+				.saturating_mul(season_fees_0.buy_percent.into())
+				.saturating_div(MAX_PERCENTAGE.into());
 			assert!(price_fee_1 > season_fees_0.buy_asset_min);
 			assert_ok!(Sage::buy_asset(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				asset_ids[0],
 				SOME_NATIVE_PAYMENT
 			));
 			// We check that the fees have been paid
-			assert_eq!(Balances::free_balance(BOB), initial_balance - asset_price - price_fee_1);
-			assert_eq!(Balances::free_balance(ALICE), initial_balance + asset_price);
+			assert_eq!(Balances::free_balance(bob()), initial_balance - asset_price - price_fee_1);
+			assert_eq!(Balances::free_balance(alice()), initial_balance + asset_price);
 
 			let asset_price_2 = 10;
 			assert_ok!(Sage::set_asset_price(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				asset_ids[1],
 				asset_price_2
 			));
 			// If the 'buy_percent' makes the fee lower than 'min_buy_fee' then fee will be
 			// calculated using that value
 			let price_fee_2 = asset_price_2
-				.saturating_mul(season_fees_0.buy_percent as u64)
-				.saturating_div(MAX_PERCENTAGE as u64);
+				.saturating_mul(season_fees_0.buy_percent.into())
+				.saturating_div(MAX_PERCENTAGE.into());
 			assert!(price_fee_2 < season_fees_0.buy_asset_min);
 			assert_ok!(Sage::buy_asset(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				asset_ids[1],
 				SOME_NATIVE_PAYMENT
 			));
 			assert_eq!(
-				Balances::free_balance(BOB),
+				Balances::free_balance(bob()),
 				initial_balance -
 					asset_price - price_fee_1 -
 					asset_price_2 - season_fees_0.buy_asset_min
 			);
 			assert_eq!(
-				Balances::free_balance(ALICE),
-				initial_balance + asset_price + asset_price_2
+                Balances::free_balance(alice()),
+                initial_balance + asset_price + asset_price_2
 			);
 		});
 }
@@ -232,7 +232,7 @@ fn buy_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(ALICE), 14, SOME_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::signed(alice()), 14, SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -251,9 +251,9 @@ fn buy_should_reject_unsigned_calls() {
 #[test]
 fn buy_should_reject_unlisted_asset() {
 	ExtBuilder::default().build().execute_with(|| {
-		let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 		assert_noop!(
-			Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_ids[0], SOME_NATIVE_PAYMENT),
+			Sage::buy_asset(RuntimeOrigin::signed(bob()), asset_ids[0], SOME_NATIVE_PAYMENT),
 			Error::<Test, ()>::AssetNotInTrade,
 		);
 	});
@@ -263,29 +263,29 @@ fn buy_should_reject_unlisted_asset() {
 fn buy_should_reject_insufficient_balance() {
 	let alice_initial_balance = 10_000;
 	ExtBuilder::default()
-		.organizer(ALICE)
-		.balances(&[(ALICE, alice_initial_balance), (BOB, alice_initial_balance * 2)])
-		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
+		.organizer(alice())
+		.balances(&[(alice(), alice_initial_balance), (bob(), alice_initial_balance * 2)])
+		.locks(&[(bob(), SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
 			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				SEASON_ID_0,
 				filter
 			));
 
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 3);
 			let asset_for_sale = asset_ids[0];
 			let asset_price = alice_initial_balance + 1;
 
 			assert_ok!(Sage::set_asset_price(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				asset_for_sale,
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(ALICE), asset_for_sale, SOME_NATIVE_PAYMENT),
+				Sage::buy_asset(RuntimeOrigin::signed(alice()), asset_for_sale, SOME_NATIVE_PAYMENT),
 				sp_runtime::TokenError::FundsUnavailable
 			);
 		});
@@ -294,28 +294,28 @@ fn buy_should_reject_insufficient_balance() {
 #[test]
 fn buy_should_reject_when_buyer_tries_to_buy_own_asset() {
 	ExtBuilder::default()
-		.organizer(ALICE)
-		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
+		.organizer(alice())
+		.locks(&[(bob(), SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
 			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				SEASON_ID_0,
 				filter
 			));
 
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 3);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 3);
 			let asset_for_sale = asset_ids[0];
 			let asset_price = 749;
 
 			assert_ok!(Sage::set_asset_price(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				asset_for_sale,
 				asset_price
 			));
 			assert_noop!(
-				Sage::buy_asset(RuntimeOrigin::signed(BOB), asset_for_sale, SOME_NATIVE_PAYMENT),
+				Sage::buy_asset(RuntimeOrigin::signed(bob()), asset_for_sale, SOME_NATIVE_PAYMENT),
 				Error::<Test, ()>::AlreadyOwned
 			);
 		});

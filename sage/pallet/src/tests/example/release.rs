@@ -20,48 +20,48 @@ use super::*;
 fn release_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			create_player_and_tracker_for(ALICE);
-			create_machine_for(ALICE);
+			create_player_and_tracker_for(alice());
+			create_machine_for(alice());
 
 			let (machine_id, _) =
-				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
+				get_assets_from(alice(), VariantType::Machine(MachineType::Bandit))[0];
 			let multiplier = MultiplierType::V1;
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Rent(multiplier),
 				vec![machine_id],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 
-			let (human_id, _) = get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+			let (human_id, _) = get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Deposit(AssetType::Player, TokenType::T1000),
 				vec![human_id],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 
-			let (seat_id, _) = get_assets_from(ALICE, VariantType::Seat)[0];
+			let (seat_id, _) = get_assets_from(alice(), VariantType::Seat)[0];
 
 			run_to_block(20);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Reserve(multiplier),
 				vec![human_id, seat_id],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 
-			let (_, mut seat_asset) = get_assets_from(ALICE, VariantType::Seat)[0];
+			let (_, mut seat_asset) = get_assets_from(alice(), VariantType::Seat)[0];
 			let (_, mut human_asset) =
-				get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+				get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 			assert_eq!(seat.player_id, Some(human_id));
@@ -80,16 +80,16 @@ fn release_works() {
 			run_to_block(200);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Release,
 				vec![human_id, seat_id],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 
-			let (_, mut seat_asset) = get_assets_from(ALICE, VariantType::Seat)[0];
+			let (_, mut seat_asset) = get_assets_from(alice(), VariantType::Seat)[0];
 			let (_, mut human_asset) =
-				get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+				get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 			assert_eq!(seat.player_id, None);

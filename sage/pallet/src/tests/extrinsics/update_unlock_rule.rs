@@ -18,11 +18,11 @@ use super::*;
 
 #[test]
 fn update_unlock_rule_should_work() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		let feature = LockableFeature::TradeAsset;
 		let rule = UnlockRule::default();
 		assert_ok!(Sage::update_unlock_rule(
-			RuntimeOrigin::signed(ALICE),
+			RuntimeOrigin::signed(alice()),
 			SEASON_ID_0,
 			feature,
 			rule
@@ -37,10 +37,10 @@ fn update_unlock_rule_should_work() {
 
 #[test]
 fn update_general_config_should_reject_non_organizer_calls() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		assert_noop!(
 			Sage::update_unlock_rule(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				SEASON_ID_0,
 				LockableFeature::TransferAsset,
 				UnlockRule::default()

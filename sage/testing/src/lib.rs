@@ -56,7 +56,8 @@ pub use sp_keyring::AccountKeyring;
 pub use frame_system;
 pub use pallet_balances;
 pub use pallet_timestamp;
-pub use sp_runtime::{self, generic};
+pub use sp_runtime::{self, generic, traits::IdentityLookup};
+pub use frame_system::EnsureSigned;
 
 pub use ajuna_primitives::{
 	payment_handler::{
@@ -162,6 +163,8 @@ parameter_types! {
 	pub const CreationFee: Balance = 0;
 	pub const TransactionBaseFee: Balance = 0;
 	pub const TransactionByteFee: Balance = 0;
+
+	pub const ExistentialDeposit: Balance = 1;
 }
 
 #[macro_export]
@@ -171,7 +174,7 @@ macro_rules! impl_balances {
 			type Balance = Balance;
 			type RuntimeEvent = RuntimeEvent;
 			type DustRemoval = ();
-			type ExistentialDeposit = frame_support::traits::ConstU128<1>;
+			type ExistentialDeposit = ExistentialDeposit;
 			type AccountStore = System;
 			type WeightInfo = ();
 			type MaxLocks = ();
@@ -181,7 +184,6 @@ macro_rules! impl_balances {
 			type RuntimeFreezeReason = RuntimeFreezeReason;
 			type FreezeIdentifier = ();
 			type MaxFreezes = frame_support::traits::ConstU32<0>;
-			type DoneSlashHandler = ();
 		}
 	};
 }
@@ -203,7 +205,7 @@ macro_rules! impl_assets {
 			type RuntimeEvent = RuntimeEvent;
 			type Balance = Balance;
 			type RemoveItemsLimit = ConstU32<1000>;
-			type AssetId = SageAssetId;
+			type AssetId = PalletAssetsAssetId;
 			type AssetIdParameter = parity_scale_codec::Compact<u32>;
 			type Currency = Balances;
 			type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
@@ -217,7 +219,7 @@ macro_rules! impl_assets {
 			type Freezer = ();
 			type Extra = ();
 			type CallbackHandle = ();
-			type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+			type WeightInfo = ();
 			#[cfg(feature = "runtime-benchmarks")]
 			type BenchmarkHelper = ();
 		}
@@ -227,10 +229,10 @@ macro_rules! impl_assets {
 pub type FungiblesAssetId = WithdrawKind<NativeOrWithId<PalletAssetsAssetId>>;
 
 // Assume that the test runtime has both, the pallet-balances and the pallet-assets.
-pub type NativeAndAssets<Balances, Assets> =
+pub type NativeAndAssetsG<Balances, Assets> =
 	UnionOf<Balances, Assets, NativeFromLeft, NativeOrWithId<PalletAssetsAssetId>, AccountId>;
 pub type TransferFungibles<Balances, Assets> =
-	WithdrawFungibles<NativeAndAssets<Balances, Assets>, AccountId>;
+	WithdrawFungibles<NativeAndAssetsG<Balances, Assets>, AccountId>;
 
 pub type TestFeeFeeHandler<TransitionId> = TakeNoFeeHandler<
 	AccountId,
@@ -351,12 +353,11 @@ macro_rules! impl_default_test_sage_api {
 
 #[macro_export]
 macro_rules! impl_core_pallets {
-	($t:ident, $system:ident, $scheduler:ident) => {
+	($t:ident, $system:ident) => {
 		impl_frame_system!($t);
 		impl_balances!($t, $system);
-		impl_timestamp!($t, $scheduler);
-		impl_assets!($t, $scheduler);
-		impl_outer_origin_for_runtime!($t);
+		impl_timestamp!($t);
+		impl_assets!($t);
 	};
 }
 

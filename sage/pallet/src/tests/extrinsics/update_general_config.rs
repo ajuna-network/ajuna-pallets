@@ -18,9 +18,9 @@ use super::*;
 
 #[test]
 fn update_general_config_should_work() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		let config = GeneralConfig::default();
-		assert_ok!(Sage::update_general_config(RuntimeOrigin::signed(ALICE), config.clone()));
+		assert_ok!(Sage::update_general_config(RuntimeOrigin::signed(alice()), config.clone()));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedGeneralConfig {
 			new_config: config,
 		}));
@@ -29,9 +29,9 @@ fn update_general_config_should_work() {
 
 #[test]
 fn update_general_config_should_reject_non_organizer_calls() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		assert_noop!(
-			Sage::update_general_config(RuntimeOrigin::signed(BOB), GeneralConfig::default()),
+			Sage::update_general_config(RuntimeOrigin::signed(bob()), GeneralConfig::default()),
 			DispatchError::BadOrigin
 		);
 	});

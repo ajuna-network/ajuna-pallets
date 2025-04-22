@@ -74,3 +74,4 @@ pallet-ajuna-wildcard                     = { path = "pallets/ajuna-wildcard", d
 example-transition              = { path = "sage/example-transition", default-features = false }
 pallet-sage                     = { path = "sage/pallet", default-features = false }
 sage-api                        = { path = "sage/api", default-features = false }
+sage-testing                    = { path = "sage/testing", default-features = false }

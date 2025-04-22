@@ -21,30 +21,30 @@ use sp_runtime::SaturatedConversion;
 fn rent_seat_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			create_machine_for(ALICE);
+			create_machine_for(alice());
 
-			assert_eq!(Sage::iter_assets_from(&ALICE).count(), 1);
+			assert_eq!(Sage::iter_assets_from(&alice()).count(), 1);
 
 			let (machine_id, _) =
-				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
+				get_assets_from(alice(), VariantType::Machine(MachineType::Bandit))[0];
 
 			let multiplier = MultiplierType::V1;
 			let transition_id = CasinoAction::Rent(multiplier);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				transition_id,
 				vec![machine_id],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 
-			assert_eq!(Sage::iter_assets_from(&ALICE).count(), 2);
+			assert_eq!(Sage::iter_assets_from(&alice()).count(), 2);
 
-			let (_, mut seat_asset) = get_assets_from(ALICE, VariantType::Seat)[0];
+			let (_, mut seat_asset) = get_assets_from(alice(), VariantType::Seat)[0];
 
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 

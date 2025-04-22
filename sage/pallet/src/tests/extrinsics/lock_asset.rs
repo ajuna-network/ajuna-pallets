@@ -19,19 +19,19 @@ use super::*;
 #[test]
 fn can_lock_asset_successfully_with_sage_lock_id() {
 	ExtBuilder::default()
-		.balances(&[(ALICE, 1_000_000)])
+		.balances(&[(alice(), 1_000_000)])
 		.locks(&[
-			(ALICE, SEASON_ID_0, Locks::all_unlocked()),
-			(BOB, SEASON_ID_0, Locks::all_unlocked()),
+			(alice(), SEASON_ID_0, Locks::all_unlocked()),
+			(bob(), SEASON_ID_0, Locks::all_unlocked()),
 			(Sage::technical_account_id(), SEASON_ID_0, Locks::all_unlocked()),
 		])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let asset_id = asset_ids[0];
-			let expected_lock = Lock { id: *SAGE_LOCK_ID, locker: ALICE };
+			let expected_lock = Lock { id: *SAGE_LOCK_ID, locker: alice() };
 
-			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(alice()), asset_id));
 			assert!(LockedAssets::<Test, ()>::contains_key(asset_id));
 			System::assert_has_event(RuntimeEvent::Sage(Event::AssetLocked {
 				asset_id,
@@ -41,9 +41,9 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 			// Ensure ownership transferred to technical account
 			let technical_account = Sage::technical_account_id();
 
-			assert!(!AssetOwners::<Test, ()>::contains_key((ALICE, SEASON_ID_0, asset_id)));
+			assert!(!AssetOwners::<Test, ()>::contains_key((alice(), SEASON_ID_0, asset_id)));
 			assert!(!AssetOwners::<Test, ()>::contains_key((
-				technical_account,
+				technical_account.clone(),
 				SEASON_ID_0,
 				asset_id
 			)));
@@ -51,10 +51,10 @@ fn can_lock_asset_successfully_with_sage_lock_id() {
 
 			// Ensure locked assets cannot be used in trading, transferring and forging
 			for extrinsic in [
-				Sage::set_asset_price(RuntimeOrigin::signed(technical_account), asset_id, 1_000),
+				Sage::set_asset_price(RuntimeOrigin::signed(technical_account.clone()), asset_id, 1_000),
 				Sage::transfer_asset(
-					RuntimeOrigin::signed(technical_account),
-					BOB,
+					RuntimeOrigin::signed(technical_account.clone()),
+					bob(),
 					asset_id,
 					SOME_NATIVE_PAYMENT,
 				),

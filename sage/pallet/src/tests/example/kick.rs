@@ -20,18 +20,18 @@ use super::*;
 fn kick_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance), (BOB, initial_balance)])
+		.balances(&[(alice(), initial_balance), (bob(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			create_player_and_tracker_for(ALICE);
-			create_machine_for(ALICE);
+			create_player_and_tracker_for(alice());
+			create_machine_for(alice());
 
 			let (machine_id, _) =
-				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
+				get_assets_from(alice(), VariantType::Machine(MachineType::Bandit))[0];
 			let multiplier = MultiplierType::V1;
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Rent(multiplier),
 				vec![machine_id],
 				(),
@@ -39,21 +39,21 @@ fn kick_works() {
 			));
 
 			let (alice_human_id, _) =
-				get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+				get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Deposit(AssetType::Player, TokenType::T1000),
 				vec![alice_human_id],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 
-			let (seat_id, _) = get_assets_from(ALICE, VariantType::Seat)[0];
+			let (seat_id, _) = get_assets_from(alice(), VariantType::Seat)[0];
 
 			run_to_block(20);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Reserve(multiplier),
 				vec![alice_human_id, seat_id],
 				(),
@@ -62,9 +62,9 @@ fn kick_works() {
 
 			assert_eq!(Sage::inspect_asset_funds(&seat_id, &NATIVE_PAYMENT), 1);
 
-			let (_, mut seat_asset) = get_assets_from(ALICE, VariantType::Seat)[0];
+			let (_, mut seat_asset) = get_assets_from(alice(), VariantType::Seat)[0];
 			let (_, mut human_asset) =
-				get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+				get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 			assert_eq!(seat.player_id, Some(alice_human_id));
@@ -82,12 +82,12 @@ fn kick_works() {
 
 			run_to_block(30);
 
-			create_player_and_tracker_for(BOB);
+			create_player_and_tracker_for(bob());
 
-			let (bob_human_id, _) = get_assets_from(BOB, VariantType::Player(PlayerType::Human))[0];
+			let (bob_human_id, _) = get_assets_from(bob(), VariantType::Player(PlayerType::Human))[0];
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				CasinoAction::Kick,
 				vec![bob_human_id, alice_human_id, seat_id],
 				(),
@@ -97,9 +97,9 @@ fn kick_works() {
 			assert_eq!(Sage::inspect_asset_funds(&seat_id, &NATIVE_PAYMENT), 0);
 			assert_eq!(Sage::inspect_asset_funds(&bob_human_id, &NATIVE_PAYMENT), 1);
 
-			let (_, mut seat_asset) = get_assets_from(ALICE, VariantType::Seat)[0];
+			let (_, mut seat_asset) = get_assets_from(alice(), VariantType::Seat)[0];
 			let (_, mut human_asset) =
-				get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+				get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 
 			let seat = seat_asset.try_as_seat().expect("should have seat");
 			assert_eq!(seat.player_id, None);

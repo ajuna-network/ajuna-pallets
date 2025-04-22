@@ -15,27 +15,28 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::*;
+use sage_testing::ExistentialDeposit;
 
 #[test]
 fn withdraw_player_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			create_player_and_tracker_for(ALICE);
-			let transition_cost = MockExistentialDeposit::get();
+			create_player_and_tracker_for(alice());
+			let transition_cost = ExistentialDeposit::get();
 
-			let (player_id, _) = get_assets_from(ALICE, VariantType::Player(PlayerType::Human))[0];
+			let (player_id, _) = get_assets_from(alice(), VariantType::Player(PlayerType::Human))[0];
 
 			let token = TokenType::T100;
-			let token_value = token.as_value() as u64;
+			let token_value = token.as_value() as u128;
 
-			assert_eq!(Balances::free_balance(ALICE), initial_balance - transition_cost);
+			assert_eq!(Balances::free_balance(alice()), initial_balance - transition_cost);
 			assert_eq!(Sage::inspect_asset_funds(&player_id, &NATIVE_PAYMENT), 0);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Deposit(AssetType::Player, token),
 				vec![player_id],
 				(),
@@ -43,15 +44,15 @@ fn withdraw_player_works() {
 			));
 
 			assert_eq!(
-				Balances::free_balance(ALICE),
-				initial_balance - token_value - (transition_cost * 2)
+                Balances::free_balance(alice()),
+                initial_balance - token_value - (transition_cost * 2)
 			);
 			assert_eq!(Sage::inspect_asset_funds(&player_id, &NATIVE_PAYMENT), token_value);
 
 			let withdraw_token = TokenType::T10;
-			let withdraw_token_value = withdraw_token.as_value() as u64;
+			let withdraw_token_value = withdraw_token.as_value() as u128;
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Withdraw(AssetType::Player, withdraw_token),
 				vec![player_id],
 				(),
@@ -59,8 +60,8 @@ fn withdraw_player_works() {
 			));
 
 			assert_eq!(
-				Balances::free_balance(ALICE),
-				initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
+                Balances::free_balance(alice()),
+                initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
 			);
 			assert_eq!(
 				Sage::inspect_asset_funds(&player_id, &NATIVE_PAYMENT),
@@ -73,23 +74,23 @@ fn withdraw_player_works() {
 fn withdraw_machine_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			create_machine_for(ALICE);
-			let transition_cost = MockExistentialDeposit::get();
+			create_machine_for(alice());
+			let transition_cost = ExistentialDeposit::get();
 
 			let (machine_id, _) =
-				get_assets_from(ALICE, VariantType::Machine(MachineType::Bandit))[0];
+				get_assets_from(alice(), VariantType::Machine(MachineType::Bandit))[0];
 
 			let token = TokenType::T1000;
-			let token_value = token.as_value() as u64;
+			let token_value = token.as_value() as u128;
 
-			assert_eq!(Balances::free_balance(ALICE), initial_balance - transition_cost);
+			assert_eq!(Balances::free_balance(alice()), initial_balance - transition_cost);
 			assert_eq!(Sage::inspect_asset_funds(&machine_id, &NATIVE_PAYMENT), 0);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Deposit(AssetType::Machine(MachineType::Bandit), token),
 				vec![machine_id],
 				(),
@@ -97,15 +98,15 @@ fn withdraw_machine_works() {
 			));
 
 			assert_eq!(
-				Balances::free_balance(ALICE),
-				initial_balance - token_value - (transition_cost * 2)
+                Balances::free_balance(alice()),
+                initial_balance - token_value - (transition_cost * 2)
 			);
 			assert_eq!(Sage::inspect_asset_funds(&machine_id, &NATIVE_PAYMENT), token_value);
 
 			let withdraw_token = TokenType::T10;
-			let withdraw_token_value = withdraw_token.as_value() as u64;
+			let withdraw_token_value = withdraw_token.as_value() as u128;
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				CasinoAction::Withdraw(AssetType::Machine(MachineType::Bandit), withdraw_token),
 				vec![machine_id],
 				(),
@@ -113,8 +114,8 @@ fn withdraw_machine_works() {
 			));
 
 			assert_eq!(
-				Balances::free_balance(ALICE),
-				initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
+                Balances::free_balance(alice()),
+                initial_balance - token_value - (transition_cost * 3) + withdraw_token_value
 			);
 			assert_eq!(
 				Sage::inspect_asset_funds(&machine_id, &NATIVE_PAYMENT),

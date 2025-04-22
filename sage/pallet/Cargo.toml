@@ -37,7 +37,7 @@ pallet-balances    = { workspace = true, optional = true }
 example-transition = { workspace = true, features = ["std"] }
 pallet-balances = { workspace = true, features = ["std"] }
 pallet-assets = { workspace = true, features = ["std"] }
-pallet-insecure-randomness-collective-flip = { workspace = true, features = ["std"] }
+sage-testing = { workspace = true, features = ["std"] }
 
 [features]
 default = [ "std" ]
@@ -58,7 +58,6 @@ std = [
     # Example
 	"example-transition/std",
 	"pallet-assets/std",
-    "pallet-insecure-randomness-collective-flip/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
@@ -76,5 +75,4 @@ try-runtime = [
 	"sp-runtime/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-assets/try-runtime",
-    "pallet-insecure-randomness-collective-flip/try-runtime",
 ]

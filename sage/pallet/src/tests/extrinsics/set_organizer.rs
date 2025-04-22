@@ -20,9 +20,9 @@ use super::*;
 fn set_organizer_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(Organizer::<Test, ()>::get(), None);
-		assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), ALICE));
-		assert_eq!(Organizer::<Test, ()>::get(), Some(ALICE));
-		System::assert_last_event(RuntimeEvent::Sage(Event::OrganizerSet { organizer: ALICE }));
+		assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), alice()));
+		assert_eq!(Organizer::<Test, ()>::get(), Some(alice()));
+		System::assert_last_event(RuntimeEvent::Sage(Event::OrganizerSet { organizer: alice() }));
 	});
 }
 
@@ -30,7 +30,7 @@ fn set_organizer_should_work() {
 fn set_organizer_should_reject_non_root_calls() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_noop!(
-			Sage::set_organizer(RuntimeOrigin::signed(ALICE), BOB),
+			Sage::set_organizer(RuntimeOrigin::signed(alice()), bob()),
 			DispatchError::BadOrigin
 		);
 	});
@@ -40,12 +40,12 @@ fn set_organizer_should_reject_non_root_calls() {
 fn set_organizer_should_replace_existing_organizer() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert_eq!(Organizer::<Test, ()>::get(), None);
-		assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), DAVE));
-		assert_eq!(Organizer::<Test, ()>::get(), Some(DAVE));
-		System::assert_last_event(RuntimeEvent::Sage(Event::OrganizerSet { organizer: DAVE }));
+		assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), dave()));
+		assert_eq!(Organizer::<Test, ()>::get(), Some(dave()));
+		System::assert_last_event(RuntimeEvent::Sage(Event::OrganizerSet { organizer: dave() }));
 
-		assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), CHARLIE));
-		assert_eq!(Organizer::<Test, ()>::get(), Some(CHARLIE));
-		System::assert_last_event(RuntimeEvent::Sage(Event::OrganizerSet { organizer: CHARLIE }));
+		assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), charlie()));
+		assert_eq!(Organizer::<Test, ()>::get(), Some(charlie()));
+		System::assert_last_event(RuntimeEvent::Sage(Event::OrganizerSet { organizer: charlie() }));
 	});
 }

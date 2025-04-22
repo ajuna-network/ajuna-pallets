@@ -20,26 +20,26 @@ use super::*;
 fn create_player_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
 			let transition_id = CasinoAction::Create(AssetType::Player);
 
-			assert_eq!(Sage::iter_assets_from(&ALICE).count(), 0);
+			assert_eq!(Sage::iter_assets_from(&alice()).count(), 0);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				transition_id,
 				vec![],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
-				account: ALICE,
+				account: alice(),
 				id: transition_id,
 			}));
 
-			let assets = Sage::iter_assets_from(&ALICE).collect::<Vec<_>>();
+			let assets = Sage::iter_assets_from(&alice()).collect::<Vec<_>>();
 			assert_eq!(assets.len(), 2);
 
 			let (_, mut asset_1) = assets[0];
@@ -80,26 +80,26 @@ fn create_player_works() {
 fn create_machine_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
 			let transition_id = CasinoAction::Create(AssetType::Machine(MachineType::Bandit));
 
-			assert_eq!(Sage::iter_assets_from(&ALICE).count(), 0);
+			assert_eq!(Sage::iter_assets_from(&alice()).count(), 0);
 
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				transition_id,
 				vec![],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
-				account: ALICE,
+				account: alice(),
 				id: transition_id,
 			}));
 
-			let assets = Sage::iter_assets_from(&ALICE).collect::<Vec<_>>();
+			let assets = Sage::iter_assets_from(&alice()).collect::<Vec<_>>();
 			assert_eq!(assets.len(), 1);
 
 			let (_, mut machine_asset) = assets[0];
