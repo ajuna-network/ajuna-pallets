@@ -2555,6 +2555,7 @@ dependencies = [
  "pallet-assets",
  "pallet-balances",
  "pallet-insecure-randomness-collective-flip",
+ "pallet-sage",
  "pallet-timestamp",
  "parity-scale-codec",
  "sage-api",

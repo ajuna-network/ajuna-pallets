@@ -32,6 +32,7 @@ pallet-balances = { workspace = true, features = ["std"] }
 pallet-assets = { workspace = true, features = ["std"] }
 pallet-insecure-randomness-collective-flip = { workspace = true, features = ["std"] }
 pallet-timestamp = { workspace = true, features = ["std"] }
+pallet-sage = { workspace = true, features = ["std"] }
 
 pallet-ajuna-seasons = { workspace = true, features = ["std"]}
 

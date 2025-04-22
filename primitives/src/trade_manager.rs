@@ -18,6 +18,8 @@ use core::marker::PhantomData;
 use frame_support::{pallet_prelude::Member, Parameter};
 use parity_scale_codec::MaxEncodedLen;
 
+pub struct AllowAllTradesAndTransfers<Filter, Asset>(PhantomData<(Filter, Asset)>);
+
 pub trait TradeManager {
 	type TradeFilter: Member + Parameter + MaxEncodedLen;
 
@@ -26,9 +28,9 @@ pub trait TradeManager {
 	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool;
 }
 
-pub struct AllowAllTrades<Filter, Asset>(PhantomData<(Filter, Asset)>);
 
-impl<Filter, Asset> TradeManager for AllowAllTrades<Filter, Asset>
+
+impl<Filter, Asset> TradeManager for AllowAllTradesAndTransfers<Filter, Asset>
 where
 	Filter: Member + Parameter + MaxEncodedLen,
 	Asset: Member + Parameter + MaxEncodedLen,
@@ -36,7 +38,7 @@ where
 	type TradeFilter = Filter;
 	type Asset = Asset;
 
-	fn can_be_traded_using(asset: &Self::Asset, filter: &Self::TradeFilter) -> bool {
+	fn can_be_traded_using(_: &Self::Asset, _: &Self::TradeFilter) -> bool {
 		true
 	}
 }
@@ -49,9 +51,7 @@ pub trait TransferManager {
 	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool;
 }
 
-pub struct AllowAllTransfers<Filter, Asset>(PhantomData<(Filter, Asset)>);
-
-impl<Filter, Asset> TransferManager for AllowAllTransfers<Filter, Asset>
+impl<Filter, Asset> TransferManager for AllowAllTradesAndTransfers<Filter, Asset>
 where
 	Filter: Member + Parameter + MaxEncodedLen,
 	Asset: Member + Parameter + MaxEncodedLen,
@@ -59,7 +59,7 @@ where
 	type TransferFilter = Filter;
 	type Asset = Asset;
 
-	fn can_be_transferred_using(asset: &Self::Asset, filter: &Self::TransferFilter) -> bool {
+	fn can_be_transferred_using(_: &Self::Asset, _: &Self::TransferFilter) -> bool {
 		true
 	}
 }
