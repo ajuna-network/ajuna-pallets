@@ -193,7 +193,6 @@ parameter_types! {
 	pub const CreationFee: Balance = 0;
 	pub const TransactionBaseFee: Balance = 0;
 	pub const TransactionByteFee: Balance = 0;
-
 	pub const ExistentialDeposit: Balance = 1;
 }
 
@@ -309,13 +308,13 @@ pub type SeasonId = u32;
 
 #[macro_export]
 macro_rules! impl_ajuna_seasons {
-	($runtime:ident, $game_asset_id:ident, $pallet_sage:ident) => {
+	($runtime:ident, $game_asset_id:ident, $pallet_sage:ident, $pallet_balances:ident) => {
 		impl pallet_ajuna_seasons::Config for $runtime {
 			type RuntimeEvent = RuntimeEvent;
 			type SeasonId = SeasonId;
 			type AssetId = $game_asset_id;
 			type AccountHandler = $pallet_sage;
-			type Currency = Balances;
+			type Currency = $pallet_balances;
 			type WeightInfo = ();
 			#[cfg(feature = "runtime-benchmarks")]
 			type BenchmarkHelper = ();
