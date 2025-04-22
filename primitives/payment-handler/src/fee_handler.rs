@@ -1,20 +1,15 @@
 use crate::withdraw_credit::WithdrawCredit;
-
-use crate::distribute_fee::TakeNoFee;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
 	traits::{
 		fungible, fungibles,
-		tokens::{Pay, Preservation},
+		tokens::{Preservation},
 		Defensive, Imbalance,
 	},
 	BoundedVec,
 };
-use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_runtime::traits::ConstU32;
-
+use parity_scale_codec::{Decode, Encode};
 pub use crate::distribute_fee::DistributeFee;
 
 /// Payment to be executed.
