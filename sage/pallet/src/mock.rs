@@ -97,6 +97,10 @@ thread_local! {
 	pub static CURRENT_SEASON: RefCell<SeasonId> = const { RefCell::new(SEASON_ID_0) }
 }
 
+// Todo: Replace this with an actual implementation from
+// `sage-testing`, but we need to make the genesis config
+// of the `pallet-ajuna-seasons` more flexible for that
+// (there is an existing JIRA issue).
 pub struct MockSeasonManager;
 
 pub type MockAsset = Asset<BlockNumberFor<Test>>;
