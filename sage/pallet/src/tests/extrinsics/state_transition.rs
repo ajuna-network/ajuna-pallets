@@ -157,9 +157,8 @@ fn player_fund_transition_add_funds_to_balance_works() {
                 Balances::free_balance(alice()),
                 initial_balance - transition_fee - added_balance
 			);
-			// Since in the mock the treasury account and the assets fund pot account
-			// are the same, they share the balance deposited to them.
-			assert_eq!(Balances::free_balance(Sage::assets_funds_pot()), added_balance + 2);
+
+			assert_eq!(Balances::free_balance(Sage::assets_funds_pot()), added_balance);
 			assert_eq!(
 				AssetFunds::<Test, _>::get(asset_ids[0], NATIVE_PAYMENT),
 				Some(added_balance)
