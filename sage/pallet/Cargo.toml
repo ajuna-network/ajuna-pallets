@@ -43,33 +43,35 @@ sage-testing = { workspace = true, features = ["std"] }
 [features]
 default = [ "std" ]
 std = [
-    "frame-benchmarking/std",
-    "frame-support/std",
-    "frame-system/std",
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "sp-core/std",
-    "sp-io/std",
-    "sp-runtime/std",
-    "sp-std/std",
-    "pallet-balances/std",
+	"frame-benchmarking/std",
+	"frame-support/std",
+	"frame-system/std",
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"pallet-balances/std",
     # Ajuna
 	"ajuna-primitives/std",
 	"sage-api/std",
     # Example
 	"example-transition/std",
 	"pallet-assets/std",
-    "pallet-insecure-randomness-collective-flip/std",
+	"pallet-insecure-randomness-collective-flip/std",
+	"sage-testing/std"
 ]
 runtime-benchmarks = [
-    "frame-benchmarking/runtime-benchmarks",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
-    "sp-runtime/runtime-benchmarks",
-    "pallet-balances/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
     # Ajuna
 	"ajuna-primitives/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
+	"sage-testing/runtime-benchmarks"
 ]
 try-runtime = [
 	"frame-support/try-runtime",
@@ -77,5 +79,6 @@ try-runtime = [
 	"sp-runtime/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-assets/try-runtime",
-    "pallet-insecure-randomness-collective-flip/try-runtime",
+	"pallet-insecure-randomness-collective-flip/try-runtime",
+	"sage-testing/try-runtime"
 ]
