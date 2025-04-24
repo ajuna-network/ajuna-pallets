@@ -1,34 +1,28 @@
-use crate::withdraw_credit::WithdrawCredit;
+// Ajuna Node
+// Copyright (C) 2022 BlogaTech AG
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+pub use crate::distribute_fee::DistributeFee;
+use crate::withdraw_credit::WithdrawCredit;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::DispatchError,
 	traits::{fungible, fungibles, tokens::Preservation, Defensive, Imbalance},
 	BoundedVec,
 };
-use parity_scale_codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
-use scale_info::TypeInfo;
-
-/// Distributes shares of a base fee to some beneficiaries.
-pub trait DistributeFee {
-	/// AccountId type used.
-	type AccountId;
-
-	/// Scalar balance type.
-	type Balance;
-
-	/// Fee identifier used to derive the fee distribution.
-	type FeeIdentifier;
-
-	/// Type of the fee distribution
-	type FeeDistribution;
-
-	fn distribute_fee(
-		base_fee: Self::Balance,
-		account: &Self::AccountId,
-		identifier: &Self::FeeIdentifier,
-	) -> Option<Self::FeeDistribution>;
-}
+use parity_scale_codec::{Decode, Encode};
 
 /// Payment to be executed.
 #[derive(Debug, Encode, Decode, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -48,7 +42,7 @@ impl<AccountId, Balance> PaymentFee<AccountId, Balance> {
 pub trait FeeHandler {
 	type AccountId;
 
-	type PaymentKind: Clone + Eq + Debug + TypeInfo + MaxEncodedLen + EncodeLike + Decode;
+	type PaymentKind;
 
 	/// Scalar type of the fee balance.
 	type Balance;
@@ -75,6 +69,59 @@ pub trait FeeHandler {
 		treasury_pot: &Self::AccountId,
 		amount: Self::Balance,
 	) -> Result<(), DispatchError>;
+}
+
+/// Simple fee handler that does nothing in case the game does not want to charge fees besides the
+/// regular substrate transaction fees.
+///
+/// Most likely this will just be used for testing environments, so that we don't need to
+/// provide actual implementations of the complex logic underneath. We still need to provide the
+/// generics, as the pallet-sage constrains these types to other types defined in the pallet.
+///
+/// The biggest benefit is that we don't need to instantiate a tournaments and affiliate pallet
+/// for this fee handler.
+pub struct TakeNoFeeHandler<
+	AccountId,
+	PaymentKind,
+	Balance,
+	AffiliateFeeIdentifier,
+	TournamentFeeIdentifier,
+>(PhantomData<(AccountId, PaymentKind, Balance, AffiliateFeeIdentifier, TournamentFeeIdentifier)>);
+
+impl<AccountId, PaymentKind, Balance, AffiliateFeeIdentifier, TournamentFeeIdentifier> FeeHandler
+	for TakeNoFeeHandler<
+		AccountId,
+		PaymentKind,
+		Balance,
+		AffiliateFeeIdentifier,
+		TournamentFeeIdentifier,
+	>
+{
+	type AccountId = AccountId;
+	type PaymentKind = PaymentKind;
+	type Balance = Balance;
+	type AffiliateFeeIdentifier = AffiliateFeeIdentifier;
+	type TournamentFeeIdentifier = TournamentFeeIdentifier;
+
+	fn withdraw_and_pay_fees(
+		_: &Self::AccountId,
+		_: Self::PaymentKind,
+		_: Self::Balance,
+		_: &Self::TournamentFeeIdentifier,
+		_: &Self::AffiliateFeeIdentifier,
+		_: &Self::AccountId,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
+
+	fn withdraw_and_deposit_into(
+		_: &Self::AccountId,
+		_: Self::PaymentKind,
+		_: &Self::AccountId,
+		_: Self::Balance,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
 }
 
 pub type AffiliateFeeDistribution<AccountId, Balance, MaxDistribution> =

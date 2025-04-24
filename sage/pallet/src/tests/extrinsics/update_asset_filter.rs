@@ -18,13 +18,13 @@ use super::*;
 
 #[test]
 fn update_asset_filter_should_work_for_trade_filter() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		let filter_core = VariantType::Player(PlayerType::Human);
 		let filter = AssetFilter::Trade(filter_core);
 
 		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), None);
 
-		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
+		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(alice()), SEASON_ID_0, filter));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTradeFilter {
 			season_id: SEASON_ID_0,
 			filter: filter_core,
@@ -36,13 +36,13 @@ fn update_asset_filter_should_work_for_trade_filter() {
 
 #[test]
 fn update_asset_filter_should_work_for_transfer_filter() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		let filter_core = VariantType::Player(PlayerType::Human);
 		let filter = AssetFilter::Transfer(filter_core);
 
 		assert_eq!(SeasonTradeFilters::<Test, ()>::get(SEASON_ID_0), None);
 
-		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(ALICE), SEASON_ID_0, filter));
+		assert_ok!(Sage::update_asset_filter(RuntimeOrigin::signed(alice()), SEASON_ID_0, filter));
 		System::assert_last_event(RuntimeEvent::Sage(Event::UpdatedTransferFilter {
 			season_id: SEASON_ID_0,
 			filter: filter_core,
@@ -54,10 +54,10 @@ fn update_asset_filter_should_work_for_transfer_filter() {
 
 #[test]
 fn update_asset_filter_should_reject_non_organizer_calls() {
-	ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
+	ExtBuilder::default().organizer(alice()).build().execute_with(|| {
 		assert_noop!(
 			Sage::update_asset_filter(
-				RuntimeOrigin::signed(BOB),
+				RuntimeOrigin::signed(bob()),
 				SEASON_ID_0,
 				AssetFilter::Trade(VariantType::Player(PlayerType::Human)),
 			),

@@ -24,19 +24,19 @@ mod lock_asset {
 	#[test]
 	fn can_lock_asset_successfully() {
 		ExtBuilder::default()
-			.balances(&[(ALICE, 1_000_000)])
+			.balances(&[(alice(), 1_000_000)])
 			.locks(&[
-				(ALICE, SEASON_ID_0, Locks::all_unlocked()),
-				(BOB, SEASON_ID_0, Locks::all_unlocked()),
+				(alice(), SEASON_ID_0, Locks::all_unlocked()),
+				(bob(), SEASON_ID_0, Locks::all_unlocked()),
 				(Sage::technical_account_id(), SEASON_ID_0, Locks::all_unlocked()),
 			])
 			.build()
 			.execute_with(|| {
-				let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 				let asset_id = asset_ids[0];
-				let expected_lock = Lock { id: *TEST_LOCK_ID, locker: ALICE };
+				let expected_lock = Lock { id: *TEST_LOCK_ID, locker: alice() };
 
-				assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, ALICE, asset_id));
+				assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, alice(), asset_id));
 				assert!(<Sage as AssetManager>::is_locked(&asset_id).is_some());
 				System::assert_has_event(RuntimeEvent::Sage(Event::AssetLocked {
 					asset_id,
@@ -46,9 +46,9 @@ mod lock_asset {
 				// Ensure ownership transferred to technical account
 				let technical_account = Sage::technical_account_id();
 
-				assert!(!AssetOwners::<Test, ()>::contains_key((ALICE, SEASON_ID_0, asset_id)));
+				assert!(!AssetOwners::<Test, ()>::contains_key((alice(), SEASON_ID_0, asset_id)));
 				assert!(!AssetOwners::<Test, ()>::contains_key((
-					technical_account,
+					technical_account.clone(),
 					SEASON_ID_0,
 					asset_id
 				)));
@@ -59,13 +59,13 @@ mod lock_asset {
 	#[test]
 	fn cannot_lock_unowned_asset() {
 		ExtBuilder::default()
-			.balances(&[(ALICE, 1_000), (BOB, 1_000)])
+			.balances(&[(alice(), 1_000), (bob(), 1_000)])
 			.build()
 			.execute_with(|| {
-				let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 1);
 				let asset_id = asset_ids[0];
 				assert_noop!(
-					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, ALICE, asset_id),
+					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, alice(), asset_id),
 					Error::<Test, ()>::AssetNotOwned
 				);
 			});
@@ -74,24 +74,28 @@ mod lock_asset {
 	#[test]
 	fn cannot_lock_asset_on_trade() {
 		ExtBuilder::default()
-			.organizer(ALICE)
-			.balances(&[(ALICE, 1_000)])
-			.locks(&[(CHARLIE, SEASON_ID_0, Locks::all_unlocked())])
+			.organizer(alice())
+			.balances(&[(alice(), 1_000)])
+			.locks(&[(charlie(), SEASON_ID_0, Locks::all_unlocked())])
 			.build()
 			.execute_with(|| {
 				let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 				assert_ok!(Sage::update_asset_filter(
-					RuntimeOrigin::signed(ALICE),
+					RuntimeOrigin::signed(alice()),
 					SEASON_ID_0,
 					filter
 				));
 
-				let asset_ids = create_assets::<()>(SEASON_ID_0, CHARLIE, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, charlie(), 1);
 				let asset_id = asset_ids[0];
 
-				assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 1_000));
+				assert_ok!(Sage::set_asset_price(
+					RuntimeOrigin::signed(charlie()),
+					asset_id,
+					1_000
+				));
 				assert_noop!(
-					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, CHARLIE, asset_id),
+					<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, charlie(), asset_id),
 					Error::<Test, ()>::CannotLockAssetInTrade
 				);
 			});
@@ -99,10 +103,10 @@ mod lock_asset {
 
 	#[test]
 	fn cannot_lock_already_locked_asset() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, DAVE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, dave(), 1);
 			let asset_id = asset_ids[0];
-			assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, DAVE, asset_id));
+			assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, dave(), asset_id));
 			assert_noop!(
 				<Sage as AssetManager>::lock_asset(
 					*TEST_LOCK_ID,
@@ -120,17 +124,17 @@ mod unlock_asset {
 
 	#[test]
 	fn can_unlock_asset_successfully() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let asset_id = asset_ids[0];
-			let expected_lock = Lock { id: *TEST_LOCK_ID, locker: ALICE };
+			let expected_lock = Lock { id: *TEST_LOCK_ID, locker: alice() };
 
-			assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, ALICE, asset_id));
+			assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, alice(), asset_id));
 			assert_eq!(
 				LockedAssets::<Test, ()>::get(asset_id),
-				Some(Lock { id: *TEST_LOCK_ID, locker: ALICE })
+				Some(Lock { id: *TEST_LOCK_ID, locker: alice() })
 			);
-			assert_ok!(<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, ALICE, asset_id));
+			assert_ok!(<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, alice(), asset_id));
 			System::assert_has_event(RuntimeEvent::Sage(Event::AssetLocked {
 				asset_id,
 				lock: expected_lock,
@@ -142,14 +146,14 @@ mod unlock_asset {
 	#[test]
 	fn cannot_unlock_non_owned_asset() {
 		ExtBuilder::default()
-			.balances(&[(ALICE, 1_000), (BOB, 5_000)])
+			.balances(&[(alice(), 1_000), (bob(), 5_000)])
 			.build()
 			.execute_with(|| {
-				let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
+				let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 1);
 				let asset_id = asset_ids[0];
-				assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, BOB, asset_id));
+				assert_ok!(<Sage as AssetManager>::lock_asset(*TEST_LOCK_ID, bob(), asset_id));
 				assert_noop!(
-					<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, ALICE, asset_id),
+					<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, alice(), asset_id),
 					Error::<Test, ()>::AssetNotOwned
 				);
 			});
@@ -157,15 +161,15 @@ mod unlock_asset {
 
 	#[test]
 	fn cannot_unlock_asset_locked_by_other_application() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let asset_id = asset_ids[0];
 
 			let other_lock_id = b"otherapp";
-			assert_ok!(<Sage as AssetManager>::lock_asset(*other_lock_id, ALICE, asset_id));
+			assert_ok!(<Sage as AssetManager>::lock_asset(*other_lock_id, alice(), asset_id));
 
 			assert_noop!(
-				<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, ALICE, asset_id),
+				<Sage as AssetManager>::unlock_asset(*TEST_LOCK_ID, alice(), asset_id),
 				Error::<Test, ()>::AssetLockedByOtherApplication
 			);
 		});
@@ -179,8 +183,8 @@ mod asset_funds_manager {
 
 	#[test]
 	fn depositing_to_asset_works() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
 
@@ -190,7 +194,7 @@ mod asset_funds_manager {
 			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
-				&ALICE,
+				&alice(),
 				NATIVE_PAYMENT,
 				asset_balance
 			));
@@ -201,14 +205,14 @@ mod asset_funds_manager {
 
 			// money went from Alice to the asset
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000 - asset_balance
 			);
 
 			// Add more money to see if depositing to existing asset funds works
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
-				&ALICE,
+				&alice(),
 				NATIVE_PAYMENT,
 				asset_balance
 			));
@@ -218,7 +222,7 @@ mod asset_funds_manager {
 			);
 
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000 - 2 * asset_balance
 			);
 		});
@@ -226,8 +230,8 @@ mod asset_funds_manager {
 
 	#[test]
 	fn depositing_to_asset_fails_if_missing_funds() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let asset_id = asset_ids[0];
 			let asset_balance = 1_000;
 
@@ -238,7 +242,7 @@ mod asset_funds_manager {
 			assert_err!(
 				<Sage as AssetFundsManager>::deposit_funds_to_asset(
 					&asset_id,
-					&ALICE,
+					&alice(),
 					NATIVE_PAYMENT,
 					asset_balance
 				),
@@ -247,7 +251,7 @@ mod asset_funds_manager {
 
 			// Alice still has all her money
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000
 			);
 		});
@@ -255,8 +259,8 @@ mod asset_funds_manager {
 
 	#[test]
 	fn transfer_funds_from_asset_works() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let ed = <<Test as Config>::Fungible as fungible::Inspect<_>>::minimum_balance();
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
@@ -272,7 +276,7 @@ mod asset_funds_manager {
 			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
-				&ALICE,
+				&alice(),
 				NATIVE_PAYMENT,
 				asset_balance
 			));
@@ -281,13 +285,13 @@ mod asset_funds_manager {
 				asset_balance
 			);
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000 - asset_balance
 			);
 
 			assert_ok!(<Sage as AssetFundsManager>::transfer_funds_from_asset(
 				&asset_id,
-				&ALICE,
+				&alice(),
 				NATIVE_PAYMENT,
 				// in this case the account can't be reaped, so we keep the ED.
 				asset_balance
@@ -299,7 +303,7 @@ mod asset_funds_manager {
 			);
 
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000
 			);
 		});
@@ -307,8 +311,8 @@ mod asset_funds_manager {
 
 	#[test]
 	fn transfer_funds_from_asset_cant_remove_more_than_owned() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let ed = <<Test as Config>::Fungible as fungible::Inspect<_>>::minimum_balance();
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
@@ -324,7 +328,7 @@ mod asset_funds_manager {
 			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
-				&ALICE,
+				&alice(),
 				NATIVE_PAYMENT,
 				asset_balance
 			));
@@ -333,14 +337,14 @@ mod asset_funds_manager {
 				asset_balance
 			);
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000 - asset_balance
 			);
 
 			assert_err!(
 				<Sage as AssetFundsManager>::transfer_funds_from_asset(
 					&asset_id,
-					&ALICE,
+					&alice(),
 					NATIVE_PAYMENT,
 					asset_balance + 1
 				),
@@ -353,7 +357,7 @@ mod asset_funds_manager {
 
 			// Alice did not receive any money as the transfer failed
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000 - asset_balance
 			);
 		});
@@ -361,8 +365,8 @@ mod asset_funds_manager {
 
 	#[test]
 	fn transfer_all_funds_from_asset_works() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let ed = <<Test as Config>::Fungible as fungible::Inspect<_>>::minimum_balance();
 			let asset_id = asset_ids[0];
 			let asset_balance = 10;
@@ -378,7 +382,7 @@ mod asset_funds_manager {
 			);
 			assert_ok!(<Sage as AssetFundsManager>::deposit_funds_to_asset(
 				&asset_id,
-				&ALICE,
+				&alice(),
 				NATIVE_PAYMENT,
 				asset_balance
 			));
@@ -389,7 +393,7 @@ mod asset_funds_manager {
 
 			assert_ok!(<Sage as AssetFundsManager>::transfer_all_from_asset(
 				&asset_id,
-				&ALICE,
+				&alice(),
 				NATIVE_PAYMENT,
 			));
 
@@ -400,7 +404,7 @@ mod asset_funds_manager {
 
 			// Alice has now her initial balance
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000
 			);
 		});
@@ -408,8 +412,8 @@ mod asset_funds_manager {
 
 	#[test]
 	fn transfer_all_funds_from_asset_fails_if_missing_funds() {
-		ExtBuilder::default().balances(&[(ALICE, 1_000)]).build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+		ExtBuilder::default().balances(&[(alice(), 1_000)]).build().execute_with(|| {
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let ed = <<Test as Config>::Fungible as fungible::Inspect<_>>::minimum_balance();
 			let asset_id = asset_ids[0];
 
@@ -426,7 +430,7 @@ mod asset_funds_manager {
 			assert_err!(
 				<Sage as AssetFundsManager>::transfer_all_from_asset(
 					&asset_id,
-					&ALICE,
+					&alice(),
 					NATIVE_PAYMENT,
 				),
 				DispatchError::Module(ModuleError {
@@ -443,7 +447,7 @@ mod asset_funds_manager {
 
 			// Alice has still her initial balance
 			assert_eq!(
-				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&ALICE),
+				<<Test as Config>::Fungible as fungible::Inspect<_>>::balance(&alice()),
 				1_000
 			);
 		});

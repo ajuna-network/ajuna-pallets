@@ -20,22 +20,22 @@ use example_transition::asset::BanditVariant;
 #[test]
 fn set_price_should_work() {
 	ExtBuilder::default()
-		.organizer(ALICE)
-		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
+		.organizer(alice())
+		.locks(&[(bob(), SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
 			let filter = AssetFilter::Trade(VariantType::Player(PlayerType::Human));
 			assert_ok!(Sage::update_asset_filter(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				SEASON_ID_0,
 				filter
 			));
 
-			let asset_for_sale = create_assets::<()>(SEASON_ID_0, BOB, 1)[0];
+			let asset_for_sale = create_assets::<()>(SEASON_ID_0, bob(), 1)[0];
 			let price = 7357;
 
 			assert_eq!(AssetTradePrices::<Test, ()>::get(SEASON_ID_0, asset_for_sale), None);
-			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_for_sale, price));
+			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(bob()), asset_for_sale, price));
 			assert_eq!(AssetTradePrices::<Test, ()>::get(SEASON_ID_0, asset_for_sale), Some(price));
 			System::assert_last_event(RuntimeEvent::Sage(Event::AssetPriceSet {
 				asset_id: asset_for_sale,
@@ -49,7 +49,7 @@ fn set_price_should_reject_when_trading_is_closed() {
 	ExtBuilder::default().build().execute_with(|| {
 		GeneralConfigStore::<Test, ()>::mutate(|config| config.trade.open = false);
 		assert_noop!(
-			Sage::set_asset_price(RuntimeOrigin::signed(ALICE), 13, 1),
+			Sage::set_asset_price(RuntimeOrigin::signed(alice()), 13, 1),
 			Error::<Test, ()>::TradeClosed,
 		);
 	});
@@ -65,11 +65,11 @@ fn set_price_should_reject_unsigned_calls() {
 #[test]
 fn set_price_should_reject_setting_price_to_a_non_owned_asset() {
 	ExtBuilder::default().build().execute_with(|| {
-		let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 2);
+		let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 2);
 		let asset_id = asset_ids[0];
 
 		assert_noop!(
-			Sage::set_asset_price(RuntimeOrigin::signed(CHARLIE), asset_id, 101),
+			Sage::set_asset_price(RuntimeOrigin::signed(charlie()), asset_id, 101),
 			Error::<Test, ()>::AssetNotOwned
 		);
 	});
@@ -79,18 +79,18 @@ fn set_price_should_reject_setting_price_to_a_non_owned_asset() {
 fn set_price_should_reject_asset_not_matching_trade_filters() {
 	// This test relies on the implementation of `MockFilterHandler` to work
 	ExtBuilder::default()
-		.organizer(ALICE)
-		.locks(&[(BOB, SEASON_ID_0, Locks::all_unlocked())])
+		.organizer(alice())
+		.locks(&[(bob(), SEASON_ID_0, Locks::all_unlocked())])
 		.build()
 		.execute_with(|| {
 			let filter = AssetFilter::Trade(VariantType::Machine(MachineType::Bandit));
 			assert_ok!(Sage::update_asset_filter(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				SEASON_ID_0,
 				filter,
 			));
 
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 2);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 2);
 			let asset_id_1 = asset_ids[0];
 			let asset_id_2 = asset_ids[1];
 
@@ -102,7 +102,7 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 			);
 
 			assert_noop!(
-				Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_id_1, 101),
+				Sage::set_asset_price(RuntimeOrigin::signed(bob()), asset_id_1, 101),
 				Error::<Test, ()>::AssetCannotBeTraded
 			);
 
@@ -126,6 +126,6 @@ fn set_price_should_reject_asset_not_matching_trade_filters() {
 					});
 				}
 			});
-			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(BOB), asset_id_2, 101));
+			assert_ok!(Sage::set_asset_price(RuntimeOrigin::signed(bob()), asset_id_2, 101));
 		});
 }

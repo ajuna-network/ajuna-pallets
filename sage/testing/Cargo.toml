@@ -1,5 +1,5 @@
 [package]
-name = "pallet-sage"
+name = "sage-testing"
 authors.workspace = true
 edition.workspace = true
 homepage.workspace = true
@@ -19,26 +19,25 @@ scale-info         = { workspace = true, features = [ "derive" ] }
 # Substrate - Primitives
 sp-core            = { workspace = true }
 sp-io              = { workspace = true }
+sp-keyring         = { workspace = true }
 sp-runtime         = { workspace = true }
 sp-std             = { workspace = true }
 # Ajuna
 ajuna-primitives   = { workspace = true }
 sage-api           = { workspace = true }
 
+# Core Runtime
+example-transition = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-insecure-randomness-collective-flip = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-sage = { workspace = true }
+
+pallet-ajuna-seasons = { workspace = true }
+
 # Benchmarking
 frame-benchmarking = { workspace = true, optional = true }
-example-transition = { workspace = true, optional = true }
-# todo: these pallets are not needed when we fix that the
-# mock doesn't need to be used in with the feature runtime-benchmarks
-pallet-assets    = { workspace = true, optional = true }
-pallet-balances    = { workspace = true, optional = true }
-
-[dev-dependencies]
-example-transition = { workspace = true, features = ["std"] }
-pallet-balances = { workspace = true, features = ["std"] }
-pallet-assets = { workspace = true, features = ["std"] }
-pallet-insecure-randomness-collective-flip = { workspace = true, features = ["std"] }
-sage-testing = { workspace = true, features = ["std"] }
 
 [features]
 default = [ "std" ]
@@ -60,7 +59,10 @@ std = [
 	"example-transition/std",
 	"pallet-assets/std",
 	"pallet-insecure-randomness-collective-flip/std",
-	"sage-testing/std"
+	"pallet-ajuna-seasons/std",
+	"pallet-sage/std",
+	"pallet-timestamp/std",
+	"sp-keyring/std"
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
@@ -71,7 +73,9 @@ runtime-benchmarks = [
     # Ajuna
 	"ajuna-primitives/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
-	"sage-testing/runtime-benchmarks"
+	"pallet-ajuna-seasons/runtime-benchmarks",
+	"pallet-sage/runtime-benchmarks",
+	"pallet-timestamp/runtime-benchmarks"
 ]
 try-runtime = [
 	"frame-support/try-runtime",
@@ -80,5 +84,7 @@ try-runtime = [
 	"pallet-balances/try-runtime",
 	"pallet-assets/try-runtime",
 	"pallet-insecure-randomness-collective-flip/try-runtime",
-	"sage-testing/try-runtime"
+	"pallet-ajuna-seasons/try-runtime",
+	"pallet-sage/try-runtime",
+	"pallet-timestamp/try-runtime"
 ]

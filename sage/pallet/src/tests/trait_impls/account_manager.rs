@@ -23,16 +23,16 @@ mod is_organizer {
 	fn is_organizer_works() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(
-				<Sage as AccountManager>::is_organizer(&CHARLIE),
+				<Sage as AccountManager>::is_organizer(&charlie()),
 				Error::<Test, ()>::OrganizerNotSet
 			);
 
-			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), ALICE));
+			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), alice()));
 
-			assert_ok!(<Sage as AccountManager>::is_organizer(&ALICE));
+			assert_ok!(<Sage as AccountManager>::is_organizer(&alice()));
 
 			assert_noop!(
-				<Sage as AccountManager>::is_organizer(&CHARLIE),
+				<Sage as AccountManager>::is_organizer(&charlie()),
 				DispatchError::BadOrigin
 			);
 		});

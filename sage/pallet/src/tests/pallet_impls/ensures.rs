@@ -23,9 +23,9 @@ mod ensure_organizer {
 	fn ensure_organizer_should_works() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_eq!(Organizer::<Test, ()>::get(), None);
-			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), DAVE));
-			assert_eq!(Organizer::<Test, ()>::get(), Some(DAVE));
-			assert_ok!(Sage::ensure_organizer(&DAVE));
+			assert_ok!(Sage::set_organizer(RuntimeOrigin::root(), dave()));
+			assert_eq!(Organizer::<Test, ()>::get(), Some(dave()));
+			assert_ok!(Sage::ensure_organizer(&dave()));
 		});
 	}
 
@@ -33,21 +33,21 @@ mod ensure_organizer {
 	fn ensure_organizer_should_reject_when_no_organizer_is_set() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_eq!(Organizer::<Test, ()>::get(), None);
-			assert_noop!(Sage::ensure_organizer(&DAVE), Error::<Test, ()>::OrganizerNotSet);
+			assert_noop!(Sage::ensure_organizer(&dave()), Error::<Test, ()>::OrganizerNotSet);
 		});
 	}
 
 	#[test]
 	fn ensure_organizer_should_reject_non_organizer_calls() {
-		ExtBuilder::default().organizer(ALICE).build().execute_with(|| {
-			assert_noop!(Sage::ensure_organizer(&DAVE), DispatchError::BadOrigin);
+		ExtBuilder::default().organizer(alice()).build().execute_with(|| {
+			assert_noop!(Sage::ensure_organizer(&dave()), DispatchError::BadOrigin);
 		});
 	}
 
 	#[test]
 	fn ensure_organizer_should_validate_newly_set_organizer() {
-		ExtBuilder::default().organizer(CHARLIE).build().execute_with(|| {
-			assert_ok!(Sage::ensure_organizer(&CHARLIE));
+		ExtBuilder::default().organizer(charlie()).build().execute_with(|| {
+			assert_ok!(Sage::ensure_organizer(&charlie()));
 		});
 	}
 }
@@ -58,19 +58,19 @@ mod ensure_ownership {
 	#[test]
 	fn ensure_ownership_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 1);
 			let asset_id = asset_ids[0];
-			assert_ok!(Sage::ensure_ownership(&BOB, &asset_id));
+			assert_ok!(Sage::ensure_ownership(&bob(), &asset_id));
 		});
 	}
 
 	#[test]
 	fn ensure_ownership_should_reject_non_owned_asset() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 1);
 			let asset_id = asset_ids[0];
 			assert_noop!(
-				Sage::ensure_ownership(&DAVE, &asset_id),
+				Sage::ensure_ownership(&dave(), &asset_id),
 				Error::<Test, ()>::AssetNotOwned
 			);
 		});
@@ -79,7 +79,7 @@ mod ensure_ownership {
 	#[test]
 	fn ensure_ownership_should_reject_unknown_asset() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_noop!(Sage::ensure_ownership(&DAVE, &13), Error::<Test, ()>::UnknownAsset);
+			assert_noop!(Sage::ensure_ownership(&dave(), &13), Error::<Test, ()>::UnknownAsset);
 		});
 	}
 }
@@ -90,7 +90,7 @@ mod ensure_for_trade {
 	#[test]
 	fn ensure_for_trade_works() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 1);
 			let asset_id = asset_ids[0];
 			let season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
 				.expect("Should get season_id");
@@ -110,7 +110,7 @@ mod ensure_for_trade {
 	#[test]
 	fn ensure_for_trade_should_reject_asset_not_in_trade() {
 		ExtBuilder::default().build().execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, BOB, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, bob(), 1);
 			let asset_id = asset_ids[0];
 
 			assert_noop!(Sage::ensure_for_trade(&asset_id), Error::<Test, ()>::AssetNotInTrade);

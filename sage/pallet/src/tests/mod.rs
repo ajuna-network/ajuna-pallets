@@ -21,24 +21,26 @@ mod trait_impls;
 
 use crate::{mock::*, *};
 
+use ajuna_primitives::runtime_types::AccountId;
 use example_transition::prelude::*;
 use frame_support::{assert_noop, assert_ok};
 use sage_api::benchmarks::SageBenchmarkHelper;
+use sage_testing::SeasonId;
 use sp_runtime::testing::H256;
 
 pub(crate) fn create_assets<I: 'static>(
-	season_id: MockSeasonId,
-	account: MockAccountId,
+	season_id: SeasonId,
+	account: AccountId,
 	n: u8,
 ) -> Vec<AssetIdOf<Test, I>>
 where
 	Test: Config<I>,
 	AssetIdOf<Test, I>: From<u32>,
 	AssetOf<Test, I>: From<MockAsset>,
-	SeasonIdOf<Test, I>: From<MockSeasonId>,
+	SeasonIdOf<Test, I>: From<SeasonId>,
 {
 	let casted_season_id = SeasonIdOf::<Test, I>::from(season_id);
-	AssetsOwnedCount::<Test, I>::mutate(account, &casted_season_id, |asset_count| {
+	AssetsOwnedCount::<Test, I>::mutate(&account, &casted_season_id, |asset_count| {
 		*asset_count = asset_count.saturating_add(n);
 	});
 
@@ -56,8 +58,8 @@ where
 			let asset_id = AssetIdOf::<Test, I>::from(asset_id);
 			let asset = AssetOf::<Test, I>::from(asset);
 
-			Assets::<Test, I>::insert(&asset_id, (account, asset));
-			AssetOwners::<Test, I>::insert((account, &casted_season_id, &asset_id), ());
+			Assets::<Test, I>::insert(&asset_id, (&account, asset));
+			AssetOwners::<Test, I>::insert((&account, &casted_season_id, &asset_id), ());
 
 			asset_id
 		})

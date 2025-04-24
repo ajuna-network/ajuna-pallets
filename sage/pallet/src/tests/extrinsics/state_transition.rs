@@ -20,7 +20,7 @@ use super::*;
 fn state_transition_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
 			let season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
@@ -30,23 +30,23 @@ fn state_transition_works() {
 					.expect("Should get season config");
 			let transition_id = CasinoAction::Create(AssetType::Player);
 
-			assert_eq!(Balances::free_balance(ALICE), initial_balance);
+			assert_eq!(Balances::free_balance(alice()), initial_balance);
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				transition_id,
 				vec![],
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
-				account: ALICE,
+				account: alice(),
 				id: transition_id,
 			}));
 			let transition_fee = season_config.fee.state_transition_base_fee;
 			// This assertion assumes that for the UpgradeAsset transition the fee is 2x
 			// the 'state_transition_base_fee'
-			// assert_eq!(Balances::free_balance(ALICE), initial_balance - (transition_fee * 2));
-			assert_eq!(Balances::free_balance(ALICE), initial_balance - transition_fee);
+			// assert_eq!(Balances::free_balance(alice()), initial_balance - (transition_fee * 2));
+			assert_eq!(Balances::free_balance(alice()), initial_balance - transition_fee);
 		});
 }
 
@@ -54,14 +54,14 @@ fn state_transition_works() {
 fn state_transition_should_reject_locked_assets() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let asset_id = asset_ids[0];
 			let transition_id = CasinoAction::Deposit(AssetType::Player, TokenType::T10);
 
-			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(ALICE), asset_id));
+			assert_ok!(Sage::lock_asset(RuntimeOrigin::signed(alice()), asset_id));
 			// This call should not be possible in the real world, but we simulate it to demonstrate
 			// that you cannot bypass asset locking
 			assert_noop!(
@@ -81,14 +81,14 @@ fn state_transition_should_reject_locked_assets() {
 fn state_transition_should_reject_rule_verification_failure() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 2);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 2);
 			let transition_id = CasinoAction::Deposit(AssetType::Player, TokenType::T10);
 			assert_noop!(
 				Sage::state_transition(
-					RuntimeOrigin::signed(ALICE),
+					RuntimeOrigin::signed(alice()),
 					transition_id,
 					asset_ids,
 					(),
@@ -103,16 +103,16 @@ fn state_transition_should_reject_rule_verification_failure() {
 fn state_transition_should_reject_too_many_input_assets() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
 			let asset_ids =
-				create_assets::<()>(SEASON_ID_0, ALICE, (MAX_ASSETS_IN_TRANSITION + 1) as u8);
+				create_assets::<()>(SEASON_ID_0, alice(), (MAX_ASSETS_IN_TRANSITION + 1) as u8);
 			let transition_id = CasinoAction::Deposit(AssetType::Player, TokenType::T10);
 
 			assert_noop!(
 				Sage::state_transition(
-					RuntimeOrigin::signed(ALICE),
+					RuntimeOrigin::signed(alice()),
 					transition_id,
 					asset_ids,
 					(),
@@ -127,10 +127,10 @@ fn state_transition_should_reject_too_many_input_assets() {
 fn player_fund_transition_add_funds_to_balance_works() {
 	let initial_balance = 100_000;
 	ExtBuilder::default()
-		.balances(&[(ALICE, initial_balance)])
+		.balances(&[(alice(), initial_balance)])
 		.build()
 		.execute_with(|| {
-			let asset_ids = create_assets::<()>(SEASON_ID_0, ALICE, 1);
+			let asset_ids = create_assets::<()>(SEASON_ID_0, alice(), 1);
 			let season_id = <Test as Config<()>>::SeasonHandler::get_current_season_id()
 				.expect("Should get season_id");
 			let season_config =
@@ -138,28 +138,27 @@ fn player_fund_transition_add_funds_to_balance_works() {
 					.expect("Should get season config");
 			let transition_id = CasinoAction::Deposit(AssetType::Player, TokenType::T10);
 
-			assert_eq!(Balances::free_balance(ALICE), initial_balance);
+			assert_eq!(Balances::free_balance(alice()), initial_balance);
 			assert_eq!(Balances::free_balance(Sage::assets_funds_pot()), 0);
 			assert_ok!(Sage::state_transition(
-				RuntimeOrigin::signed(ALICE),
+				RuntimeOrigin::signed(alice()),
 				transition_id,
 				asset_ids.clone(),
 				(),
 				SOME_NATIVE_PAYMENT
 			));
 			System::assert_last_event(RuntimeEvent::Sage(Event::TransitionExecuted {
-				account: ALICE,
+				account: alice(),
 				id: transition_id,
 			}));
 			let transition_fee = season_config.fee.state_transition_base_fee;
 			let added_balance = TokenType::T10.get_value_for(MultiplierType::V1).into();
 			assert_eq!(
-				Balances::free_balance(ALICE),
+				Balances::free_balance(alice()),
 				initial_balance - transition_fee - added_balance
 			);
-			// Since in the mock the treasury account and the assets fund pot account
-			// are the same, they share the balance deposited to them.
-			assert_eq!(Balances::free_balance(Sage::assets_funds_pot()), added_balance + 2);
+
+			assert_eq!(Balances::free_balance(Sage::assets_funds_pot()), added_balance);
 			assert_eq!(
 				AssetFunds::<Test, _>::get(asset_ids[0], NATIVE_PAYMENT),
 				Some(added_balance)

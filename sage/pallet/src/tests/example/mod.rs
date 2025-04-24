@@ -25,13 +25,13 @@ mod withdraw;
 
 use super::*;
 
-use ajuna_primitives::asset_manager::AssetInspector;
+use ajuna_primitives::{asset_manager::AssetInspector, runtime_types::AccountId};
 use example_transition::prelude::*;
 
-pub(crate) fn create_player_and_tracker_for(account_id: MockAccountId) {
+pub(crate) fn create_player_and_tracker_for(account_id: AccountId) {
 	let transition_id = CasinoAction::Create(AssetType::Player);
 	assert_ok!(Sage::state_transition(
-		RuntimeOrigin::signed(account_id),
+		RuntimeOrigin::signed(account_id.clone()),
 		transition_id,
 		vec![],
 		(),
@@ -43,10 +43,10 @@ pub(crate) fn create_player_and_tracker_for(account_id: MockAccountId) {
 	}));
 }
 
-pub(crate) fn create_machine_for(account_id: MockAccountId) {
+pub(crate) fn create_machine_for(account_id: AccountId) {
 	let transition_id = CasinoAction::Create(AssetType::Machine(MachineType::Bandit));
 	assert_ok!(Sage::state_transition(
-		RuntimeOrigin::signed(account_id),
+		RuntimeOrigin::signed(account_id.clone()),
 		transition_id,
 		vec![],
 		(),
@@ -59,24 +59,10 @@ pub(crate) fn create_machine_for(account_id: MockAccountId) {
 }
 
 pub(crate) fn get_assets_from(
-	account_id: MockAccountId,
+	account_id: AccountId,
 	variant_type: VariantType,
 ) -> Vec<(AssetId, Asset<BlockNumberFor<Test>>)> {
 	Sage::iter_assets_from(&account_id)
 		.filter(|(_, asset)| asset.variant.is_variant(variant_type))
 		.collect()
-}
-
-pub(crate) fn run_to_block(n: u64) {
-	while System::block_number() < n {
-		if System::block_number() > 1 {
-			Randomness::on_finalize(System::block_number());
-			Sage::on_finalize(System::block_number());
-			System::on_finalize(System::block_number());
-		}
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		Sage::on_initialize(System::block_number());
-		Randomness::on_initialize(System::block_number());
-	}
 }
