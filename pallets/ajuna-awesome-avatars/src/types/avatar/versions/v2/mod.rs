@@ -352,7 +352,10 @@ impl<T: Config> ForgerV2<T> {
 					sacrificed_toolboxes <= MAX_TOOLBOXES
 				{
 					ForgeType::Assemble
-				} else if leader_rarity == RarityTier::Epic && leader_sub_type.is_armor_base() {
+				} else if (leader_rarity == RarityTier::Epic ||
+					leader_rarity == RarityTier::Legendary) &&
+					leader_sub_type.is_armor_base()
+				{
 					let has_one_paint_flask_or_glow = sacrifices
 						.iter()
 						.filter(|sacrifice| {
