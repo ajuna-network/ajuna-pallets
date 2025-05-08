@@ -27,6 +27,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
 };
+use sp_std::num::NonZeroU32;
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
 pub type MockSignature = TestSignature;
@@ -51,6 +52,7 @@ frame_support::construct_runtime!(
 		AAvatars: pallet_ajuna_awesome_avatars = 4,
 		Affiliates: pallet_ajuna_affiliates::<Instance1> = 6,
 		Tournament: pallet_ajuna_tournament::<Instance1> = 7,
+		BattleRoyale: pallet_ajuna_battle_royale::<Instance1> = 8,
 	}
 );
 
@@ -128,6 +130,7 @@ impl pallet_ajuna_awesome_avatars::Config for Test {
 		AffiliateMaxLevel,
 		Tournament,
 	>;
+	type BattleHandler = BattleRoyale;
 	type WeightInfo = ();
 }
 
@@ -242,6 +245,32 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = TournamentBenchmarkHelper;
+}
+
+parameter_types! {
+	// Input lasts 3 blocks
+	pub const InputPhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(2);
+	// Reveal lasts 3 blocks
+	pub const RevealPhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(2);
+	// Execution lasts 1 block
+	pub const ExecutionPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Shrink lasts 1 block
+	pub const ShrinkPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Verification lasts 1 block
+	pub const VerificationPhaseDuration: NonZeroU32 = NonZeroU32::MIN;
+	// Idle lasts 2 blocks
+	pub const IdlePhaseDuration: NonZeroU32 = NonZeroU32::MIN.saturating_add(1);
+}
+
+type BattleInstance1 = pallet_ajuna_battle_royale::Instance1;
+impl pallet_ajuna_battle_royale::Config<BattleInstance1> for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type InputPhaseDuration = InputPhaseDuration;
+	type RevealPhaseDuration = RevealPhaseDuration;
+	type ExecutionPhaseDuration = ExecutionPhaseDuration;
+	type ShrinkPhaseDuration = ShrinkPhaseDuration;
+	type VerificationPhaseDuration = VerificationPhaseDuration;
+	type IdlePhaseDuration = IdlePhaseDuration;
 }
 
 pub struct ExtBuilder {
@@ -381,11 +410,13 @@ pub fn run_to_block(n: u64) {
 		if System::block_number() > 1 {
 			AAvatars::on_finalize(System::block_number());
 			Tournament::on_finalize(System::block_number());
+			BattleRoyale::on_finalize(System::block_number());
 			System::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		AAvatars::on_initialize(System::block_number());
+		BattleRoyale::on_initialize(System::block_number());
 		Tournament::on_initialize(System::block_number());
 	}
 }

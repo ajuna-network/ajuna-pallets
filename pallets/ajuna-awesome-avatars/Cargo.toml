@@ -33,10 +33,11 @@ sp-runtime         = { workspace = true }
 sp-std             = { workspace = true }
 
 # Ajuna
-pallet-ajuna-affiliates   = { workspace = true }
-pallet-ajuna-nft-transfer = { workspace = true }
-pallet-ajuna-tournament   = { workspace = true }
-ajuna-primitives = { workspace = true }
+pallet-ajuna-affiliates    = { workspace = true }
+pallet-ajuna-battle-royale = { workspace = true }
+pallet-ajuna-nft-transfer  = { workspace = true }
+pallet-ajuna-tournament    = { workspace = true }
+ajuna-primitives           = { workspace = true }
 
 [dev-dependencies]
 # Substrate - FRAME
@@ -57,6 +58,7 @@ std = [
     "frame-system/std",
     "ajuna-primitives/std",
     "pallet-ajuna-affiliates/std",
+    "pallet-ajuna-battle-royale/std",
     "pallet-ajuna-nft-transfer/std",
     "pallet-ajuna-tournament/std",
     "pallet-balances/std",
@@ -75,6 +77,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "ajuna-primitives/runtime-benchmarks",
     "pallet-ajuna-affiliates/runtime-benchmarks",
+    "pallet-ajuna-battle-royale/runtime-benchmarks",
     "pallet-ajuna-nft-transfer/runtime-benchmarks",
     "pallet-ajuna-tournament/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
@@ -85,6 +88,7 @@ try-runtime = [
     "frame-support/try-runtime",
     "frame-system/try-runtime",
     "pallet-ajuna-affiliates/try-runtime",
+    "pallet-ajuna-battle-royale/try-runtime",
     "pallet-ajuna-nft-transfer/try-runtime",
     "pallet-ajuna-tournament/try-runtime",
     "pallet-balances/try-runtime",

@@ -1,0 +1,66 @@
+[package]
+description = "Ajuna Network pallet used to play battle royale games with avatars"
+name        = "pallet-ajuna-battle-royale"
+
+authors.workspace    = true
+edition.workspace    = true
+homepage.workspace   = true
+repository.workspace = true
+version.workspace    = true
+
+[package.metadata.docs.rs]
+targets = [ "x86_64-unknown-linux-gnu" ]
+
+[dependencies]
+# General
+bitvec = { workspace = true }
+hex = { workspace = true, features = ["alloc"] }
+log = { workspace = true }
+
+# Substrate - FRAME
+frame-support      = { workspace = true }
+frame-system       = { workspace = true }
+
+# Substrate - SCALE codec
+parity-scale-codec = { workspace = true, features = [ "derive", "max-encoded-len" ] }
+scale-info         = { workspace = true, features = [ "derive" ] }
+
+sp-io              = { workspace = true }
+sp-crypto-hashing  = { workspace = true }
+sp-runtime         = { workspace = true }
+sp-std             = { workspace = true }
+
+[dev-dependencies]
+pallet-balances = { workspace = true, features = ["std"] }
+# Substrate - Primitives
+sp-core = { workspace = true }
+
+[features]
+default = [ "std" ]
+std = [
+    "bitvec/std",
+    "hex/std",
+    "log/std",
+    "pallet-balances/std",
+    "frame-support/std",
+    "frame-system/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-core/std",
+    "sp-crypto-hashing/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "pallet-balances/try-runtime",
+    "sp-runtime/try-runtime",
+]
