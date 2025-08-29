@@ -25,7 +25,7 @@ pub(crate) const ZERO_BALANCE_PROOF_PREFIX: &[u8] = b"Erdstall zero balance";
 pub(crate) const LIGHT_CLIENT_PROOF_PREFIX: &[u8] = b"Is a certified light client";
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen)]
 pub enum AssetType {
 	Fungible = 0,
 	NonFungible = 1,
@@ -41,7 +41,7 @@ impl From<u8> for AssetType {
 	}
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen)]
 pub struct AssetDeposit {
 	pub origin: AssetOrigin,
 	pub asset_type: AssetType,
@@ -105,7 +105,7 @@ pub trait Proof {
 	fn extract_msg(&self) -> Vec<u8>;
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen)]
 pub struct BalanceProof {
 	pub epoch: EpochNumber,
 	pub origin: ChainId,
@@ -204,7 +204,7 @@ impl BalanceProof {
 	}
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen)]
 pub struct FreezeProof {
 	pub epoch: EpochNumber,
 	pub origin: ChainId,
@@ -224,7 +224,7 @@ impl Proof for FreezeProof {
 	}
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Debug, Copy, Clone, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen)]
 pub struct ZeroBalanceProof {
 	pub epoch: EpochNumber,
 	pub origin: ChainId,

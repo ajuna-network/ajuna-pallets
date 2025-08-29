@@ -240,8 +240,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		type Currency: ReservableCurrency<Self::AccountId>;
 
 		type AssetId: Member + Parameter + Clone + MaybeSerializeDeserialize + MaxEncodedLen;

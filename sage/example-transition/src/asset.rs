@@ -24,11 +24,12 @@ use crate::{
 use sage_api::{traits::GetId, TransitionError};
 
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use sp_core::DecodeWithMemTracking;
 use sp_runtime::traits::BlockNumber as BlockNumberT;
 
 pub type AssetId = u32;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct Asset<BlockNumber> {
 	pub id: AssetId,
 	pub collection_id: u8,
@@ -138,14 +139,14 @@ impl<BlockNumber> GetId<AssetId> for Asset<BlockNumber> {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum VariantType {
 	Player(PlayerType),
 	Machine(MachineType),
 	Seat,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum AssetVariant<BlockNumber> {
 	Player(PlayerVariant),
 	Machine(MachineVariant),
@@ -171,7 +172,7 @@ impl<BlockNumber> AssetVariant<BlockNumber> {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum PlayerVariant {
 	Human(HumanVariant),
 	Tracker(TrackerVariant),
@@ -193,7 +194,7 @@ impl PlayerVariant {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct HumanVariant {
 	pub seat_id: Option<AssetId>,
 }
@@ -212,7 +213,7 @@ impl HumanVariant {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking,MaxEncodedLen, TypeInfo)]
 pub struct TrackerVariant {
 	pub slot_a_result: u16,
 	pub slot_b_result: u16,
@@ -231,7 +232,7 @@ impl TrackerVariant {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct MachineVariant {
 	pub seat_linked: u8,
 	pub seat_limit: u8,
@@ -252,18 +253,18 @@ impl MachineVariant {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum MachineSubVariant {
 	Bandit(BanditVariant),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct BanditVariant {
 	pub max_spins: u8,
 	pub jackpot: u32,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct SeatVariant<BlockNumber> {
 	pub seat_validity_period: u16,
 	pub player_fee: u16,

@@ -70,7 +70,7 @@ pub mod pallet {
 	pub(crate) type StakedItemsOf<T> = BoundedVec<NftIdOf<T>, <T as Config>::MaxStakingClauses>;
 
 	#[derive(
-		Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, Eq, PartialEq,
+		Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, Eq, PartialEq,
 	)]
 	pub struct GlobalConfig {
 		pub pallet_locked: bool,
@@ -115,9 +115,6 @@ pub mod pallet {
 		/// The NFT-staking's pallet id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The staking balance.
 		type Currency: Currency<Self::AccountId>;

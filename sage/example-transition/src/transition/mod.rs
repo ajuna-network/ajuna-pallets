@@ -12,7 +12,7 @@ use frame_support::{
 	Parameter,
 };
 use parity_scale_codec::{Codec, MaxEncodedLen};
-use sp_core::H256;
+use sp_core::{DecodeWithMemTracking, H256};
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
@@ -30,13 +30,13 @@ pub const ASSET_COLLECTION_ID: u8 = 1;
 
 pub const BANDIT_MAX_SPINS: u8 = 4;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum AssetType {
 	Player,
 	Machine(MachineType),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum CasinoAction {
 	Create(AssetType),
 	Deposit(AssetType, TokenType),
@@ -48,7 +48,7 @@ pub enum CasinoAction {
 	Kick,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, Clone, PartialEq, Eq)]
 pub struct CasinoJamTransitionConfig {
 	pub reward_multiplier: u8,
 }

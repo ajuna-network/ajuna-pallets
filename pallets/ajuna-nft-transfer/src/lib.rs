@@ -82,9 +82,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// Identifier for the collection of item.
 		type CollectionId: Member + Parameter + MaxEncodedLen + Copy + AtLeast32BitUnsigned;
 

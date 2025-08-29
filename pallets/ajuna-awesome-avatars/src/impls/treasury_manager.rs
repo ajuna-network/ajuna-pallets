@@ -17,7 +17,6 @@
 use crate::*;
 
 impl<T: Config> TreasuryManager for Pallet<T> {
-	type AccountId = AccountIdFor<T>;
 	type Currency = BalanceOf<T>;
 	type TreasuryPotKey = SeasonId;
 

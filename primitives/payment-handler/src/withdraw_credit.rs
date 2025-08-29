@@ -25,7 +25,7 @@ use frame_support::{
 		tokens::{AssetId, Balance, Fortitude, Precision, Preservation},
 	},
 };
-use parity_scale_codec::{Decode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// Implements `WithdrawCredit`, but ensures that only whitelisted assets are withdrawn.
@@ -143,7 +143,7 @@ where
 	}
 }
 
-#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Encode, Decode, DecodeWithMemTracking, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo)]
 pub enum WithdrawKind<AssetId> {
 	Payment(AssetId),
 	Voucher,

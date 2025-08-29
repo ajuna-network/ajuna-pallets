@@ -58,7 +58,6 @@ pub mod pallet {
 		Saturating,
 	};
 
-	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type BalanceOf<T, I> =
 		<<T as Config<I>>::Currency as Currency<AccountIdFor<T>>>::Balance;
 	pub(crate) type TournamentScheduledActionFor<T, I> =
@@ -95,10 +94,6 @@ pub mod pallet {
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Currency: Currency<Self::AccountId>;
 
@@ -878,7 +873,7 @@ pub mod pallet {
 			let tournament_id = Self::try_get_active_tournament_id_for(category_id)?;
 
 			GoldenDucks::<T, I>::mutate(category_id, tournament_id, |state| {
-				if let GoldenDuckState::Enabled(payout_perc, ref maybe_entry_id) = state {
+				if let GoldenDuckState::Enabled(payout_perc, maybe_entry_id) = state {
 					match maybe_entry_id {
 						None => {
 							*state =

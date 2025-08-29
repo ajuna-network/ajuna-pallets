@@ -185,10 +185,6 @@ pub mod pallet {
 		/// balances-pallet.
 		type Fungible: fungible::Inspect<AccountIdOf<Self>> + fungible::Mutate<AccountIdOf<Self>>;
 
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// The weight calculations
 		type WeightInfo: WeightInfo;
 

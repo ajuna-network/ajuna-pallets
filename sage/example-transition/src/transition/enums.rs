@@ -1,17 +1,18 @@
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use sp_core::DecodeWithMemTracking;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking,MaxEncodedLen, TypeInfo)]
 pub enum PlayerType {
 	Human,
 	Tracker,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum MachineType {
 	Bandit = 1,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum TokenType {
 	#[default]
 	T1 = 0,
@@ -33,7 +34,7 @@ impl TokenType {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum MultiplierType {
 	#[default]
 	V0 = 0,

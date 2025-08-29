@@ -18,6 +18,7 @@ use frame_support::{
 	pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, TypeInfo},
 	BoundedVec,
 };
+use parity_scale_codec::DecodeWithMemTracking;
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub enum SeasonScheduledAction<SeasonId> {
@@ -34,7 +35,7 @@ pub struct SeasonStatus<SeasonId> {
 	pub early_ended: bool,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct SeasonMetadata {
 	pub name: BoundedVec<u8, ConstU32<100>>,
 	pub description: BoundedVec<u8, ConstU32<1_000>>,

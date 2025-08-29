@@ -105,7 +105,6 @@ use sp_std::{collections::vec_deque::VecDeque, prelude::*};
 pub mod pallet {
 	use super::*;
 
-	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type SeasonOf<T> = Season<BlockNumberFor<T>, BalanceOf<T>>;
 	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
 	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
@@ -134,8 +133,6 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Currency: Currency<Self::AccountId>;
 

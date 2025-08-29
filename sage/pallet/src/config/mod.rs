@@ -21,7 +21,7 @@ pub(crate) use player::*;
 
 pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
 pub enum LockableFeature {
 	TradeAsset,
 	TransferAsset,
@@ -33,17 +33,17 @@ pub enum AssetFilter<TradeFilter, TransferFilter> {
 	Transfer(TransferFilter),
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub struct TransferConfig {
 	pub open: bool,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub struct TradeConfig {
 	pub open: bool,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub struct GeneralConfig {
 	pub transfer: TransferConfig,
 	pub trade: TradeConfig,

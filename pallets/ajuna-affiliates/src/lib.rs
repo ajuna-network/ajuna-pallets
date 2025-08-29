@@ -51,7 +51,6 @@ pub mod pallet {
 	pub type AffiliatedAccountsOf<T, I> =
 		BoundedVec<<T as frame_system::Config>::AccountId, <T as Config<I>>::AffiliateMaxLevel>;
 
-	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub type RuleIdentifierFor<T, I> = <T as Config<I>>::RuleIdentifier;
 	pub type AffiliateMaxLevelFor<T, I> = <T as Config<I>>::AffiliateMaxLevel;
 	pub type FeePropagationOf<T, I> = FeePropagation<<T as Config<I>>::AffiliateMaxLevel>;
@@ -84,10 +83,6 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		type Currency: Currency<Self::AccountId>;
 
 		#[pallet::constant]

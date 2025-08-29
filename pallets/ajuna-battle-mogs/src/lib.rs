@@ -25,7 +25,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::{
-	traits::{Hash, Saturating, TrailingZeroInput, Zero},
+	traits::{Hash, Saturating, TrailingZeroInput},
 	DispatchResult, SaturatedConversion,
 };
 use sp_std::{mem::MaybeUninit, prelude::*, ptr::copy_nonoverlapping, vec::Vec};
@@ -78,9 +78,6 @@ pub mod pallet {
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// The currency mechanism.
 		type Currency: ReservableCurrency<Self::AccountId>;
 
