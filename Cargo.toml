@@ -1,6 +1,6 @@
 [workspace.package]
 authors    = [ "Ajuna Network <https://github.com/ajuna-network>" ]
-edition    = "2021"
+edition    = "2024"
 homepage   = "https://ajuna.io"
 repository = "https://github.com/ajuna-network/ajuna-pallets"
 version    = "0.15.0"
@@ -37,19 +37,19 @@ parity-scale-codec = { version = "3.0.0", default-features = false }
 scale-info         = { version = "2.1.1", default-features = false }
 
 # Substrate
-frame-benchmarking                         = { version = "38.0.0", default-features = false }
-frame-support                              = { version = "38.2.0", default-features = false }
-frame-system                               = { version = "38.0.0", default-features = false }
-pallet-assets                              = { version = "40.0.0", default-features = false }
-pallet-balances                            = { version = "39.0.0", default-features = false }
-pallet-insecure-randomness-collective-flip = { version = "26.0.0", default-features = false }
-pallet-nfts                                = { version = "32.0.0", default-features = false }
-pallet-timestamp                           = { version = "37.0.0", default-features = false }
-sp-arithmetic                              = { version = "26.0.0", default-features = false }
-sp-core                                    = { version = "34.0.0", default-features = false }
-sp-io                                      = { version = "38.0.0", default-features = false }
-sp-keyring                                 = { version = "39.0.0", default-features = false }
-sp-runtime                                 = { version = "39.0.5", default-features = false }
+frame-benchmarking                         = { version = "41.0.1", default-features = false }
+frame-support                              = { version = "41.0.0", default-features = false }
+frame-system                               = { version = "41.0.0", default-features = false }
+pallet-assets                              = { version = "43.0.0", default-features = false }
+pallet-balances                            = { version = "42.0.0", default-features = false }
+pallet-insecure-randomness-collective-flip = { version = "29.0.0", default-features = false }
+pallet-nfts                                = { version = "35.0.0", default-features = false }
+pallet-timestamp                           = { version = "40.0.0", default-features = false }
+sp-arithmetic                              = { version = "27.0.0", default-features = false }
+sp-core                                    = { version = "37.0.0", default-features = false }
+sp-io                                      = { version = "41.0.1", default-features = false }
+sp-keyring                                 = { version = "42.0.0", default-features = false }
+sp-runtime                                 = { version = "42.0.0", default-features = false }
 sp-std                                     = { version = "14.0.0", default-features = false }
 
 # orml
