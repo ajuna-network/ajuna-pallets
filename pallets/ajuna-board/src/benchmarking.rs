@@ -30,7 +30,7 @@ fn players<Player: Decode + Ord>(how_many: u32) -> Vec<Player> {
 	(0..how_many).map(|i| account("player", i, SEED)).collect()
 }
 
-fn assert_last_event<T: Config>(event: <T as Config>::RuntimeEvent) {
+fn assert_last_event<T: Config>(event: T::RuntimeEvent) {
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 

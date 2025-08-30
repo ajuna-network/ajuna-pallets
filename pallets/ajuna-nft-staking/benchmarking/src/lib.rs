@@ -28,6 +28,7 @@ use frame_support::{
 	},
 };
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use sp_runtime::traits::BlockNumberProvider;
 use pallet_ajuna_nft_staking::{
 	BenchmarkHelper as NftStakingBenchmarkHelper, Config as NftStakingConfig, *,
 };
@@ -85,8 +86,10 @@ type NftBalanceOf<T> = <NftCurrencyOf<T> as Currency<AccountIdFor<T>>>::Balance;
 type NftCollectionIdOf<T> = <T as pallet_nfts::Config>::CollectionId;
 type CollectionDeposit<T> = <T as pallet_nfts::Config>::CollectionDeposit;
 type ItemDeposit<T> = <T as pallet_nfts::Config>::ItemDeposit;
+
+type BlockNumberForNft<T> = <<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 type CollectionConfigOf<T> =
-	pallet_nfts::CollectionConfig<NftBalanceOf<T>, BlockNumberFor<T>, NftCollectionIdOf<T>>;
+	pallet_nfts::CollectionConfig<NftBalanceOf<T>, BlockNumberForNft<T>, NftCollectionIdOf<T>>;
 
 fn account<T: Config>(name: &'static str) -> T::AccountId {
 	let account = frame_benchmarking::account(name, Default::default(), Default::default());
@@ -95,7 +98,7 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 }
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
-	let event = <T as NftStakingConfig>::RuntimeEvent::from(avatars_event);
+	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 

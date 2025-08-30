@@ -33,7 +33,7 @@ pub type Schedule<T> = VestingSchedule<BlockNumberFor<T>, BalanceFor<T>>;
 
 const SEED: u32 = 0;
 
-pub fn schedule<T: Config>(
+pub fn schedule<T: Config + frame_system::Config>(
 	start: u32,
 	period: u32,
 	period_count: u32,

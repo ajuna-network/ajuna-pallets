@@ -36,7 +36,7 @@ fn account<T: Config<I>, I: 'static>(name: &'static str) -> T::AccountId {
 }
 
 fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
-	let event = <T as Config<I>>::RuntimeEvent::from(avatars_event);
+	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
 	frame_system::Pallet::<T>::assert_last_event(event.into());
 }
 
