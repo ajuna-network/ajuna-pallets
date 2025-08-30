@@ -41,7 +41,7 @@ pub type Dna = BoundedVec<u8, ConstU32<100>>;
 pub type SoulCount = u32;
 
 /// Used to indicate which version of the forging and/or mint logic should be used.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, PartialEq)]
 pub enum LogicGeneration {
 	#[default]
 	First,
@@ -51,7 +51,7 @@ pub enum LogicGeneration {
 }
 
 /// Used to indicate the layout of an avatars DNA byte sequence.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub enum DnaEncoding {
 	#[default]
 	V1,
@@ -60,7 +60,7 @@ pub enum DnaEncoding {
 	V4,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Avatar<BlockNumber> {
 	pub season_id: SeasonId,
 	pub encoding: DnaEncoding,

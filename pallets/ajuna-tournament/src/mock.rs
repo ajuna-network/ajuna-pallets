@@ -107,7 +107,7 @@ pub type MockCategoryId = u32;
 pub type MockEntityId = H256;
 pub type MockEntity = u32;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
 pub struct MockRanker;
 
 impl EntityRank for MockRanker {

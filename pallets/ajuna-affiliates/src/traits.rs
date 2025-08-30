@@ -61,7 +61,7 @@ pub trait RuleExecutor<RuleId, RuleLength> {
 		F: Fn(FeePropagation<RuleLength>) -> Result<R, DispatchError>;
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
 pub enum AffiliatableStatus {
 	#[default]
 	NonAffiliatable,
@@ -69,7 +69,7 @@ pub enum AffiliatableStatus {
 	Blocked,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
 pub struct AffiliatorState {
 	pub status: AffiliatableStatus,
 	pub affiliates: u32,

@@ -68,7 +68,6 @@ mod tests;
 pub mod benchmark_helper;
 
 pub mod impls;
-pub mod migration;
 pub mod types;
 pub mod weights;
 
@@ -118,15 +117,18 @@ pub mod pallet {
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+	#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 	pub enum WhitelistOperation {
 		AddAccount,
 		RemoveAccount,
 		ClearList,
 	}
 
+	// The current storage version.
+	pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
+
 	#[pallet::pallet]
-	#[pallet::storage_version(migration::STORAGE_VERSION)]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]

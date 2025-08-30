@@ -81,7 +81,7 @@ use sp_runtime::{traits::IdentifyAccount, MultiSignature, Perbill};
 
 // convenience reexport such that the tests do not need to put sp-keyring in the Cargo.toml.
 #[cfg(feature = "std")]
-pub use sp_keyring::AccountKeyring;
+pub use sp_keyring::sr25519::Keyring as AccountKeyring;
 
 // reexports for macro resolution
 pub use frame_system::{self, EnsureSigned};

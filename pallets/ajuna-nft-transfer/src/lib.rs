@@ -60,7 +60,7 @@ pub mod pallet {
 		<<T as Config>::Fungible as InspectFungible<AccountIdFor<T>>>::Balance;
 	pub(crate) type GeneralConfigOf<T> = GeneralConfig<BalanceOf<T>>;
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+	#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
 	pub enum NftStatus {
 		/// The NFT exists in storage in the chain
 		Stored,

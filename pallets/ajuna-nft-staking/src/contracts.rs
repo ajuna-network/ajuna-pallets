@@ -15,13 +15,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::traits::{tokens::nonfungibles_v2::Inspect, ConstU32};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::BoundedVec;
 use sp_std::{fmt::Debug, vec::Vec};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct ContractStats {
 	pub contracts_staked: u32,
 	pub contracts_claimed: u32,
@@ -33,23 +33,23 @@ pub struct ContractStats {
 /// Attribute namespaces for non-fungible tokens.
 /// Based on the logic for
 /// https://github.com/paritytech/substrate/blob/polkadot-v0.9.42/frame/nfts/src/types.rs#L326
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum AttributeNamespace {
 	Pallet,
 	CollectionOwner,
 }
 
 /// Type to represent the collection and item IDs of an NFT.
-#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct NftId<CollectionId, ItemId>(pub CollectionId, pub ItemId);
 
-#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum Reward<Balance, CollectionId, ItemId> {
 	Tokens(Balance),
 	Nft(NftId<CollectionId, ItemId>),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct ContractClause<CollectionId, KL, VL>
 where
 	KL: Get<u32>,
@@ -89,7 +89,7 @@ where
 }
 pub type Attribute<N> = BoundedVec<u8, N>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum AttributeValue<VL: Get<u32>> {
 	Equal(Attribute<VL>),
 	Greater(Attribute<VL>),
@@ -135,7 +135,7 @@ where
 	}
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub enum Clause<CollectionId, KL, VL>
 where
 	KL: Get<u32>,
@@ -226,7 +226,7 @@ pub(crate) type BoundedRewards<Balance, CollectionId, ItemId> =
 
 /// Specification for a staking contract, in short it's a list of criteria to be fulfilled,
 /// with a given reward after the duration is complete.
-#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct Contract<Balance, CollectionId, ItemId, BlockNumber, KL, VL>
 where
 	KL: Get<u32>,

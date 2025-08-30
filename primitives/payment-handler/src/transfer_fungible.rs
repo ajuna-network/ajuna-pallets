@@ -22,6 +22,7 @@ use frame_support::{
 		tokens::{Fortitude, Preservation},
 	},
 };
+use parity_scale_codec::DecodeWithMemTracking;
 use sp_runtime::{DispatchError, TokenError};
 use sp_std::marker::PhantomData;
 
@@ -59,7 +60,7 @@ pub struct TransferFungibleAssets<W, I>(PhantomData<(W, I)>);
 ///
 /// It is important to check this result because we do have implementations
 /// that withdraw credit in one asset and allocate it as another asset.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
 pub struct TransferResult<AssetId, Amount> {
 	pub input_asset_id: AssetId,
 	pub input_amount: Amount,

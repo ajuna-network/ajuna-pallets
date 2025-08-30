@@ -27,7 +27,7 @@ pub enum LockableFeature {
 	TransferAsset,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, PartialEq)]
 pub enum AssetFilter<TradeFilter, TransferFilter> {
 	Trade(TradeFilter),
 	Transfer(TransferFilter),
@@ -49,7 +49,7 @@ pub struct GeneralConfig {
 	pub trade: TradeConfig,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
 pub enum UnlockTarget<AccountId> {
 	OneselfFree,
 	OneselfPaying,

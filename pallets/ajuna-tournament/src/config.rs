@@ -3,8 +3,9 @@ use frame_support::{
 	pallet_prelude::{ConstU32, Decode, Encode, MaxEncodedLen, TypeInfo},
 	BoundedVec,
 };
+use frame_support::pallet_prelude::DecodeWithMemTracking;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub enum RewardClaimState<Account> {
 	#[default]
 	Unclaimed,
@@ -17,7 +18,7 @@ pub type Percentage = u8;
 
 pub type RewardDistributionTable = BoundedVec<Percentage, ConstU32<MAX_PLAYERS>>;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub enum GoldenDuckConfig {
 	#[default]
 	Disabled,
@@ -25,7 +26,7 @@ pub enum GoldenDuckConfig {
 }
 
 /// Describes the configuration of a given tournament
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct TournamentConfig<BlockNumber, Balance, Ranker> {
 	/// Block in which the tournament starts.
 	pub start: BlockNumber,
@@ -49,14 +50,14 @@ pub struct TournamentConfig<BlockNumber, Balance, Ranker> {
 	pub ranker: Ranker,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub enum TournamentScheduledAction<CategoryId> {
 	StartActivePhase(CategoryId, TournamentId),
 	SwitchToClaimPhase(CategoryId, TournamentId),
 	EndClaimPhase(CategoryId, TournamentId),
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub enum TournamentState<Balance> {
 	#[default]
 	Inactive,
@@ -65,7 +66,7 @@ pub enum TournamentState<Balance> {
 	Finished(TournamentId),
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub enum GoldenDuckState<EntityId> {
 	#[default]
 	Disabled,

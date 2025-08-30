@@ -1023,7 +1023,7 @@ pub mod pallet {
 }
 
 /// Result of an attempt to enter the ranks.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone)]
 pub enum RankingResult {
 	/// The entity was successfully ranked.
 	Ranked { rank: Rank },

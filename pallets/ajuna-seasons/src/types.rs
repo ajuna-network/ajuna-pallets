@@ -20,14 +20,14 @@ use frame_support::{
 };
 use parity_scale_codec::DecodeWithMemTracking;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub enum SeasonScheduledAction<SeasonId> {
 	EarlyStart(SeasonId),
 	Start(SeasonId),
 	End(SeasonId),
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
 pub struct SeasonStatus<SeasonId> {
 	pub season_id: SeasonId,
 	pub early: bool,
@@ -41,7 +41,7 @@ pub struct SeasonMetadata {
 	pub description: BoundedVec<u8, ConstU32<1_000>>,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct SeasonSchedule<BlockNumber> {
 	pub early_start: BlockNumber,
 	pub start: BlockNumber,
