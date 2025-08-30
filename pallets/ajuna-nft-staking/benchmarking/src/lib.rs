@@ -200,6 +200,7 @@ fn set_attribute<T: Config>(
 	Ok(())
 }
 
+#[allow(clippy::type_complexity)]
 fn stakes_and_fees<T: Config>(
 	num_stake_clauses: u32,
 	num_fee_clauses: u32,

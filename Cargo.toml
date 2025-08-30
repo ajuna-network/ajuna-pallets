@@ -27,6 +27,7 @@ members = [
 manual_inspect = { level = "allow", priority = 2 }              # Needs substrate fix in `#[pallet]`
 multiple_bound_locations = { level = "allow", priority = 2 }    # Needs substrate fix in `#[benchmark]`
 type_complexity = { level = "allow", priority = 2 }
+too_many_arguments = { level = "allow", priority = 2 }
 
 [workspace.dependencies]
 # General
