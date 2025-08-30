@@ -319,15 +319,13 @@ where
 	where
 		NftInspector: Inspect<AccountId, CollectionId = CollectionId, ItemId = ItemId>,
 	{
-		(self.nft_stake_amount == stakes.len() as u8)
-			.then(|| {
+		if self.nft_stake_amount == stakes.len() as u8 { {
 				self.stake_clauses.iter().all(|stake_clause| {
 					stake_clause.evaluate_for::<AccountId, NftInspector, ItemId>(
 						&stakes[stake_clause.target_index as usize],
 					)
 				})
-			})
-			.unwrap_or(false)
+			} } else { false }
 	}
 
 	pub fn evaluate_fees<AccountId, NftInspector>(
@@ -337,14 +335,12 @@ where
 	where
 		NftInspector: Inspect<AccountId, CollectionId = CollectionId, ItemId = ItemId>,
 	{
-		(self.nft_fee_amount == fees.len() as u8)
-			.then(|| {
+		if self.nft_fee_amount == fees.len() as u8 { {
 				self.fee_clauses.iter().all(|fee_clause| {
 					fee_clause.evaluate_for::<AccountId, NftInspector, ItemId>(
 						&fees[fee_clause.target_index as usize],
 					)
 				})
-			})
-			.unwrap_or(false)
+			} } else { false }
 	}
 }
