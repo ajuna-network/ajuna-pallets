@@ -6,7 +6,7 @@ repository = "https://github.com/ajuna-network/ajuna-pallets"
 version    = "0.15.0"
 
 [workspace.metadata.psvm]
-version = "polkadot-stable2409-3"
+version = "polkadot-stable2506-1"
 
 [workspace]
 resolver = "2"
