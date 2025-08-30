@@ -97,7 +97,11 @@ impl Breeding {
 		let input_rarity_1 = input_rarity_1 as u16;
 		let input_rarity_2 = input_rarity_2 as u16;
 
-		let rarity_diff = if input_rarity_2 > input_rarity_1 { input_rarity_2.saturating_sub(input_rarity_1) } else { Default::default() };
+		let rarity_diff = if input_rarity_2 > input_rarity_1 {
+			input_rarity_2.saturating_sub(input_rarity_1)
+		} else {
+			Default::default()
+		};
 
 		if rarity_diff != 0 && generation_diff != 0 {
 			let max_generation = {

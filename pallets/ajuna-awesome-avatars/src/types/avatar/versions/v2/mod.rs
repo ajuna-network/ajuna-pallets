@@ -356,27 +356,33 @@ impl<T: Config> ForgerV2<T> {
 					let has_one_paint_flask_or_glow = sacrifices
 						.iter()
 						.filter(|sacrifice| {
-							if sacrifice
-								.has_type(ItemType::Essence) { {
+							if sacrifice.has_type(ItemType::Essence) {
+								{
 									let item_sub_type =
 										sacrifice.get_item_sub_type::<EssenceItemType>();
 
 									item_sub_type == EssenceItemType::PaintFlask ||
 										item_sub_type == EssenceItemType::GlowFlask
-								} } else { false }
+								}
+							} else {
+								false
+							}
 						})
 						.count() == 1;
 
 					let all_are_glimmer_paint_or_force = sacrifices.iter().all(|sacrifice| {
-						if sacrifice
-							.has_type(ItemType::Essence) { {
+						if sacrifice.has_type(ItemType::Essence) {
+							{
 								let item_sub_type =
 									sacrifice.get_item_sub_type::<EssenceItemType>();
 
 								item_sub_type == EssenceItemType::Glimmer ||
 									item_sub_type == EssenceItemType::PaintFlask ||
 									item_sub_type == EssenceItemType::GlowFlask
-							} } else { false }
+							}
+						} else {
+							false
+						}
 					});
 
 					if has_one_paint_flask_or_glow && all_are_glimmer_paint_or_force {
