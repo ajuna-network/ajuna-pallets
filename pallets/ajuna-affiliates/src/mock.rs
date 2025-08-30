@@ -245,7 +245,6 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 
 #[cfg(feature = "runtime-benchmarks")]
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;

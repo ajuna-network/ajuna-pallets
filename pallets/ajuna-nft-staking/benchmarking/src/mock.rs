@@ -27,6 +27,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, MultiSignature,
 };
+use frame_support::pallet_prelude::DecodeWithMemTracking;
 
 pub type MockSignature = MultiSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -77,6 +78,7 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -97,6 +99,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -189,6 +192,7 @@ impl pallet_nfts::Config for Runtime {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -201,7 +205,6 @@ parameter_types! {
 
 impl pallet_ajuna_nft_staking::Config for Runtime {
 	type PalletId = NftStakingPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type CollectionId = MockCollectionId;
 	type ItemId = H256;

@@ -90,6 +90,7 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -110,6 +111,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
@@ -135,7 +137,6 @@ parameter_types! {
 
 impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type PalletId = AwesomeAvatarsPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Randomness = Randomness;
 	type FeeChainMaxLength = AffiliateMaxLevel;
@@ -188,7 +189,6 @@ impl AffiliateUnlockRules for MockAffiliateRules {
 
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = AAvatars;
@@ -263,7 +263,6 @@ impl
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = SeasonId;
 	type EntityId = crate::AvatarIdOf<Runtime>;

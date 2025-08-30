@@ -329,7 +329,6 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 #[cfg(feature = "runtime-benchmarks")]
 impl Config for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;
