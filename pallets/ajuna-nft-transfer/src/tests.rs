@@ -19,12 +19,13 @@ use frame_support::{
 	assert_err, assert_noop, assert_ok,
 	traits::tokens::nonfungibles_v2::{Create, Inspect},
 };
-use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::Encode;
 use sp_runtime::{testing::H256, DispatchError};
+use sp_runtime::traits::{BlockNumber, BlockNumberProvider};
 
+type BlockNumberForNft<T> = <<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 type CollectionConfig =
-	pallet_nfts::CollectionConfig<MockBalance, BlockNumberFor<Test>, MockCollectionId>;
+	pallet_nfts::CollectionConfig<MockBalance, BlockNumberForNft<Test>, MockCollectionId>;
 
 fn create_collection(organizer: MockAccountId) -> MockCollectionId {
 	<Test as Config>::NftHelper::create_collection(
@@ -53,7 +54,7 @@ impl ExtBuilder {
 		use sp_runtime::BuildStorage;
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();

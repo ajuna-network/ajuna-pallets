@@ -224,7 +224,6 @@ impl crate::Config for Test {
 	type FungiblesAssetId = FungiblesAssetId;
 	type FilterHandler = GameFilter<BlockNumberFor<Test>>;
 	type Fungible = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = GameBenchmarkHelper<BlockNumberFor<Test>>;
@@ -315,7 +314,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 			pallet_assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance

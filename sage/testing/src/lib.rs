@@ -159,6 +159,7 @@ macro_rules! impl_frame_system {
 			type PreInherents = ();
 			type PostInherents = ();
 			type PostTransactions = ();
+			type ExtensionsWeightInfo = ();
 		}
 	};
 }
@@ -213,6 +214,7 @@ macro_rules! impl_balances {
 			type RuntimeFreezeReason = RuntimeFreezeReason;
 			type FreezeIdentifier = ();
 			type MaxFreezes = frame_support::traits::ConstU32<0>;
+			type DoneSlashHandler = ();
 		}
 	};
 }
@@ -249,6 +251,7 @@ macro_rules! impl_assets {
 			type Extra = ();
 			type CallbackHandle = ();
 			type WeightInfo = ();
+			type Holder = ();
 			#[cfg(feature = "runtime-benchmarks")]
 			type BenchmarkHelper = ();
 		}

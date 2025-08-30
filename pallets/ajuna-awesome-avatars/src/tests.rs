@@ -2343,7 +2343,7 @@ mod forging {
 				});
 
 				Avatars::<Test>::mutate(owned_avatars[0], |maybe_avatar| {
-					if let Some((_, ref mut avatar)) = maybe_avatar {
+					if let Some((_, avatar)) = maybe_avatar {
 						avatar.season_id = 123;
 					}
 				});

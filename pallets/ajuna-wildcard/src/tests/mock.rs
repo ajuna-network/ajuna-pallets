@@ -89,6 +89,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -109,6 +110,7 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type MaxFreezes = ();
+	type DoneSlashHandler = ();
 }
 
 pub type MockCollectionId = u32;
@@ -185,6 +187,7 @@ impl pallet_nfts::Config for Test {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -219,6 +222,7 @@ impl pallet_assets::Config for Test {
 	type ApprovalDeposit = ApprovalDeposit;
 	type StringLimit = frame_support::traits::ConstU32<20>;
 	type Freezer = ();
+	type Holder = ();
 	type Extra = ();
 	type CallbackHandle = ();
 	type WeightInfo = ();
