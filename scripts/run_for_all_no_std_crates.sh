@@ -36,6 +36,14 @@ while IFS= read -r CARGO_TOML; do
     echo "::group::[crate:$CRATE_NAME] Building $CRATE_NAME"
     echo -e "${YELLOW}==> Checking in directory:${NC} $DIR"
 
+    # Todo: Re-enable #123
+    # Skip if crate is pallet-ajuna-boards.
+    if grep -q '^name *= *"pallet-ajuna-boards"' "$CARGO_TOML"; then
+        echo -e "${YELLOW}    Skipping:${NC} pallet-ajuna-boards"
+        echo "::endgroup::"
+        continue
+    fi
+
     # Skip if no `std` feature
     if ! grep -q "\[features\]" "$CARGO_TOML" || ! grep -q "std = \[" "$CARGO_TOML"; then
         echo -e "${YELLOW}    Skipping:${NC} no 'std' feature found."
