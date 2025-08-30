@@ -24,7 +24,7 @@ env:
   CARGO_ARGS: ${{ github.ref == 'refs/heads/develop' && '--release' || '' }}
   CARGO_TERM_COLOR: always
   SKIP_WASM_BUILD: 1
-  RUST_NIGHTLY_VERSION: 2024-11-19
+  RUST_NIGHTLY_VERSION: 2025-08-30
 
 jobs:
   fmt:
