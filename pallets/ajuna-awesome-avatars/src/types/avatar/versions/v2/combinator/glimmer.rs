@@ -882,7 +882,7 @@ mod test {
 					panic!("ForgeOutput should have been Minted!")
 				}
 
-				let hash_text = format!("hash_loop_{:#07X}", i);
+				let hash_text = format!("hash_loop_{i:#07X}");
 				let hash = Pallet::<Test>::random_hash(hash_text.as_bytes(), &ALICE);
 				hash_provider = HashProvider::new(&hash);
 			}
