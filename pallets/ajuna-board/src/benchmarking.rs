@@ -16,8 +16,8 @@
 
 use super::*;
 use crate::{
-	dot4gravity::{Coordinates, Side, Turn},
 	Pallet as AjunaBoard,
+	dot4gravity::{Coordinates, Side, Turn},
 };
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;

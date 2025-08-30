@@ -97,22 +97,26 @@ where
 #[cfg(test)]
 mod tests {
 	use crate::types::{
+		Avatar, DnaEncoding, Force, RarityTier,
 		avatar::{
+			ByteConvertible,
 			nft::{
 				DNA_ATTRIBUTE, FORCE_ATTRIBUTE, MINTED_AT_ATTRIBUTE, RARITY_ATTRIBUTE,
 				SEASON_ID_ATTRIBUTE, SOUL_POINTS_ATTRIBUTE,
 			},
-			ByteConvertible,
 		},
-		Avatar, DnaEncoding, Force, RarityTier,
 	};
-	use frame_support::pallet_prelude::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen, TypeInfo};
+	use frame_support::pallet_prelude::{
+		Decode, DecodeWithMemTracking, Encode, MaxEncodedLen, TypeInfo,
+	};
 	use pallet_ajuna_nft_transfer::traits::NftConvertible;
-	use sp_core::{bounded_vec, Get};
+	use sp_core::{Get, bounded_vec};
 
 	type TestAvatar = Avatar<u64>;
 
-	#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+	#[derive(
+		Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+	)]
 	pub struct ParameterGet<const N: u32>;
 
 	impl<const N: u32> Get<u32> for ParameterGet<N> {

@@ -2,7 +2,7 @@ use crate::{
 	types::avatar::versions::v2::{ByteType, DnaUtils},
 	*,
 };
-use sp_runtime::{traits::Zero, DispatchError, Saturating};
+use sp_runtime::{DispatchError, Saturating, traits::Zero};
 use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, vec::Vec};
 
 pub(crate) struct AttributeMapperV4;
@@ -277,11 +277,7 @@ impl<T: Config> ForgerV4<T> {
 			(current_period % max_variations) == last_variation
 		};
 
-		if (current_period == last_variation) || is_in_period {
-			1
-		} else {
-			2
-		}
+		if (current_period == last_variation) || is_in_period { 1 } else { 2 }
 	}
 }
 

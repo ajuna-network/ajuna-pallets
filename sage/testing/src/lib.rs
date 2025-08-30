@@ -68,16 +68,15 @@ extern crate alloc;
 
 use alloc::vec;
 use frame_support::{
-	ord_parameter_types, parameter_types,
+	PalletId, ord_parameter_types, parameter_types,
 	traits::{
-		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
 		EitherOfDiverse,
+		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
 	},
-	PalletId,
 };
-use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSignedBy};
+use frame_system::{EnsureRoot, EnsureSignedBy, pallet_prelude::BlockNumberFor};
 use sp_core::crypto::AccountId32;
-use sp_runtime::{traits::IdentifyAccount, MultiSignature, Perbill};
+use sp_runtime::{MultiSignature, Perbill, traits::IdentifyAccount};
 
 // convenience reexport such that the tests do not need to put sp-keyring in the Cargo.toml.
 #[cfg(feature = "std")]

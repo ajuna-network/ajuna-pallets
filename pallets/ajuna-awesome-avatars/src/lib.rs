@@ -79,9 +79,9 @@ use ajuna_primitives::{
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
+	PalletId,
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness},
-	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
@@ -92,11 +92,11 @@ use pallet_ajuna_tournament::{
 	traits::{TournamentInspector, TournamentRanker},
 };
 use sp_runtime::{
+	ArithmeticError,
 	traits::{
 		AccountIdConversion, CheckedSub, Hash, Saturating, TrailingZeroInput, UniqueSaturatedInto,
 		Zero,
 	},
-	ArithmeticError,
 };
 use sp_std::{collections::vec_deque::VecDeque, prelude::*};
 
@@ -117,7 +117,9 @@ pub mod pallet {
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
-	#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+	#[derive(
+		Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq,
+	)]
 	pub enum WhitelistOperation {
 		AddAccount,
 		RemoveAccount,
@@ -158,12 +160,12 @@ pub mod pallet {
 			> + TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>;
 
 		type FeeHandler: FeeHandler<
-			AccountId = AccountIdFor<Self>,
-			PaymentKind = (),
-			Balance = BalanceOf<Self>,
-			AffiliateFeeIdentifier = AffiliateMethods,
-			TournamentFeeIdentifier = SeasonId,
-		>;
+				AccountId = AccountIdFor<Self>,
+				PaymentKind = (),
+				Balance = BalanceOf<Self>,
+				AffiliateFeeIdentifier = AffiliateMethods,
+				TournamentFeeIdentifier = SeasonId,
+			>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -1499,8 +1501,8 @@ pub mod pallet {
 			Ok((current_status.season_id, season))
 		}
 
-		fn current_season_schedule_with_id(
-		) -> Result<(SeasonId, SeasonScheduleOf<T>), DispatchError> {
+		fn current_season_schedule_with_id()
+		-> Result<(SeasonId, SeasonScheduleOf<T>), DispatchError> {
 			let mut current_status = CurrentSeasonStatus::<T>::get();
 			let season_schedule = match SeasonSchedules::<T>::get(current_status.season_id) {
 				Some(season_schedule) if current_status.is_in_season() => season_schedule,

@@ -1,19 +1,21 @@
 use crate as pallet_matchmaker;
 use frame_support::{
+	pallet_prelude::DecodeWithMemTracking,
 	parameter_types,
 	traits::{ConstU16, ConstU64, Get},
 };
-use frame_support::pallet_prelude::DecodeWithMemTracking;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::{
+	BuildStorage,
 	testing::TestSignature,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {

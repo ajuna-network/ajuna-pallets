@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use core::marker::PhantomData;
-use frame_support::{pallet_prelude::Member, Parameter};
+use frame_support::{Parameter, pallet_prelude::Member};
 use parity_scale_codec::MaxEncodedLen;
 
 pub struct AllowAllTradesAndTransfers<Filter, Asset>(PhantomData<(Filter, Asset)>);

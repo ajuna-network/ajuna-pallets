@@ -100,9 +100,9 @@ pub mod pallet {
 		type UnlockParameters: Parameter;
 
 		type AffiliatesUnlockRules: AffiliateUnlockRules<
-			AccountId = AccountIdFor<Self>,
-			UnlockParameters = Self::UnlockParameters,
-		>;
+				AccountId = AccountIdFor<Self>,
+				UnlockParameters = Self::UnlockParameters,
+			>;
 
 		type WeightInfo: WeightInfo;
 
@@ -372,11 +372,7 @@ pub mod pallet {
 		fn try_clear_affiliation_for(account: &AccountIdFor<T>) -> DispatchResult {
 			let result = Affiliatees::<T, I>::take(account)
 				.and_then(|mut affiliate_chain| {
-					if affiliate_chain.is_empty() {
-						None
-					} else {
-						Some(affiliate_chain.remove(0))
-					}
+					if affiliate_chain.is_empty() { None } else { Some(affiliate_chain.remove(0)) }
 				})
 				.map_or_else(
 					|| Ok(()),

@@ -32,7 +32,9 @@ pub enum MatchingType {
 	Mix,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct PlayerStruct<AccountId> {
 	pub account: AccountId,
 }

@@ -23,9 +23,9 @@ use sp_runtime::BuildStorage;
 
 use ajuna_primitives::account_manager::WhitelistKey;
 use sp_runtime::{
+	MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	MultiSignature,
 };
 use sp_std::cell::RefCell;
 

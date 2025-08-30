@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	mock, mock::*, AccountAchievement, AchievementState, Error, Event, GameEventType, MogwaiPrices,
-	Mogwais, PhaseType, RarityType,
+	AccountAchievement, AchievementState, Error, Event, GameEventType, MogwaiPrices, Mogwais,
+	PhaseType, RarityType, mock, mock::*,
 };
 use frame_support::{assert_noop, assert_ok};
 

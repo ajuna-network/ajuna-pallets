@@ -56,10 +56,10 @@ pub mod pallet {
 		type GameState: Codec + TypeInfo + MaxEncodedLen + Clone;
 		/// A turn based game
 		type Game: TurnBasedGame<
-			Player = Self::AccountId,
-			Turn = Self::PlayersTurn,
-			State = Self::GameState,
-		>;
+				Player = Self::AccountId,
+				Turn = Self::PlayersTurn,
+				State = Self::GameState,
+			>;
 		/// Number of players required for a game.
 		#[pallet::constant]
 		type Players: Get<u32>;

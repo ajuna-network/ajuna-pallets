@@ -2,7 +2,18 @@ use super::*;
 use pallet_ajuna_tournament::traits::EntityRank;
 use sp_std::{cmp::Ordering, num::NonZeroU32};
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Clone,
+	Debug,
+	Default,
+	PartialEq,
+	Eq,
+)]
 pub enum AvatarRankingCategory {
 	#[default]
 	MinSoulPoints,
@@ -14,7 +25,18 @@ pub enum AvatarRankingCategory {
 	MintedAtModulo(NonZeroU32),
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Clone,
+	Debug,
+	Default,
+	PartialEq,
+	Eq,
+)]
 pub struct AvatarRanker<Id, BlockNumber> {
 	pub category: AvatarRankingCategory,
 	pub _marker: PhantomData<(Id, BlockNumber)>,

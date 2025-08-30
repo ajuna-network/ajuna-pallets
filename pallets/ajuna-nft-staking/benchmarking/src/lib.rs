@@ -23,19 +23,18 @@ use frame_benchmarking::v2::*;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		tokens::nonfungibles_v2::{Create, Mutate},
 		Currency, Get,
+		tokens::nonfungibles_v2::{Create, Mutate},
 	},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
-use sp_runtime::traits::BlockNumberProvider;
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 use pallet_ajuna_nft_staking::{
 	BenchmarkHelper as NftStakingBenchmarkHelper, Config as NftStakingConfig, *,
 };
 use pallet_nfts::{BenchmarkHelper, ItemConfig};
 use sp_runtime::{
-	traits::{One, UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchError,
+	traits::{BlockNumberProvider, One, UniqueSaturatedFrom, UniqueSaturatedInto},
 };
 use sp_std::{vec, vec::Vec};
 
@@ -87,7 +86,8 @@ type NftCollectionIdOf<T> = <T as pallet_nfts::Config>::CollectionId;
 type CollectionDeposit<T> = <T as pallet_nfts::Config>::CollectionDeposit;
 type ItemDeposit<T> = <T as pallet_nfts::Config>::ItemDeposit;
 
-type BlockNumberForNft<T> = <<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
+type BlockNumberForNft<T> =
+	<<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 type CollectionConfigOf<T> =
 	pallet_nfts::CollectionConfig<NftBalanceOf<T>, BlockNumberForNft<T>, NftCollectionIdOf<T>>;
 

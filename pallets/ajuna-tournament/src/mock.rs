@@ -20,15 +20,14 @@ use ajuna_primitives::{
 	asset_manager::{AssetManager, Lock},
 };
 use frame_support::{
-	parameter_types,
+	PalletId, parameter_types,
 	traits::{ConstU16, ConstU64, LockIdentifier},
-	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
 use sp_std::{cell::RefCell, cmp::Ordering, collections::btree_map::BTreeMap};
 
@@ -109,7 +108,18 @@ pub type MockCategoryId = u32;
 pub type MockEntityId = H256;
 pub type MockEntity = u32;
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Clone,
+	Debug,
+	Default,
+	PartialEq,
+	Eq,
+)]
 pub struct MockRanker;
 
 impl EntityRank for MockRanker {
@@ -273,8 +283,8 @@ impl
 		id
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
+	fn create_default_tournament_config()
+	-> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,

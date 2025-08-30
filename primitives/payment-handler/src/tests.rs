@@ -17,9 +17,9 @@
 use crate::{
 	fee_handler::FeeHandler,
 	mock::{
-		AffiliateFeeId, Assets, Balances, ExtBuilder, TestAssetFeeHandler, TestNativeFeeHandler,
-		TournamentFeeId, ALICE, BOB, CHARLIE, DAVE, FERDIE, NATIVE_ASSET_PAYMENT,
-		NOT_WHITELISTED_ASSET_ID_PAYMENT, NOT_WHITE_LISTED_ASSET_ID, TOURNAMENT_TREASURY,
+		ALICE, AffiliateFeeId, Assets, BOB, Balances, CHARLIE, DAVE, ExtBuilder, FERDIE,
+		NATIVE_ASSET_PAYMENT, NOT_WHITE_LISTED_ASSET_ID, NOT_WHITELISTED_ASSET_ID_PAYMENT,
+		TOURNAMENT_TREASURY, TestAssetFeeHandler, TestNativeFeeHandler, TournamentFeeId,
 		WHITELISTED_ASSET_ID, WHITELISTED_ASSET_ID_PAYMENT,
 	},
 };
@@ -31,7 +31,7 @@ mod asset_fee_handler {
 
 	mod withdraw_and_pay_fees {
 		use super::*;
-		use crate::mock::{VOUCHERS, VOUCHER_ASSET_PAYMENT};
+		use crate::mock::{VOUCHER_ASSET_PAYMENT, VOUCHERS};
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
@@ -324,7 +324,7 @@ mod asset_fee_handler {
 
 	mod withdraw_and_deposit_into {
 		use super::*;
-		use crate::mock::{VOUCHERS, VOUCHER_ASSET_PAYMENT};
+		use crate::mock::{VOUCHER_ASSET_PAYMENT, VOUCHERS};
 
 		#[test]
 		fn withdraw_and_deposit_into_works() {
@@ -467,7 +467,7 @@ mod native_fee_handler {
 
 	mod withdraw_and_pay_fees {
 		use super::*;
-		use crate::mock::{VOUCHERS, VOUCHER_NATIVE_PAYMENT};
+		use crate::mock::{VOUCHER_NATIVE_PAYMENT, VOUCHERS};
 
 		#[test]
 		fn withdraw_and_pay_fee_deposits_all_into_the_treasury() {
@@ -711,7 +711,7 @@ mod native_fee_handler {
 
 	mod withdraw_and_deposit_into {
 		use super::*;
-		use crate::mock::{VOUCHERS, VOUCHER_NATIVE_PAYMENT};
+		use crate::mock::{VOUCHER_NATIVE_PAYMENT, VOUCHERS};
 
 		#[test]
 		fn withdraw_and_deposit_into_works() {

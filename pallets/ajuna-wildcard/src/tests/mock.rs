@@ -2,8 +2,8 @@ use crate::{self as pallet_wildcard, *};
 use frame_support::{
 	parameter_types,
 	traits::{
-		tokens::nonfungibles_v2::{Create, Mutate},
 		AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks,
+		tokens::nonfungibles_v2::{Create, Mutate},
 	},
 };
 
@@ -11,9 +11,9 @@ use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::PalletFeatures;
 use sp_core::Pair;
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -308,9 +308,12 @@ impl ExtBuilder {
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances, dev_accounts: Default::default() }
-			.assimilate_storage(&mut t)
-			.unwrap();
+		pallet_balances::GenesisConfig::<Test> {
+			balances: self.balances,
+			dev_accounts: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		let mut ext: sp_io::TestExternalities = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));

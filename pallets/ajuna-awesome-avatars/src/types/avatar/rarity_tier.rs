@@ -19,7 +19,18 @@ use parity_scale_codec::alloc::string::ToString;
 use sp_std::{fmt, prelude::*};
 
 #[derive(
-	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Clone,
+	Default,
+	Debug,
+	PartialEq,
+	Eq,
+	PartialOrd,
+	Ord,
 )]
 pub enum RarityTier {
 	#[default]

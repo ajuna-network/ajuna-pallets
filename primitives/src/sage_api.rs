@@ -17,8 +17,8 @@
 use crate::season_manager::SeasonConfig;
 use ajuna_payment_handler::{IdentifyVoucherOrAssetId, NativeId};
 use frame_support::{
-	pallet_prelude::{DispatchError, MaybeSerializeDeserialize, Member},
 	Parameter,
+	pallet_prelude::{DispatchError, MaybeSerializeDeserialize, Member},
 };
 use parity_scale_codec::{Codec, MaxEncodedLen};
 

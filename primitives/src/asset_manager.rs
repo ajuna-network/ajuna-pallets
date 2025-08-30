@@ -22,7 +22,9 @@ pub type LockIdentifier = [u8; 8];
 
 /// A lock that tracks the purpose of the lock via the `id` and
 /// who was the `locker`.
-#[derive(Encode, Decode, DecodeWithMemTracking,Clone, PartialEq, Eq, Debug, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Debug, MaxEncodedLen, TypeInfo,
+)]
 pub struct Lock<AccountId> {
 	/// An identifier for this lock. Only one lock may be in existence for each identifier.
 	pub id: LockIdentifier,

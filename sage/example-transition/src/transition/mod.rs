@@ -5,17 +5,17 @@ use crate::{
 };
 
 use ajuna_primitives::{payment_handler::NativeId, sage_api::SageApi};
-use sage_api::{rules::*, traits::TransitionOutput, SageGameTransition, TransitionError};
+use sage_api::{SageGameTransition, TransitionError, rules::*, traits::TransitionOutput};
 
 use frame_support::{
-	pallet_prelude::{Decode, Encode, TypeInfo},
 	Parameter,
+	pallet_prelude::{Decode, Encode, TypeInfo},
 };
 use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_core::{DecodeWithMemTracking, H256};
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, BlockNumber as BlockNumberT, Member},
 	SaturatedConversion,
+	traits::{AtLeast32BitUnsigned, BlockNumber as BlockNumberT, Member},
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 
@@ -30,13 +30,35 @@ pub const ASSET_COLLECTION_ID: u8 = 1;
 
 pub const BANDIT_MAX_SPINS: u8 = 4;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Copy,
+	Clone,
+	Debug,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+)]
 pub enum AssetType {
 	Player,
 	Machine(MachineType),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Copy,
+	Clone,
+	Debug,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+)]
 pub enum CasinoAction {
 	Create(AssetType),
 	Deposit(AssetType, TokenType),
@@ -48,7 +70,18 @@ pub enum CasinoAction {
 	Kick,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, Clone, PartialEq, Eq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Debug,
+	Default,
+	Clone,
+	PartialEq,
+	Eq,
+)]
 pub struct CasinoJamTransitionConfig {
 	pub reward_multiplier: u8,
 }
@@ -63,14 +96,14 @@ where
 	BlockNumber: BlockNumberT,
 	Balance: Member + Parameter + AtLeast32BitUnsigned + MaxEncodedLen,
 	Sage: SageApi<
-		AccountId = AccountId,
-		AssetId = AssetId,
-		Asset = Asset<BlockNumber>,
-		Balance = Balance,
-		BlockNumber = BlockNumber,
-		TransitionConfig = CasinoJamTransitionConfig,
-		HashOutput = H256,
-	>,
+			AccountId = AccountId,
+			AssetId = AssetId,
+			Asset = Asset<BlockNumber>,
+			Balance = Balance,
+			BlockNumber = BlockNumber,
+			TransitionConfig = CasinoJamTransitionConfig,
+			HashOutput = H256,
+		>,
 {
 	fn try_get_asset(asset_id: &AssetId) -> Result<Asset<BlockNumber>, TransitionError> {
 		let asset = Sage::get_asset(asset_id)
@@ -610,14 +643,14 @@ where
 	BlockNumber: BlockNumberT,
 	Balance: Member + Parameter + AtLeast32BitUnsigned + MaxEncodedLen,
 	Sage: SageApi<
-		AccountId = AccountId,
-		AssetId = AssetId,
-		Asset = Asset<BlockNumber>,
-		Balance = Balance,
-		BlockNumber = BlockNumber,
-		TransitionConfig = CasinoJamTransitionConfig,
-		HashOutput = H256,
-	>,
+			AccountId = AccountId,
+			AssetId = AssetId,
+			Asset = Asset<BlockNumber>,
+			Balance = Balance,
+			BlockNumber = BlockNumber,
+			TransitionConfig = CasinoJamTransitionConfig,
+			HashOutput = H256,
+		>,
 {
 	type TransitionId = CasinoAction;
 	type TransitionConfig = CasinoJamTransitionConfig;

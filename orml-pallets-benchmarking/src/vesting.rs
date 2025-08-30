@@ -15,11 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::utils::{
-	get_vesting_account, lookup_of_account, set_balance, AccountIdFor, BalanceFor, CurrencyFor,
+	AccountIdFor, BalanceFor, CurrencyFor, get_vesting_account, lookup_of_account, set_balance,
 };
 use frame_benchmarking::v2::*;
 use frame_support::traits::{Currency, Get};
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 use sp_runtime::Saturating;
 use sp_std::prelude::*;
 

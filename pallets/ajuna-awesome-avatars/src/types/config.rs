@@ -19,7 +19,9 @@ use frame_support::pallet_prelude::*;
 pub type MintCount = u16;
 
 /// Number of avatars to be minted.
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub enum MintPackSize {
 	#[default]
 	One,
@@ -40,7 +42,9 @@ impl MintPackSize {
 	}
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub enum MintPayment {
 	/// Mint using free mint credits.
 	#[default]
@@ -49,7 +53,9 @@ pub enum MintPayment {
 	Normal,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub enum PackType {
 	#[default]
 	Material = 1,
@@ -58,7 +64,9 @@ pub enum PackType {
 }
 
 /// Minting options
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct MintOption {
 	/// The choice of payment for minting.
 	pub payment: MintPayment,
@@ -68,19 +76,25 @@ pub struct MintOption {
 	pub pack_size: MintPackSize,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct MintConfig<BlockNumber> {
 	pub open: bool,
 	pub cooldown: BlockNumber,
 	pub free_mint_fee_multiplier: MintCount,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct ForgeConfig {
 	pub open: bool,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub enum FreeMintTransferMode {
 	#[default]
 	Open,
@@ -88,36 +102,48 @@ pub enum FreeMintTransferMode {
 	Closed,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct AvatarTransferConfig {
 	pub open: bool,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct FreemintTransferConfig {
 	pub mode: FreeMintTransferMode,
 	pub free_mint_transfer_fee: MintCount,
 	pub min_free_mint_transfer: MintCount,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct TradeConfig {
 	pub open: bool,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct NftTransferConfig {
 	pub open: bool,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub enum AffiliateMode {
 	#[default]
 	Closed,
 	Open,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct AffiliateConfig<Balance> {
 	pub mode: AffiliateMode,
 	pub enabled_in_mint: bool,
@@ -126,7 +152,9 @@ pub struct AffiliateConfig<Balance> {
 	pub affiliator_enable_fee: Balance,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct GlobalConfig<BlockNumber, Balance> {
 	pub mint: MintConfig<BlockNumber>,
 	pub forge: ForgeConfig,
@@ -137,7 +165,9 @@ pub struct GlobalConfig<BlockNumber, Balance> {
 	pub affiliate_config: AffiliateConfig<Balance>,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq,
+)]
 pub enum UnlockTarget<AccountId> {
 	OneselfFree,
 	OneselfPaying,
@@ -146,7 +176,9 @@ pub enum UnlockTarget<AccountId> {
 
 pub type UnlockConfig = Option<BoundedVec<u8, ConstU32<5>>>;
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq,
+)]
 pub struct UnlockConfigs {
 	pub set_price_unlock: UnlockConfig,
 	pub avatar_transfer_unlock: UnlockConfig,

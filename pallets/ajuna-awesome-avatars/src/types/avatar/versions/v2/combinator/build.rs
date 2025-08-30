@@ -137,8 +137,11 @@ impl<T: Config> AvatarCombinator<T> {
 				generated_equippables[sacrifice_index % 32].souls.saturating_inc();
 			}
 
-			output_sacrifices
-				.extend(generated_equippables.into_iter().map(|generation| ForgeOutput::Minted(generation)));
+			output_sacrifices.extend(
+				generated_equippables
+					.into_iter()
+					.map(|generation| ForgeOutput::Minted(generation)),
+			);
 		} else {
 			// TODO: Incomplete
 			output_sacrifices.extend(input_sacrifices.into_iter().map(

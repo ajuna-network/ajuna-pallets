@@ -20,9 +20,9 @@ pub use types::*;
 
 use super::*;
 use crate::{
+	Config,
 	pallet::SeasonOf,
 	types::{MintOption, SeasonId},
-	Config,
 };
 use sp_runtime::DispatchError;
 
@@ -449,26 +449,30 @@ mod test {
 			.collect::<Vec<_>>();
 
 			// Can forge with V2 avatar and correct number of sacrifices
-			assert!(ForgerV2::<Test>::forge(
-				&ALICE,
-				1,
-				&season,
-				leader.clone(),
-				sacrifices[0..4].to_vec(),
-				false
-			)
-			.is_ok());
+			assert!(
+				ForgerV2::<Test>::forge(
+					&ALICE,
+					1,
+					&season,
+					leader.clone(),
+					sacrifices[0..4].to_vec(),
+					false
+				)
+				.is_ok()
+			);
 
 			// Can't forge with more than MAX_SACRIFICE amount
-			assert!(ForgerV2::<Test>::forge(
-				&ALICE,
-				1,
-				&season,
-				leader.clone(),
-				sacrifices.to_vec(),
-				false
-			)
-			.is_err());
+			assert!(
+				ForgerV2::<Test>::forge(
+					&ALICE,
+					1,
+					&season,
+					leader.clone(),
+					sacrifices.to_vec(),
+					false
+				)
+				.is_err()
+			);
 
 			// Can't forge with less than MIN_SACRIFICE amount
 			assert!(

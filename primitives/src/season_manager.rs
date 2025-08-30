@@ -15,14 +15,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::{
-	pallet_prelude::{Decode, DispatchError, Encode, Member, TypeInfo},
-	sp_runtime::traits::MaybeSerializeDeserialize,
 	Parameter,
+	pallet_prelude::{Decode, DecodeWithMemTracking, DispatchError, Encode, Member, TypeInfo},
+	sp_runtime::traits::MaybeSerializeDeserialize,
 };
-use frame_support::pallet_prelude::DecodeWithMemTracking;
 use parity_scale_codec::MaxEncodedLen;
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct SeasonFeeConfig<Balance> {
 	/// Fee that will be deposited in the treasury when transferring an asset
 	pub transfer_asset: Balance,
@@ -42,7 +43,9 @@ pub struct SeasonFeeConfig<Balance> {
 	/// Base price of executing and asset transition
 	pub state_transition_base_fee: Balance,
 }
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct SeasonConfig<Balance> {
 	pub fee: SeasonFeeConfig<Balance>,
 }

@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	types::{fee::Fee, Avatar, LogicGeneration, RarityTier, SeasonId},
 	Config, Error, MAX_PERCENTAGE,
+	types::{Avatar, LogicGeneration, RarityTier, SeasonId, fee::Fee},
 };
 use frame_support::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32Bit, UniqueSaturatedInto, Zero};
@@ -25,7 +25,9 @@ use sp_std::{
 	ops::{Deref, DerefMut},
 };
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq,
+)]
 pub struct SeasonStatus {
 	pub season_id: SeasonId,
 	pub early: bool,
@@ -39,13 +41,17 @@ impl SeasonStatus {
 	}
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq,
+)]
 pub struct SeasonMeta {
 	pub name: BoundedVec<u8, ConstU32<100>>,
 	pub description: BoundedVec<u8, ConstU32<1_000>>,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq,
+)]
 pub struct SeasonSchedule<BlockNumber> {
 	pub early_start: BlockNumber,
 	pub start: BlockNumber,
@@ -73,7 +79,9 @@ where
 
 pub type TradeFilter = u32;
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct TradeFilters(pub BoundedVec<TradeFilter, ConstU32<100>>);
 
 impl Deref for TradeFilters {
@@ -121,7 +129,9 @@ impl TradeFilters {
 pub type RarityPercent = u8;
 pub type SacrificeCount = u8;
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq,
+)]
 pub struct Season<BlockNumber, Balance> {
 	pub max_tier_forges: u32,
 	pub max_variations: u8,
@@ -411,14 +421,16 @@ mod test {
 
 	#[test]
 	fn is_in_season_works() {
-		assert!(!SeasonStatus {
-			season_id: 123,
-			early: false,
-			active: false,
-			early_ended: false,
-			max_tier_avatars: 0
-		}
-		.is_in_season());
+		assert!(
+			!SeasonStatus {
+				season_id: 123,
+				early: false,
+				active: false,
+				early_ended: false,
+				max_tier_avatars: 0
+			}
+			.is_in_season()
+		);
 
 		for season_status in [
 			SeasonStatus::default().early(true).active(false).early_ended(false),

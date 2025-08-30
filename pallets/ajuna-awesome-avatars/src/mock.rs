@@ -17,15 +17,14 @@
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
 use ajuna_primitives::payment_handler::{NativeGameFeeHandler, WithdrawNative};
 use frame_support::{
-	parameter_types,
+	PalletId, parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
-	PalletId,
 };
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
+	BuildStorage,
 	testing::TestSignature,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
@@ -192,8 +191,8 @@ impl
 		id as SeasonId
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
+	fn create_default_tournament_config()
+	-> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,

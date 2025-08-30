@@ -1,12 +1,12 @@
-use super::{constants::*, types::*, ByteType};
+use super::{ByteType, constants::*, types::*};
 use crate::{
-	types::{Avatar, Dna, DnaEncoding, SeasonId, SoulCount},
 	ByteConvertible, Config, Force, Ranged, RarityTier,
+	types::{Avatar, Dna, DnaEncoding, SeasonId, SoulCount},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
-	traits::{BlockNumber, Hash},
 	SaturatedConversion,
+	traits::{BlockNumber, Hash},
 };
 use sp_std::{
 	cmp::Ordering,

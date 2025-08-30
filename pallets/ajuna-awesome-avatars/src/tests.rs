@@ -16,7 +16,7 @@
 
 use crate::{mock::*, types::*, *};
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::{testing::H256, ArithmeticError, DispatchError};
+use sp_runtime::{ArithmeticError, DispatchError, testing::H256};
 
 fn create_avatars(season_id: SeasonId, account: MockAccountId, n: u8) -> Vec<AvatarIdOf<Test>> {
 	(0..n)

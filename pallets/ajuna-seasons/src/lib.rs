@@ -39,7 +39,7 @@ use ajuna_primitives::{
 
 use frame_support::{pallet_prelude::*, traits::Currency};
 use frame_system::pallet_prelude::*;
-use sp_runtime::{traits::MaybeSerializeDeserialize, Saturating};
+use sp_runtime::{Saturating, traits::MaybeSerializeDeserialize};
 
 pub use types::*;
 use weights::WeightInfo;

@@ -25,8 +25,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::{
-	traits::{Hash, Saturating, TrailingZeroInput},
 	DispatchResult, SaturatedConversion,
+	traits::{Hash, Saturating, TrailingZeroInput},
 };
 use sp_std::{mem::MaybeUninit, prelude::*, ptr::copy_nonoverlapping, vec::Vec};
 
@@ -54,7 +54,7 @@ type BalanceOf<T> =
 #[frame_support::pallet]
 pub mod pallet {
 	pub use crate::weights::WeightInfo;
-	use frame_support::{dispatch::DispatchResult, pallet_prelude::*, BoundedBTreeSet};
+	use frame_support::{BoundedBTreeSet, dispatch::DispatchResult, pallet_prelude::*};
 	use sp_runtime::traits::{Bounded, Saturating};
 
 	use super::*;

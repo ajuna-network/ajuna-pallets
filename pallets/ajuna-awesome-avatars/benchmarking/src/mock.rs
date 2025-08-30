@@ -21,23 +21,20 @@ use ajuna_primitives::{
 	payment_handler::{NativeGameFeeHandler, WithdrawNative},
 };
 use frame_support::{
-	parameter_types,
+	PalletId, parameter_types,
 	traits::{ConstU16, ConstU64},
-	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use pallet_ajuna_affiliates::{traits::AffiliateUnlockRules, BenchmarkHelper};
+use pallet_ajuna_affiliates::{BenchmarkHelper, traits::AffiliateUnlockRules};
 use pallet_ajuna_awesome_avatars::{
-	benchmark_helper,
+	AvatarIdOf, AvatarOf, AvatarRankerFor, Avatars, CurrentSeasonStatus, Owners, benchmark_helper,
 	types::{AffiliateMethods, Avatar, SeasonId},
-	AvatarIdOf, AvatarOf, AvatarRankerFor, Avatars, CurrentSeasonStatus, Owners,
 };
 use pallet_ajuna_tournament::{GoldenDuckConfig, TournamentConfig};
 use sp_runtime::{
-	bounded_vec,
+	BuildStorage, DispatchError, MultiSignature, bounded_vec,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, DispatchError, MultiSignature,
 };
 
 pub type MockSignature = MultiSignature;
@@ -225,8 +222,8 @@ impl
 		id as SeasonId
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Runtime>> {
+	fn create_default_tournament_config()
+	-> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Runtime>> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,

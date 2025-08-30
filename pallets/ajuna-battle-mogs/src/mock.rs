@@ -21,8 +21,8 @@ use frame_support::{
 };
 use sp_core::H256;
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup},
 	BuildStorage,
+	traits::{BlakeTwo256, IdentityLookup},
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;

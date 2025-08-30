@@ -103,11 +103,7 @@ impl Breeding {
 			let max_generation = {
 				let max_gen = ((generation_diff * 2) / ((rarity_diff + 1) * input_rarity_2)) + 1;
 
-				if (input_generation_2 + max_gen) > 16 {
-					16 - input_generation_2
-				} else {
-					max_gen
-				}
+				if (input_generation_2 + max_gen) > 16 { 16 - input_generation_2 } else { max_gen }
 			};
 
 			let final_prob = {
@@ -118,18 +114,10 @@ impl Breeding {
 
 					let prob = (256 / (input_rarity_2 + prob_rar)) + prob_aug;
 
-					if prob_gen > prob_rar * 2 {
-						prob + prob_gen - (prob_rar * 2)
-					} else {
-						prob
-					}
+					if prob_gen > prob_rar * 2 { prob + prob_gen - (prob_rar * 2) } else { prob }
 				};
 
-				if prob < 256 {
-					prob as u8
-				} else {
-					u8::MAX
-				}
+				if prob < 256 { prob as u8 } else { u8::MAX }
 			};
 
 			let gen_add = input_generation_1 + input_generation_2;

@@ -2,7 +2,9 @@ use crate::*;
 use frame_support::traits::ExistenceRequirement;
 use pallet_ajuna_affiliates::traits::AffiliateUnlockRules;
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq,
+)]
 pub struct AffiliateUnlockParams<AccountId> {
 	pub target: UnlockTarget<AccountId>,
 	pub season_id: SeasonId,

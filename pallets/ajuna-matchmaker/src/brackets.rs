@@ -178,11 +178,7 @@ where
 	fn size(&self, bracket: Bracket) -> BufferIndex {
 		let (v_start, v_end) = self.index_vector[bracket as usize];
 
-		if v_start <= v_end {
-			v_end - v_start
-		} else {
-			(BufferIndex::MAX - v_start) + v_end
-		}
+		if v_start <= v_end { v_end - v_start } else { (BufferIndex::MAX - v_start) + v_end }
 	}
 
 	/// Return whether the item_key is queued or not.

@@ -22,11 +22,12 @@ mod mock;
 
 use frame_benchmarking::v2::*;
 use frame_support::traits::{Currency, Get};
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 use pallet_ajuna_awesome_avatars::{
+	Config as AvatarsConfig, Pallet as AAvatars,
 	benchmark_helper::{create_avatars, create_seasons},
 	types::*,
-	Config as AvatarsConfig, Pallet as AAvatars, *,
+	*,
 };
 use sp_runtime::traits::{Saturating, UniqueSaturatedFrom, UniqueSaturatedInto};
 use sp_std::vec;

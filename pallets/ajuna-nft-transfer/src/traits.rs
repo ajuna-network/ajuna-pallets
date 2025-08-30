@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::{pallet_prelude::ConstU32, Parameter};
+use frame_support::{Parameter, pallet_prelude::ConstU32};
 use parity_scale_codec::{Codec, MaxEncodedLen};
-use sp_runtime::{traits::AtLeast32BitUnsigned, BoundedVec, DispatchError, DispatchResult};
+use sp_runtime::{BoundedVec, DispatchError, DispatchResult, traits::AtLeast32BitUnsigned};
 use sp_std::vec::Vec;
 
 /// Type used to differentiate attribute codes for each item.

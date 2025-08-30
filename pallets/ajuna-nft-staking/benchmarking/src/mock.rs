@@ -16,18 +16,19 @@
 
 #![cfg(test)]
 
-use frame_support::{parameter_types, traits::AsEnsureOriginWithArg, PalletId};
+use frame_support::{
+	PalletId, pallet_prelude::DecodeWithMemTracking, parameter_types, traits::AsEnsureOriginWithArg,
+};
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::PalletFeatures;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
-use frame_support::pallet_prelude::DecodeWithMemTracking;
 
 pub type MockSignature = MultiSignature;
 pub type MockAccountPublic = <MockSignature as Verify>::Signer;
@@ -152,7 +153,9 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {

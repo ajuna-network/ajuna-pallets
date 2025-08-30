@@ -31,7 +31,7 @@ pub mod impls;
 pub mod traits;
 pub mod weights;
 
-use frame_support::{pallet_prelude::*, PalletId};
+use frame_support::{PalletId, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
 
 use crate::weights::WeightInfo;
@@ -54,8 +54,8 @@ pub mod pallet {
 	use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
 	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_runtime::{
-		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
 		Saturating,
+		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
 	};
 
 	pub(crate) type BalanceOf<T, I> =
@@ -114,10 +114,10 @@ pub mod pallet {
 		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 
 		type AssetManager: AssetManager<
-			AccountId = AccountIdFor<Self>,
-			AssetId = Self::EntityId,
-			Asset = Self::RankedEntity,
-		>;
+				AccountId = AccountIdFor<Self>,
+				AssetId = Self::EntityId,
+				Asset = Self::RankedEntity,
+			>;
 
 		/// Minimum duration of the tournament active and claim periods in blocks.
 		#[pallet::constant]
@@ -127,14 +127,14 @@ pub mod pallet {
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type BenchmarkHelper: BenchmarkHelper<
-			Self::TournamentCategoryId,
-			BlockNumberFor<Self>,
-			BalanceOf<Self, I>,
-			Self::EntityRanker,
-			AccountIdFor<Self>,
-			EntityIdFor<Self, I>,
-			Self::RankedEntity,
-		>;
+				Self::TournamentCategoryId,
+				BlockNumberFor<Self>,
+				BalanceOf<Self, I>,
+				Self::EntityRanker,
+				AccountIdFor<Self>,
+				EntityIdFor<Self, I>,
+				Self::RankedEntity,
+			>;
 	}
 
 	#[pallet::storage]
@@ -1023,7 +1023,9 @@ pub mod pallet {
 }
 
 /// Result of an attempt to enter the ranks.
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone,
+)]
 pub enum RankingResult {
 	/// The entity was successfully ranked.
 	Ranked { rank: Rank },

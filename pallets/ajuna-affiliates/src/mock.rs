@@ -21,9 +21,9 @@ use frame_support::{
 	traits::{ConstU16, ConstU64},
 };
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, DispatchError,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
 use sp_std::{
 	cell::RefCell,

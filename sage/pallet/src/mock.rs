@@ -30,12 +30,11 @@ use ajuna_primitives::{
 	next_asset_id_provider::IncrementingAssetIdProvider, runtime_types::AccountId,
 };
 use frame_support::{
-	parameter_types,
+	PalletId, parameter_types,
 	traits::{
-		fungible::{Mutate, NativeOrWithId},
 		AsEnsureOriginWithArg,
+		fungible::{Mutate, NativeOrWithId},
 	},
-	PalletId,
 };
 use sage_testing::*;
 use sp_core::H256;
