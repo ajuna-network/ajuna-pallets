@@ -99,7 +99,7 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 fn create_creator<T: Config>(reward_item: Option<Vec<u16>>) -> Result<T::AccountId, DispatchError> {

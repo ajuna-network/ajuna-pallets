@@ -54,7 +54,7 @@ fn enable_fee_payment<T: Config + pallet_nfts::Config>(player: &T::AccountId) {
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
 	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 #[benchmarks(where T: pallet_nfts::Config)]

@@ -31,7 +31,7 @@ fn players<Player: Decode + Ord>(how_many: u32) -> Vec<Player> {
 }
 
 fn assert_last_event<T: Config>(event: T::RuntimeEvent) {
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 fn create_new_game<T: Config>(players: Vec<T::AccountId>) {
