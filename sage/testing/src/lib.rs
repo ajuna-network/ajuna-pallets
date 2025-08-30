@@ -19,7 +19,7 @@
 //! You still need the following boilerplate code in the test suite, which can unfortunately not be
 //! avoided as we need to get some types from there.
 //!
-//! ```no_run
+//! ```ignore
 //! use sage_testing::{impl_ajuna_seasons, impl_core_pallets, impl_pallet_sage, impl_test_runtime_sage_api, TestRandomness};
 //! use sp_core::H256;
 //!
