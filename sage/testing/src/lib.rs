@@ -19,7 +19,7 @@
 //! You still need the following boilerplate code in the test suite, which can unfortunately not be
 //! avoided as we need to get some types from there.
 //!
-//! ```rust
+//! ```no_run
 //! use sage_testing::{impl_ajuna_seasons, impl_core_pallets, impl_pallet_sage, impl_test_runtime_sage_api, TestRandomness};
 //! use sp_core::H256;
 //!
@@ -47,7 +47,7 @@
 //! pub type Randomness = TestRandomness<TestRuntime>;
 //!
 //! impl_core_pallets!(TestRuntime, System);
-//! impl_ajuna_seasons!(TestRuntime, GameAssetId, Sage);
+//! impl_ajuna_seasons!(TestRuntime, GameAssetId, Sage, Balances);
 //! impl_pallet_sage!(TestRuntime, GameTransition, GameAssetId, GameAsset, AjunaSeasons, Balances, Assets);
 //! impl_test_runtime_sage_api!(
 //!   SageEngine,
