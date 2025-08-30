@@ -37,8 +37,8 @@ while IFS= read -r CARGO_TOML; do
     echo -e "${YELLOW}==> Checking in directory:${NC} $DIR"
 
     # Todo: Re-enable #123
-    # Skip if crate is pallet-ajuna-boards.
-    if grep -q '^name *= *"pallet-ajuna-boards"' "$CARGO_TOML"; then
+    # Skip if crate is pallet-ajuna-board.
+    if grep -q '^name *= *"pallet-ajuna-board"' "$CARGO_TOML"; then
         echo -e "${YELLOW}    Skipping:${NC} pallet-ajuna-boards"
         echo "::endgroup::"
         continue
