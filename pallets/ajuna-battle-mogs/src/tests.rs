@@ -500,7 +500,7 @@ mod sacrifice {
 				// We artificially increase the mogwai intrinsic so that it then deposits to the
 				// target account trying to cause an overflow when calling BattleMogs::sacrifice
 				crate::Mogwais::<Test>::mutate(mogwai_id, |maybe_mogwai| {
-					if let Some(ref mut mogwai) = maybe_mogwai {
+					if let Some(mogwai) = maybe_mogwai {
 						mogwai.intrinsic = balance;
 					}
 				});
@@ -536,13 +536,13 @@ mod sacrifice_into {
 
 			// We need to up the rarity in order to be allowed to sacrifice
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
 
 			Mogwais::<Test>::mutate(mogwai_id_2, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
@@ -583,7 +583,7 @@ mod sacrifice_into {
 			assert_ok!(BattleMogs::hatch_mogwai(RuntimeOrigin::signed(account), mogwai_id_2));
 
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Common;
 				}
 			});
@@ -608,13 +608,13 @@ mod sacrifice_into {
 
 			// We need to up the rarity in order to be allowed to sacrifice
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
 
 			Mogwais::<Test>::mutate(mogwai_id_2, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
@@ -639,13 +639,13 @@ mod sacrifice_into {
 			let mogwai_id_2 = create_mogwai(other);
 
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
 
 			Mogwais::<Test>::mutate(mogwai_id_2, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
@@ -668,7 +668,7 @@ mod sacrifice_into {
 			let mogwai_id_1 = create_mogwai(account);
 
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
@@ -699,13 +699,13 @@ mod sacrifice_into {
 			assert_ok!(BattleMogs::hatch_mogwai(RuntimeOrigin::signed(account), mogwai_id_2));
 
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
 
 			Mogwais::<Test>::mutate(mogwai_id_2, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 				}
 			});
@@ -752,14 +752,14 @@ mod sacrifice_into {
 
 			// We need to up the rarity in order to be allowed to sacrifice
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 					mogwai.intrinsic = MockBalance::MAX;
 				}
 			});
 
 			Mogwais::<Test>::mutate(mogwai_id_2, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.rarity = RarityType::Epic;
 					mogwai.intrinsic = MockBalance::MAX;
 				}
@@ -971,7 +971,7 @@ mod morph_mogwai {
 			let mogwai_id = create_mogwai(account);
 
 			Mogwais::<Test>::mutate(mogwai_id, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.intrinsic = MockBalance::MAX;
 				}
 			});
@@ -1090,13 +1090,13 @@ mod breed_mogwai {
 			assert_ok!(BattleMogs::hatch_mogwai(RuntimeOrigin::signed(account), mogwai_id_2));
 
 			Mogwais::<Test>::mutate(mogwai_id_1, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.intrinsic = MockBalance::MAX;
 				}
 			});
 
 			Mogwais::<Test>::mutate(mogwai_id_2, |maybe_mogwai| {
-				if let Some(ref mut mogwai) = maybe_mogwai {
+				if let Some(mogwai) = maybe_mogwai {
 					mogwai.intrinsic = MockBalance::MAX;
 				}
 			});

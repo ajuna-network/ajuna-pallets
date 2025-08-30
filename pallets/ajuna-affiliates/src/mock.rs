@@ -215,7 +215,6 @@ impl AffiliateUnlockRules for MockAffiliateRules {
 
 pub(crate) type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
@@ -230,7 +229,6 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 
 pub(crate) type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;

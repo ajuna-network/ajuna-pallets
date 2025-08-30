@@ -3,6 +3,7 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64, Get},
 };
+use frame_support::pallet_prelude::DecodeWithMemTracking;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H256;
@@ -66,6 +67,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -74,7 +76,6 @@ parameter_types! {
 }
 
 impl pallet_matchmaker::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type AmountPlayers = AmountPlayers;
 	type AmountBrackets = AmountBrackets;
 }

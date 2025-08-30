@@ -20,7 +20,7 @@ pub use dot4gravity::{Coordinates, GameState, Side};
 use frame_support::{pallet_prelude::*, Parameter};
 use sp_std::borrow::ToOwned;
 
-#[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 pub enum Turn {
 	DropBomb(Coordinates),
 	DropStone((Side, u8)),

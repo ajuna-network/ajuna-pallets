@@ -28,6 +28,7 @@ use frame_support::{
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, LockIdentifier},
 	BoundedVec, PalletId,
 };
+use frame_support::pallet_prelude::DecodeWithMemTracking;
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -218,7 +219,6 @@ impl crate::BenchmarkHelper<MockAccountId, ItemId> for NftTransferBenchmarkHelpe
 
 impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
 	type Item = MockItem;
 	type ItemId = ItemId;

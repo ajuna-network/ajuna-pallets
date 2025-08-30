@@ -160,7 +160,6 @@ impl BenchmarkHelper<MockSeasonId> for SeasonsBenchmarkHelper {
 }
 
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type SeasonId = MockSeasonId;
 	type AssetId = MockAssetId;
 	type AccountHandler = MockAccountManager;

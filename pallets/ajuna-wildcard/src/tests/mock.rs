@@ -271,7 +271,6 @@ impl OnMappingRequest<MockAssetId, MockCollectionId, MockItemId> for MockOnMappi
 
 impl pallet_wildcard::Config for Test {
 	type PalletId = WildcardPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type AssetId = MockAssetId;
 	type Fungibles = Assets;
@@ -305,7 +304,7 @@ impl ExtBuilder {
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances, dev_accounts: Default::default() }
 			.assimilate_storage(&mut t)
 			.unwrap();
 

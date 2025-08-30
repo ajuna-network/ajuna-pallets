@@ -295,7 +295,6 @@ impl
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;
@@ -312,7 +311,6 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
 impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type PalletId = TournamentPalletId2;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;

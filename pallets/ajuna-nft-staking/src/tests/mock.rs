@@ -215,7 +215,6 @@ pub type CollectionConfig =
 
 impl pallet_nft_staking::Config for Test {
 	type PalletId = NftStakingPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type CollectionId = MockCollectionId;
 	type ItemId = MockItemId;
