@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{voucher_handler::VoucherHandler, IdentifyVoucherOrAssetId};
+use crate::{IdentifyVoucherOrAssetId, voucher_handler::VoucherHandler};
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
 	pallet_prelude::{DispatchError, Encode},
@@ -25,7 +25,7 @@ use frame_support::{
 		tokens::{AssetId, Balance, Fortitude, Precision, Preservation},
 	},
 };
-use parity_scale_codec::{Decode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// Implements `WithdrawCredit`, but ensures that only whitelisted assets are withdrawn.
@@ -143,7 +143,9 @@ where
 	}
 }
 
-#[derive(Debug, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, Encode, Decode, DecodeWithMemTracking, PartialEq, Eq, Clone, MaxEncodedLen, TypeInfo,
+)]
 pub enum WithdrawKind<AssetId> {
 	Payment(AssetId),
 	Voucher,

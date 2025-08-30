@@ -21,9 +21,9 @@ use frame_support::{
 	traits::{ConstU16, ConstU64},
 };
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, DispatchError,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
 use sp_std::{
 	cell::RefCell,
@@ -78,6 +78,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -98,6 +99,7 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -215,7 +217,6 @@ impl AffiliateUnlockRules for MockAffiliateRules {
 
 pub(crate) type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
@@ -230,7 +231,6 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 
 pub(crate) type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
@@ -245,7 +245,6 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
 
 #[cfg(feature = "runtime-benchmarks")]
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = MockAccountManager;
@@ -287,7 +286,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();

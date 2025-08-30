@@ -23,9 +23,9 @@ use sp_runtime::BuildStorage;
 
 use ajuna_primitives::account_manager::WhitelistKey;
 use sp_runtime::{
+	MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	MultiSignature,
 };
 use sp_std::cell::RefCell;
 
@@ -66,6 +66,7 @@ impl frame_system::Config for Test {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type ExtensionsWeightInfo = ();
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
@@ -94,6 +95,7 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type MaxFreezes = ();
+	type DoneSlashHandler = ();
 }
 
 pub type MockAssetId = u32;
@@ -160,7 +162,6 @@ impl BenchmarkHelper<MockSeasonId> for SeasonsBenchmarkHelper {
 }
 
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type SeasonId = MockSeasonId;
 	type AssetId = MockAssetId;
 	type AccountHandler = MockAccountManager;

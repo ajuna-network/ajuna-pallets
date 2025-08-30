@@ -325,7 +325,7 @@ fn transfer_asset_rejects_asset_not_matching_transfer_filters() {
 			// We change asset_id_2 type so that it matches the filter, allowing us to put it on
 			// sale
 			Assets::<Test, ()>::mutate(asset_id_2, |maybe_asset| {
-				if let Some((_, ref mut asset)) = maybe_asset {
+				if let Some((_, asset)) = maybe_asset {
 					asset.variant = AssetVariant::Machine(MachineVariant {
 						seat_linked: 0,
 						seat_limit: 0,

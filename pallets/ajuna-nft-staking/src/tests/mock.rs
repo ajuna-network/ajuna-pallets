@@ -17,15 +17,15 @@
 use crate::{self as pallet_nft_staking, *};
 use frame_support::{
 	parameter_types,
-	traits::{tokens::nonfungibles_v2::Create, AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks},
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks, tokens::nonfungibles_v2::Create},
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{CollectionSettings, ItemConfig, ItemSettings, PalletFeatures};
 use sp_core::bounded_vec;
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -89,6 +89,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -109,6 +110,7 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 pub type MockCollectionId = u32;
@@ -159,7 +161,9 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {
@@ -199,6 +203,7 @@ impl pallet_nfts::Config for Test {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -215,7 +220,6 @@ pub type CollectionConfig =
 
 impl pallet_nft_staking::Config for Test {
 	type PalletId = NftStakingPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type CollectionId = MockCollectionId;
 	type ItemId = MockItemId;
@@ -443,7 +447,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();

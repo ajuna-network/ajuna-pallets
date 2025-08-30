@@ -633,7 +633,7 @@ mod test {
 				}
 
 				if i % 1000 == 999 {
-					let hash_text = format!("loop_{:#07X}", i);
+					let hash_text = format!("loop_{i:#07X}");
 					let hash = Pallet::<Test>::random_hash(hash_text.as_bytes(), &ALICE);
 					hash_provider = HashProvider::new(&hash);
 				}
@@ -756,7 +756,7 @@ mod test {
 				}
 
 				if i % 1000 == 999 {
-					let hash_text = format!("loop_{:#07X}", i);
+					let hash_text = format!("loop_{i:#07X}");
 					let hash = Pallet::<Test>::random_hash(hash_text.as_bytes(), &ALICE);
 					hash_provider = HashProvider::new(&hash);
 				}
@@ -862,7 +862,7 @@ mod test {
 				}
 
 				if i % 1000 == 999 {
-					let hash_text = format!("loop_{:#07X}", i);
+					let hash_text = format!("loop_{i:#07X}");
 					let hash = Pallet::<Test>::random_hash(hash_text.as_bytes(), &ALICE);
 					hash_provider = HashProvider::new(&hash);
 				}

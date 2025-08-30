@@ -16,8 +16,8 @@
 
 //! Useful helper methods that can be used in benchmarks.
 
-use crate::{types::*, Pallet as AAvatars, *};
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use crate::{Pallet as AAvatars, types::*, *};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 use sp_runtime::traits::{UniqueSaturatedInto, Zero};
 use sp_std::vec;
 

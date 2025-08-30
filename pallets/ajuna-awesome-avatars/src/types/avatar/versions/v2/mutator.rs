@@ -193,11 +193,7 @@ impl<T: Config> AvatarMutator<T> for EquippableItemType {
 				let slot_type = SlotRoller::<T>::roll_on(&ARMOR_SLOT_PROBABILITIES, hash_provider);
 
 				let rarity = {
-					if (hash_provider.next() % 3) > 1 {
-						RarityTier::Rare
-					} else {
-						RarityTier::Epic
-					}
+					if (hash_provider.next() % 3) > 1 { RarityTier::Rare } else { RarityTier::Epic }
 				};
 
 				AvatarBuilder::with_base_avatar(base_avatar).try_into_armor_and_component(

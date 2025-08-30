@@ -22,11 +22,12 @@ mod mock;
 
 use frame_benchmarking::v2::*;
 use frame_support::traits::{Currency, Get};
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 use pallet_ajuna_awesome_avatars::{
+	Config as AvatarsConfig, Pallet as AAvatars,
 	benchmark_helper::{create_avatars, create_seasons},
 	types::*,
-	Config as AvatarsConfig, Pallet as AAvatars, *,
+	*,
 };
 use sp_runtime::traits::{Saturating, UniqueSaturatedFrom, UniqueSaturatedInto};
 use sp_std::vec;
@@ -45,8 +46,8 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 }
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
-	let event = <T as AvatarsConfig>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 #[benchmarks]

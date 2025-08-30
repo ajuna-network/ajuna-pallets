@@ -14,9 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use frame_support::pallet_prelude::{
+	Decode, DecodeWithMemTracking, Encode, MaxEncodedLen, TypeInfo,
+};
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq,
+)]
 pub enum AffiliateMethods<TransitionId> {
 	UpgradeAssetInventory,
 	TradeAsset,

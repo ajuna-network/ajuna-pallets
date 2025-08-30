@@ -19,7 +19,7 @@
 //! You still need the following boilerplate code in the test suite, which can unfortunately not be
 //! avoided as we need to get some types from there.
 //!
-//! ```rust
+//! ```ignore
 //! use sage_testing::{impl_ajuna_seasons, impl_core_pallets, impl_pallet_sage, impl_test_runtime_sage_api, TestRandomness};
 //! use sp_core::H256;
 //!
@@ -47,7 +47,7 @@
 //! pub type Randomness = TestRandomness<TestRuntime>;
 //!
 //! impl_core_pallets!(TestRuntime, System);
-//! impl_ajuna_seasons!(TestRuntime, GameAssetId, Sage);
+//! impl_ajuna_seasons!(TestRuntime, GameAssetId, Sage, Balances);
 //! impl_pallet_sage!(TestRuntime, GameTransition, GameAssetId, GameAsset, AjunaSeasons, Balances, Assets);
 //! impl_test_runtime_sage_api!(
 //!   SageEngine,
@@ -68,20 +68,19 @@ extern crate alloc;
 
 use alloc::vec;
 use frame_support::{
-	ord_parameter_types, parameter_types,
+	PalletId, ord_parameter_types, parameter_types,
 	traits::{
-		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
 		EitherOfDiverse,
+		fungible::{NativeFromLeft, NativeOrWithId, UnionOf},
 	},
-	PalletId,
 };
-use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSignedBy};
+use frame_system::{EnsureRoot, EnsureSignedBy, pallet_prelude::BlockNumberFor};
 use sp_core::crypto::AccountId32;
-use sp_runtime::{traits::IdentifyAccount, MultiSignature, Perbill};
+use sp_runtime::{MultiSignature, Perbill, traits::IdentifyAccount};
 
 // convenience reexport such that the tests do not need to put sp-keyring in the Cargo.toml.
 #[cfg(feature = "std")]
-pub use sp_keyring::AccountKeyring;
+pub use sp_keyring::sr25519::Keyring as AccountKeyring;
 
 // reexports for macro resolution
 pub use frame_system::{self, EnsureSigned};
@@ -159,6 +158,7 @@ macro_rules! impl_frame_system {
 			type PreInherents = ();
 			type PostInherents = ();
 			type PostTransactions = ();
+			type ExtensionsWeightInfo = ();
 		}
 	};
 }
@@ -213,6 +213,7 @@ macro_rules! impl_balances {
 			type RuntimeFreezeReason = RuntimeFreezeReason;
 			type FreezeIdentifier = ();
 			type MaxFreezes = frame_support::traits::ConstU32<0>;
+			type DoneSlashHandler = ();
 		}
 	};
 }
@@ -249,6 +250,7 @@ macro_rules! impl_assets {
 			type Extra = ();
 			type CallbackHandle = ();
 			type WeightInfo = ();
+			type Holder = ();
 			#[cfg(feature = "runtime-benchmarks")]
 			type BenchmarkHelper = ();
 		}

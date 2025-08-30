@@ -23,18 +23,18 @@ use frame_benchmarking::v2::*;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		tokens::nonfungibles_v2::{Create, Mutate},
 		Currency, Get,
+		tokens::nonfungibles_v2::{Create, Mutate},
 	},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 use pallet_ajuna_nft_staking::{
 	BenchmarkHelper as NftStakingBenchmarkHelper, Config as NftStakingConfig, *,
 };
 use pallet_nfts::{BenchmarkHelper, ItemConfig};
 use sp_runtime::{
-	traits::{One, UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchError,
+	traits::{BlockNumberProvider, One, UniqueSaturatedFrom, UniqueSaturatedInto},
 };
 use sp_std::{vec, vec::Vec};
 
@@ -85,8 +85,11 @@ type NftBalanceOf<T> = <NftCurrencyOf<T> as Currency<AccountIdFor<T>>>::Balance;
 type NftCollectionIdOf<T> = <T as pallet_nfts::Config>::CollectionId;
 type CollectionDeposit<T> = <T as pallet_nfts::Config>::CollectionDeposit;
 type ItemDeposit<T> = <T as pallet_nfts::Config>::ItemDeposit;
+
+type BlockNumberForNft<T> =
+	<<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 type CollectionConfigOf<T> =
-	pallet_nfts::CollectionConfig<NftBalanceOf<T>, BlockNumberFor<T>, NftCollectionIdOf<T>>;
+	pallet_nfts::CollectionConfig<NftBalanceOf<T>, BlockNumberForNft<T>, NftCollectionIdOf<T>>;
 
 fn account<T: Config>(name: &'static str) -> T::AccountId {
 	let account = frame_benchmarking::account(name, Default::default(), Default::default());
@@ -95,8 +98,8 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 }
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
-	let event = <T as NftStakingConfig>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 fn create_creator<T: Config>(reward_item: Option<Vec<u16>>) -> Result<T::AccountId, DispatchError> {
@@ -197,6 +200,7 @@ fn set_attribute<T: Config>(
 	Ok(())
 }
 
+#[allow(clippy::type_complexity)]
 fn stakes_and_fees<T: Config>(
 	num_stake_clauses: u32,
 	num_fee_clauses: u32,

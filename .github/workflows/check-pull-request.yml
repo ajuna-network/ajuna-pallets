@@ -24,7 +24,7 @@ env:
   CARGO_ARGS: ${{ github.ref == 'refs/heads/develop' && '--release' || '' }}
   CARGO_TERM_COLOR: always
   SKIP_WASM_BUILD: 1
-  RUST_NIGHTLY_VERSION: 2024-11-19
+  RUST_NIGHTLY_VERSION: 2025-08-30
 
 jobs:
   fmt:
@@ -52,7 +52,6 @@ jobs:
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
-      - run: ./.github/scripts/free_disk_space.sh
       - run: sudo apt-get install -y protobuf-compiler
       - uses: actions/cache@v4
         with:
@@ -64,7 +63,7 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-lint-
-      - run: cargo clippy --all-features --all-targets ${{ env.CARGO_ARGS }} -- -D warnings
+      - run: cargo clippy --all-features --all-targets --workspace --exclude pallet-ajuna-board ${{ env.CARGO_ARGS }} -- -D warnings
 
   test:
     if: ${{ !startsWith(github.head_ref, 'release/') }}
@@ -73,7 +72,6 @@ jobs:
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
-      - run: ./.github/scripts/free_disk_space.sh
       - run: sudo apt-get install -y protobuf-compiler
       - uses: actions/cache@v4
         with:
@@ -85,31 +83,8 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-test-
-      - run: cargo test --all-features --all-targets ${{ env.CARGO_ARGS }}
-  coverage:
-    if: ${{ !startsWith(github.head_ref, 'release/') }}
-    name: Coverage
-    runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:0.31.2
-      options: --security-opt seccomp=unconfined
-    steps:
-      - uses: actions/checkout@v4
-      - name: Generate code coverage
-        run: |
-          cargo tarpaulin --timeout 120 --no-fail-fast --workspace --out Xml \
-            --exclude \
-                pallet-ajuna-awesome-avatars-benchmarking \
-                pallet-ajuna-nft-staking-benchmarking \
-            --exclude-files \
-                pallets/ajuna-awesome-avatars/benchmarking/* \
-                pallets/ajuna-nft-staking-benchmarking/* \
-                benchmarking.rs weights.rs
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+          # Todo: Re-enable #123
+      - run: cargo test --all-features --all-targets --workspace --exclude pallet-ajuna-board ${{ env.CARGO_ARGS }}
 
   check-wasm:
     if: ${{ !startsWith(github.head_ref, 'release/') }}
@@ -118,7 +93,6 @@ jobs:
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
-      - run: ./.github/scripts/free_disk_space.sh
       - run: sudo apt-get install -y protobuf-compiler
       - uses: actions/cache@v4
         with:

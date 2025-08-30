@@ -15,9 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	pallet::PlayerStatsOf, AccountIdOf, Config, Error, Event, FungiblesAssetIdOf, LockableFeature,
-	Pallet, PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockRule,
-	UnlockTarget,
+	AccountIdOf, Config, Error, Event, FungiblesAssetIdOf, LockableFeature, Pallet,
+	PlayerSeasonConfigs, PlayerSeasonStats, SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget,
+	pallet::PlayerStatsOf,
 };
 
 use ajuna_primitives::{payment_handler::FeeHandler, season_manager::SeasonManager};

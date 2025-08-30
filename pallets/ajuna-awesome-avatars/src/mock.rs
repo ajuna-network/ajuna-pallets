@@ -17,15 +17,14 @@
 use crate::{self as pallet_ajuna_awesome_avatars, impls::AffiliateUnlockParams, types::*, *};
 use ajuna_primitives::payment_handler::{NativeGameFeeHandler, WithdrawNative};
 use frame_support::{
-	parameter_types,
+	PalletId, parameter_types,
 	traits::{ConstU16, ConstU64, Hooks},
-	PalletId,
 };
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
+	BuildStorage,
 	testing::TestSignature,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
@@ -84,6 +83,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -104,6 +104,7 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Test {}
@@ -114,7 +115,6 @@ parameter_types! {
 
 impl pallet_ajuna_awesome_avatars::Config for Test {
 	type PalletId = AwesomeAvatarsPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Randomness = Randomness;
 	type FeeChainMaxLength = AffiliateMaxLevel;
@@ -155,7 +155,6 @@ impl
 
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type WhitelistKey = AffiliateWhitelistKey;
 	type AccountManager = AAvatars;
@@ -192,8 +191,8 @@ impl
 		id as SeasonId
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
+	fn create_default_tournament_config()
+	-> TournamentConfig<MockBlockNumber, MockBalance, AvatarRankerFor<Test>> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,
@@ -230,7 +229,6 @@ impl
 pub(crate) type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = SeasonId;
 	type EntityId = AvatarIdOf<Test>;
@@ -318,7 +316,7 @@ impl ExtBuilder {
 		MOCK_EXISTENTIAL_DEPOSIT.with(|v| *v.borrow_mut() = self.existential_deposit);
 
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances, dev_accounts: None }
 			.assimilate_storage(&mut t)
 			.unwrap();
 		pallet_ajuna_awesome_avatars::GenesisConfig::<Test>::default()

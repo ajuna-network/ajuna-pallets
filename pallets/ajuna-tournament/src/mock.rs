@@ -20,15 +20,14 @@ use ajuna_primitives::{
 	asset_manager::{AssetManager, Lock},
 };
 use frame_support::{
-	parameter_types,
+	PalletId, parameter_types,
 	traits::{ConstU16, ConstU64, LockIdentifier},
-	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
 use sp_std::{cell::RefCell, cmp::Ordering, collections::btree_map::BTreeMap};
 
@@ -73,6 +72,7 @@ impl frame_system::Config for Test {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type ExtensionsWeightInfo = ();
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
@@ -101,13 +101,25 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type MaxFreezes = ();
+	type DoneSlashHandler = ();
 }
 
 pub type MockCategoryId = u32;
 pub type MockEntityId = H256;
 pub type MockEntity = u32;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Clone,
+	Debug,
+	Default,
+	PartialEq,
+	Eq,
+)]
 pub struct MockRanker;
 
 impl EntityRank for MockRanker {
@@ -271,8 +283,8 @@ impl
 		id
 	}
 
-	fn create_default_tournament_config(
-	) -> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
+	fn create_default_tournament_config()
+	-> TournamentConfig<MockBlockNumber, MockBalance, MockRanker> {
 		TournamentConfig {
 			start: 20_u64,
 			active_end: 50_u64,
@@ -295,7 +307,6 @@ impl
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;
@@ -312,7 +323,6 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
 impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type PalletId = TournamentPalletId2;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;
@@ -329,7 +339,6 @@ impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 #[cfg(feature = "runtime-benchmarks")]
 impl Config for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type TournamentCategoryId = MockCategoryId;
 	type EntityId = MockEntityId;
@@ -379,7 +388,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();

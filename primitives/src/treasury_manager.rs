@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::{
-	pallet_prelude::{DispatchError, Member},
 	Parameter,
+	pallet_prelude::{DispatchError, Member},
 };
 use parity_scale_codec::Codec;
 

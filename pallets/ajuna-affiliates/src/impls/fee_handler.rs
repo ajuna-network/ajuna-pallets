@@ -1,7 +1,7 @@
 use super::*;
 use ajuna_primitives::payment_handler::{AffiliateFeeDistribution, DistributeFee, PaymentFee};
 use frame_support::traits::Defensive;
-use sp_runtime::{traits::CheckedDiv, Saturating};
+use sp_runtime::{Saturating, traits::CheckedDiv};
 
 impl<T: Config<I>, I: 'static> DistributeFee for Pallet<T, I> {
 	type AccountId = AccountIdFor<T>;

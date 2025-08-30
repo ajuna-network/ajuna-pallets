@@ -1,5 +1,5 @@
 use crate::*;
-use sp_runtime::{traits::Zero, DispatchError, Saturating};
+use sp_runtime::{DispatchError, Saturating, traits::Zero};
 use sp_std::{collections::btree_set::BTreeSet, marker::PhantomData, vec::Vec};
 
 pub(crate) struct AttributeMapperV1;
@@ -56,7 +56,7 @@ impl<T: Config> MinterV1<T> {
 			.map(|i| {
 				let (random_tier, random_variation) =
 					Self::random_component(season, hash, i as usize * 2, batched_mint);
-				((random_tier << 4) | random_variation) as u8
+				(random_tier << 4) | random_variation
 			})
 			.collect::<Vec<_>>();
 		Dna::try_from(dna).map_err(|_| Error::<T>::IncorrectDna.into())
@@ -205,7 +205,7 @@ impl<T: Config> ForgerV1<T> {
 		max_tier: u8,
 	) -> (bool, BTreeSet<usize>) {
 		let compare_variation = |lhs: u8, rhs: u8| -> bool {
-			let diff = if lhs > rhs { lhs - rhs } else { rhs - lhs };
+			let diff = lhs.abs_diff(rhs);
 			diff == 1 || diff == (max_variations - 1)
 		};
 
@@ -267,11 +267,7 @@ impl<T: Config> ForgerV1<T> {
 			(current_period % max_variations) == last_variation
 		};
 
-		if (current_period == last_variation) || is_in_period {
-			1
-		} else {
-			2
-		}
+		if (current_period == last_variation) || is_in_period { 1 } else { 2 }
 	}
 }
 

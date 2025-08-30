@@ -15,20 +15,20 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+	AffiliateFeeDistribution, NativeGameFeeHandler, TournamentFeeDistribution,
+	WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind, WithdrawNative,
 	fee_handler::{AssetGameFeeHandler, DistributeFee, PaymentFee},
 	voucher_handler::VoucherHandler,
 	withdraw_credit::{EnsureWhitelistedAsset, WithdrawWhitelistedCredit},
-	AffiliateFeeDistribution, NativeGameFeeHandler, TournamentFeeDistribution,
-	WithdrawCreditOrVoucher, WithdrawFungibles, WithdrawKind, WithdrawNative,
 };
 use frame_support::{
 	derive_impl,
 	traits::{AsEnsureOriginWithArg, ConstU32},
 };
 use sp_runtime::{
+	BuildStorage, DispatchError, TokenError,
 	testing::TestSignature,
 	traits::{IdentifyAccount, Verify},
-	BuildStorage, DispatchError, TokenError,
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap};
 
@@ -227,7 +227,10 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: pallet_balances::GenesisConfig { balances: vec![(ALICE, 100)] },
+			balances: pallet_balances::GenesisConfig {
+				balances: vec![(ALICE, 100)],
+				dev_accounts: Default::default(),
+			},
 			assets: pallet_assets::GenesisConfig {
 				assets: vec![
 					// id, owner, is_sufficient, min_balance

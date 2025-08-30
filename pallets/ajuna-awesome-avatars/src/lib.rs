@@ -68,7 +68,6 @@ mod tests;
 pub mod benchmark_helper;
 
 pub mod impls;
-pub mod migration;
 pub mod types;
 pub mod weights;
 
@@ -80,9 +79,9 @@ use ajuna_primitives::{
 	treasury_manager::TreasuryManager,
 };
 use frame_support::{
+	PalletId,
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness},
-	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
@@ -93,11 +92,11 @@ use pallet_ajuna_tournament::{
 	traits::{TournamentInspector, TournamentRanker},
 };
 use sp_runtime::{
+	ArithmeticError,
 	traits::{
 		AccountIdConversion, CheckedSub, Hash, Saturating, TrailingZeroInput, UniqueSaturatedInto,
 		Zero,
 	},
-	ArithmeticError,
 };
 use sp_std::{collections::vec_deque::VecDeque, prelude::*};
 
@@ -105,7 +104,6 @@ use sp_std::{collections::vec_deque::VecDeque, prelude::*};
 pub mod pallet {
 	use super::*;
 
-	pub(crate) type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 	pub(crate) type SeasonOf<T> = Season<BlockNumberFor<T>, BalanceOf<T>>;
 	pub(crate) type SeasonScheduleOf<T> = SeasonSchedule<BlockNumberFor<T>>;
 	pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
@@ -119,23 +117,26 @@ pub mod pallet {
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+	#[derive(
+		Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq,
+	)]
 	pub enum WhitelistOperation {
 		AddAccount,
 		RemoveAccount,
 		ClearList,
 	}
 
+	// The current storage version.
+	pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
+
 	#[pallet::pallet]
-	#[pallet::storage_version(migration::STORAGE_VERSION)]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Currency: Currency<Self::AccountId>;
 
@@ -159,12 +160,12 @@ pub mod pallet {
 			> + TournamentRanker<SeasonId, AvatarOf<Self>, AvatarIdOf<Self>>;
 
 		type FeeHandler: FeeHandler<
-			AccountId = AccountIdFor<Self>,
-			PaymentKind = (),
-			Balance = BalanceOf<Self>,
-			AffiliateFeeIdentifier = AffiliateMethods,
-			TournamentFeeIdentifier = SeasonId,
-		>;
+				AccountId = AccountIdFor<Self>,
+				PaymentKind = (),
+				Balance = BalanceOf<Self>,
+				AffiliateFeeIdentifier = AffiliateMethods,
+				TournamentFeeIdentifier = SeasonId,
+			>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -1500,8 +1501,8 @@ pub mod pallet {
 			Ok((current_status.season_id, season))
 		}
 
-		fn current_season_schedule_with_id(
-		) -> Result<(SeasonId, SeasonScheduleOf<T>), DispatchError> {
+		fn current_season_schedule_with_id()
+		-> Result<(SeasonId, SeasonScheduleOf<T>), DispatchError> {
 			let mut current_status = CurrentSeasonStatus::<T>::get();
 			let season_schedule = match SeasonSchedules::<T>::get(current_status.season_id) {
 				Some(season_schedule) if current_status.is_in_season() => season_schedule,

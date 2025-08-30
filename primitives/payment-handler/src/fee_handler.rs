@@ -18,9 +18,9 @@ pub use crate::distribute_fee::DistributeFee;
 use crate::withdraw_credit::WithdrawCredit;
 use core::{fmt::Debug, marker::PhantomData};
 use frame_support::{
-	pallet_prelude::DispatchError,
-	traits::{fungible, fungibles, tokens::Preservation, Defensive, Imbalance},
 	BoundedVec,
+	pallet_prelude::DispatchError,
+	traits::{Defensive, Imbalance, fungible, fungibles, tokens::Preservation},
 };
 use parity_scale_codec::{Decode, Encode};
 
@@ -139,21 +139,20 @@ where
 	// `NativeAndAssets` struct.
 	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Assets,
-		Credit = fungibles::Credit<AccountId, Assets>,
-	>,
-
+			AccountId = AccountId,
+			Assets = Assets,
+			Credit = fungibles::Credit<AccountId, Assets>,
+		>,
 	Affiliate: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
+		>,
 	Tournament: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
+		>,
 {
 	type AccountId = AccountId;
 	type PaymentKind = W::AssetId;
@@ -202,21 +201,20 @@ impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
 where
 	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Assets,
-		Credit = fungibles::Credit<AccountId, Assets>,
-	>,
-
+			AccountId = AccountId,
+			Assets = Assets,
+			Credit = fungibles::Credit<AccountId, Assets>,
+		>,
 	Affiliate: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
+		>,
 	Tournament: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
+		>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///
@@ -292,10 +290,10 @@ impl<AccountId, Assets, W, Affiliate, MaxAffiliates, Tournament>
 where
 	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Assets,
-		Credit = fungibles::Credit<AccountId, Assets>,
-	>,
+			AccountId = AccountId,
+			Assets = Assets,
+			Credit = fungibles::Credit<AccountId, Assets>,
+		>,
 {
 	fn withdraw_and_deposit(
 		payment: W::AssetId,
@@ -336,21 +334,20 @@ where
 	// This is satisfied by the `pallet-balances`.
 	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Balances,
-		Credit = fungible::Credit<AccountId, Balances>,
-	>,
-
+			AccountId = AccountId,
+			Assets = Balances,
+			Credit = fungible::Credit<AccountId, Balances>,
+		>,
 	Affiliate: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
+		>,
 	Tournament: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
+		>,
 {
 	type AccountId = AccountId;
 	// If not vouchers are to be used this can be ()
@@ -398,21 +395,20 @@ impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
 where
 	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Balances,
-		Credit = fungible::Credit<AccountId, Balances>,
-	>,
-
+			AccountId = AccountId,
+			Assets = Balances,
+			Credit = fungible::Credit<AccountId, Balances>,
+		>,
 	Affiliate: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = AffiliateFeeDistribution<AccountId, W::Balance, MaxAffiliates>,
+		>,
 	Tournament: DistributeFee<
-		AccountId = AccountId,
-		Balance = W::Balance,
-		FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
-	>,
+			AccountId = AccountId,
+			Balance = W::Balance,
+			FeeDistribution = TournamentFeeDistribution<AccountId, W::Balance>,
+		>,
 {
 	/// Distributes an already withdrawn `fee_credit` to the affiliates of `account`.
 	///
@@ -486,10 +482,10 @@ impl<AccountId, Balances, W, Affiliate, MaxAffiliates, Tournament>
 where
 	Balances: fungible::Balanced<AccountId, Balance = W::Balance>,
 	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Balances,
-		Credit = fungible::Credit<AccountId, Balances>,
-	>,
+			AccountId = AccountId,
+			Assets = Balances,
+			Credit = fungible::Credit<AccountId, Balances>,
+		>,
 {
 	fn withdraw_and_deposit(
 		payment: W::AssetId,

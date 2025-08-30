@@ -21,8 +21,8 @@ use ajuna_primitives::{
 };
 use frame_support::{__private::log, traits::tokens::Preservation};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub},
 	ArithmeticError,
+	traits::{CheckedAdd, CheckedSub},
 };
 
 impl<T: Config<I>, I: 'static> AssetManager for Pallet<T, I> {

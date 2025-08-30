@@ -42,15 +42,15 @@ use ajuna_primitives::{
 	trade_manager::{TradeManager, TransferManager},
 };
 use sage_api::{
-	traits::{GetId, TransitionOutput},
 	SageGameTransition, TransitionError,
+	traits::{GetId, TransitionOutput},
 };
 
-use frame_support::{pallet_prelude::*, traits::fungible, PalletId};
+use frame_support::{PalletId, pallet_prelude::*, traits::fungible};
 use frame_system::pallet_prelude::*;
 use sp_runtime::{
-	traits::{AccountIdConversion, UniqueSaturatedInto},
 	Saturating,
+	traits::{AccountIdConversion, UniqueSaturatedInto},
 };
 use sp_std::prelude::*;
 
@@ -146,33 +146,30 @@ pub mod pallet {
 		/// The `SageGameTransition` that this pallet hosts, and whose state transition
 		/// are executed as part of the `state_transition` extrinsic.
 		type SageGameTransition: SageGameTransition<
-			AccountId = AccountIdOf<Self>,
-			PaymentFungible = Self::FungiblesAssetId,
-		>;
+				AccountId = AccountIdOf<Self>,
+				PaymentFungible = Self::FungiblesAssetId,
+			>;
 
 		type NextAssetIdProvider: ProvideNextAssetId<AssetId = AssetIdOf<Self, I>>;
 
 		/// Retrieves information about past and ongoing seasons.
-		type SeasonHandler: SeasonManager<
-			AssetId = AssetIdOf<Self, I>,
-			Balance = BalanceOf<Self, I>,
-		>;
+		type SeasonHandler: SeasonManager<AssetId = AssetIdOf<Self, I>, Balance = BalanceOf<Self, I>>;
 
 		/// Handles the extra fees that incur during executing the state transition, or other
 		/// things like paying for an asset inventory upgrade.
 		type FeeHandler: FeeHandler<
-			AccountId = AccountIdOf<Self>,
-			PaymentKind = FungiblesAssetIdOf<Self, I>,
-			Balance = BalanceOf<Self, I>,
-			AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
-			TournamentFeeIdentifier = SeasonIdOf<Self, I>,
-		>;
+				AccountId = AccountIdOf<Self>,
+				PaymentKind = FungiblesAssetIdOf<Self, I>,
+				Balance = BalanceOf<Self, I>,
+				AffiliateFeeIdentifier = AffiliateMethodsOf<Self, I>,
+				TournamentFeeIdentifier = SeasonIdOf<Self, I>,
+			>;
 
 		type TransferFunds: TransferFungible<
-			AccountId = AccountIdOf<Self>,
-			AssetId = FungiblesAssetIdOf<Self, I>,
-			Balance = BalanceOf<Self, I>,
-		>;
+				AccountId = AccountIdOf<Self>,
+				AssetId = FungiblesAssetIdOf<Self, I>,
+				Balance = BalanceOf<Self, I>,
+			>;
 
 		type FungiblesAssetId: AssetId + IdentifyVoucherOrAssetId + NativeId;
 
@@ -185,22 +182,18 @@ pub mod pallet {
 		/// balances-pallet.
 		type Fungible: fungible::Inspect<AccountIdOf<Self>> + fungible::Mutate<AccountIdOf<Self>>;
 
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// The weight calculations
 		type WeightInfo: WeightInfo;
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type BenchmarkHelper: sage_api::benchmarks::SageBenchmarkHelper<
-			AssetIdOf<Self, I>,
-			AssetOf<Self, I>,
-			TransitionIdOf<Self, I>,
-			TradeFilterOf<Self, I>,
-			TransferFilterOf<Self, I>,
-			FungiblesAssetIdOf<Self, I>,
-		>;
+				AssetIdOf<Self, I>,
+				AssetOf<Self, I>,
+				TransitionIdOf<Self, I>,
+				TradeFilterOf<Self, I>,
+				TransferFilterOf<Self, I>,
+				FungiblesAssetIdOf<Self, I>,
+			>;
 	}
 
 	/// Organizer of the game. Essentially the administrator with certain privileges.

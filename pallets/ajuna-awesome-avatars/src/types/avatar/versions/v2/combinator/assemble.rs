@@ -24,18 +24,18 @@ impl<T: Config> AvatarCombinator<T> {
 
 		let (additionals, non_additionals): (Vec<_>, Vec<_>) =
 			matching_sacrifices.into_iter().chain(non_matching).partition(|(_, sacrifice)| {
-				sacrifice
-					.same_full_and_class_types(&input_leader)
-					.not()
-					.then(|| {
+				if sacrifice.same_full_and_class_types(&input_leader).not() {
+					{
 						DnaUtils::<BlockNumberFor<T>>::is_progress_match(
 							leader_progress_array,
 							sacrifice.get_progress(),
 							MATCH_ALGO_START_RARITY.as_byte(),
 						)
 						.is_some()
-					})
-					.unwrap_or(false)
+					}
+				} else {
+					false
+				}
 			});
 
 		let progress_rarity =

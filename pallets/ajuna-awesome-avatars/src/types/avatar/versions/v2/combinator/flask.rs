@@ -163,12 +163,14 @@ mod test {
 			let sacrifice_progress_array = paint_flask.1.get_progress();
 			assert_eq!(sacrifice_progress_array, expected_sacrifice_progress_array);
 
-			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
-				leader_progress_array,
-				sacrifice_progress_array,
-				MATCH_ALGO_START_RARITY.as_byte()
-			)
-			.is_some());
+			assert!(
+				DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
+					leader_progress_array,
+					sacrifice_progress_array,
+					MATCH_ALGO_START_RARITY.as_byte()
+				)
+				.is_some()
+			);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::flask_avatars(
 				armor_component,
@@ -248,12 +250,14 @@ mod test {
 				[0x45, 0x43, 0x54, 0x53, 0x54, 0x51, 0x52, 0x50, 0x54, 0x55, 0x42];
 			assert_eq!(sacrifice_progress_array, expected_progress_array_other);
 
-			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
-				leader_progress_array,
-				sacrifice_progress_array,
-				MATCH_ALGO_START_RARITY.as_byte()
-			)
-			.is_some());
+			assert!(
+				DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
+					leader_progress_array,
+					sacrifice_progress_array,
+					MATCH_ALGO_START_RARITY.as_byte()
+				)
+				.is_some()
+			);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::flask_avatars(
 				avatar,
@@ -340,12 +344,14 @@ mod test {
 				[0x45, 0x43, 0x54, 0x53, 0x54, 0x51, 0x52, 0x50, 0x54, 0x55, 0x42];
 			assert_eq!(sacrifice_progress_array, expected_progress_array_other);
 
-			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
-				leader_progress_array,
-				sacrifice_progress_array,
-				MATCH_ALGO_START_RARITY.as_byte()
-			)
-			.is_some());
+			assert!(
+				DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
+					leader_progress_array,
+					sacrifice_progress_array,
+					MATCH_ALGO_START_RARITY.as_byte()
+				)
+				.is_some()
+			);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::flask_avatars(
 				armor_component,
@@ -413,12 +419,14 @@ mod test {
 
 			let total_soul_points = leader.1.get_souls() + sac_1.1.get_souls();
 
-			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
-				leader_progress_array,
-				sacrifice_progress_array,
-				MATCH_ALGO_START_RARITY.as_byte()
-			)
-			.is_some());
+			assert!(
+				DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
+					leader_progress_array,
+					sacrifice_progress_array,
+					MATCH_ALGO_START_RARITY.as_byte()
+				)
+				.is_some()
+			);
 
 			let (leader_output, sacrifice_output) =
 				AvatarCombinator::<Test>::flask_avatars(leader, vec![sac_1], &mut hash_provider)
@@ -495,12 +503,14 @@ mod test {
 				[0x45, 0x43, 0x54, 0x53, 0x54, 0x51, 0x52, 0x50, 0x54, 0x55, 0x41];
 			assert_eq!(sacrifice_progress_array, expected_progress_array_other);
 
-			assert!(DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
-				leader_progress_array,
-				sacrifice_progress_array,
-				MATCH_ALGO_START_RARITY.as_byte()
-			)
-			.is_none());
+			assert!(
+				DnaUtils::<BlockNumberFor<Test>>::is_progress_match(
+					leader_progress_array,
+					sacrifice_progress_array,
+					MATCH_ALGO_START_RARITY.as_byte()
+				)
+				.is_none()
+			);
 
 			let (leader_output, sacrifice_output) = AvatarCombinator::<Test>::flask_avatars(
 				avatar,

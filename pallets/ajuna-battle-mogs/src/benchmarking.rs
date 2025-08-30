@@ -31,7 +31,7 @@ fn account<T: Config>(name: &'static str) -> T::AccountId {
 
 fn force_hatch_mogwai<T: Config>(mogwai_id: &MogwaiIdOf<T>) {
 	Mogwais::<T>::mutate(mogwai_id, |maybe_mogwai| {
-		if let Some(ref mut mogwai) = maybe_mogwai {
+		if let Some(mogwai) = maybe_mogwai {
 			mogwai.phase = PhaseType::Hatched;
 		}
 	});
@@ -39,7 +39,7 @@ fn force_hatch_mogwai<T: Config>(mogwai_id: &MogwaiIdOf<T>) {
 
 fn force_mogwai_rarity<T: Config>(mogwai_id: &MogwaiIdOf<T>, rarity: RarityType) {
 	Mogwais::<T>::mutate(mogwai_id, |maybe_mogwai| {
-		if let Some(ref mut mogwai) = maybe_mogwai {
+		if let Some(mogwai) = maybe_mogwai {
 			mogwai.rarity = rarity;
 		}
 	});

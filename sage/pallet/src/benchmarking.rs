@@ -15,11 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+	AssetIdOf, AssetOf, AssetOwners, AssetTradePrices, Assets, BalanceOf, Config, Event, ExtraOf,
+	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SAGE_LOCK_ID,
+	SeasonIdOf, SeasonUnlocks, UnlockRule, UnlockTarget,
 	config::{InventoryTier, Locks},
 	pallet::AssetFilterOf,
-	AssetIdOf, AssetOf, AssetOwners, AssetTradePrices, Assets, BalanceOf, Config, Event, ExtraOf,
-	GeneralConfigStore, LockableFeature, Organizer, Pallet, PlayerSeasonConfigs, SeasonIdOf,
-	SeasonUnlocks, UnlockRule, UnlockTarget, SAGE_LOCK_ID,
 };
 use ajuna_primitives::{asset_manager::Lock, season_manager::SeasonManager};
 use frame_benchmarking::v2::*;
@@ -36,8 +36,8 @@ fn account<T: Config<I>, I: 'static>(name: &'static str) -> T::AccountId {
 }
 
 fn assert_last_event<T: Config<I>, I: 'static>(avatars_event: Event<T, I>) {
-	let event = <T as Config<I>>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 fn setup_organizer<T: Config<I>, I: 'static>(organizer: T::AccountId) {

@@ -22,6 +22,7 @@ use frame_support::{
 		tokens::{Fortitude, Preservation},
 	},
 };
+use parity_scale_codec::DecodeWithMemTracking;
 use sp_runtime::{DispatchError, TokenError};
 use sp_std::marker::PhantomData;
 
@@ -59,7 +60,18 @@ pub struct TransferFungibleAssets<W, I>(PhantomData<(W, I)>);
 ///
 /// It is important to check this result because we do have implementations
 /// that withdraw credit in one asset and allocate it as another asset.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, Copy, Clone, PartialEq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Debug,
+	Default,
+	Copy,
+	Clone,
+	PartialEq,
+)]
 pub struct TransferResult<AssetId, Amount> {
 	pub input_asset_id: AssetId,
 	pub input_amount: Amount,
@@ -72,11 +84,11 @@ where
 	Assets: fungibles::Balanced<AccountId, Balance = W::Balance>
 		+ fungibles::Inspect<AccountId, Balance = W::Balance, AssetId = I::AssetId>,
 	W: WithdrawCredit<
-		AccountId = AccountId,
-		Assets = Assets,
-		Credit = fungibles::Credit<AccountId, Assets>,
-		AssetId = I,
-	>,
+			AccountId = AccountId,
+			Assets = Assets,
+			Credit = fungibles::Credit<AccountId, Assets>,
+			AssetId = I,
+		>,
 	I: IdentifyVoucherOrAssetId + Clone,
 	W::AssetId: From<I::AssetId>,
 {
@@ -92,7 +104,9 @@ where
 		preservation: Preservation,
 	) -> Result<TransferResult<Self::AssetId, Self::Balance>, DispatchError> {
 		if asset_id.is_voucher() {
-			log::debug!("Transferring vouchers is unsupported on this level. The pallet should handle that.");
+			log::debug!(
+				"Transferring vouchers is unsupported on this level. The pallet should handle that."
+			);
 			return Err(DispatchError::Token(TokenError::Unsupported));
 		}
 
@@ -109,8 +123,8 @@ where
 				// account sending the transaction. It would be a bad user experience if
 				// the transaction fails because we can't allocate the fees to the recipient.
 				log::error!(
-				"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
-			);
+					"Could not deposit to beneficiary, it probably doesn't exist, burning the credit..."
+				);
 			}
 			Ok(result)
 		} else {
@@ -137,7 +151,9 @@ where
 			Self::transfer(asset_id, from, to, balance, Preservation::Expendable)
 		} else {
 			// The asset id is a voucher or anything else not-relating to fungible assets.
-			log::debug!("Transferring vouchers is unsupported on this level. The pallet should handle that.");
+			log::debug!(
+				"Transferring vouchers is unsupported on this level. The pallet should handle that."
+			);
 			Err(DispatchError::Token(TokenError::Unsupported))
 		}
 	}
@@ -147,12 +163,13 @@ where
 mod tests {
 	use super::*;
 	use crate::{
-		mock::{
-			AssetId, Assets, ExtBuilder, MockVoucherHandler, WithdrawWhitelistedAssets, ALICE,
-			FERDIE, NOT_WHITELISTED_ASSET_ID_PAYMENT, NOT_WHITE_LISTED_ASSET_ID, VOUCHERS,
-			VOUCHER_ASSET_PAYMENT, WHITELISTED_ASSET_ID, WHITELISTED_ASSET_ID_PAYMENT,
-		},
 		WithdrawCreditOrVoucher, WithdrawKind,
+		mock::{
+			ALICE, AssetId, Assets, ExtBuilder, FERDIE, MockVoucherHandler,
+			NOT_WHITE_LISTED_ASSET_ID, NOT_WHITELISTED_ASSET_ID_PAYMENT, VOUCHER_ASSET_PAYMENT,
+			VOUCHERS, WHITELISTED_ASSET_ID, WHITELISTED_ASSET_ID_PAYMENT,
+			WithdrawWhitelistedAssets,
+		},
 	};
 	use frame_support::assert_noop;
 	use sp_runtime::{ModuleError, TokenError};

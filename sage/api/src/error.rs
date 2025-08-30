@@ -14,11 +14,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
+use frame_support::pallet_prelude::{
+	Decode, DecodeWithMemTracking, Encode, MaxEncodedLen, TypeInfo,
+};
 use sp_runtime::DispatchError;
 
 /// Errors that may happen during the execution of a SAGE transition.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Debug,
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+)]
 pub enum TransitionError {
 	TransferError,
 	FeeError,

@@ -1,5 +1,5 @@
 use super::{TournamentConfig, TournamentId, TournamentState};
-use sp_runtime::{traits::Member, DispatchError, DispatchResult};
+use sp_runtime::{DispatchError, DispatchResult, traits::Member};
 
 pub trait EntityRank {
 	type EntityId: Member;

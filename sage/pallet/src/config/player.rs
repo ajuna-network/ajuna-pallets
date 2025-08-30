@@ -16,7 +16,18 @@
 
 use frame_support::pallet_prelude::*;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Copy,
+	Clone,
+	Debug,
+	Default,
+	PartialEq,
+)]
 pub enum InventoryTier {
 	#[default]
 	One = 25,
@@ -45,7 +56,18 @@ impl InventoryTier {
 	}
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Default, Debug, PartialEq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Copy,
+	Clone,
+	Default,
+	Debug,
+	PartialEq,
+)]
 pub struct Locks {
 	pub asset_transfer: bool,
 	pub asset_trade: bool,
@@ -57,7 +79,9 @@ impl Locks {
 	}
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq,
+)]
 pub struct PlayerConfig {
 	pub inventory_tier: InventoryTier,
 	pub locks: Locks,
@@ -65,7 +89,9 @@ pub struct PlayerConfig {
 
 pub type Stat = u32;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Default, Debug, PartialEq,
+)]
 pub struct PlayerStats<BlockNumber> {
 	pub minted_amount: Stat,
 	pub forged_amount: Stat,

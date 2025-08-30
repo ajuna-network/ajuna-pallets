@@ -88,26 +88,26 @@ impl Breeding {
 		let input_generation_1 = input_generation_1 as u16;
 		let input_generation_2 = input_generation_2 as u16;
 
-		let generation_diff = (input_generation_1 > input_generation_2)
-			.then_some(input_generation_1.saturating_sub(input_generation_2))
-			.unwrap_or_default();
+		let generation_diff = if input_generation_1 > input_generation_2 {
+			input_generation_1.saturating_sub(input_generation_2)
+		} else {
+			Default::default()
+		};
 
 		let input_rarity_1 = input_rarity_1 as u16;
 		let input_rarity_2 = input_rarity_2 as u16;
 
-		let rarity_diff = (input_rarity_2 > input_rarity_1)
-			.then_some(input_rarity_2.saturating_sub(input_rarity_1))
-			.unwrap_or_default();
+		let rarity_diff = if input_rarity_2 > input_rarity_1 {
+			input_rarity_2.saturating_sub(input_rarity_1)
+		} else {
+			Default::default()
+		};
 
 		if rarity_diff != 0 && generation_diff != 0 {
 			let max_generation = {
 				let max_gen = ((generation_diff * 2) / ((rarity_diff + 1) * input_rarity_2)) + 1;
 
-				if (input_generation_2 + max_gen) > 16 {
-					16 - input_generation_2
-				} else {
-					max_gen
-				}
+				if (input_generation_2 + max_gen) > 16 { 16 - input_generation_2 } else { max_gen }
 			};
 
 			let final_prob = {
@@ -118,18 +118,10 @@ impl Breeding {
 
 					let prob = (256 / (input_rarity_2 + prob_rar)) + prob_aug;
 
-					if prob_gen > prob_rar * 2 {
-						prob + prob_gen - (prob_rar * 2)
-					} else {
-						prob
-					}
+					if prob_gen > prob_rar * 2 { prob + prob_gen - (prob_rar * 2) } else { prob }
 				};
 
-				if prob < 256 {
-					prob as u8
-				} else {
-					u8::MAX
-				}
+				if prob < 256 { prob as u8 } else { u8::MAX }
 			};
 
 			let gen_add = input_generation_1 + input_generation_2;

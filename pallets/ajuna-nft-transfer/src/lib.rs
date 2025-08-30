@@ -30,16 +30,16 @@ pub mod weights;
 
 use ajuna_primitives::{account_manager::AccountManager, asset_manager::AssetManager};
 use frame_support::{
+	PalletId,
 	pallet_prelude::*,
 	traits::{
+		Locker,
 		fungible::{Inspect as InspectFungible, Mutate as MutateFungible},
 		tokens::{
-			nonfungibles_v2::{Inspect, Mutate},
 			Preservation,
+			nonfungibles_v2::{Inspect, Mutate},
 		},
-		Locker,
 	},
-	PalletId,
 };
 
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
@@ -60,7 +60,9 @@ pub mod pallet {
 		<<T as Config>::Fungible as InspectFungible<AccountIdFor<T>>>::Balance;
 	pub(crate) type GeneralConfigOf<T> = GeneralConfig<BalanceOf<T>>;
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+	#[derive(
+		Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq,
+	)]
 	pub enum NftStatus {
 		/// The NFT exists in storage in the chain
 		Stored,
@@ -82,9 +84,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// Identifier for the collection of item.
 		type CollectionId: Member + Parameter + MaxEncodedLen + Copy + AtLeast32BitUnsigned;
 
@@ -96,11 +95,7 @@ pub mod pallet {
 		/// Type that holds the specific configurations for an item.
 		type ItemConfig: Default + MaxEncodedLen + TypeInfo;
 
-		type AssetManager: AssetManager<
-			AccountId = AccountIdFor<Self>,
-			AssetId = Self::ItemId,
-			Asset = Self::Item,
-		>;
+		type AssetManager: AssetManager<AccountId = AccountIdFor<Self>, AssetId = Self::ItemId, Asset = Self::Item>;
 
 		type AccountManager: AccountManager<AccountId = AccountIdFor<Self>>;
 

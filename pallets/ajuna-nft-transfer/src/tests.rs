@@ -14,17 +14,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{mock::*, traits::*, Error, *};
+use crate::{Error, mock::*, traits::*, *};
 use frame_support::{
 	assert_err, assert_noop, assert_ok,
 	traits::tokens::nonfungibles_v2::{Create, Inspect},
 };
-use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::Encode;
-use sp_runtime::{testing::H256, DispatchError};
+use sp_runtime::{DispatchError, testing::H256, traits::BlockNumberProvider};
 
+type BlockNumberForNft<T> =
+	<<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 type CollectionConfig =
-	pallet_nfts::CollectionConfig<MockBalance, BlockNumberFor<Test>, MockCollectionId>;
+	pallet_nfts::CollectionConfig<MockBalance, BlockNumberForNft<Test>, MockCollectionId>;
 
 fn create_collection(organizer: MockAccountId) -> MockCollectionId {
 	<Test as Config>::NftHelper::create_collection(
@@ -53,7 +54,7 @@ impl ExtBuilder {
 		use sp_runtime::BuildStorage;
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();
@@ -794,21 +795,27 @@ mod recover_from_nft {
 
 				assert_eq!(NftTransfer::recover_from_nft(BOB, collection_id, item_id), Ok(item));
 				assert!(NftStatuses::<Test>::get(collection_id, item_id).is_none());
-				assert!(Nft::system_attribute(
-					&collection_id,
-					Some(&item_id),
-					&MockItem::ITEM_CODE.encode()
-				)
-				.is_none());
-				assert!(Nft::system_attribute(
-					&collection_id,
-					Some(&item_id),
-					&MockItem::IPFS_URL_CODE.encode()
-				)
-				.is_none());
+				assert!(
+					Nft::system_attribute(
+						&collection_id,
+						Some(&item_id),
+						&MockItem::ITEM_CODE.encode()
+					)
+					.is_none()
+				);
+				assert!(
+					Nft::system_attribute(
+						&collection_id,
+						Some(&item_id),
+						&MockItem::IPFS_URL_CODE.encode()
+					)
+					.is_none()
+				);
 				for attribute_code in MockItem::get_attribute_codes() {
-					assert!(Nft::attribute(&collection_id, &item_id, &attribute_code.encode())
-						.is_none());
+					assert!(
+						Nft::attribute(&collection_id, &item_id, &attribute_code.encode())
+							.is_none()
+					);
 				}
 
 				// check players are refunded the item deposit

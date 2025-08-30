@@ -2,8 +2,8 @@ use crate::{self as pallet_wildcard, *};
 use frame_support::{
 	parameter_types,
 	traits::{
-		tokens::nonfungibles_v2::{Create, Mutate},
 		AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks,
+		tokens::nonfungibles_v2::{Create, Mutate},
 	},
 };
 
@@ -11,9 +11,9 @@ use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::PalletFeatures;
 use sp_core::Pair;
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -89,6 +89,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -109,6 +110,7 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type MaxFreezes = ();
+	type DoneSlashHandler = ();
 }
 
 pub type MockCollectionId = u32;
@@ -185,6 +187,7 @@ impl pallet_nfts::Config for Test {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -219,6 +222,7 @@ impl pallet_assets::Config for Test {
 	type ApprovalDeposit = ApprovalDeposit;
 	type StringLimit = frame_support::traits::ConstU32<20>;
 	type Freezer = ();
+	type Holder = ();
 	type Extra = ();
 	type CallbackHandle = ();
 	type WeightInfo = ();
@@ -271,7 +275,6 @@ impl OnMappingRequest<MockAssetId, MockCollectionId, MockItemId> for MockOnMappi
 
 impl pallet_wildcard::Config for Test {
 	type PalletId = WildcardPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type AssetId = MockAssetId;
 	type Fungibles = Assets;
@@ -305,9 +308,12 @@ impl ExtBuilder {
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
-			.assimilate_storage(&mut t)
-			.unwrap();
+		pallet_balances::GenesisConfig::<Test> {
+			balances: self.balances,
+			dev_accounts: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		let mut ext: sp_io::TestExternalities = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));

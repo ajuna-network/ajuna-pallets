@@ -39,7 +39,7 @@ use ajuna_primitives::{
 
 use frame_support::{pallet_prelude::*, traits::Currency};
 use frame_system::pallet_prelude::*;
-use sp_runtime::{traits::MaybeSerializeDeserialize, Saturating};
+use sp_runtime::{Saturating, traits::MaybeSerializeDeserialize};
 
 pub use types::*;
 use weights::WeightInfo;
@@ -135,10 +135,6 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		type SeasonId: Member + Parameter + MaxEncodedLen + MaybeSerializeDeserialize;
 
 		type AssetId: Member + Parameter + MaxEncodedLen + TypeInfo;
@@ -403,7 +399,7 @@ pub mod pallet {
 				if let Some(SeasonSchedule { end: Some(end), .. }) = schedule {
 					Self::add_season_end_action_at(&season_id, end)?;
 					SeasonSchedules::<T, I>::mutate(&season_id, |maybe_schedule| {
-						if let Some(ref mut schedule) = maybe_schedule {
+						if let Some(schedule) = maybe_schedule {
 							schedule.end = Some(end);
 						} else {
 							log::error!(target: LOG_TARGET,
@@ -558,7 +554,7 @@ pub mod pallet {
 			schedule: &SeasonScheduleOf<T>,
 		) -> DispatchResult {
 			SeasonSchedules::<T, I>::try_mutate(season_id, |maybe_prev_schedule| {
-				if let Some(ref prev_schedule) = maybe_prev_schedule {
+				if let Some(prev_schedule) = maybe_prev_schedule {
 					SeasonScheduledActions::<T, I>::remove(prev_schedule.early_start);
 					SeasonScheduledActions::<T, I>::remove(prev_schedule.start);
 					if let Some(ref prev_end) = prev_schedule.end {

@@ -15,27 +15,27 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	self as pallet_ajuna_nft_transfer,
+	self as pallet_ajuna_nft_transfer, GeneralConfigStore,
 	traits::{NFTAttribute, NftConvertible},
-	GeneralConfigStore,
 };
 use ajuna_primitives::{
 	account_manager::WhitelistKey,
 	asset_manager::{AssetManager, Lock},
 };
 use frame_support::{
-	ensure, parameter_types,
+	BoundedVec, PalletId, ensure,
+	pallet_prelude::DecodeWithMemTracking,
+	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, LockIdentifier},
-	BoundedVec, PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
 	DispatchError, RuntimeAppPublic,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
 };
 use sp_std::{cell::RefCell, collections::btree_map::BTreeMap, vec, vec::Vec};
 
@@ -88,6 +88,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -108,9 +109,12 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {
@@ -200,6 +204,7 @@ impl pallet_nfts::Config for Test {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -218,7 +223,6 @@ impl crate::BenchmarkHelper<MockAccountId, ItemId> for NftTransferBenchmarkHelpe
 
 impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
 	type Item = MockItem;
 	type ItemId = ItemId;

@@ -20,9 +20,9 @@ pub use types::*;
 
 use super::*;
 use crate::{
+	Config,
 	pallet::SeasonOf,
 	types::{MintOption, SeasonId},
-	Config,
 };
 use sp_runtime::DispatchError;
 
@@ -356,31 +356,33 @@ impl<T: Config> ForgerV2<T> {
 					let has_one_paint_flask_or_glow = sacrifices
 						.iter()
 						.filter(|sacrifice| {
-							sacrifice
-								.has_type(ItemType::Essence)
-								.then(|| {
+							if sacrifice.has_type(ItemType::Essence) {
+								{
 									let item_sub_type =
 										sacrifice.get_item_sub_type::<EssenceItemType>();
 
 									item_sub_type == EssenceItemType::PaintFlask ||
 										item_sub_type == EssenceItemType::GlowFlask
-								})
-								.unwrap_or(false)
+								}
+							} else {
+								false
+							}
 						})
 						.count() == 1;
 
 					let all_are_glimmer_paint_or_force = sacrifices.iter().all(|sacrifice| {
-						sacrifice
-							.has_type(ItemType::Essence)
-							.then(|| {
+						if sacrifice.has_type(ItemType::Essence) {
+							{
 								let item_sub_type =
 									sacrifice.get_item_sub_type::<EssenceItemType>();
 
 								item_sub_type == EssenceItemType::Glimmer ||
 									item_sub_type == EssenceItemType::PaintFlask ||
 									item_sub_type == EssenceItemType::GlowFlask
-							})
-							.unwrap_or(false)
+							}
+						} else {
+							false
+						}
 					});
 
 					if has_one_paint_flask_or_glow && all_are_glimmer_paint_or_force {
@@ -449,26 +451,30 @@ mod test {
 			.collect::<Vec<_>>();
 
 			// Can forge with V2 avatar and correct number of sacrifices
-			assert!(ForgerV2::<Test>::forge(
-				&ALICE,
-				1,
-				&season,
-				leader.clone(),
-				sacrifices[0..4].to_vec(),
-				false
-			)
-			.is_ok());
+			assert!(
+				ForgerV2::<Test>::forge(
+					&ALICE,
+					1,
+					&season,
+					leader.clone(),
+					sacrifices[0..4].to_vec(),
+					false
+				)
+				.is_ok()
+			);
 
 			// Can't forge with more than MAX_SACRIFICE amount
-			assert!(ForgerV2::<Test>::forge(
-				&ALICE,
-				1,
-				&season,
-				leader.clone(),
-				sacrifices.to_vec(),
-				false
-			)
-			.is_err());
+			assert!(
+				ForgerV2::<Test>::forge(
+					&ALICE,
+					1,
+					&season,
+					leader.clone(),
+					sacrifices.to_vec(),
+					false
+				)
+				.is_err()
+			);
 
 			// Can't forge with less than MIN_SACRIFICE amount
 			assert!(
@@ -1279,7 +1285,7 @@ mod test {
 					.or_insert(1_u32);
 
 				if i % 1000 == 999 {
-					let hash_text = format!("hash_loop_{:#07X}", i);
+					let hash_text = format!("hash_loop_{i:#07X}");
 					let hash = Pallet::<Test>::random_hash(hash_text.as_bytes(), &ALICE);
 					hash_provider = HashProvider::new(&hash);
 				}
