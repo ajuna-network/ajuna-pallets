@@ -53,7 +53,7 @@ sp-runtime                                 = { version = "42.0.0", default-featu
 sp-std                                     = { version = "14.0.0", default-features = false }
 
 # orml
-orml-vesting = { version = "1.2.1", default-features = false }
+orml-vesting = { version = "1.4.0", default-features = false }
 
 # Ajuna
 ajuna-payment-handler                     = { path = "primitives/payment-handler", default-features = false }
