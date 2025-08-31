@@ -159,7 +159,7 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {
@@ -346,7 +346,7 @@ impl ExtBuilder {
 		MOCK_EXISTENTIAL_DEPOSIT.with(|v| *v.borrow_mut() = self.existential_deposit);
 
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances, dev_accounts: None }
 			.assimilate_storage(&mut t)
 			.unwrap();
 		pallet_ajuna_awesome_avatars::GenesisConfig::<Test>::default()

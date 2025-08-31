@@ -20,6 +20,7 @@ use frame_support::{
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
 	PalletId,
 };
+use frame_support::pallet_prelude::DecodeWithMemTracking;
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -104,7 +105,7 @@ impl pallet_balances::Config for Test {
 	type DoneSlashHandler = ();
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {

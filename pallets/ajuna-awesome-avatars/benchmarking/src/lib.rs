@@ -218,8 +218,8 @@ fn create_service_account_and_prepare_avatar<T: Config>(
 }
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
-	let event = <T as AvatarsConfig>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 benchmarks! {

@@ -39,7 +39,7 @@ pub mod pallet {
 	};
 	use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned};
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+	#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
 	pub enum NftStatus {
 		/// The NFT exists in storage in the chain
 		Stored,

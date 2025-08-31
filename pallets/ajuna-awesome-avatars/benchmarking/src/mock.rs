@@ -17,21 +17,22 @@
 #![cfg(test)]
 
 use frame_support::{
+	PalletId,
+	pallet_prelude::DecodeWithMemTracking,
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-	PalletId,
 };
-use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot, EnsureSigned};
+use frame_system::{EnsureRoot, EnsureSigned, pallet_prelude::BlockNumberFor};
 use pallet_ajuna_awesome_avatars::{
-	types::{AffiliateMethods, Avatar, SeasonId},
 	FeePropagationOf,
+	types::{AffiliateMethods, Avatar, SeasonId},
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
 
 pub type MockSignature = MultiSignature;
@@ -87,6 +88,7 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -107,6 +109,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
@@ -162,7 +165,9 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {
@@ -202,6 +207,7 @@ impl pallet_nfts::Config for Runtime {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -210,7 +216,6 @@ parameter_types! {
 
 impl pallet_ajuna_awesome_avatars::Config for Runtime {
 	type PalletId = AwesomeAvatarsPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Randomness = Randomness;
 	type KeyLimit = KeyLimit;
@@ -228,7 +233,6 @@ parameter_types! {
 
 impl pallet_ajuna_nft_transfer::Config for Runtime {
 	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
 	type ItemId = H256;
 	type ItemConfig = pallet_nfts::ItemConfig;
@@ -243,7 +247,6 @@ parameter_types! {
 
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Runtime>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
@@ -257,7 +260,6 @@ parameter_types! {
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Runtime {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type SeasonId = SeasonId;
 	type EntityId = crate::AvatarIdOf<Runtime>;

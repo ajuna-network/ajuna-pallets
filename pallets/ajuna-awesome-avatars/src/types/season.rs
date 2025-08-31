@@ -25,7 +25,7 @@ use sp_std::{
 	ops::{Deref, DerefMut},
 };
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, Default, PartialEq)]
 pub struct SeasonStatus {
 	pub season_id: SeasonId,
 	pub early: bool,
@@ -39,13 +39,13 @@ impl SeasonStatus {
 	}
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct SeasonMeta {
 	pub name: BoundedVec<u8, ConstU32<100>>,
 	pub description: BoundedVec<u8, ConstU32<1_000>>,
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct SeasonSchedule<BlockNumber> {
 	pub early_start: BlockNumber,
 	pub start: BlockNumber,
@@ -73,7 +73,7 @@ where
 
 pub type TradeFilter = u32;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
 pub struct TradeFilters(pub BoundedVec<TradeFilter, ConstU32<100>>);
 
 impl Deref for TradeFilters {
@@ -121,7 +121,7 @@ impl TradeFilters {
 pub type RarityPercent = u8;
 pub type SacrificeCount = u8;
 
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
 pub struct Season<BlockNumber, Balance> {
 	pub max_tier_forges: u32,
 	pub max_variations: u8,
