@@ -20,11 +20,11 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU16, ConstU64},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, EnsureSigned};
+use frame_system::{EnsureSigned, pallet_prelude::BlockNumberFor};
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, BlockNumberProvider, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
 
 pub type MockSignature = MultiSignature;
@@ -73,6 +73,7 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -93,6 +94,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 parameter_types! {

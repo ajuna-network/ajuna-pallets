@@ -15,11 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::utils::{
-	get_vesting_account, lookup_of_account, set_balance, AccountIdFor, BalanceFor, CurrencyFor,
+	AccountIdFor, BalanceFor, CurrencyFor, get_vesting_account, lookup_of_account, set_balance,
 };
-use frame_benchmarking::{account, benchmarks, whitelisted_caller};
+use frame_benchmarking::v2::*;
 use frame_support::traits::{Currency, Get};
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
 use sp_runtime::Saturating;
 use sp_std::prelude::*;
 
@@ -33,7 +33,7 @@ pub type Schedule<T> = VestingSchedule<BlockNumberFor<T>, BalanceFor<T>>;
 
 const SEED: u32 = 0;
 
-pub fn schedule<T: Config>(
+pub fn schedule<T: Config + frame_system::Config>(
 	start: u32,
 	period: u32,
 	period_count: u32,
@@ -42,11 +42,13 @@ pub fn schedule<T: Config>(
 	Schedule::<T> { start: start.into(), period: period.into(), period_count, per_period }
 }
 
-benchmarks! {
-	vested_transfer {
-		let schedule = schedule::<T>(
-			0, 2,3,<T>::MinVestedTransfer::get()
-		);
+#[benchmarks]
+mod benchmarks {
+	use super::*;
+
+	#[benchmark]
+	fn vested_transfer() {
+		let schedule = schedule::<T>(0, 2, 3, <T>::MinVestedTransfer::get());
 
 		let from = get_vesting_account::<T>();
 		let ed_times_two = CurrencyFor::<T>::minimum_balance().saturating_mul(2u32.into());
@@ -54,19 +56,16 @@ benchmarks! {
 
 		let to: AccountIdFor<T> = account("to", 0, SEED);
 		let to_lookup = lookup_of_account::<T>(to.clone());
-	}: _(RawOrigin::Signed(from), to_lookup, schedule.clone())
-	verify {
-		assert_eq!(CurrencyFor::<T>::total_balance(&to),
-			schedule.total_amount().unwrap()
-		);
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(from), to_lookup, schedule.clone());
+
+		assert_eq!(CurrencyFor::<T>::total_balance(&to), schedule.total_amount().unwrap());
 	}
 
-	claim {
-		let i in 1 .. <T>::MaxVestingSchedules::get();
-
-		let mut schedule = schedule::<T>(
-			0, 2,3,<T>::MinVestedTransfer::get()
-		);
+	#[benchmark]
+	fn claim(i: Linear<1, { T::MaxVestingSchedules::get() }>) {
+		let mut schedule = schedule::<T>(0, 2, 3, <T>::MinVestedTransfer::get());
 
 		let from: AccountIdFor<T> = get_vesting_account::<T>();
 		let ed_times_two = CurrencyFor::<T>::minimum_balance().saturating_mul(2u32.into());
@@ -76,26 +75,30 @@ benchmarks! {
 
 		for _ in 0..i {
 			schedule.start = i.into();
-			orml_vesting::Pallet::<T>::vested_transfer(RawOrigin::Signed(from.clone()).into(), to_lookup.clone(), schedule.clone())?;
+			orml_vesting::Pallet::<T>::vested_transfer(
+				RawOrigin::Signed(from.clone()).into(),
+				to_lookup.clone(),
+				schedule.clone(),
+			)
+			.expect("Should make vested transfer");
 		}
 		frame_system::Pallet::<T>::set_block_number(schedule.end().unwrap() + 1u32.into());
-	}: _(RawOrigin::Signed(to.clone()))
-	verify {
+
+		#[extrinsic_call]
+		_(RawOrigin::Signed(to.clone()));
+
 		assert_eq!(
 			CurrencyFor::<T>::free_balance(&to),
 			schedule.total_amount().unwrap() * i.into(),
 		);
 	}
 
-	update_vesting_schedules {
-		let i in 1 .. <T>::MaxVestingSchedules::get();
+	#[benchmark]
+	fn update_vesting_schedules(i: Linear<1, { T::MaxVestingSchedules::get() }>) {
+		let mut schedule = schedule::<T>(0, 2, 3, <T>::MinVestedTransfer::get());
 
-		let mut schedule = schedule::<T>(
-			0, 2,3,<T>::MinVestedTransfer::get()
-		);
-
-		let to: AccountIdFor<T>= account("to", 0, SEED);
-		set_balance::<T>(to.clone(),schedule.total_amount().unwrap() * i.into());
+		let to: AccountIdFor<T> = account("to", 0, SEED);
+		set_balance::<T>(to.clone(), schedule.total_amount().unwrap() * i.into());
 		let to_lookup = lookup_of_account::<T>(to.clone());
 
 		let mut schedules = vec![];
@@ -103,17 +106,15 @@ benchmarks! {
 			schedule.start = i.into();
 			schedules.push(schedule.clone());
 		}
-	}: _(RawOrigin::Root, to_lookup, schedules)
-	verify {
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, to_lookup, schedules);
+
 		assert_eq!(
 			CurrencyFor::<T>::free_balance(&to),
 			schedule.total_amount().unwrap() * i.into()
 		);
 	}
 
-	impl_benchmark_test_suite!(
-		Pallet,
-		crate::mock::new_test_ext(),
-		crate::mock::Runtime
-	);
+	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Runtime);
 }
