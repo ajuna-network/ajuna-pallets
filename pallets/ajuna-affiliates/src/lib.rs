@@ -50,10 +50,6 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// The rule identifier type at runtime.
 		type RuleIdentifier: Parameter + MaxEncodedLen;
 
@@ -240,11 +236,7 @@ pub mod pallet {
 		fn try_clear_affiliation_for(account: &AccountIdFor<T>) -> DispatchResult {
 			Affiliatees::<T, I>::take(account)
 				.and_then(|mut affiliate_chain| {
-					if affiliate_chain.is_empty() {
-						None
-					} else {
-						Some(affiliate_chain.remove(0))
-					}
+					if affiliate_chain.is_empty() { None } else { Some(affiliate_chain.remove(0)) }
 				})
 				.map_or_else(
 					|| Ok(()),

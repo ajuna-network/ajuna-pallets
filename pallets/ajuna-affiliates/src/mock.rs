@@ -20,9 +20,9 @@ use frame_support::{
 	traits::{ConstU16, ConstU64},
 };
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
 	BoundedVec, BuildStorage,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
 };
 
 pub type MockSignature = TestSignature;
@@ -77,6 +77,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -97,6 +98,7 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -108,7 +110,6 @@ pub type MockRuntimeRule = BoundedVec<u8, ConstU32<2>>;
 
 type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
@@ -116,7 +117,6 @@ impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
 
 type AffiliatesInstance2 = pallet_ajuna_affiliates::Instance2;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance2> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type RuleIdentifier = MockRuleId;
 	type RuntimeRule = MockRuntimeRule;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
@@ -136,7 +136,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();

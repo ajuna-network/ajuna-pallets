@@ -16,16 +16,16 @@
 
 use crate::{self as pallet_ajuna_tournament, *};
 use frame_support::{
+	PalletId,
 	pallet_prelude::Hooks,
 	parameter_types,
 	traits::{ConstU16, ConstU64},
-	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
 use std::cmp::Ordering;
 
@@ -77,6 +77,7 @@ impl frame_system::Config for Test {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type ExtensionsWeightInfo = ();
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
@@ -105,6 +106,7 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type MaxFreezes = ();
+	type DoneSlashHandler = ();
 }
 
 pub type MockSeasonId = u32;
@@ -143,7 +145,6 @@ parameter_types! {
 type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type SeasonId = MockSeasonId;
 	type EntityId = MockEntityId;
@@ -154,7 +155,6 @@ impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 type TournamentInstance2 = pallet_ajuna_tournament::Instance2;
 impl pallet_ajuna_tournament::Config<TournamentInstance2> for Test {
 	type PalletId = TournamentPalletId2;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type SeasonId = MockSeasonId;
 	type EntityId = MockEntityId;
@@ -189,7 +189,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();

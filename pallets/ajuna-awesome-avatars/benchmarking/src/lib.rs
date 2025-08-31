@@ -25,11 +25,11 @@ use frame_support::{
 	pallet_prelude::{DispatchError, DispatchResult},
 	traits::{Currency, Get},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
-use pallet_ajuna_awesome_avatars::{types::*, Config as AvatarsConfig, Pallet as AAvatars, *};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
+use pallet_ajuna_awesome_avatars::{Config as AvatarsConfig, Pallet as AAvatars, types::*, *};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
 use sp_runtime::traits::{
-	Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+	BlockNumberProvider, Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
 };
 use sp_std::vec;
 
@@ -51,12 +51,14 @@ type CollectionIdOf<T> = <<T as AvatarsConfig>::NftHandler as NftHandler<
 	AvatarOf<T>,
 >>::CollectionId;
 
+type BlockNumberForNft<T> =
+	<<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 type NftCollectionConfigOf<T> =
 	pallet_nfts::CollectionConfig<
 		<<T as pallet_nfts::Config>::Currency as Currency<
 			<T as frame_system::Config>::AccountId,
 		>>::Balance,
-		BlockNumberFor<T>,
+		BlockNumberForNft<T>,
 		<T as pallet_nfts::Config>::CollectionId,
 	>;
 
@@ -218,8 +220,8 @@ fn create_service_account_and_prepare_avatar<T: Config>(
 }
 
 fn assert_last_event<T: Config>(avatars_event: Event<T>) {
-	let event = <T as AvatarsConfig>::RuntimeEvent::from(avatars_event);
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+	let event = <T as frame_system::Config>::RuntimeEvent::from(avatars_event);
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 benchmarks! {

@@ -13,7 +13,7 @@ use super::{mock, mock::*};
 use crate::{AssetDeposit, *};
 
 use frame_support::{assert_noop, assert_ok};
-use sp_core::{Pair, H256};
+use sp_core::{H256, Pair};
 
 const MOCK_NON_NATIVE_FUNGIBLE_PAD: [u8; 30] = [11; 30];
 const MOCK_NON_NATIVE_NON_FUNGIBLE_PAD: [u8; 30] = [62; 30];

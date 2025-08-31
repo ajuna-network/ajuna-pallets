@@ -47,7 +47,6 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type Matchmaker: MatchFunc<Self::AccountId>;
 		/// Board id
 		type BoardId: Copy + Default + AtLeast32BitUnsigned + Parameter + MaxEncodedLen;
@@ -57,10 +56,10 @@ pub mod pallet {
 		type GameState: Codec + TypeInfo + MaxEncodedLen + Clone;
 		/// A turn based game
 		type Game: TurnBasedGame<
-			Player = Self::AccountId,
-			Turn = Self::PlayersTurn,
-			State = Self::GameState,
-		>;
+				Player = Self::AccountId,
+				Turn = Self::PlayersTurn,
+				State = Self::GameState,
+			>;
 		/// Number of players required for a game.
 		#[pallet::constant]
 		type Players: Get<u32>;

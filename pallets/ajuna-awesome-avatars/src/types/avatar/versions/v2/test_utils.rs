@@ -1,7 +1,9 @@
 use crate::{
+	AvatarOf, Config, Force, Pallet,
 	mock::{MockAccountId, Test},
 	pallet::AvatarIdOf,
 	types::{
+		Avatar, DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
 		avatar::versions::v2::{
 			avatar_utils::{AvatarBuilder, HashProvider, WrappedAvatar},
 			types::{
@@ -9,9 +11,7 @@ use crate::{
 				SlotType,
 			},
 		},
-		Avatar, DnaEncoding, ForgeOutput, LeaderForgeOutput, RarityTier, SoulCount,
 	},
-	AvatarOf, Config, Force, Pallet,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_core::bounded::BoundedVec;

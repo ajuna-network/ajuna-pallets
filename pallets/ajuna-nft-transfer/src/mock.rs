@@ -16,18 +16,19 @@
 
 use crate::{self as pallet_ajuna_nft_transfer};
 use frame_support::{
+	PalletId,
+	pallet_prelude::DecodeWithMemTracking,
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, RuntimeAppPublic,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
 };
 
 pub type MockSignature = TestSignature;
@@ -80,6 +81,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -100,9 +102,12 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {
@@ -190,6 +195,7 @@ impl pallet_nfts::Config for Test {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -198,7 +204,6 @@ parameter_types! {
 
 impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
 	type ItemId = H256;
 	type ItemConfig = pallet_nfts::ItemConfig;
@@ -221,7 +226,7 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let config = RuntimeGenesisConfig {
 			system: Default::default(),
-			balances: BalancesConfig { balances: self.balances },
+			balances: BalancesConfig { balances: self.balances, dev_accounts: None },
 		};
 
 		let mut ext: sp_io::TestExternalities = config.build_storage().unwrap().into();

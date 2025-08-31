@@ -16,16 +16,15 @@
 
 use crate::{self as pallet_ajuna_awesome_avatars, types::*, *};
 use frame_support::{
-	parameter_types,
-	traits::{tokens::nonfungibles_v2::Create, AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks},
-	PalletId,
+	PalletId, parameter_types,
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks, tokens::nonfungibles_v2::Create},
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
+	BuildStorage, RuntimeAppPublic,
 	testing::TestSignature,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, RuntimeAppPublic,
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
@@ -87,6 +86,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -107,6 +107,7 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Test {}
@@ -157,7 +158,9 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {
@@ -197,6 +200,7 @@ impl pallet_nfts::Config for Test {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -205,7 +209,6 @@ parameter_types! {
 
 impl pallet_ajuna_awesome_avatars::Config for Test {
 	type PalletId = AwesomeAvatarsPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Randomness = Randomness;
 	type KeyLimit = KeyLimit;
@@ -223,7 +226,6 @@ parameter_types! {
 
 impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
 	type ItemId = H256;
 	type ItemConfig = pallet_nfts::ItemConfig;
@@ -238,7 +240,6 @@ parameter_types! {
 
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
@@ -252,7 +253,6 @@ parameter_types! {
 pub(crate) type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type SeasonId = SeasonId;
 	type EntityId = AvatarIdOf<Test>;
@@ -347,7 +347,7 @@ impl ExtBuilder {
 		MOCK_EXISTENTIAL_DEPOSIT.with(|v| *v.borrow_mut() = self.existential_deposit);
 
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances, dev_accounts: None }
 			.assimilate_storage(&mut t)
 			.unwrap();
 		pallet_ajuna_awesome_avatars::GenesisConfig::<Test>::default()

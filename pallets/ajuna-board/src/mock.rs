@@ -21,9 +21,9 @@ use frame_support::{
 };
 use sp_core::H256;
 use sp_runtime::{
+	BuildStorage,
 	testing::TestSignature,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage,
 };
 use sp_std::prelude::*;
 
@@ -76,6 +76,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -84,13 +85,11 @@ parameter_types! {
 }
 
 impl pallet_ajuna_matchmaker::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type AmountPlayers = Players;
 	type AmountBrackets = Brackets;
 }
 
 impl pallet_ajuna_board::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Matchmaker = AjunaMatchmaker;
 	type BoardId = u32;
 	type PlayersTurn = crate::dot4gravity::Turn;

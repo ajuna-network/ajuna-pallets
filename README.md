@@ -11,6 +11,24 @@
 
 This repository contains the different FRAME pallets used in the Ajuna/Bajun ecosystem.
 
+## Stable Branch
+
+This branch contains the stable pallets aka, the currently depoloyed pallet on the Ajuna Parachain before the 
+introduction of SAGE and the refactoring introduced.
+
+### How to maintain the stable branch
+There are a few crates are still identical to develop:
+
+* orml-benchmarking
+* ajuna-battle-mogs
+* ajuna-board
+* ajuna-matchmaker
+* ajuna-wildcard
+
+For above crates and the CI stuff, we can basically just get all changes from develop.
+
+The other crates have to updated with care, we do not want to get the refactorings of develop into this branch.
+
 ## Managing Dependencies
 We use [psvm](https://github.com/paritytech/psvm) to manage substrate/polkadot dependencies.
 

@@ -30,16 +30,18 @@ pub mod traits;
 pub mod pallet {
 	use crate::traits::*;
 	use frame_support::{
+		PalletId,
 		pallet_prelude::*,
 		traits::{
-			tokens::nonfungibles_v2::{Inspect, Mutate},
 			Locker,
+			tokens::nonfungibles_v2::{Inspect, Mutate},
 		},
-		PalletId,
 	};
 	use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned};
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq)]
+	#[derive(
+		Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Eq, PartialEq,
+	)]
 	pub enum NftStatus {
 		/// The NFT exists in storage in the chain
 		Stored,
@@ -55,9 +57,6 @@ pub mod pallet {
 		/// The NFT-transfer's pallet id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Identifier for the collection of item.
 		type CollectionId: Member + Parameter + MaxEncodedLen + Copy + AtLeast32BitUnsigned;

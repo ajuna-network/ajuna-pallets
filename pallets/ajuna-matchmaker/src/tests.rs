@@ -1,4 +1,4 @@
-use crate::{mock::*, Error};
+use crate::{Error, mock::*};
 
 #[test]
 fn test_is_queued() {

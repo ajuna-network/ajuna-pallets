@@ -28,7 +28,7 @@ pub mod account;
 pub mod config;
 pub mod traits;
 
-use frame_support::{pallet_prelude::*, PalletId};
+use frame_support::{PalletId, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
 
 use account::*;
@@ -49,8 +49,8 @@ pub mod pallet {
 	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_arithmetic::traits::AtLeast16BitUnsigned;
 	use sp_runtime::{
-		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
 		Saturating,
+		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
 	};
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -76,11 +76,6 @@ pub mod pallet {
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		type Currency: Currency<Self::AccountId>;
 
 		/// The season identifier type.
@@ -764,7 +759,7 @@ pub mod pallet {
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 
 			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| {
-				if let GoldenDuckState::Enabled(payout_perc, ref maybe_entry_id) = state {
+				if let GoldenDuckState::Enabled(payout_perc, maybe_entry_id) = state {
 					match maybe_entry_id {
 						None => {
 							*state =
@@ -933,7 +928,9 @@ pub mod pallet {
 }
 
 /// Result of an attempt to enter the ranks.
-#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone,
+)]
 pub enum RankingResult {
 	/// The entity was successfully ranked.
 	Ranked { rank: Rank },

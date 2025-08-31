@@ -37,7 +37,7 @@ pub fn lookup_of_account<T: frame_system::Config>(
 	<T as frame_system::Config>::Lookup::unlookup(who)
 }
 
-pub fn set_balance<T: orml_vesting::Config>(
+pub fn set_balance<T: orml_vesting::Config + frame_system::Config>(
 	account: AccountIdFor<T>,
 	schedule_amount: BalanceFor<T>,
 ) {

@@ -23,20 +23,20 @@ pub mod contracts;
 pub mod weights;
 
 use frame_support::{
+	PalletId,
 	pallet_prelude::*,
 	traits::{
-		tokens::nonfungibles_v2::{Destroy, Inspect, Mutate, Transfer},
 		Currency,
 		ExistenceRequirement::AllowDeath,
 		Get, Imbalance, WithdrawReasons,
+		tokens::nonfungibles_v2::{Destroy, Inspect, Mutate, Transfer},
 	},
-	PalletId,
 };
 use frame_system::pallet_prelude::*;
 use scale_info::prelude::string::String as Str;
 use sp_runtime::{
-	traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, Zero},
 	ArithmeticError,
+	traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, Zero},
 };
 use sp_std::prelude::*;
 
@@ -70,7 +70,17 @@ pub mod pallet {
 	pub(crate) type StakedItemsOf<T> = BoundedVec<NftIdOf<T>, <T as Config>::MaxStakingClauses>;
 
 	#[derive(
-		Encode, Decode, MaxEncodedLen, TypeInfo, Copy, Clone, Debug, Default, Eq, PartialEq,
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		MaxEncodedLen,
+		TypeInfo,
+		Copy,
+		Clone,
+		Debug,
+		Default,
+		Eq,
+		PartialEq,
 	)]
 	pub struct GlobalConfig {
 		pub pallet_locked: bool,
@@ -115,9 +125,6 @@ pub mod pallet {
 		/// The NFT-staking's pallet id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The staking balance.
 		type Currency: Currency<Self::AccountId>;

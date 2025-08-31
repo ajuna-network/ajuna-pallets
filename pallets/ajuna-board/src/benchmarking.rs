@@ -16,10 +16,10 @@
 
 use super::*;
 use crate::{
-	dot4gravity::{Coordinates, Side, Turn},
 	Pallet as AjunaBoard,
+	dot4gravity::{Coordinates, Side, Turn},
 };
-use frame_benchmarking::{account, benchmarks};
+use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_runtime::SaturatedConversion;
@@ -30,8 +30,8 @@ fn players<Player: Decode + Ord>(how_many: u32) -> Vec<Player> {
 	(0..how_many).map(|i| account("player", i, SEED)).collect()
 }
 
-fn assert_last_event<T: Config>(event: <T as Config>::RuntimeEvent) {
-	frame_system::Pallet::<T>::assert_last_event(event.into());
+fn assert_last_event<T: Config>(event: T::RuntimeEvent) {
+	frame_system::Pallet::<T>::assert_last_event(event);
 }
 
 fn create_new_game<T: Config>(players: Vec<T::AccountId>) {
@@ -90,30 +90,36 @@ fn create_and_play_until_win<T: Config>(players: Vec<T::AccountId>) {
 	each_player_drops_stone(win_position, lose_position);
 }
 
-benchmarks! {
-	play {
+#[benchmarks]
+mod benchmarks {
+	use super::*;
+
+	#[benchmark]
+	fn play() {
 		let players = players::<T::AccountId>(T::Players::get());
 		create_new_game::<T>(players.clone());
 
 		let player_1 = players.into_iter().next().unwrap();
 		let turn = Turn::DropBomb(Coordinates::new(1, 2));
-	}: play(RawOrigin::Signed(player_1), turn.into())
 
-	play_turn_until_finished {
+		#[extrinsic_call]
+		_(RawOrigin::Signed(player_1), turn.into());
+	}
+
+	#[benchmark]
+	fn play_turn_until_finished() {
 		let board_id = T::BoardId::saturated_from(0_u32);
 		let players = players::<T::AccountId>(T::Players::get());
 		create_and_play_until_win::<T>(players.clone());
 
 		let winner = players.into_iter().next().unwrap();
 		let turn = Turn::DropStone((Side::South, 1));
-	}: play(RawOrigin::Signed(winner.clone()), turn.into())
-	verify {
+
+		#[extrinsic_call]
+		play(RawOrigin::Signed(winner.clone()), turn.into());
+
 		assert_last_event::<T>(Event::GameFinished { board_id, winner }.into());
 	}
 
-	impl_benchmark_test_suite!(
-		AjunaBoard,
-		crate::mock::new_test_ext(),
-		crate::mock::Test,
-	)
+	impl_benchmark_test_suite!(AjunaBoard, crate::mock::new_test_ext(), crate::mock::Test,);
 }
