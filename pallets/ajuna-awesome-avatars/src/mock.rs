@@ -87,6 +87,7 @@ impl frame_system::Config for Test {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -107,6 +108,7 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Test {}
@@ -197,6 +199,7 @@ impl pallet_nfts::Config for Test {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -205,7 +208,6 @@ parameter_types! {
 
 impl pallet_ajuna_awesome_avatars::Config for Test {
 	type PalletId = AwesomeAvatarsPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Randomness = Randomness;
 	type KeyLimit = KeyLimit;
@@ -223,7 +225,6 @@ parameter_types! {
 
 impl pallet_ajuna_nft_transfer::Config for Test {
 	type PalletId = NftTransferPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = MockCollectionId;
 	type ItemId = H256;
 	type ItemConfig = pallet_nfts::ItemConfig;
@@ -238,7 +239,6 @@ parameter_types! {
 
 pub type AffiliatesInstance1 = pallet_ajuna_affiliates::Instance1;
 impl pallet_ajuna_affiliates::Config<AffiliatesInstance1> for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type RuleIdentifier = AffiliateMethods;
 	type RuntimeRule = FeePropagationOf<Test>;
 	type AffiliateMaxLevel = AffiliateMaxLevel;
@@ -252,7 +252,6 @@ parameter_types! {
 pub(crate) type TournamentInstance1 = pallet_ajuna_tournament::Instance1;
 impl pallet_ajuna_tournament::Config<TournamentInstance1> for Test {
 	type PalletId = TournamentPalletId1;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type SeasonId = SeasonId;
 	type EntityId = AvatarIdOf<Test>;

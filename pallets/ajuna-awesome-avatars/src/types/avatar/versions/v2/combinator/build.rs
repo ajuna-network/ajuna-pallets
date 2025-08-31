@@ -138,7 +138,7 @@ impl<T: Config> AvatarCombinator<T> {
 			}
 
 			output_sacrifices
-				.extend(generated_equippables.into_iter().map(|gen| ForgeOutput::Minted(gen)));
+				.extend(generated_equippables.into_iter().map(|generation| ForgeOutput::Minted(generation)));
 		} else {
 			// TODO: Incomplete
 			output_sacrifices.extend(input_sacrifices.into_iter().map(

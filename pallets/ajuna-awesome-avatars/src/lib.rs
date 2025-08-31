@@ -138,8 +138,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		type Currency: Currency<Self::AccountId>;
 
 		type Randomness: Randomness<Self::Hash, BlockNumberFor<Self>>;

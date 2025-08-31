@@ -759,7 +759,7 @@ pub mod pallet {
 			let tournament_id = Self::try_get_active_tournament_id_for(season_id)?;
 
 			GoldenDucks::<T, I>::mutate(season_id, tournament_id, |state| {
-				if let GoldenDuckState::Enabled(payout_perc, ref maybe_entry_id) = state {
+				if let GoldenDuckState::Enabled(payout_perc, maybe_entry_id) = state {
 					match maybe_entry_id {
 						None => {
 							*state =
