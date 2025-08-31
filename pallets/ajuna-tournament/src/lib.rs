@@ -76,11 +76,6 @@ pub mod pallet {
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self, I>>
-			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		type Currency: Currency<Self::AccountId>;
 
 		/// The season identifier type.

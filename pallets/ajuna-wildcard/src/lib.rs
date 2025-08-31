@@ -10,15 +10,15 @@ pub use pallet::*;
 pub use asset::{OnMappingRequest, WideId};
 
 use frame_support::{
+	PalletId,
 	pallet_prelude::*,
 	traits::{
-		tokens::{
-			fungibles, nonfungibles_v2, ExistenceRequirement::AllowDeath, Fortitude::Polite,
-			Precision::Exact, Preservation::Expendable,
-		},
 		Currency, ReservableCurrency, Time,
+		tokens::{
+			ExistenceRequirement::AllowDeath, Fortitude::Polite, Precision::Exact,
+			Preservation::Expendable, fungibles, nonfungibles_v2,
+		},
 	},
-	PalletId,
 };
 use frame_system::pallet_prelude::*;
 use sp_core::sp_std;
@@ -239,8 +239,6 @@ pub mod pallet {
 		/// The pallet's id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type Currency: ReservableCurrency<Self::AccountId>;
 
@@ -1141,11 +1139,7 @@ pub mod pallet {
 					let max_epoch = {
 						let max = *epoch_vec.iter().max().unwrap();
 
-						if max > epoch {
-							epoch
-						} else {
-							max
-						}
+						if max > epoch { epoch } else { max }
 					};
 
 					Some((min_epoch, max_epoch))

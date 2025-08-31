@@ -1,7 +1,6 @@
 [package]
 description = "Ajuna Network pallet used to interact with Erdstall chain bridge"
 name        = "pallet-ajuna-wildcard"
-
 authors.workspace    = true
 edition.workspace    = true
 homepage.workspace   = true

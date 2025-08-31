@@ -66,7 +66,7 @@ pub trait TurnBasedGame {
 	fn get_next_player(state: &Self::State) -> Self::Player;
 	/// Play a turn with player on the current state returning the new state
 	fn play_turn(player: Self::Player, state: Self::State, turn: Self::Turn)
-		-> Option<Self::State>;
+	-> Option<Self::State>;
 	/// Forces the termination of a game with a designated winner, useful when games
 	/// get stalled for some reason.
 	fn abort(state: Self::State, winner: Self::Player) -> Self::State;

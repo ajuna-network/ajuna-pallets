@@ -137,11 +137,11 @@ where
 
 		// this will intentionally overflow and wrap around when bonds_end
 		// reaches `Index::max_value` because we want a brackets.
-		let next_index = v_end.wrapping_add(1_u16);
+		let next_index = v_end.wrapping_add(1);
 		if next_index == v_start {
 			// queue presents as empty but is not
 			// --> overwrite the oldest item in the FIFO brackets
-			v_start = v_start.wrapping_add(1_u16);
+			v_start = v_start.wrapping_add(1);
 		}
 		v_end = next_index;
 
@@ -161,10 +161,9 @@ where
 
 		M::take(bracket, v_start)
 			.and_then(|item_key| N::take(bracket, item_key))
-			.map(|item| {
-				v_start = v_start.wrapping_add(1_u16);
+			.inspect(|_item| {
+				v_start = v_start.wrapping_add(1);
 				self.index_vector[bracket as usize] = (v_start, v_end);
-				item
 			})
 	}
 
@@ -179,11 +178,7 @@ where
 	fn size(&self, bracket: Bracket) -> BufferIndex {
 		let (v_start, v_end) = self.index_vector[bracket as usize];
 
-		if v_start <= v_end {
-			v_end - v_start
-		} else {
-			(BufferIndex::MAX - v_start) + v_end
-		}
+		if v_start <= v_end { v_end - v_start } else { (BufferIndex::MAX - v_start) + v_end }
 	}
 
 	/// Return whether the item_key is queued or not.

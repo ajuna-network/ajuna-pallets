@@ -16,16 +16,18 @@
 
 #![cfg(test)]
 
-use frame_support::{parameter_types, traits::AsEnsureOriginWithArg, PalletId};
+use frame_support::{
+	PalletId, pallet_prelude::DecodeWithMemTracking, parameter_types, traits::AsEnsureOriginWithArg,
+};
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::PalletFeatures;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
 
 pub type MockSignature = MultiSignature;
@@ -77,6 +79,7 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
 }
 
 parameter_types! {
@@ -97,6 +100,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
+	type DoneSlashHandler = ();
 }
 
 parameter_types! {
@@ -149,7 +153,9 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {
@@ -189,6 +195,7 @@ impl pallet_nfts::Config for Runtime {
 		type Helper = Helper;
 	}
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -201,7 +208,6 @@ parameter_types! {
 
 impl pallet_ajuna_nft_staking::Config for Runtime {
 	type PalletId = NftStakingPalletId;
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type CollectionId = MockCollectionId;
 	type ItemId = H256;

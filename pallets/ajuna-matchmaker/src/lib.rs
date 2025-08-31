@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::pallet_prelude::DecodeWithMemTracking;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
@@ -31,7 +32,9 @@ pub enum MatchingType {
 	Mix,
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen,
+)]
 pub struct PlayerStruct<AccountId> {
 	pub account: AccountId,
 }
@@ -46,9 +49,6 @@ pub mod pallet {
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// Constant that indicates how many players are needed to create a new match.
 		#[pallet::constant]
 		type AmountPlayers: Get<u8>;
