@@ -1139,11 +1139,7 @@ where
 	/// If there is a match, that means that the index these bytes are from may be selected for
 	/// upgrading the leader's progress_array.
 	pub fn match_progress_byte(leader_byte: u8, sacrifice_byte: u8) -> bool {
-		let diff = if leader_byte >= sacrifice_byte {
-			leader_byte - sacrifice_byte
-		} else {
-			sacrifice_byte - leader_byte
-		};
+		let diff = leader_byte.abs_diff(sacrifice_byte);
 		diff == 1 || diff == (PROGRESS_VARIATIONS - 1)
 	}
 

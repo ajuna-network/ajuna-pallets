@@ -205,7 +205,7 @@ impl<T: Config> ForgerV1<T> {
 		max_tier: u8,
 	) -> (bool, BTreeSet<usize>) {
 		let compare_variation = |lhs: u8, rhs: u8| -> bool {
-			let diff = if lhs > rhs { lhs - rhs } else { rhs - lhs };
+			let diff = lhs.abs_diff(rhs);
 			diff == 1 || diff == (max_variations - 1)
 		};
 

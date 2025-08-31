@@ -246,24 +246,22 @@ mod match_test {
 					&mut hash_provider,
 				);
 
-				assert_eq!(sacrifices.len(), sac_len, "Test matched_avatars len for case {}", i);
+				assert_eq!(sacrifices.len(), sac_len, "Test matched_avatars len for case {i}");
 
 				if top_bit_index == 0 {
-					assert_eq!(leader.get_dna()[0], top_1_bit, "Test top_bit for case {}", i);
+					assert_eq!(leader.get_dna()[0], top_1_bit, "Test top_bit for case {i}");
 				} else {
 					assert_eq!(
 						sacrifices[top_bit_index - 1].1.get_dna()[0],
 						top_1_bit,
-						"Test top_bit for case {}",
-						i
+						"Test top_bit for case {i}"
 					);
 				}
 
 				assert_eq!(
 					leader.get_progress(),
 					progress_array_1,
-					"Test progress_array for case {}",
-					i
+					"Test progress_array for case {i}"
 				);
 			}
 		});
