@@ -18,7 +18,9 @@ use crate::types::MintPackSize;
 use frame_support::pallet_prelude::*;
 
 /// Minting fee per pack of avatars.
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct MintFees<Balance> {
 	pub one: Balance,
 	pub three: Balance,
@@ -35,7 +37,9 @@ impl<Balance> MintFees<Balance> {
 	}
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq,
+)]
 pub struct Fee<Balance> {
 	pub mint: MintFees<Balance>,
 	pub transfer_avatar: Balance,

@@ -16,19 +16,19 @@
 
 use crate::{self as pallet_ajuna_nft_transfer};
 use frame_support::{
+	PalletId,
+	pallet_prelude::DecodeWithMemTracking,
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64},
-	PalletId,
 };
-use frame_support::pallet_prelude::DecodeWithMemTracking;
 use frame_system::{EnsureRoot, EnsureSigned};
 use pallet_nfts::{PalletFeature, PalletFeatures};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, RuntimeAppPublic,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, Get, IdentifyAccount, IdentityLookup, Verify},
 };
 
 pub type MockSignature = TestSignature;
@@ -105,7 +105,9 @@ impl pallet_balances::Config for Test {
 	type DoneSlashHandler = ();
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {

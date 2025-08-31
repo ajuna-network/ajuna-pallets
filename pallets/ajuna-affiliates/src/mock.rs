@@ -20,9 +20,9 @@ use frame_support::{
 	traits::{ConstU16, ConstU64},
 };
 use sp_runtime::{
-	testing::{TestSignature, H256},
-	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
 	BoundedVec, BuildStorage,
+	testing::{H256, TestSignature},
+	traits::{BlakeTwo256, ConstU32, IdentifyAccount, IdentityLookup, Verify},
 };
 
 pub type MockSignature = TestSignature;

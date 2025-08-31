@@ -1,6 +1,6 @@
 use frame_support::Parameter;
 use parity_scale_codec::{Codec, MaxEncodedLen};
-use sp_runtime::{traits::AtLeast32BitUnsigned, BoundedVec, DispatchError, DispatchResult};
+use sp_runtime::{BoundedVec, DispatchError, DispatchResult, traits::AtLeast32BitUnsigned};
 use sp_std::vec::Vec;
 
 /// Type used to differentiate attribute codes for each item.

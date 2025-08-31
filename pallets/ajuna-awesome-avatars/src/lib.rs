@@ -69,9 +69,9 @@ pub mod weights;
 
 use crate::{types::*, weights::WeightInfo};
 use frame_support::{
+	PalletId,
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement::AllowDeath, Randomness, WithdrawReasons},
-	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use pallet_ajuna_affiliates::traits::{
@@ -83,11 +83,11 @@ use pallet_ajuna_tournament::{
 	traits::{TournamentClaimer, TournamentInspector, TournamentMutator, TournamentRanker},
 };
 use sp_runtime::{
+	ArithmeticError,
 	traits::{
 		AccountIdConversion, CheckedDiv, CheckedSub, Hash, Saturating, TrailingZeroInput,
 		UniqueSaturatedInto, Zero,
 	},
-	ArithmeticError,
 };
 use sp_std::prelude::*;
 
@@ -121,7 +121,9 @@ pub mod pallet {
 
 	pub(crate) const MAX_PERCENTAGE: u8 = 100;
 
-	#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq)]
+	#[derive(
+		Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq,
+	)]
 	pub enum WhitelistOperation {
 		AddAccount,
 		RemoveAccount,
@@ -153,12 +155,12 @@ pub mod pallet {
 		type ValueLimit: Get<u32>;
 
 		type NftHandler: NftHandler<
-			Self::AccountId,
-			Self::Hash,
-			Self::KeyLimit,
-			Self::ValueLimit,
-			AvatarOf<Self>,
-		>;
+				Self::AccountId,
+				Self::Hash,
+				Self::KeyLimit,
+				Self::ValueLimit,
+				AvatarOf<Self>,
+			>;
 
 		/// The maximum depth of the propagation fee chain,
 		#[pallet::constant]
@@ -1886,8 +1888,8 @@ pub mod pallet {
 			Ok((current_status.season_id, season))
 		}
 
-		fn current_season_schedule_with_id(
-		) -> Result<(SeasonId, SeasonScheduleOf<T>), DispatchError> {
+		fn current_season_schedule_with_id()
+		-> Result<(SeasonId, SeasonScheduleOf<T>), DispatchError> {
 			let mut current_status = CurrentSeasonStatus::<T>::get();
 			let season_schedule = match SeasonSchedules::<T>::get(current_status.season_id) {
 				Some(season_schedule) if current_status.is_in_season() => season_schedule,

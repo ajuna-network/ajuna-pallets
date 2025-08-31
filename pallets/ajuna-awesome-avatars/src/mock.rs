@@ -16,16 +16,15 @@
 
 use crate::{self as pallet_ajuna_awesome_avatars, types::*, *};
 use frame_support::{
-	parameter_types,
-	traits::{tokens::nonfungibles_v2::Create, AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks},
-	PalletId,
+	PalletId, parameter_types,
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU64, Hooks, tokens::nonfungibles_v2::Create},
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 pub(crate) use sp_runtime::testing::H256;
 use sp_runtime::{
+	BuildStorage, RuntimeAppPublic,
 	testing::TestSignature,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, RuntimeAppPublic,
 };
 
 pub type MockBlock = frame_system::mocking::MockBlock<Test>;
@@ -159,7 +158,9 @@ impl<CollectionId: From<u16>, ItemId: From<[u8; 32]>>
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Debug, PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo,
+)]
 pub struct ParameterGet<const N: u32>;
 
 impl<const N: u32> Get<u32> for ParameterGet<N> {

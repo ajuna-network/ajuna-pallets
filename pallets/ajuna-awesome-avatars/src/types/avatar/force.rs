@@ -18,7 +18,18 @@ use crate::*;
 use parity_scale_codec::alloc::string::ToString;
 use sp_std::{fmt, ops::Range, prelude::*};
 
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	MaxEncodedLen,
+	TypeInfo,
+	Clone,
+	Debug,
+	Default,
+	PartialEq,
+	Eq,
+)]
 pub enum Force {
 	Null,
 	#[default]

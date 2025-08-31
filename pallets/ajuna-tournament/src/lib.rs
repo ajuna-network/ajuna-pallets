@@ -28,7 +28,7 @@ pub mod account;
 pub mod config;
 pub mod traits;
 
-use frame_support::{pallet_prelude::*, PalletId};
+use frame_support::{PalletId, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
 
 use account::*;
@@ -49,8 +49,8 @@ pub mod pallet {
 	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_arithmetic::traits::AtLeast16BitUnsigned;
 	use sp_runtime::{
-		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
 		Saturating,
+		traits::{AccountIdConversion, CheckedDiv, SaturatedConversion},
 	};
 
 	pub type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -928,7 +928,9 @@ pub mod pallet {
 }
 
 /// Result of an attempt to enter the ranks.
-#[derive(Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo, Debug, PartialEq, Copy, Clone,
+)]
 pub enum RankingResult {
 	/// The entity was successfully ranked.
 	Ranked { rank: Rank },

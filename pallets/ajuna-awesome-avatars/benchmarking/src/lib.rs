@@ -25,10 +25,12 @@ use frame_support::{
 	pallet_prelude::{DispatchError, DispatchResult},
 	traits::{Currency, Get},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
-use pallet_ajuna_awesome_avatars::{types::*, Config as AvatarsConfig, Pallet as AAvatars, *};
+use frame_system::{RawOrigin, pallet_prelude::BlockNumberFor};
+use pallet_ajuna_awesome_avatars::{Config as AvatarsConfig, Pallet as AAvatars, types::*, *};
 use pallet_ajuna_nft_transfer::traits::NftHandler;
-use sp_runtime::traits::{BlockNumberProvider, Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero};
+use sp_runtime::traits::{
+	BlockNumberProvider, Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+};
 use sp_std::vec;
 
 pub struct Pallet<T: Config>(pallet_ajuna_awesome_avatars::Pallet<T>);
@@ -49,7 +51,8 @@ type CollectionIdOf<T> = <<T as AvatarsConfig>::NftHandler as NftHandler<
 	AvatarOf<T>,
 >>::CollectionId;
 
-type BlockNumberForNft<T> = <<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
+type BlockNumberForNft<T> =
+	<<T as pallet_nfts::Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 type NftCollectionConfigOf<T> =
 	pallet_nfts::CollectionConfig<
 		<<T as pallet_nfts::Config>::Currency as Currency<

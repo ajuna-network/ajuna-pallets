@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::types::{Avatar, ByteConvertible, Force, RarityTier};
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::{BoundedVec, traits::Get};
 use pallet_ajuna_nft_transfer::traits::{NFTAttribute, NftConvertible};
 use parity_scale_codec::alloc::string::ToString;
 use scale_info::prelude::format;

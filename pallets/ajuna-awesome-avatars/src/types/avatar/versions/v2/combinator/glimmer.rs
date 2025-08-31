@@ -176,7 +176,8 @@ mod test {
 						ForgeOutput::Minted(avatar) => avatar.souls,
 						_ => 0,
 					})
-					.sum::<SoulCount>() + wrapped.get_souls();
+					.sum::<SoulCount>() +
+					wrapped.get_souls();
 				assert_eq!(output_souls + GLIMMER_SP as u32, total_soul_points);
 
 				assert_eq!(wrapped.get_quantity(), 9);
@@ -276,7 +277,8 @@ mod test {
 						ForgeOutput::Minted(avatar) => avatar.souls,
 						_ => 0,
 					})
-					.sum::<SoulCount>() + wrapped.get_souls();
+					.sum::<SoulCount>() +
+					wrapped.get_souls();
 				assert_eq!(output_souls + 4 * GLIMMER_SP as u32, total_soul_points);
 
 				assert_eq!(wrapped.get_quantity(), 96);
@@ -385,7 +387,8 @@ mod test {
 						ForgeOutput::Minted(avatar) => avatar.souls,
 						_ => 0,
 					})
-					.sum::<SoulCount>() + wrapped.get_souls();
+					.sum::<SoulCount>() +
+					wrapped.get_souls();
 				assert_eq!(output_souls + 4 * GLIMMER_SP as u32, total_soul_points);
 
 				assert_eq!(wrapped.get_quantity(), 96);
@@ -531,7 +534,8 @@ mod test {
 						ForgeOutput::Minted(avatar) => avatar.souls,
 						_ => 0,
 					})
-					.sum::<SoulCount>() + leader_avatar.souls;
+					.sum::<SoulCount>() +
+					leader_avatar.souls;
 				assert_eq!(output_souls, total_soul_points);
 
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {
@@ -586,7 +590,8 @@ mod test {
 						ForgeOutput::Minted(avatar) => avatar.souls,
 						_ => 0,
 					})
-					.sum::<SoulCount>() + leader_avatar.souls;
+					.sum::<SoulCount>() +
+					leader_avatar.souls;
 				assert_eq!(output_souls, total_soul_points);
 
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {
@@ -641,7 +646,8 @@ mod test {
 						ForgeOutput::Minted(avatar) => avatar.souls,
 						_ => 0,
 					})
-					.sum::<SoulCount>() + leader_avatar.souls;
+					.sum::<SoulCount>() +
+					leader_avatar.souls;
 				assert_eq!(output_souls, total_soul_points);
 
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {
@@ -693,7 +699,8 @@ mod test {
 						ForgeOutput::Minted(avatar) => avatar.souls,
 						_ => 0,
 					})
-					.sum::<SoulCount>() + leader_avatar.souls;
+					.sum::<SoulCount>() +
+					leader_avatar.souls;
 				assert_eq!(output_souls, total_soul_points);
 
 				if let ForgeOutput::Minted(avatar) = sacrifice_output.into_iter().nth(1).unwrap() {

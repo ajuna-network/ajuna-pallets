@@ -1,6 +1,6 @@
 use crate::{
-	types::{avatar::versions::v2::avatar_utils::HashProvider, PackType},
 	Config,
+	types::{PackType, avatar::versions::v2::avatar_utils::HashProvider},
 };
 use sp_std::marker::PhantomData;
 
@@ -66,7 +66,7 @@ impl<T: Config> SlotRoller<T> {
 #[cfg(test)]
 mod test {
 	use super::{super::types::*, *};
-	use crate::{mock::*, types::ByteConvertible, Pallet};
+	use crate::{Pallet, mock::*, types::ByteConvertible};
 
 	#[test]
 	fn statistics_verification_test() {

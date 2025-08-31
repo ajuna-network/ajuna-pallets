@@ -16,16 +16,16 @@
 
 use crate::{self as pallet_ajuna_tournament, *};
 use frame_support::{
+	PalletId,
 	pallet_prelude::Hooks,
 	parameter_types,
 	traits::{ConstU16, ConstU64},
-	PalletId,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
+	BuildStorage, MultiSignature,
 	testing::H256,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
 };
 use std::cmp::Ordering;
 
