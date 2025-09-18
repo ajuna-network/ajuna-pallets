@@ -55,7 +55,7 @@ sp-runtime                                 = { version = "42.0.0", default-featu
 sp-std                                     = { version = "14.0.0", default-features = false }
 
 # orml
-orml-vesting = { git = "https://github.com/ajuna-network/open-runtime-module-library", branch = "cl/polkadot-stable2506-1", default-features = false }
+orml-vesting = { version = "1.5.0", default-features = false }
 
 # Ajuna
 ajuna-payment-handler                     = { path = "primitives/payment-handler", default-features = false }

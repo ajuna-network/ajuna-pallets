@@ -110,7 +110,6 @@ impl BlockNumberProvider for MockBlockNumberProvider {
 }
 
 impl orml_vesting::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MinVestedTransfer = MockExistentialDeposit;
 	type VestedTransferOrigin = EnsureSigned<MockAccountId>;
